@@ -15,8 +15,8 @@ let rec loop () =
   | MParser.Success None ->
       (* User entered a blank line *)
       loop ()
-  | MParser.Success (Some _ex) ->
-      print_endline "Parse ok.";
+  | MParser.Success (Some expr) ->
+      print_endline (Pretty.format expr);
       loop ()
 
 let () = loop ()
