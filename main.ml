@@ -16,7 +16,9 @@ let rec loop () =
       (* User entered a blank line *)
       loop ()
   | MParser.Success (Some expr) ->
-      print_endline (Pretty.format expr);
+      Eval.eval expr
+        |> Pretty.format
+        |> print_endline;
       loop ()
 
 let () = loop ()
