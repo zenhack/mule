@@ -1,6 +1,6 @@
 open Ast
 
-let rec format = function
+let rec expr = function
   | EVar (_, Var name) ->
       name
   | ELam (_, Var name, body) ->
@@ -8,13 +8,13 @@ let rec format = function
         [ "fn "
         ; name
         ; ". "
-        ; format body
+        ; expr body
         ]
   | EApp (_, f, x) ->
       String.concat ""
         [ "("
-        ; format f
+        ; expr f
         ; ") ("
-        ; format x
+        ; expr x
         ; ")"
         ]

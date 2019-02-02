@@ -17,7 +17,7 @@ let rec loop () =
       loop ()
   | MParser.Success (Some expr) ->
       Eval.eval expr
-        |> Pretty.format
+        |> Pretty.expr
         |> print_endline;
       loop ()
 
