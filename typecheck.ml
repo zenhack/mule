@@ -72,10 +72,10 @@ let rec add_rec_binders ty = Ast.Type.(
       ( S.singleton v
       , ty
       )
-  | Rec(i, v, t) ->
+  | Recur(i, v, t) ->
       let (vs, ts) = add_rec_binders t in
       ( S.remove (ivar i) vs
-      , Rec(i, v, ts)
+      , Recur(i, v, ts)
       )
   | Fn (i, f, x) ->
       let (fv, ft) = add_rec_binders f in
@@ -84,7 +84,7 @@ let rec add_rec_binders ty = Ast.Type.(
       let myvar = ivar i in
       if S.mem myvar vars then
         ( S.remove myvar vars
-        , Rec(i, Ast.Var myvar, Fn (i, ft, xt))
+        , Recur(i, Ast.Var myvar, Fn (i, ft, xt))
         )
       else
         ( vars

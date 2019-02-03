@@ -17,11 +17,11 @@ end
 module Type = struct
   type 'i t =
     | Fn of ('i * 'i t * 'i t)
-    | Rec of ('i * var * 'i t)
+    | Recur of ('i * var * 'i t)
     | Var of ('i * var)
 
   let get_info = function
     | Fn(i, _, _) -> i
-    | Rec(i, _, _) -> i
+    | Recur(i, _, _) -> i
     | Var(i, _) -> i
 end

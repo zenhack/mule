@@ -30,7 +30,7 @@ let rec typ = Ast.Type.(
         ; typ x
         ; ")"
         ]
-  | Rec (_, Ast.Var v, body) ->
+  | Recur (_, Ast.Var v, body) ->
       String.concat ""
         [ "rec "
         ; v
