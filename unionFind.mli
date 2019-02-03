@@ -15,8 +15,9 @@ val make : 'a -> 'a var
 (* Get the value of the set. *)
 val get : 'a var -> 'a
 
-(* Unify two variables, given a function to merge their values. If the funtion
- * returns [Err], the variables are not unified.
+(* Unify two variables, given a function to merge their values. As soon as this
+ * function is called, the variables are considred unified; even if the funtion
+ * returns [Err], the variables are now considered the same.
  *)
 val merge
   : ('a -> 'a -> ('e, 'a) OrErr.t)

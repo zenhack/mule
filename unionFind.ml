@@ -31,11 +31,12 @@ let merge f l r =
   let (lrep, lval), (rrep, rval) = (get_rep_val l, get_rep_val r) in
   if lrep == rrep then
     Ok lrep
-  else begin match f lval rval with
-  | Ok value ->
-      lrep := Repr value;
-      rrep := Ptr lrep;
-      Ok rrep
-  | Err e ->
-      Err e
+  else begin
+    rrep := Ptr lrep;
+    match f lval rval with
+    | Ok value ->
+        lrep := Repr value;
+        Ok lrep
+    | Err e ->
+        Err e
   end
