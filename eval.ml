@@ -28,4 +28,10 @@ let rec eval = function
       | _ ->
           raise NotAFunction
       end
-  | Record _ -> Debug.todo "Evaluate records"
+  | Record (i, fields) ->
+      Record
+        ( i
+        , List.map
+            (fun (lbl, ex) -> (lbl, eval ex))
+            fields
+        )

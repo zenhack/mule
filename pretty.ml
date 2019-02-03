@@ -17,8 +17,16 @@ let rec expr = Ast.Expr.(
         ; expr x
         ; ")"
         ]
-  | Record _ ->
-      Debug.todo "print records"
+  | Record (_, fields) ->
+      String.concat ""
+        [ "{"
+        ; String.concat ", "
+            (List.map
+              (fun (Ast.Label lbl, e) -> lbl ^ " = " ^ expr e)
+              fields
+            )
+        ; "}"
+        ]
 )
 
 let rec typ = Ast.Type.(
