@@ -66,19 +66,6 @@ let rec walk env = Ast.Expr.(OrErr.(
 
 let ivar i = "t" ^ string_of_int i
 
-let rec extract_type env = function
-  | Free i -> Ast.Type.Var (i, Ast.Var (ivar i))
-  | Fn (i, f, x) ->
-      if S.mem (ivar i) env then
-        extract_type env (Free i)
-      else
-        let env' = S.add (ivar i) env in
-        Fn
-          ( i
-          , extract_type env' (UnionFind.get f)
-          , extract_type env' (UnionFind.get x)
-          )
-
 let rec add_rec_binders ty = Ast.Type.(
   match ty with
   | Var (_, (Ast.Var v)) ->
@@ -105,17 +92,28 @@ let rec add_rec_binders ty = Ast.Type.(
         )
 )
 let add_rec_binders ty =
-  let (_, ty) = add_rec_binders ty in
-  ty
+  snd (add_rec_binders ty)
 
-let extract_type uvar =
-  let uval = UnionFind.get uvar in
-  let ty = extract_type S.empty uval in
-  add_rec_binders ty
+let rec get_var_type env = function
+  | Free i -> Ast.Type.Var (i, Ast.Var (ivar i))
+  | Fn (i, f, x) ->
+      if S.mem (ivar i) env then
+        get_var_type env (Free i)
+      else
+        let env' = S.add (ivar i) env in
+        Fn
+          ( i
+          , get_var_type env' (UnionFind.get f)
+          , get_var_type env' (UnionFind.get x)
+          )
+let get_var_type uvar =
+  UnionFind.get uvar
+    |> get_var_type S.empty
+    |> add_rec_binders
 
 let typecheck expr = OrErr.(
   check_unbound expr
   >>= fun () -> Ok (decorate expr)
   >>= walk Env.empty
-  |>> extract_type
+  |>> get_var_type
 )
