@@ -63,7 +63,10 @@ and unify_row l r = OrErr.(
         |>> fun ret_rest -> Extend (l_lbl, ret_ty, ret_rest)
       else
         Debug.todo "unify disparate labels"
-  | (_, _) -> Err Mismatch
+  | (Row _, r) -> Ok r
+  | (l, Row _) -> Ok l
+  | (Extend _, Empty) -> Err Mismatch
+  | (Empty, Extend _) -> Err Mismatch
 )
 
 let decorate expr =
