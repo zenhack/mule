@@ -26,7 +26,7 @@ let check_unbound expr =
 
 (* The type of values associated with unification variables *)
 type uVal =
-  | Free of int
+  | Type of int
   | Fn of (int * uVal UnionFind.var * uVal UnionFind.var)
 
 let rec unify l r = OrErr.(
@@ -35,19 +35,19 @@ let rec unify l r = OrErr.(
       UnionFind.merge unify ll rl
       >>= fun l' -> UnionFind.merge unify lr rr
       >>= fun r' -> Ok (Fn (i, l', r'))
-  | (Free _, r) -> Ok r
-  | (l, Free _) -> Ok l
+  | (Type _, r) -> Ok r
+  | (l, Type _) -> Ok l
 )
 
 let decorate expr =
-  Ast.Expr.map_info (fun _ -> UnionFind.make (Free (Gensym.gensym ()))) expr
+  Ast.Expr.map_info (fun _ -> UnionFind.make (Type (Gensym.gensym ()))) expr
 
 let rec walk env = Ast.Expr.(OrErr.(
   function
   | Var (uVar, Ast.Var v) ->
       UnionFind.merge unify uVar (Env.find v env)
   | Lam (fVar, Ast.Var param, body) ->
-      let paramVar = UnionFind.make (Free (Gensym.gensym ())) in
+      let paramVar = UnionFind.make (Type (Gensym.gensym ())) in
       walk (Env.add param paramVar env) body
       >>= fun retVar ->
         UnionFind.merge unify
@@ -95,10 +95,10 @@ let add_rec_binders ty =
   snd (add_rec_binders ty)
 
 let rec get_var_type env = function
-  | Free i -> Ast.Type.Var (i, Ast.Var (ivar i))
+  | Type i -> Ast.Type.Var (i, Ast.Var (ivar i))
   | Fn (i, f, x) ->
       if S.mem (ivar i) env then
-        get_var_type env (Free i)
+        get_var_type env (Type i)
       else
         let env' = S.add (ivar i) env in
         Fn
