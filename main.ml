@@ -19,6 +19,9 @@ let rec loop () =
       | OrErr.Err (Typecheck.UnboundVar (Ast.Var name)) ->
           print_endline ("unbound variable: " ^ name);
           loop ()
+      | OrErr.Err Typecheck.Mismatch ->
+          (* Most useful error message EVER: *)
+          print_endline "Type mismatch"
       | OrErr.Ok ty ->
           print_endline ("inferred type: " ^ Pretty.typ ty);
           Eval.eval expr

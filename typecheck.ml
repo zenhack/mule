@@ -29,16 +29,13 @@ let check_unbound expr =
   | None -> OrErr.Ok ()
 
 (* The type of values associated with unification variables *)
-type uVal =
+type u_type =
   | Type of int
-  | Fn of (int * uVal UnionFind.var * uVal UnionFind.var)
-(*
-  | Record of int
-  | Row of row
-and row =
-  | Extend of (Ast.label * uVal UnionFind.var * uVal UnionFind.var)
+  | Fn of (int * u_type UnionFind.var * u_type UnionFind.var)
+  | Record of (int * u_row UnionFind.var)
+and u_row =
+  | Extend of (Ast.label * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
-*)
 
 let rec unify l r = OrErr.(
   match l, r with
@@ -46,25 +43,41 @@ let rec unify l r = OrErr.(
       UnionFind.merge unify ll rl
       >>= fun l' -> UnionFind.merge unify lr rr
       >>= fun r' -> Ok (Fn (i, l', r'))
+  | (Record (i, row_l), Record(_, row_r)) ->
+      UnionFind.merge unify_row row_l row_r
+      |>> fun row_ret -> Record (i, row_ret)
   | (Type _, r) -> Ok r
   | (l, Type _) -> Ok l
+  | (_, _) -> Err Mismatch
+)
+and unify_row l r = OrErr.(
+  match l, r with
+  | (Empty, Empty) -> Ok Empty
+  | (Extend (l_lbl, l_ty, l_rest), Extend (r_lbl, r_ty, r_rest)) ->
+      if l_lbl = r_lbl then
+        UnionFind.merge unify l_ty r_ty
+        >>= fun ret_ty -> UnionFind.merge unify_row l_rest r_rest
+        |>> fun ret_rest -> Extend (l_lbl, ret_ty, ret_rest)
+      else
+        Debug.todo "unify disparate labels"
+  | (_, _) -> Err Mismatch
 )
 
 let decorate expr =
   Ast.Expr.map_info (fun _ -> UnionFind.make (Type (Gensym.gensym ()))) expr
 
-let rec walk env = Ast.Expr.(OrErr.(
+let rec walk env = Ast.(OrErr.(
   function
-  | Var (uVar, Ast.Var v) ->
+  | Expr.Var (uVar, Ast.Var v) ->
       UnionFind.merge unify uVar (Env.find v env)
-  | Lam (fVar, Ast.Var param, body) ->
+  | Expr.Lam (fVar, Ast.Var param, body) ->
       let paramVar = UnionFind.make (Type (Gensym.gensym ())) in
       walk (Env.add param paramVar env) body
       >>= fun retVar ->
         UnionFind.merge unify
           fVar
           (UnionFind.make (Fn (Gensym.gensym (), paramVar, retVar)))
-  | App (retVar, f, arg) ->
+  | Expr.App (retVar, f, arg) ->
       walk env f
       >>= fun fVar -> walk env arg
       >>= fun argVar ->
@@ -72,9 +85,21 @@ let rec walk env = Ast.Expr.(OrErr.(
           fVar
           (UnionFind.make (Fn (Gensym.gensym (), argVar, retVar)))
       >> Ok retVar
-  | Record _ ->
-      Debug.todo "walk record"
+  | Expr.Record (retVar, fields) ->
+      walk_fields env fields
+      >>= fun rowVar -> UnionFind.merge unify
+          retVar
+          (UnionFind.make (Record (Gensym.gensym (), rowVar)))
 ))
+and walk_fields env = OrErr.(
+  function
+  | [] -> Ok (UnionFind.make Empty)
+  | ((lbl, ty) :: fs) ->
+      walk env ty
+      >>= fun lblVar -> walk_fields env fs
+      |>> fun tailVar ->
+        UnionFind.make (Extend(lbl, lblVar, tailVar))
+)
 
 
 let ivar i = "t" ^ string_of_int i
@@ -103,6 +128,27 @@ let rec add_rec_binders ty = Ast.Type.(
         ( vars
         , Fn (i, ft, xt)
         )
+  | Record(i, fields) ->
+      (* XXX: there's a lot of duplication between this and the Fn case. *)
+      let fields_vars = List.map
+        (fun (lbl, ty) -> (lbl, add_rec_binders ty))
+        fields
+      in
+      let vars = List.fold_left
+        (fun accum (_, (vars, _)) -> S.union accum vars)
+        S.empty
+        fields_vars
+      in
+      let fields' = List.map (fun (lbl, (_, ty)) -> (lbl, ty)) fields_vars in
+      let myvar = ivar i in
+      if S.mem myvar vars then
+        ( S.remove myvar vars
+        , Recur (i, Ast.Var myvar, Record (i, fields'))
+        )
+      else
+        ( vars
+        , Record (i, fields')
+        )
 )
 let add_rec_binders ty =
   snd (add_rec_binders ty)
@@ -119,6 +165,18 @@ let rec get_var_type env = function
           , get_var_type env' (UnionFind.get f)
           , get_var_type env' (UnionFind.get x)
           )
+  | Record (i, fields) ->
+      Ast.Type.Record
+        ( i
+        , get_var_row (S.add (ivar i) env) (UnionFind.get fields)
+        )
+and get_var_row env = function
+  | Empty -> []
+  | Extend (lbl, ty, rest) ->
+      ( lbl
+      , get_var_type env (UnionFind.get ty)
+      )
+      :: get_var_row env (UnionFind.get rest)
 let get_var_type uvar =
   UnionFind.get uvar
     |> get_var_type S.empty

@@ -39,4 +39,6 @@ let rec typ = Ast.Type.(
         ; ". "
         ; typ body
         ]
+  | Record _ ->
+      Debug.todo "Print record types"
 )

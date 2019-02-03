@@ -25,9 +25,11 @@ module Type = struct
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * var * 'i t)
     | Var of ('i * var)
+    | Record of ('i * (label * 'i t) list)
 
   let get_info = function
     | Fn(i, _, _) -> i
     | Recur(i, _, _) -> i
     | Var(i, _) -> i
+    | Record (i, _) -> i
 end
