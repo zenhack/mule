@@ -26,7 +26,7 @@ let rec typ = Ast.Type.(
       String.concat ""
         [ "("
         ; typ f
-        ; " -> "
+        ; ") -> ("
         ; typ x
         ; ")"
         ]
