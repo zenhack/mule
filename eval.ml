@@ -13,6 +13,7 @@ let rec subst param arg expr = match expr with
         Lam (i, Ast.Var param', subst param arg body)
   | App (i, f, x) ->
       App (i, subst param arg f, subst param arg x)
+  | Record _ -> Debug.todo "Substitute records"
 
 let rec eval = function
   | Var (_, Ast.Var v) ->
@@ -27,3 +28,4 @@ let rec eval = function
       | _ ->
           raise NotAFunction
       end
+  | Record _ -> Debug.todo "Evaluate records"

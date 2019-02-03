@@ -15,6 +15,10 @@ let rec expr_free_vars env = Ast.Expr.(
       expr_free_vars (S.add v env) body
   | App (_, f, x) ->
       S.union (expr_free_vars env f) (expr_free_vars env x)
+  | Record (_, fields) ->
+      fields
+        |> List.map (fun (_, v) -> expr_free_vars env v)
+        |> List.fold_left S.union S.empty
 )
 
 (* Check for unbound variables. *)
@@ -28,6 +32,13 @@ let check_unbound expr =
 type uVal =
   | Type of int
   | Fn of (int * uVal UnionFind.var * uVal UnionFind.var)
+(*
+  | Record of int
+  | Row of row
+and row =
+  | Extend of (Ast.label * uVal UnionFind.var * uVal UnionFind.var)
+  | Empty
+*)
 
 let rec unify l r = OrErr.(
   match l, r with
@@ -61,6 +72,8 @@ let rec walk env = Ast.Expr.(OrErr.(
           fVar
           (UnionFind.make (Fn (Gensym.gensym (), argVar, retVar)))
       >> Ok retVar
+  | Record _ ->
+      Debug.todo "walk record"
 ))
 
 

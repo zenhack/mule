@@ -17,6 +17,8 @@ let rec expr = Ast.Expr.(
         ; expr x
         ; ")"
         ]
+  | Record _ ->
+      Debug.todo "print records"
 )
 
 let rec typ = Ast.Type.(

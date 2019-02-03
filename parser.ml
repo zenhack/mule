@@ -17,6 +17,7 @@ let kwd name =
   token (string name)
 
 let parens p = between (kwd "(") (kwd ")") p
+let braces p = between (kwd "{") (kwd "}") p
 
 (* An identifier. Does not check if the identifier is a reserved word. *)
 let identifier : (string, unit) MParser.t = (
@@ -37,6 +38,9 @@ let var = token (
       return (Ast.Var name)
 )
 
+let label =
+  var |>> fun (Ast.Var name) -> Ast.Label name
+
 let rec expr = lazy ((
   lazy_p term
   >>= fun t -> many (lazy_p term)
@@ -47,6 +51,7 @@ and term = lazy (
     [ lazy_p lambda
     ; (var |>> fun v -> Ast.Expr.Var ((), v))
     ; parens (lazy_p expr)
+    ; lazy_p record
     ]
 )
 and lambda = lazy ((
@@ -56,6 +61,16 @@ and lambda = lazy ((
   >> lazy_p expr
   |>> fun body -> Ast.Expr.Lam ((), param, body)
 ) <?> "lambda")
+and record = lazy ((
+  braces (sep_end_by (lazy_p field_def) (kwd ","))
+  |>> fun fields -> Ast.Expr.Record ((), fields)
+) <?> "record")
+and field_def = lazy (
+  label
+  >>= fun l -> kwd "="
+  >> lazy_p expr
+  |>> fun e -> (l, e)
+)
 
 let expr = Lazy.force expr
 
