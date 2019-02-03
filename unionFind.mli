@@ -1,0 +1,25 @@
+(* Union find/disjoint sets data structure:
+ *
+ * https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+ *
+ * We call the sets "unification variables" (or just [var]). Each set has an
+ * associated value.
+ *)
+
+(* A set (or unification variable). *)
+type 'a var
+
+(* Make a new set with the given value. *)
+val make : 'a -> 'a var
+
+(* Get the value of the set. *)
+val get : 'a var -> 'a
+
+(* Unify two variables, given a function to merge their values. If the funtion
+ * returns [Err], the variables are not unified.
+ *)
+val merge
+  : ('a -> 'a -> ('e, 'a) OrErr.t)
+  -> 'a var
+  -> 'a var
+  -> ('e, 'a var) OrErr.t
