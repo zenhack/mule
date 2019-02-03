@@ -39,6 +39,14 @@ let rec typ = Ast.Type.(
         ; ". "
         ; typ body
         ]
-  | Record _ ->
-      Debug.todo "Print record types"
+  | Record (_, fields) ->
+      String.concat ""
+        [ "{"
+        ; String.concat ", "
+            (List.map
+              (fun (Ast.Label lbl, ty) -> lbl ^ " : " ^ typ ty)
+              fields
+            )
+        ; "}"
+        ]
 )
