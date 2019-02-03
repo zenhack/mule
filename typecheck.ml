@@ -95,15 +95,15 @@ let rec extract_type env = function
 
 let extract_type uvar =
   let uval = UnionFind.get uvar in
-  let i = match uval with
-    | Free i -> i
-    | Fn (i, _, _) -> i
-  in
-  let ty = extract_type (S.singleton (ivar i)) uval in
-  if S.mem (ivar i) (type_free_vars S.empty ty) then
-    Ast.Type.Rec (i, Ast.Var (ivar i), ty)
-  else
-    ty
+  let ty = extract_type S.empty uval in
+  match uval with
+    | Free _ -> ty
+    | Fn (i, _, _) ->
+        let free_vars = type_free_vars S.empty ty in
+        if S.mem (ivar i) free_vars then
+          Ast.Type.Rec (i, Ast.Var (ivar i), ty)
+        else
+          ty
 
 let typecheck expr = OrErr.(
   check_unbound expr
