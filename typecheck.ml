@@ -3,6 +3,7 @@ include Typecheck_t
 module S = Set.Make(String)
 module Env = Map.Make(String)
 
+(* Free variables in a value-level expression *)
 let rec expr_free_vars env = Ast.Expr.(
   function
   | Var (_, Ast.Var v) ->
@@ -16,6 +17,7 @@ let rec expr_free_vars env = Ast.Expr.(
       S.union (expr_free_vars env f) (expr_free_vars env x)
 )
 
+(* Free variables in a type expression *)
 let rec type_free_vars env = Ast.Type.(
   function
   | Var (_, (Ast.Var v))->
@@ -29,6 +31,7 @@ let rec type_free_vars env = Ast.Type.(
       S.union (type_free_vars env l) (type_free_vars env r)
 )
 
+(* Check for unbound variables. *)
 let check_unbound expr =
   let free = expr_free_vars S.empty expr in
   match S.find_first_opt (fun _ -> true) free with
