@@ -1,6 +1,3 @@
-
-module U = UnionFind
-
 let rec loop () =
   print_string "#ready> ";
   let line = try read_line () with
