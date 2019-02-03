@@ -104,6 +104,15 @@ and walk_fields env = OrErr.(
 
 let ivar i = "t" ^ string_of_int i
 
+let maybe_add_rec i vars ty =
+  let myvar = ivar i in
+  if S.mem myvar vars then
+    ( S.remove myvar vars
+    , Ast.Type.Recur(i, Ast.Var myvar, ty)
+    )
+  else
+    (vars, ty)
+
 let rec add_rec_binders ty = Ast.Type.(
   match ty with
   | Var (_, (Ast.Var v)) ->
@@ -118,18 +127,8 @@ let rec add_rec_binders ty = Ast.Type.(
   | Fn (i, f, x) ->
       let (fv, ft) = add_rec_binders f in
       let (xv, xt) = add_rec_binders x in
-      let vars = S.union fv xv in
-      let myvar = ivar i in
-      if S.mem myvar vars then
-        ( S.remove myvar vars
-        , Recur(i, Ast.Var myvar, Fn (i, ft, xt))
-        )
-      else
-        ( vars
-        , Fn (i, ft, xt)
-        )
+      maybe_add_rec i (S.union fv xv) (Fn(i, ft, xt))
   | Record(i, fields) ->
-      (* XXX: there's a lot of duplication between this and the Fn case. *)
       let fields_vars = List.map
         (fun (lbl, ty) -> (lbl, add_rec_binders ty))
         fields
@@ -140,15 +139,7 @@ let rec add_rec_binders ty = Ast.Type.(
         fields_vars
       in
       let fields' = List.map (fun (lbl, (_, ty)) -> (lbl, ty)) fields_vars in
-      let myvar = ivar i in
-      if S.mem myvar vars then
-        ( S.remove myvar vars
-        , Recur (i, Ast.Var myvar, Record (i, fields'))
-        )
-      else
-        ( vars
-        , Record (i, fields')
-        )
+      maybe_add_rec i vars (Record(i, fields'))
 )
 let add_rec_binders ty =
   snd (add_rec_binders ty)
