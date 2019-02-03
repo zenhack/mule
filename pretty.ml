@@ -47,7 +47,7 @@ let rec typ = Ast.Type.(
         ; ". "
         ; typ body
         ]
-  | Record (_, fields) ->
+  | Record (_, fields, rest) ->
       String.concat ""
         [ "{"
         ; String.concat ", "
@@ -55,6 +55,9 @@ let rec typ = Ast.Type.(
               (fun (Ast.Label lbl, ty) -> lbl ^ " : " ^ typ ty)
               fields
             )
+        ; (match rest with
+            | Some (Ast.Var v) -> " | " ^ v
+            | None -> "")
         ; "}"
         ]
 )
