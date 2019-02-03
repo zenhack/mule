@@ -53,6 +53,8 @@ and term = lazy (
     ; parens (lazy_p expr)
     ; lazy_p record
     ]
+  >>= fun head -> many (kwd "." >> label)
+  |>> List.fold_left (fun e l -> Ast.Expr.GetField((), e, l)) head
 )
 and lambda = lazy ((
   kwd "fn"
