@@ -3,7 +3,7 @@ include Typecheck_t
 module S = Set.Make(String)
 module Env = Map.Make(String)
 
-let rec free_vars env = Ast.Expr.(
+let rec expr_free_vars env = Ast.Expr.(
   function
   | Var (_, Ast.Var v) ->
       if S.mem v env then
@@ -11,13 +11,26 @@ let rec free_vars env = Ast.Expr.(
       else
         S.singleton v
   | Lam (_, Ast.Var v, body) ->
-      free_vars (S.add v env) body
+      expr_free_vars (S.add v env) body
   | App (_, f, x) ->
-      S.union (free_vars env f) (free_vars env x)
+      S.union (expr_free_vars env f) (expr_free_vars env x)
+)
+
+let rec type_free_vars env = Ast.Type.(
+  function
+  | Var (_, (Ast.Var v))->
+      if S.mem v env then
+        S.empty
+      else
+        S.singleton v
+  | Rec (_, (Ast.Var v), body) ->
+      type_free_vars (S.add v env) body
+  | Fn (_, l, r) ->
+      S.union (type_free_vars env l) (type_free_vars env r)
 )
 
 let check_unbound expr =
-  let free = free_vars S.empty expr in
+  let free = expr_free_vars S.empty expr in
   match S.find_first_opt (fun _ -> true) free with
   | Some x -> OrErr.Err (UnboundVar (Ast.Var x))
   | None -> OrErr.Ok ()
@@ -27,44 +40,71 @@ type uVal =
   | Free of int
   | Fn of (int * uVal UnionFind.var * uVal UnionFind.var)
 
-let get_index = function
-  | Free i -> i
-  | Fn (i, _, _) -> i
-
 let rec unify l r = OrErr.(
-  match l r with
+  match l, r with
   | (Fn (i, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl
       >>= fun l' -> UnionFind.merge unify lr rr
-      >>= fun r' -> Ok (i, l', r')
+      >>= fun r' -> Ok (Fn (i, l', r'))
   | (Free _, r) -> Ok r
   | (l, Free _) -> Ok l
 )
 
 let decorate expr =
-  Ast.Expr.map_info (fun _ -> UnionFind.make (Free (gensym ()))) expr
+  Ast.Expr.map_info (fun _ -> UnionFind.make (Free (Gensym.gensym ()))) expr
 
-let walk env = Ast.Expr.(
+let rec walk env = Ast.Expr.(OrErr.(
   function
   | Var (uVar, Ast.Var v) ->
       UnionFind.merge unify uVar (Env.find v env)
   | Lam (fVar, Ast.Var param, body) ->
-      let paramVar = UnionFind.make (Free (gensym ())) in
-      walk (Env.add param paramVar) body
+      let paramVar = UnionFind.make (Free (Gensym.gensym ())) in
+      walk (Env.add param paramVar env) body
       >>= fun retVar ->
         UnionFind.merge unify
           fVar
-          (UnionFind.make (Fn (gensym (), paramVar, retVar)))
-  | EApp (retVar, f, arg) ->
+          (UnionFind.make (Fn (Gensym.gensym (), paramVar, retVar)))
+  | App (retVar, f, arg) ->
       walk env f
       >>= fun fVar -> walk env arg
       >>= fun argVar ->
         UnionFind.merge unify
           fVar
-          (UnionFind.make (Fn (gensym(), argVar, retVar)))
-      |>> retVar
-)
+          (UnionFind.make (Fn (Gensym.gensym (), argVar, retVar)))
+      >> Ok retVar
+))
 
-let typecheck expr =
+
+let ivar i = "t" ^ string_of_int i
+
+let rec extract_type env = function
+  | Free i -> Ast.Type.Var (i, Ast.Var (ivar i))
+  | Fn (i, f, x) ->
+      if S.mem (ivar i) env then
+        extract_type env (Free i)
+      else
+        let env' = S.add (ivar i) env in
+        Fn
+          ( i
+          , extract_type env' (UnionFind.get f)
+          , extract_type env' (UnionFind.get x)
+          )
+
+let extract_type uvar =
+  let uval = UnionFind.get uvar in
+  let i = match uval with
+    | Free i -> i
+    | Fn (i, _, _) -> i
+  in
+  let ty = extract_type (S.singleton (ivar i)) uval in
+  if S.mem (ivar i) (type_free_vars S.empty ty) then
+    Ast.Type.Rec (i, Ast.Var (ivar i), ty)
+  else
+    ty
+
+let typecheck expr = OrErr.(
   check_unbound expr
+  >>= fun () -> Ok (decorate expr)
   >>= walk Env.empty
+  |>> extract_type
+)

@@ -19,9 +19,10 @@ let rec loop () =
       loop ()
   | MParser.Success (Some expr) ->
       match Typecheck.typecheck expr with
-      | OrErr.Err (TypeCheck.UnboundVar (Ast.Var name)) ->
+      | OrErr.Err (Typecheck.UnboundVar (Ast.Var name)) ->
           print_endline ("unbound variable: " ^ name)
-      | OrErr.Ok _ ->
+      | OrErr.Ok ty ->
+          print_endline ("inferred type: " ^ Pretty.typ ty);
           Eval.eval expr
             |> Pretty.expr
             |> print_endline;

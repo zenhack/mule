@@ -1,2 +1,2 @@
 
-val : gensym : unit -> int
+val gensym : unit -> int
