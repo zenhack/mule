@@ -27,6 +27,8 @@ let rec expr = Ast.Expr.(
             )
         ; "}"
         ]
+  | GetField (_, e, Ast.Label lbl) ->
+      "(" ^ expr e ^ ")" ^ lbl
 )
 
 let rec typ = Ast.Type.(

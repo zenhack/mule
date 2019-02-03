@@ -10,6 +10,7 @@ module Expr = struct
     | Lam of ('i * var * 'i t)
     | Var of ('i * var)
     | Record of ('i * (label * 'i t) list)
+    | GetField of ('i * 'i t * label)
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
@@ -18,6 +19,8 @@ module Expr = struct
     | Record (i, fields) ->
         let new_fields = List.map (fun (l, v) -> (l, map_info f v)) fields in
         Record (f i, new_fields)
+    | GetField (i, e, lbl) ->
+        GetField(f i, map_info f e, lbl)
 end
 
 module Type = struct

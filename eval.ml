@@ -14,6 +14,17 @@ let rec subst param arg expr = match expr with
   | App (i, f, x) ->
       App (i, subst param arg f, subst param arg x)
   | Record _ -> Debug.todo "Substitute records"
+  | GetField (i, e, lbl) ->
+      GetField (i, subst param arg e, lbl)
+
+
+let rec get_field lbl = function
+  | [] -> Debug.impossible "Missing field! the type checker should have caught this!"
+  | ((l, v) :: rest) ->
+      if lbl = l then
+        v
+      else
+        get_field lbl rest
 
 let rec eval = function
   | Var (_, Ast.Var v) ->
@@ -35,3 +46,10 @@ let rec eval = function
             (fun (lbl, ex) -> (lbl, eval ex))
             fields
         )
+  | GetField (_, e, lbl) ->
+      match eval e with
+      | Record (_, fields) ->
+          get_field lbl fields
+      | _ -> Debug.impossible
+        ("Tried to get a field on something that's not a record. " ^
+        "this should have been caught by the type checker!")

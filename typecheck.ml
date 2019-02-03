@@ -19,6 +19,8 @@ let rec expr_free_vars env = Ast.Expr.(
       fields
         |> List.map (fun (_, v) -> expr_free_vars env v)
         |> List.fold_left S.union S.empty
+  | GetField(_, e, _) ->
+      expr_free_vars env e
 )
 
 (* Check for unbound variables. *)
@@ -36,6 +38,7 @@ type u_type =
 and u_row =
   | Extend of (Ast.label * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
+  | Row of int
 
 let rec unify l r = OrErr.(
   match l, r with
@@ -90,6 +93,20 @@ let rec walk env = Ast.(OrErr.(
       >>= fun rowVar -> UnionFind.merge unify
           retVar
           (UnionFind.make (Record (Gensym.gensym (), rowVar)))
+  | Expr.GetField (retVar, e, lbl) ->
+      walk env e
+      >>= fun tyvar ->
+      let rowVar = UnionFind.make (Row (Gensym.gensym ())) in
+      let recVar = UnionFind.make (Record (Gensym.gensym(), rowVar)) in
+      UnionFind.merge unify
+        recVar
+        tyvar
+      >>= fun _ ->
+      let tailVar = UnionFind.make (Row (Gensym.gensym ())) in
+      UnionFind.merge unify_row
+          rowVar
+          (UnionFind.make (Extend(lbl, retVar, tailVar)))
+      |>> fun _ -> retVar
 ))
 and walk_fields env = OrErr.(
   function
@@ -166,6 +183,7 @@ let rec get_var_type env = function
       in
       Ast.Type.Record (i, fields, rest)
 and get_var_row env = function
+  | Row i -> ([], Some (Ast.Var (ivar i)))
   | Empty -> ([], None)
   | Extend (lbl, ty, rest) ->
       let (fields, rest) = get_var_row env (UnionFind.get rest) in
