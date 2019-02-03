@@ -17,20 +17,6 @@ let rec expr_free_vars env = Ast.Expr.(
       S.union (expr_free_vars env f) (expr_free_vars env x)
 )
 
-(* Free variables in a type expression *)
-let rec type_free_vars env = Ast.Type.(
-  function
-  | Var (_, (Ast.Var v))->
-      if S.mem v env then
-        S.empty
-      else
-        S.singleton v
-  | Rec (_, (Ast.Var v), body) ->
-      type_free_vars (S.add v env) body
-  | Fn (_, l, r) ->
-      S.union (type_free_vars env l) (type_free_vars env r)
-)
-
 (* Check for unbound variables. *)
 let check_unbound expr =
   let free = expr_free_vars S.empty expr in
@@ -93,17 +79,39 @@ let rec extract_type env = function
           , extract_type env' (UnionFind.get x)
           )
 
+let rec add_rec_binders ty = Ast.Type.(
+  match ty with
+  | Var (_, (Ast.Var v)) ->
+      ( S.singleton v
+      , ty
+      )
+  | Rec(i, v, t) ->
+      let (vs, ts) = add_rec_binders t in
+      ( S.remove (ivar i) vs
+      , Rec(i, v, ts)
+      )
+  | Fn (i, f, x) ->
+      let (fv, ft) = add_rec_binders f in
+      let (xv, xt) = add_rec_binders x in
+      let vars = S.union fv xv in
+      let myvar = ivar i in
+      if S.mem myvar vars then
+        ( S.remove myvar vars
+        , Rec(i, Ast.Var myvar, Fn (i, ft, xt))
+        )
+      else
+        ( vars
+        , Fn (i, ft, xt)
+        )
+)
+let add_rec_binders ty =
+  let (_, ty) = add_rec_binders ty in
+  ty
+
 let extract_type uvar =
   let uval = UnionFind.get uvar in
   let ty = extract_type S.empty uval in
-  match uval with
-    | Free _ -> ty
-    | Fn (i, _, _) ->
-        let free_vars = type_free_vars S.empty ty in
-        if S.mem (ivar i) free_vars then
-          Ast.Type.Rec (i, Ast.Var (ivar i), ty)
-        else
-          ty
+  add_rec_binders ty
 
 let typecheck expr = OrErr.(
   check_unbound expr
