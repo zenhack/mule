@@ -2,12 +2,16 @@
 
 type var = Var of string
 
-type 'i expr =
-  | EApp of ('i * 'i expr * 'i expr)
-  | ELam of ('i * var * 'i expr)
-  | EVar of ('i * var)
+module Expr = struct
+  type 'i t =
+    | App of ('i * 'i t * 'i t)
+    | Lam of ('i * var * 'i t)
+    | Var of ('i * var)
+end
 
-type 'i typ =
-  | TFn of ('i * 'i typ * 'i typ)
-  | TRec of ('i * var * 'i typ)
-  | TVar of ('i * var)
+module Type = struct
+  type 'i t =
+    | Fn of ('i * 'i t * 'i t)
+    | Rec of ('i * var * 'i t)
+    | Var of ('i * var)
+end

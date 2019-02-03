@@ -1,3 +1,3 @@
 
-val expr : 'i Ast.expr -> string
-val typ : 'i Ast.typ -> string
+val expr : 'i Ast.Expr.t -> string
+val typ : 'i Ast.Type.t -> string

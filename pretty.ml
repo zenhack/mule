@@ -1,16 +1,15 @@
-open Ast
-
-let rec expr = function
-  | EVar (_, Var name) ->
+let rec expr = Ast.Expr.(
+  function
+  | Var (_, Ast.Var name) ->
       name
-  | ELam (_, Var name, body) ->
+  | Lam (_, Ast.Var name, body) ->
       String.concat ""
         [ "fn "
         ; name
         ; ". "
         ; expr body
         ]
-  | EApp (_, f, x) ->
+  | App (_, f, x) ->
       String.concat ""
         [ "("
         ; expr f
@@ -18,10 +17,12 @@ let rec expr = function
         ; expr x
         ; ")"
         ]
+)
 
-let rec typ = function
-  | TVar (_, Var v) -> v
-  | TFn (_, f, x) ->
+let rec typ = Ast.Type.(
+  function
+  | Var (_, Ast.Var v) -> v
+  | Fn (_, f, x) ->
       String.concat ""
         [ "("
         ; typ f
@@ -29,10 +30,11 @@ let rec typ = function
         ; typ x
         ; ")"
         ]
-  | TRec (_, Var v, body) ->
+  | Rec (_, Ast.Var v, body) ->
       String.concat ""
         [ "rec "
         ; v
         ; ". "
         ; typ body
         ]
+)

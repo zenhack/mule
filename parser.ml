@@ -40,12 +40,12 @@ let var = token (
 let rec expr = lazy ((
   lazy_p term
   >>= fun t -> many (lazy_p term)
-  |>> fun ts -> List.fold_left (fun f x -> Ast.EApp ((), f, x)) t ts
+  |>> fun ts -> List.fold_left (fun f x -> Ast.Expr.App ((), f, x)) t ts
 ) <?> "expression")
 and term = lazy (
   choice
     [ lazy_p lambda
-    ; (var |>> fun v -> Ast.EVar ((), v))
+    ; (var |>> fun v -> Ast.Expr.Var ((), v))
     ; parens (lazy_p expr)
     ]
 )
@@ -54,7 +54,7 @@ and lambda = lazy ((
   >> var
   >>= fun param -> kwd "."
   >> lazy_p expr
-  |>> fun body -> Ast.ELam ((), param, body)
+  |>> fun body -> Ast.Expr.Lam ((), param, body)
 ) <?> "lambda")
 
 let expr = Lazy.force expr
