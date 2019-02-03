@@ -18,9 +18,13 @@ let rec loop () =
       (* User entered a blank line *)
       loop ()
   | MParser.Success (Some expr) ->
-      Eval.eval expr
-        |> Pretty.expr
-        |> print_endline;
-      loop ()
+      match Typecheck.typecheck expr with
+      | OrErr.Err (TypeCheck.UnboundVar (Ast.Var name)) ->
+          print_endline ("unbound variable: " ^ name)
+      | OrErr.Ok _ ->
+          Eval.eval expr
+            |> Pretty.expr
+            |> print_endline;
+          loop ()
 
 let () = loop ()

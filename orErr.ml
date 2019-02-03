@@ -1,2 +1,15 @@
+include OrErr_t
 
-type ('e, 'v) t = Ok of 'v | Err of 'e
+let map f = function
+  | Ok v -> Ok (f v)
+  | Err e -> Err e
+
+let join = function
+  | Ok v -> v
+  | Err e -> Err e
+
+let (>>=) = fun x f -> join (map f x)
+
+let (>>) = fun x y -> x >>= fun _ -> y
+
+let (|>>) = fun x f -> x >>= fun y -> Ok (f y)
