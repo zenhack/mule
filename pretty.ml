@@ -18,3 +18,21 @@ let rec expr = function
         ; expr x
         ; ")"
         ]
+
+let rec typ = function
+  | TVar (_, Var v) -> v
+  | TFn (_, f, x) ->
+      String.concat ""
+        [ "("
+        ; typ f
+        ; " -> "
+        ; typ x
+        ; ")"
+        ]
+  | TRec (_, Var v, body) ->
+      String.concat ""
+        [ "rec "
+        ; v
+        ; ". "
+        ; typ body
+        ]
