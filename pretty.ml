@@ -66,7 +66,7 @@ let rec typ = Ast.Type.(
         ]
   | Union (_, ctors, rest) -> (
       (String.concat " | "
-        (List.map (fun (Ast.Label lbl, ty) -> lbl ^ " " ^ typ ty) ctors))
+        (List.map (fun (Ast.Label lbl, ty) -> "(" ^ lbl ^ " " ^ typ ty ^ ")") ctors))
       ^ match rest with
         | Some (Ast.Var v) -> " | ..." ^ v
         | None -> ""
