@@ -13,9 +13,13 @@ let rec subst param arg expr = match expr with
         Lam (i, Ast.Var param', subst param arg body)
   | App (i, f, x) ->
       App (i, subst param arg f, subst param arg x)
-  | Record _ -> Debug.todo "Substitute records"
+  | Record (i, fields) ->
+      Record (i, subst_fields param arg fields)
   | GetField (i, e, lbl) ->
       GetField (i, subst param arg e, lbl)
+and subst_fields param arg = function
+  | [] -> []
+  | (lbl, e) :: rest -> (lbl, subst param arg e) :: subst_fields param arg rest
 
 
 let rec get_field lbl = function
