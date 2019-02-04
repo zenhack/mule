@@ -62,7 +62,16 @@ and unify_row l r = OrErr.(
         >>= fun ret_ty -> UnionFind.merge unify_row l_rest r_rest
         |>> fun ret_rest -> Extend (l_lbl, ret_ty, ret_rest)
       else
-        Debug.todo "unify disparate labels"
+        UnionFind.merge unify_row
+          r_rest
+          (UnionFind.make (Extend(l_lbl, l_ty, UnionFind.make (Row (Gensym.gensym())))))
+        >>= fun _ ->
+        UnionFind.merge unify_row
+          l_rest
+          (UnionFind.make (Extend(r_lbl, r_ty, UnionFind.make (Row (Gensym.gensym())))))
+        |>> fun rest ->
+          Extend(l_lbl, l_ty, rest)
+
   | (Row _, r) -> Ok r
   | (l, Row _) -> Ok l
   | (Extend _, Empty) -> Err Mismatch
