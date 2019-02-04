@@ -1,4 +1,4 @@
-open Ast.Expr
+open Ast.Surface.Expr
 
 exception NotAFunction
 exception UnboundVar of string

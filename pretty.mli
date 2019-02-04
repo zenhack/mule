@@ -1,3 +1,3 @@
 
-val expr : 'i Ast.Expr.t -> string
-val typ : 'i Ast.Type.t -> string
+val expr : 'i Ast.Surface.Expr.t -> string
+val typ : 'i Ast.Surface.Type.t -> string

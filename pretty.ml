@@ -1,4 +1,4 @@
-let rec expr = Ast.Expr.(
+let rec expr = Ast.Surface.Expr.(
   function
   | Var (_, Ast.Var name) ->
       name
@@ -33,7 +33,7 @@ let rec expr = Ast.Expr.(
       "(" ^ expr e ^ ")" ^ lbl
 )
 
-let rec typ = Ast.Type.(
+let rec typ = Ast.Surface.Type.(
   function
   | Var (_, Ast.Var v) -> v
   | Fn (_, f, x) ->

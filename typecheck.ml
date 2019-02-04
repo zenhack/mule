@@ -4,7 +4,7 @@ module S = Set.Make(String)
 module Env = Map.Make(String)
 
 (* Free variables in a value-level expression *)
-let rec expr_free_vars env = Ast.Expr.(
+let rec expr_free_vars env = Ast.Surface.Expr.(
   function
   | Var (_, Ast.Var v) ->
       if S.mem v env then
@@ -82,9 +82,9 @@ and unify_row l r = OrErr.(
 )
 
 let decorate expr =
-  Ast.Expr.map_info (fun _ -> UnionFind.make (Type (Gensym.gensym ()))) expr
+  Ast.Surface.Expr.map_info (fun _ -> UnionFind.make (Type (Gensym.gensym ()))) expr
 
-let rec walk env = Ast.(OrErr.(
+let rec walk env = Ast.Surface.(OrErr.(
   function
   | Expr.Var (uVar, Ast.Var v) ->
       UnionFind.merge unify uVar (Env.find v env)
@@ -161,12 +161,12 @@ let maybe_add_rec i vars ty =
   let myvar = ivar i in
   if S.mem myvar vars then
     ( S.remove myvar vars
-    , Ast.Type.Recur(i, Ast.Var myvar, ty)
+    , Ast.Surface.Type.Recur(i, Ast.Var myvar, ty)
     )
   else
     (vars, ty)
 
-let rec add_rec_binders ty = Ast.Type.(
+let rec add_rec_binders ty = Ast.Surface.Type.(
   match ty with
   | Var (_, (Ast.Var v)) ->
       ( S.singleton v
@@ -208,7 +208,7 @@ let add_rec_binders ty =
   snd (add_rec_binders ty)
 
 let rec get_var_type env = function
-  | Type i -> Ast.Type.Var (i, Ast.Var (ivar i))
+  | Type i -> Ast.Surface.Type.Var (i, Ast.Var (ivar i))
   | Fn (i, f, x) ->
       if S.mem (ivar i) env then
         get_var_type env (Type i)
@@ -223,12 +223,12 @@ let rec get_var_type env = function
       let (fields, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get fields)
       in
-      Ast.Type.Record (i, fields, rest)
+      Ast.Surface.Type.Record (i, fields, rest)
   | Union (i, ctors) ->
       let (ctors, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
       in
-      Ast.Type.Union (i, ctors, rest)
+      Ast.Surface.Type.Union (i, ctors, rest)
 and get_var_row env = function
   | Row i -> ([], Some (Ast.Var (ivar i)))
   | Empty -> ([], None)

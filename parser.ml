@@ -1,4 +1,5 @@
 open MParser
+open Ast.Surface
 
 module StrSet = Set.Make(String)
 
@@ -50,29 +51,29 @@ let ctor = token (
 let rec expr = lazy ((
   lazy_p term
   >>= fun t -> many (lazy_p term)
-  |>> fun ts -> List.fold_left (fun f x -> Ast.Expr.App ((), f, x)) t ts
+  |>> fun ts -> List.fold_left (fun f x -> Expr.App ((), f, x)) t ts
 ) <?> "expression")
 and term = lazy (
   choice
     [ lazy_p lambda
-    ; (var |>> fun v -> Ast.Expr.Var ((), v))
+    ; (var |>> fun v -> Expr.Var ((), v))
     ; parens (lazy_p expr)
     ; lazy_p record
-    ; (ctor |>> fun c -> Ast.Expr.Ctor (((), c)))
+    ; (ctor |>> fun c -> Expr.Ctor (((), c)))
     ]
   >>= fun head -> many (kwd "." >> label)
-  |>> List.fold_left (fun e l -> Ast.Expr.GetField((), e, l)) head
+  |>> List.fold_left (fun e l -> Expr.GetField((), e, l)) head
 )
 and lambda = lazy ((
   kwd "fn"
   >> var
   >>= fun param -> kwd "."
   >> lazy_p expr
-  |>> fun body -> Ast.Expr.Lam ((), param, body)
+  |>> fun body -> Expr.Lam ((), param, body)
 ) <?> "lambda")
 and record = lazy ((
   braces (sep_end_by (lazy_p field_def) (kwd ","))
-  |>> fun fields -> Ast.Expr.Record ((), fields)
+  |>> fun fields -> Expr.Record ((), fields)
 ) <?> "record")
 and field_def = lazy (
   label
