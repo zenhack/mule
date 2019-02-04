@@ -2,6 +2,8 @@ let rec expr = Ast.Expr.(
   function
   | Var (_, Ast.Var name) ->
       name
+  | Ctor (_, Ast.Label name) ->
+      name
   | Lam (_, Ast.Var name, body) ->
       String.concat ""
         [ "fn "
@@ -58,8 +60,15 @@ let rec typ = Ast.Type.(
               fields
             )
         ; (match rest with
-            | Some (Ast.Var v) -> " | " ^ v
+            | Some (Ast.Var v) -> ", ..." ^ v
             | None -> "")
         ; "}"
         ]
+  | Union (_, ctors, rest) -> (
+      (String.concat " | "
+        (List.map (fun (Ast.Label lbl, ty) -> lbl ^ " " ^ typ ty) ctors))
+      ^ match rest with
+        | Some (Ast.Var v) -> " | ..." ^ v
+        | None -> ""
+  )
 )

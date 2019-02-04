@@ -6,6 +6,7 @@ exception UnboundVar of string
 let rec subst param arg expr = match expr with
   | Var (_, Ast.Var v) when v = param -> arg
   | Var _ -> expr
+  | Ctor _ -> expr
   | Lam (i, Ast.Var param', body) ->
       if param == param' then
         expr
@@ -34,12 +35,15 @@ let rec eval = function
   | Var (_, Ast.Var v) ->
       raise (UnboundVar v)
   | Lam lam -> Lam lam
-  | App (_, f, arg) ->
+  | Ctor c -> Ctor c
+  | App (i, f, arg) ->
       let f' = eval f in
       let arg' = eval arg in
       begin match f' with
       | Lam (_, (Ast.Var param), body) ->
           eval (subst param arg' body)
+      | Ctor _ ->
+          App (i, f', arg')
       | _ ->
           raise NotAFunction
       end

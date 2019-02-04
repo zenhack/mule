@@ -41,6 +41,12 @@ let var = token (
 let label =
   var |>> fun (Ast.Var name) -> Ast.Label name
 
+let ctor = token (
+  uppercase
+  >>= fun c -> many_chars (letter <|> char '_' <|> digit)
+  |>> fun cs -> Ast.Label (String.make 1 c ^ cs)
+) <?> "constructor"
+
 let rec expr = lazy ((
   lazy_p term
   >>= fun t -> many (lazy_p term)
@@ -52,6 +58,7 @@ and term = lazy (
     ; (var |>> fun v -> Ast.Expr.Var ((), v))
     ; parens (lazy_p expr)
     ; lazy_p record
+    ; (ctor |>> fun c -> Ast.Expr.Ctor (((), c)))
     ]
   >>= fun head -> many (kwd "." >> label)
   |>> List.fold_left (fun e l -> Ast.Expr.GetField((), e, l)) head

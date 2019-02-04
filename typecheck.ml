@@ -21,6 +21,8 @@ let rec expr_free_vars env = Ast.Expr.(
         |> List.fold_left S.union S.empty
   | GetField(_, e, _) ->
       expr_free_vars env e
+  | Ctor _ ->
+      S.empty
 )
 
 (* Check for unbound variables. *)
@@ -35,6 +37,7 @@ type u_type =
   | Type of int
   | Fn of (int * u_type UnionFind.var * u_type UnionFind.var)
   | Record of (int * u_row UnionFind.var)
+  | Union of (int * u_row UnionFind.var)
 and u_row =
   | Extend of (Ast.label * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
@@ -119,6 +122,27 @@ let rec walk env = Ast.(OrErr.(
           rowVar
           (UnionFind.make (Extend(lbl, retVar, tailVar)))
       |>> fun _ -> retVar
+  | Expr.Ctor (retVar, lbl) ->
+      let paramVar = UnionFind.make (Type (Gensym.gensym ())) in
+      let rowVar = UnionFind.make
+          (Extend
+            ( lbl
+            , paramVar
+            , UnionFind.make (Row (Gensym.gensym ()))
+            )
+          )
+      in
+      UnionFind.merge unify
+        retVar
+        (UnionFind.make
+          (Fn
+            ( Gensym.gensym ()
+            , paramVar
+            , UnionFind.make (Union (Gensym.gensym (), rowVar))
+            )
+          )
+        )
+
 ))
 and walk_fields env = OrErr.(
   function
@@ -158,22 +182,28 @@ let rec add_rec_binders ty = Ast.Type.(
       let (xv, xt) = add_rec_binders x in
       maybe_add_rec i (S.union fv xv) (Fn(i, ft, xt))
   | Record(i, fields, rest) ->
-      let row_var = match rest with
-        | Some (Ast.Var v) -> S.singleton v
-        | None -> S.empty
-      in
-      let fields_vars = List.map
-        (fun (lbl, ty) -> (lbl, add_rec_binders ty))
-        fields
-      in
-      let vars = List.fold_left
-        (fun accum (_, (vars, _)) -> S.union accum vars)
-        row_var
-        fields_vars
-      in
-      let fields' = List.map (fun (lbl, (_, ty)) -> (lbl, ty)) fields_vars in
-      maybe_add_rec i vars (Record(i, fields', rest))
+      let (vars, ret) = row_add_rec_binders i fields rest in
+      maybe_add_rec i vars (Record ret)
+  | Union(i, ctors, rest) ->
+      let (vars, ret) = row_add_rec_binders i ctors rest in
+      maybe_add_rec i vars (Union ret)
 )
+and row_add_rec_binders i fields rest =
+  let row_var = match rest with
+    | Some (Ast.Var v) -> S.singleton v
+    | None -> S.empty
+  in
+  let fields_vars = List.map
+    (fun (lbl, ty) -> (lbl, add_rec_binders ty))
+    fields
+  in
+  let vars = List.fold_left
+    (fun accum (_, (vars, _)) -> S.union accum vars)
+    row_var
+    fields_vars
+  in
+  let fields' = List.map (fun (lbl, (_, ty)) -> (lbl, ty)) fields_vars in
+  (vars, (i, fields', rest))
 let add_rec_binders ty =
   snd (add_rec_binders ty)
 
@@ -194,6 +224,11 @@ let rec get_var_type env = function
         get_var_row (S.add (ivar i) env) (UnionFind.get fields)
       in
       Ast.Type.Record (i, fields, rest)
+  | Union (i, ctors) ->
+      let (ctors, rest) =
+        get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
+      in
+      Ast.Type.Union (i, ctors, rest)
 and get_var_row env = function
   | Row i -> ([], Some (Ast.Var (ivar i)))
   | Empty -> ([], None)

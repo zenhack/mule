@@ -11,6 +11,7 @@ module Expr = struct
     | Var of ('i * var)
     | Record of ('i * (label * 'i t) list)
     | GetField of ('i * 'i t * label)
+    | Ctor of ('i * label)
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
@@ -21,6 +22,7 @@ module Expr = struct
         Record (f i, new_fields)
     | GetField (i, e, lbl) ->
         GetField(f i, map_info f e, lbl)
+    | Ctor (i, l) -> Ctor (f i, l)
 end
 
 module Type = struct
@@ -29,10 +31,12 @@ module Type = struct
     | Recur of ('i * var * 'i t)
     | Var of ('i * var)
     | Record of ('i * (label * 'i t) list * var option)
+    | Union of ('i * (label * 'i t) list * var option)
 
   let get_info = function
     | Fn(i, _, _) -> i
     | Recur(i, _, _) -> i
     | Var(i, _) -> i
-    | Record (i, _, _) -> i
+    | Record(i, _, _) -> i
+    | Union(i, _, _) -> i
 end
