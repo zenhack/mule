@@ -9,6 +9,9 @@ let lazy_p p = return () >>= fun () -> Lazy.force p
 let keywords = StrSet.of_list
   [ "fn"
   ; "rec"
+  ; "match"
+  ; "with"
+  ; "end"
   ]
 
 (* [token p] is [p] followed by optional whitespace. *)
