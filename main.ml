@@ -24,8 +24,9 @@ let rec loop () =
           print_endline "Type mismatch"
       | OrErr.Ok ty ->
           print_endline ("inferred type: " ^ Pretty.typ ty);
-          Eval.eval expr
-            |> Pretty.expr
+          Desugar.desugar expr
+            |> Eval.eval
+            |> Ast.Desugared.Pretty.expr
             |> print_endline;
           loop ()
 
