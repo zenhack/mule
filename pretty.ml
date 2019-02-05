@@ -30,7 +30,7 @@ let rec expr = Ast.Surface.Expr.(
         ; "}"
         ]
   | GetField (_, e, Ast.Label lbl) ->
-      "(" ^ expr e ^ ")" ^ lbl
+      "(" ^ expr e ^ ")." ^ lbl
 )
 
 let rec typ = Ast.Surface.Type.(
