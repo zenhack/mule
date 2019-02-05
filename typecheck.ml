@@ -3,6 +3,9 @@ include Typecheck_t
 module S = Set.Make(String)
 module Env = Map.Make(String)
 
+open Gensym
+open OrErr
+
 (* Free variables in a value-level expression *)
 let rec expr_free_vars env = Ast.Surface.Expr.(
   function
@@ -56,7 +59,7 @@ let rec unify l r = OrErr.(
   | (l, Type _) -> Ok l
   | (_, _) -> Err Mismatch
 )
-and unify_row l r = OrErr.(
+and unify_row l r =
   match l, r with
   | (Empty, Empty) -> Ok Empty
   | (Extend (l_lbl, l_ty, l_rest), Extend (r_lbl, r_ty, r_rest)) ->
@@ -67,11 +70,11 @@ and unify_row l r = OrErr.(
       else
         UnionFind.merge unify_row
           r_rest
-          (UnionFind.make (Extend(l_lbl, l_ty, UnionFind.make (Row (Gensym.gensym())))))
+          (UnionFind.make (Extend(l_lbl, l_ty, UnionFind.make (Row (gensym())))))
         >>= fun _ ->
         UnionFind.merge unify_row
           l_rest
-          (UnionFind.make (Extend(r_lbl, r_ty, UnionFind.make (Row (Gensym.gensym())))))
+          (UnionFind.make (Extend(r_lbl, r_ty, UnionFind.make (Row (gensym())))))
         |>> fun rest ->
           Extend(l_lbl, l_ty, rest)
 
@@ -79,56 +82,56 @@ and unify_row l r = OrErr.(
   | (l, Row _) -> Ok l
   | (Extend _, Empty) -> Err Mismatch
   | (Empty, Extend _) -> Err Mismatch
-)
 
 let decorate expr =
-  Ast.Surface.Expr.map_info (fun _ -> UnionFind.make (Type (Gensym.gensym ()))) expr
+  Ast.Surface.Expr.map_info (fun _ -> UnionFind.make (Type (gensym ()))) expr
 
-let rec walk env = Ast.Surface.(OrErr.(
+let rec walk env =
+  let open Ast.Surface in
   function
   | Expr.Var (uVar, Ast.Var v) ->
       UnionFind.merge unify uVar (Env.find v env)
   | Expr.Lam (fVar, Ast.Var param, body) ->
-      let paramVar = UnionFind.make (Type (Gensym.gensym ())) in
+      let paramVar = UnionFind.make (Type (gensym ())) in
       walk (Env.add param paramVar env) body
       >>= fun retVar ->
         UnionFind.merge unify
           fVar
-          (UnionFind.make (Fn (Gensym.gensym (), paramVar, retVar)))
+          (UnionFind.make (Fn (gensym (), paramVar, retVar)))
   | Expr.App (retVar, f, arg) ->
       walk env f
       >>= fun fVar -> walk env arg
       >>= fun argVar ->
         UnionFind.merge unify
           fVar
-          (UnionFind.make (Fn (Gensym.gensym (), argVar, retVar)))
+          (UnionFind.make (Fn (gensym (), argVar, retVar)))
       >> Ok retVar
   | Expr.Record (retVar, fields) ->
       walk_fields env fields
       >>= fun rowVar -> UnionFind.merge unify
           retVar
-          (UnionFind.make (Record (Gensym.gensym (), rowVar)))
+          (UnionFind.make (Record (gensym (), rowVar)))
   | Expr.GetField (retVar, e, lbl) ->
       walk env e
       >>= fun tyvar ->
-      let rowVar = UnionFind.make (Row (Gensym.gensym ())) in
-      let recVar = UnionFind.make (Record (Gensym.gensym(), rowVar)) in
+      let rowVar = UnionFind.make (Row (gensym ())) in
+      let recVar = UnionFind.make (Record (gensym(), rowVar)) in
       UnionFind.merge unify
         recVar
         tyvar
       >>= fun _ ->
-      let tailVar = UnionFind.make (Row (Gensym.gensym ())) in
+      let tailVar = UnionFind.make (Row (gensym ())) in
       UnionFind.merge unify_row
           rowVar
           (UnionFind.make (Extend(lbl, retVar, tailVar)))
       |>> fun _ -> retVar
   | Expr.Ctor (retVar, lbl) ->
-      let paramVar = UnionFind.make (Type (Gensym.gensym ())) in
+      let paramVar = UnionFind.make (Type (gensym ())) in
       let rowVar = UnionFind.make
           (Extend
             ( lbl
             , paramVar
-            , UnionFind.make (Row (Gensym.gensym ()))
+            , UnionFind.make (Row (gensym ()))
             )
           )
       in
@@ -136,15 +139,13 @@ let rec walk env = Ast.Surface.(OrErr.(
         retVar
         (UnionFind.make
           (Fn
-            ( Gensym.gensym ()
+            ( gensym ()
             , paramVar
-            , UnionFind.make (Union (Gensym.gensym (), rowVar))
+            , UnionFind.make (Union (gensym (), rowVar))
             )
           )
         )
-
-))
-and walk_fields env = OrErr.(
+and walk_fields env =
   function
   | [] -> Ok (UnionFind.make Empty)
   | ((lbl, ty) :: fs) ->
@@ -152,7 +153,6 @@ and walk_fields env = OrErr.(
       >>= fun lblVar -> walk_fields env fs
       |>> fun tailVar ->
         UnionFind.make (Extend(lbl, lblVar, tailVar))
-)
 
 
 let ivar i = "t" ^ string_of_int i
@@ -166,7 +166,8 @@ let maybe_add_rec i vars ty =
   else
     (vars, ty)
 
-let rec add_rec_binders ty = Ast.Surface.Type.(
+let rec add_rec_binders ty =
+  let open Ast.Surface.Type in
   match ty with
   | Var (_, (Ast.Var v)) ->
       ( S.singleton v
@@ -187,7 +188,6 @@ let rec add_rec_binders ty = Ast.Surface.Type.(
   | Union(i, ctors, rest) ->
       let (vars, ret) = row_add_rec_binders i ctors rest in
       maybe_add_rec i vars (Union ret)
-)
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
     | Some (Ast.Var v) -> S.singleton v
@@ -245,9 +245,8 @@ let get_var_type uvar =
     |> get_var_type S.empty
     |> add_rec_binders
 
-let typecheck expr = OrErr.(
+let typecheck expr =
   check_unbound expr
   >>= fun () -> Ok (decorate expr)
   >>= walk Env.empty
   |>> get_var_type
-)
