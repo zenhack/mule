@@ -9,9 +9,11 @@ let lazy_p p = return () >>= fun () -> Lazy.force p
 let keywords = StrSet.of_list
   [ "fn"
   ; "rec"
-  ; "match"
-  ; "with"
+  ; "case"
+  ; "of"
   ; "end"
+  ; "with"
+  ; "_"
   ]
 
 (* [token p] is [p] followed by optional whitespace. *)
@@ -72,6 +74,7 @@ and ex2 = lazy (
 and ex3 = lazy (
   choice
     [ lazy_p lambda
+    ; lazy_p match_expr
     ; (var |>> fun v -> Expr.Var ((), v))
     ; parens (lazy_p expr)
     ; lazy_p record
@@ -85,6 +88,32 @@ and lambda = lazy ((
   >> lazy_p expr
   |>> fun body -> Expr.Lam ((), param, body)
 ) <?> "lambda")
+and match_expr = lazy ((
+  kwd "case"
+  >> lazy_p expr
+  >>= fun e -> kwd "of"
+  >> optional (kwd "|")
+  >> sep_by1 (lazy_p case) (kwd "|")
+  >>= fun cases -> kwd "end"
+  |>> fun _ -> Expr.Match((), e, cases)
+) <?> "match expression")
+and case = lazy (
+  lazy_p pattern
+  >>= fun p -> kwd "->"
+  >> lazy_p expr
+  |>> fun e -> (p, e)
+)
+and pattern = lazy ((
+  choice
+    [ (kwd "_" |>> fun _ -> Pattern.Wild ())
+    ; (var |>> fun v -> Pattern.Var((), v))
+    ; (ctor
+        >>= fun lbl -> lazy_p pattern
+        |>> fun p -> Pattern.Ctor ((), lbl, p)
+      )
+    ;
+    ]
+) <?> "pattern")
 and record_fields = lazy ((
   braces (sep_end_by (lazy_p field_def) (kwd ","))
 ) <?> "record")
