@@ -52,11 +52,24 @@ let ctor = token (
 ) <?> "constructor"
 
 let rec expr = lazy ((
-  lazy_p term
-  >>= fun t -> many (lazy_p term)
+  lazy_p ex1
+  >>= fun t -> many (lazy_p ex1)
   |>> fun ts -> List.fold_left (fun f x -> Expr.App ((), f, x)) t ts
 ) <?> "expression")
-and term = lazy (
+and ex1 = lazy (
+  lazy_p ex2
+  >>= fun old -> choice
+    [ (kwd "with" >> lazy_p record_fields
+        |>> fun fields -> Expr.Update ((), old, fields))
+    ; return old
+    ]
+)
+and ex2 = lazy (
+  lazy_p ex3
+  >>= fun head -> many (kwd "." >> label)
+  |>> List.fold_left (fun e l -> Expr.GetField((), e, l)) head
+)
+and ex3 = lazy (
   choice
     [ lazy_p lambda
     ; (var |>> fun v -> Expr.Var ((), v))
@@ -64,8 +77,6 @@ and term = lazy (
     ; lazy_p record
     ; (ctor |>> fun c -> Expr.Ctor (((), c)))
     ]
-  >>= fun head -> many (kwd "." >> label)
-  |>> List.fold_left (fun e l -> Expr.GetField((), e, l)) head
 )
 and lambda = lazy ((
   kwd "fn"
@@ -74,10 +85,13 @@ and lambda = lazy ((
   >> lazy_p expr
   |>> fun body -> Expr.Lam ((), param, body)
 ) <?> "lambda")
-and record = lazy ((
+and record_fields = lazy ((
   braces (sep_end_by (lazy_p field_def) (kwd ","))
-  |>> fun fields -> Expr.Record ((), fields)
 ) <?> "record")
+and record = lazy (
+  lazy_p record_fields
+  |>> fun fields -> Expr.Record ((), fields)
+)
 and field_def = lazy (
   label
   >>= fun l -> kwd "="
