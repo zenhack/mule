@@ -4,7 +4,8 @@ open Ast.Desugared
 let rec subst param arg expr = match expr with
   | Var (Ast.Var v) when v = param -> arg
   | Var _ -> expr
-  | Ctor _ -> expr
+  | Ctor (lbl, value) ->
+      Ctor (lbl, subst param arg value)
   | Lam (Ast.Var param', body) ->
       Lam (subst_binding param' param arg body)
   | App (f, x) ->
