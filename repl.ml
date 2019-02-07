@@ -25,10 +25,11 @@ let rec loop () =
           print_endline (String.concat ", " fields)
       | OrErr.Ok ty ->
           print_endline ("inferred type: " ^ Pretty.typ ty);
-          Desugar.desugar expr
-            |> Eval.eval
-            |> Ast.Desugared.Pretty.expr
-            |> print_endline;
+          let dexp = Desugar.desugar expr in
+          print_endline ("Desugared: " ^ Ast.Desugared.Pretty.expr dexp);
+          Eval.eval dexp
+          |> Ast.Desugared.Pretty.expr
+          |> print_endline
       end
   end;
   loop ()
