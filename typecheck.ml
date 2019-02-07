@@ -76,7 +76,7 @@ let rec walk env =
           (UnionFind.make (Fn (gensym (), argVar, retVar)))
       >> Ok retVar
   | Expr.Record (retVar, fields) ->
-      walk_fields env fields
+      walk_fields env (UnionFind.make Empty) fields
       >>= fun rowVar -> UnionFind.merge unify
           retVar
           (UnionFind.make (Record (gensym (), rowVar)))
@@ -94,6 +94,19 @@ let rec walk env =
           rowVar
           (UnionFind.make (Extend(lbl, retVar, tailVar)))
       |>> fun _ -> retVar
+  | Expr.Update (retVar, r, updates) ->
+      walk env r
+      >>= fun origVar ->
+        let tailVar = UnionFind.make (Row (gensym())) in
+        walk_fields env tailVar updates
+      >>= fun updateVar ->
+        UnionFind.merge unify
+          origVar
+          (UnionFind.make (Record (gensym(), tailVar)))
+      >>
+        UnionFind.merge unify
+          retVar
+          (UnionFind.make (Record (gensym(), updateVar)))
   | Expr.Ctor (retVar, lbl) ->
       let paramVar = UnionFind.make (Type (gensym ())) in
       let rowVar = UnionFind.make
@@ -114,12 +127,12 @@ let rec walk env =
             )
           )
         )
-and walk_fields env =
+and walk_fields env final =
   function
-  | [] -> Ok (UnionFind.make Empty)
+  | [] -> Ok final
   | ((lbl, ty) :: fs) ->
       walk env ty
-      >>= fun lblVar -> walk_fields env fs
+      >>= fun lblVar -> walk_fields env final fs
       |>> fun tailVar ->
         UnionFind.make (Extend(lbl, lblVar, tailVar))
 

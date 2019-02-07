@@ -13,6 +13,7 @@ module Expr = struct
     | App of (t * t)
     | Record of t RowMap.t
     | GetField of (t * label)
+    | Extend of (t * (label * t) list)
     | Ctor of (label * t)
 end
 
@@ -46,6 +47,14 @@ module Pretty = struct
               |> List.of_seq
               |> String.concat ", "
           ; "}"
+          ]
+    | Expr.Extend(r, fields) ->
+        String.concat ""
+          [ expr r
+          ; " with { "
+          ; String.concat ", "
+              (List.map (fun (Label lbl, e) -> lbl ^ " = " ^ expr e) fields)
+          ; " }"
           ]
     | Expr.GetField (e, Label lbl) ->
         "(" ^ expr e ^ ")." ^ lbl

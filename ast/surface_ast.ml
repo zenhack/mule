@@ -8,6 +8,7 @@ module Expr = struct
     | Record of ('i * (label * 'i t) list)
     | GetField of ('i * 'i t * label)
     | Ctor of ('i * label)
+    | Update of ('i * 'i t * (label * 'i t) list)
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
@@ -19,6 +20,12 @@ module Expr = struct
     | GetField (i, e, lbl) ->
         GetField(f i, map_info f e, lbl)
     | Ctor (i, l) -> Ctor (f i, l)
+    | Update (i, r, updates) ->
+        Update
+          ( f i
+          , map_info f r
+          , List.map (fun (l, e) -> (l, map_info f e)) updates
+          )
 end
 
 module Type = struct

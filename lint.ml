@@ -14,15 +14,20 @@ let rec free_vars env = Ast.Surface.Expr.(
       free_vars (S.add v env) body
   | App (_, f, x) ->
       S.union (free_vars env f) (free_vars env x)
-  | Record (_, fields) ->
-      fields
-        |> List.map (fun (_, v) -> free_vars env v)
-        |> List.fold_left S.union S.empty
+  | Record (_, fields) -> fields_free_vars env fields
+  | Update(_, e, fields) ->
+      S.union
+        (free_vars env e)
+        (fields_free_vars env fields)
   | GetField(_, e, _) ->
       free_vars env e
   | Ctor _ ->
       S.empty
 )
+and fields_free_vars env fields =
+  fields
+    |> List.map (fun (_, v) -> free_vars env v)
+    |> List.fold_left S.union S.empty
 
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
@@ -52,6 +57,9 @@ let check_duplicate_record_fields =
     function
     | Record (_, fields) ->
         check_fields S.empty S.empty fields
+    | Update(_, e, fields) ->
+        go e
+        >> check_fields S.empty S.empty fields
 
     (* The rest of this is just walking down the tree *)
     | Lam (_, _, body) -> go body

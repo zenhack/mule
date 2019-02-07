@@ -29,6 +29,12 @@ let rec expr = Ast.Surface.Expr.(
             )
         ; "}"
         ]
+  | Update(i, e, fields) ->
+      String.concat ""
+        [ expr e
+        ; " with "
+        ; expr (Record(i, fields))
+        ]
   | GetField (_, e, Ast.Label lbl) ->
       "(" ^ expr e ^ ")." ^ lbl
 )

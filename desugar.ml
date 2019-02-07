@@ -8,15 +8,17 @@ let rec desugar = function
   | S.App (_, f, x) -> D.App (desugar f, desugar x)
   | S.Lam (_, param, body) -> D.Lam (param, desugar body)
   | S.Record (_, fields) ->
-      (* TODO: *somewhere* before this we need to be checking for
-       * duplicate fields, and I'm not sure we are. Note that the
-       * theory allows duplicate fields. *)
       D.Record (
         fields
         |> List.to_seq
         |> Seq.map (fun (l, e) -> (l, desugar e))
         |> RowMap.of_seq
       )
+  | S.Update(_, e, fields) ->
+      D.Extend
+        ( desugar e
+        , List.map (fun (l, v) -> (l, desugar v)) fields
+        )
   | S.GetField (_, e, l) ->
       D.GetField (desugar e, l)
   | S.Ctor (_, label) ->
