@@ -25,6 +25,9 @@ let rec unify l r = OrErr.(
   | (Record (i, row_l), Record(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r
       |>> fun row_ret -> Record (i, row_ret)
+  | (Union (i, row_l), Union(_, row_r)) ->
+      UnionFind.merge unify_row row_l row_r
+      |>> fun row_ret -> Union(i, row_ret)
   | (Type _, r) -> Ok r
   | (l, Type _) -> Ok l
   | (_, _) -> Err Error.TypeMismatch
@@ -140,8 +143,8 @@ and walk_fields env final =
         UnionFind.make (Extend(lbl, lblVar, tailVar))
 and walk_match env retVar e cases =
     walk env e
-    >>= (fun _ ->
-    cases
+    >>= fun argVar ->
+    (cases
       |> List.map
           ( fun (p, body) ->
               walk_pattern env p
@@ -165,8 +168,8 @@ and walk_match env retVar e cases =
             )
           )
     )
-    >>= fun (p, e) -> UnionFind.merge unify p e
-    >>= fun uvar -> UnionFind.merge unify uvar retVar
+    >>= fun (p, e) -> UnionFind.merge unify p argVar
+    >>= fun _ -> UnionFind.merge unify e retVar
 and walk_pattern env = function
   | Pattern.Wild _ ->
       Ok (UnionFind.make (Type (gensym())), Env.empty)
