@@ -15,6 +15,10 @@ module Expr = struct
     | GetField of (t * label)
     | Extend of (t * (label * t) list)
     | Ctor of (label * t)
+    | Match of {
+        cases: (var * t) RowMap.t;
+        default: (var option * t) option;
+      }
 end
 
 module Pretty = struct
@@ -58,4 +62,25 @@ module Pretty = struct
           ]
     | Expr.GetField (e, Label lbl) ->
         "(" ^ expr e ^ ")." ^ lbl
+    | Expr.Match {cases; default} ->
+        String.concat ""
+          [ "match-lam"
+          ; RowMap.to_seq cases
+              |> Seq.map (fun (Label lbl, (Var v, e)) -> String.concat ""
+                  [ "\n | "
+                  ; lbl
+                  ; " "
+                  ; v
+                  ; " -> "
+                  ; expr e
+                  ])
+              |> List.of_seq
+              |> String.concat ""
+          ; begin match default with
+              | None -> ""
+              | Some (None, e) -> "\n | _ -> " ^ expr e
+              | Some (Some (Var v), e) -> "\n | " ^ v ^ " -> " ^ expr e
+            end
+          ; "\nend"
+          ]
 end

@@ -9,10 +9,7 @@ let rec subst param arg expr = match expr with
   | Var _ -> expr
   | Ctor _ -> expr
   | Lam (Ast.Var param', body) ->
-      if param == param' then
-        expr
-      else
-        Lam (Ast.Var param', subst param arg body)
+      Lam (subst_binding param' param arg body)
   | App (f, x) ->
       App (subst param arg f, subst param arg x)
   | Record fields ->
@@ -24,11 +21,33 @@ let rec subst param arg expr = match expr with
         ( subst param arg e
         , List.map (fun (l, v) -> (l, subst param arg v)) fields
         )
+  | Match {cases; default} ->
+      Match
+        { cases = RowMap.map
+          (fun (Ast.Var param', body) ->
+            subst_binding param' param arg body)
+          cases
+        ; default = match default with
+            | None ->
+                None
+            | Some (Some (Ast.Var param'), body) ->
+                let (p', b') = subst_binding param' param arg body in
+                Some (Some p', b')
+            | Some (None, body) ->
+                Some (None, subst param arg body)
+        }
+and subst_binding param' param arg body =
+  if param == param' then
+    (Ast.Var param', body)
+  else
+    (Ast.Var param', subst param arg body)
+
 
 let rec eval = function
   | Var (Ast.Var v) ->
       raise (UnboundVar v)
   | Lam lam -> Lam lam
+  | Match m -> Match m
   | Ctor c -> Ctor c
   | App (f, arg) ->
       let f' = eval f in
@@ -36,6 +55,8 @@ let rec eval = function
       begin match f' with
       | Lam (Ast.Var param, body) ->
           eval (subst param arg' body)
+      | Match {cases; default} ->
+          eval_match cases default arg'
       | _ ->
           raise NotAFunction
       end
@@ -61,4 +82,28 @@ let rec eval = function
       | _ -> Debug.impossible
           ("Tried to do a record update on something that's not a record. " ^
           "This should have been caught by the type checker!")
+      end
+and eval_match cases default = function
+ | Ctor (lbl, value) ->
+     begin match RowMap.find_opt lbl cases with
+      | Some (Ast.Var param, body) ->
+        eval (subst param value body)
+      | None ->
+        begin match default with
+          | None ->
+              Debug.impossible "Match failed"
+          | Some (None, body) ->
+              eval body
+          | Some (Some (Ast.Var param), body) ->
+              eval (subst param value body)
+        end
+     end
+  | value ->
+      begin match default with
+        | None ->
+            Debug.impossible "Match failed"
+        | Some (None, body) ->
+            eval body
+        | Some (Some (Ast.Var param), body) ->
+            eval (subst param value body)
       end
