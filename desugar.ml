@@ -64,8 +64,12 @@ and desugar_match dict = function
 and finalize_dict dict =
   RowMap.map
     ( fun cases ->
-      ( Ast.Var ("-" ^ string_of_int (Gensym.gensym()))
-      , desugar_match RowMap.empty (List.rev cases)
+      let v = Ast.Var ("-" ^ string_of_int (Gensym.gensym())) in
+      ( v
+      , D.App
+          ( desugar_match RowMap.empty (List.rev cases)
+          , D.Var v
+          )
       )
     )
     dict
