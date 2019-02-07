@@ -1,5 +1,5 @@
 let rec loop () =
-  print_string "#ready> ";
+  print_string "#mule> ";
   let line = try read_line () with
     End_of_file ->
       (* Make sure the terminal prompt shows up on a new line: *)
