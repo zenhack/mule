@@ -1,9 +1,6 @@
 open Ast.Desugared.Expr
 open Ast.Desugared
 
-exception NotAFunction
-exception UnboundVar of string
-
 let rec subst param arg expr = match expr with
   | Var (Ast.Var v) when v = param -> arg
   | Var _ -> expr
@@ -45,7 +42,8 @@ and subst_binding param' param arg body =
 
 let rec eval = function
   | Var (Ast.Var v) ->
-      raise (UnboundVar v)
+      Debug.impossible
+        ("Unbound variable \"" ^ v ^ "\"; this should have been caught sooner.")
   | Lam lam -> Lam lam
   | Match m -> Match m
   | Ctor c -> Ctor c
@@ -58,7 +56,7 @@ let rec eval = function
       | Match {cases; default} ->
           eval_match cases default arg'
       | _ ->
-          raise NotAFunction
+        Debug.impossible ("Tried to call non-function: " ^ Pretty.expr f')
       end
   | Record fields ->
       Record (RowMap.map eval fields)
