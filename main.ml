@@ -6,20 +6,18 @@ let rec loop () =
       print_endline "";
       exit 0
   in
-  match MParser.parse_string Parser.repl_line line () with
+  begin match MParser.parse_string Parser.repl_line line () with
   | MParser.Failed (msg, _) ->
       print_endline "Parse Error:";
-      print_endline msg;
-      loop ()
+      print_endline msg
   | MParser.Success None ->
       (* User entered a blank line *)
-      loop ()
+      ()
   | MParser.Success (Some expr) ->
-      match Typecheck.typecheck expr with
-      | OrErr.Err (Typecheck.UnboundVar (Ast.Var name)) ->
+      begin match Typecheck.typecheck expr with
+      | OrErr.Err (Error.UnboundVar (Ast.Var name)) ->
           print_endline ("unbound variable: " ^ name);
-          loop ()
-      | OrErr.Err Typecheck.Mismatch ->
+      | OrErr.Err Error.TypeMismatch ->
           (* Most useful error message EVER: *)
           print_endline "Type mismatch"
       | OrErr.Ok ty ->
@@ -28,6 +26,8 @@ let rec loop () =
             |> Eval.eval
             |> Ast.Desugared.Pretty.expr
             |> print_endline;
-          loop ()
+      end
+  end;
+  loop ()
 
 let () = loop ()

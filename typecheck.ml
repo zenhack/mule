@@ -1,39 +1,8 @@
-include Typecheck_t
-
 module S = Set.Make(String)
 module Env = Map.Make(String)
 
 open Gensym
 open OrErr
-
-(* Free variables in a value-level expression *)
-let rec expr_free_vars env = Ast.Surface.Expr.(
-  function
-  | Var (_, Ast.Var v) ->
-      if S.mem v env then
-        S.empty
-      else
-        S.singleton v
-  | Lam (_, Ast.Var v, body) ->
-      expr_free_vars (S.add v env) body
-  | App (_, f, x) ->
-      S.union (expr_free_vars env f) (expr_free_vars env x)
-  | Record (_, fields) ->
-      fields
-        |> List.map (fun (_, v) -> expr_free_vars env v)
-        |> List.fold_left S.union S.empty
-  | GetField(_, e, _) ->
-      expr_free_vars env e
-  | Ctor _ ->
-      S.empty
-)
-
-(* Check for unbound variables. *)
-let check_unbound expr =
-  let free = expr_free_vars S.empty expr in
-  match S.find_first_opt (fun _ -> true) free with
-  | Some x -> OrErr.Err (UnboundVar (Ast.Var x))
-  | None -> OrErr.Ok ()
 
 (* The type of values associated with unification variables *)
 type u_type =
@@ -57,7 +26,7 @@ let rec unify l r = OrErr.(
       |>> fun row_ret -> Record (i, row_ret)
   | (Type _, r) -> Ok r
   | (l, Type _) -> Ok l
-  | (_, _) -> Err Mismatch
+  | (_, _) -> Err Error.TypeMismatch
 )
 and unify_row l r =
   match l, r with
@@ -80,8 +49,8 @@ and unify_row l r =
 
   | (Row _, r) -> Ok r
   | (l, Row _) -> Ok l
-  | (Extend _, Empty) -> Err Mismatch
-  | (Empty, Extend _) -> Err Mismatch
+  | (Extend _, Empty) -> Err Error.TypeMismatch
+  | (Empty, Extend _) -> Err Error.TypeMismatch
 
 let decorate expr =
   Ast.Surface.Expr.map_info (fun _ -> UnionFind.make (Type (gensym ()))) expr
@@ -246,7 +215,7 @@ let get_var_type uvar =
     |> add_rec_binders
 
 let typecheck expr =
-  check_unbound expr
+  Lint.check_unbound expr
   >>= fun () -> Ok (decorate expr)
   >>= walk Env.empty
   |>> get_var_type
