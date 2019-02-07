@@ -1,4 +1,5 @@
 open OrErr
+open Ast.Surface.Expr
 module S = Set.Make(String)
 
 (* Free variables in an expression *)
@@ -23,8 +24,44 @@ let rec free_vars env = Ast.Surface.Expr.(
       S.empty
 )
 
-let check_unbound expr =
+(* Check for unbound variables. *)
+let check_unbound_vars expr =
   let free = free_vars S.empty expr in
   match S.find_first_opt (fun _ -> true) free with
   | Some x -> Err (Error.UnboundVar (Ast.Var x))
   | None -> Ok ()
+
+(* Check for duplicate record fields *)
+let check_duplicate_record_fields =
+  let rec go =
+    let rec check_fields all dups = function
+      | (Ast.Label x, v) :: xs ->
+          go v >>
+          if S.mem x all then
+            check_fields all (S.add x dups) xs
+          else
+            check_fields (S.add x all) dups xs
+      | [] ->
+          if S.is_empty dups then
+            Ok ()
+          else
+            Err
+              ( Error.DuplicateFields (List.of_seq (S.to_seq dups))
+              )
+    in
+    function
+    | Record (_, fields) ->
+        check_fields S.empty S.empty fields
+
+    (* The rest of this is just walking down the tree *)
+    | Lam (_, _, body) -> go body
+    | App (_, f, x) -> go f >> go x
+    | GetField(_, e, _) -> go e
+
+    | Var _ -> Ok ()
+    | Ctor _ -> Ok ()
+  in go
+
+let check expr =
+  check_unbound_vars expr
+  >> check_duplicate_record_fields expr

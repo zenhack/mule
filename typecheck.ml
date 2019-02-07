@@ -215,7 +215,7 @@ let get_var_type uvar =
     |> add_rec_binders
 
 let typecheck expr =
-  Lint.check_unbound expr
+  Lint.check expr
   >>= fun () -> Ok (decorate expr)
   >>= walk Env.empty
   |>> get_var_type

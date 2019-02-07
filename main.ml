@@ -20,6 +20,9 @@ let rec loop () =
       | OrErr.Err Error.TypeMismatch ->
           (* Most useful error message EVER: *)
           print_endline "Type mismatch"
+      | OrErr.Err (Error.DuplicateFields fields) ->
+          print_endline "Duplicate fields:";
+          print_endline (String.concat ", " fields)
       | OrErr.Ok ty ->
           print_endline ("inferred type: " ^ Pretty.typ ty);
           Desugar.desugar expr
