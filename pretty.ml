@@ -1,3 +1,4 @@
+(*
 let rec expr = Ast.Surface.Expr.(
   function
   | Var (_, Ast.Var name) ->
@@ -38,6 +39,7 @@ let rec expr = Ast.Surface.Expr.(
   | GetField (_, e, Ast.Label lbl) ->
       "(" ^ expr e ^ ")." ^ lbl
 )
+*)
 
 let rec typ = Ast.Surface.Type.(
   function

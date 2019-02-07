@@ -23,7 +23,20 @@ let rec free_vars env = Ast.Surface.Expr.(
       free_vars env e
   | Ctor _ ->
       S.empty
+  | Match (_, e, cases) ->
+      List.fold_left
+        S.union
+        (free_vars env e)
+        (List.map (case_free_vars env) cases)
 )
+and case_free_vars env (p, body) =
+  match p with
+    | Ast.Surface.Pattern.Wild _ ->
+        free_vars env body
+    | Ast.Surface.Pattern.Var(i, v) ->
+        free_vars env (Lam (i, v, body))
+    | Ast.Surface.Pattern.Ctor (_, _, p') ->
+        case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
     |> List.map (fun (_, v) -> free_vars env v)
@@ -54,6 +67,10 @@ let check_duplicate_record_fields =
               ( Error.DuplicateFields (List.of_seq (S.to_seq dups))
               )
     in
+    let rec check_cases = function
+      | [] -> Ok ()
+      | ((_, body) :: cs) -> go body >> check_cases cs
+    in
     function
     | Record (_, fields) ->
         check_fields S.empty S.empty fields
@@ -63,6 +80,8 @@ let check_duplicate_record_fields =
 
     (* The rest of this is just walking down the tree *)
     | Lam (_, _, body) -> go body
+    | Match(_, e, cases) ->
+        go e >> check_cases cases
     | App (_, f, x) -> go f >> go x
     | GetField(_, e, _) -> go e
 

@@ -1,5 +1,6 @@
 module S = Set.Make(String)
 module Env = Map.Make(String)
+module Pattern = Ast.Surface.Pattern
 
 open Gensym
 open OrErr
@@ -127,6 +128,8 @@ let rec walk env =
             )
           )
         )
+  | Expr.Match (retVar, e, cases) ->
+      walk_match env retVar e cases
 and walk_fields env final =
   function
   | [] -> Ok final
@@ -135,6 +138,56 @@ and walk_fields env final =
       >>= fun lblVar -> walk_fields env final fs
       |>> fun tailVar ->
         UnionFind.make (Extend(lbl, lblVar, tailVar))
+and walk_match env retVar e cases =
+    walk env e
+    >>= (fun _ ->
+    cases
+      |> List.map
+          ( fun (p, body) ->
+              walk_pattern env p
+              >>= fun (pVar, bound) ->
+                walk
+                  (Env.union (fun _ _ v -> Some v) env bound)
+                  body
+              |>> fun bodyVar -> (pVar, bodyVar)
+          )
+      |> List.fold_left
+          (fun l r -> l
+            >>= fun (lp, le) -> r
+            >>= fun (rp, re) ->
+              UnionFind.merge unify lp rp
+              >>= fun p -> UnionFind.merge unify le re
+              |>> fun e -> (p, e)
+          )
+          (Ok
+            ( UnionFind.make (Type (gensym ()))
+            , UnionFind.make (Type (gensym()))
+            )
+          )
+    )
+    >>= fun (p, e) -> UnionFind.merge unify p e
+    >>= fun uvar -> UnionFind.merge unify uvar retVar
+and walk_pattern env = function
+  | Pattern.Wild _ ->
+      Ok (UnionFind.make (Type (gensym())), Env.empty)
+  | Pattern.Var (uVar, Ast.Var name) ->
+      Ok (uVar, Env.singleton name uVar)
+  | Pattern.Ctor (uVar, lbl, p) ->
+      walk_pattern env p
+      >>= fun (nextPVar, boundVars) ->
+      let rowVar = UnionFind.make
+          ( Extend
+              ( lbl
+              , nextPVar
+              , UnionFind.make (Row (gensym()))
+              )
+          )
+      in
+      UnionFind.merge unify
+        uVar
+        (UnionFind.make (Union (gensym(), rowVar)))
+      >>= fun retVar -> Ok (retVar, boundVars)
+
 
 
 let ivar i = "t" ^ string_of_int i

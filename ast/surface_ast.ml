@@ -1,5 +1,19 @@
 open Common_ast
 
+module Pattern = struct
+  type 'i t =
+    | Ctor of ('i * label * 'i t)
+    | Var of ('i * var)
+    | Wild of 'i
+
+  let rec map_info f = function
+    | Ctor (i, lbl, p) ->
+        Ctor (f i, lbl, map_info f p)
+    | Var (i, v) ->
+        Var (f i, v)
+    | Wild i -> Wild (f i)
+end
+
 module Expr = struct
   type 'i t =
     | App of ('i * 'i t * 'i t)
@@ -9,6 +23,7 @@ module Expr = struct
     | GetField of ('i * 'i t * label)
     | Ctor of ('i * label)
     | Update of ('i * 'i t * (label * 'i t) list)
+    | Match of ('i * 'i t * ('i Pattern.t * 'i t) list)
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
@@ -25,6 +40,12 @@ module Expr = struct
           ( f i
           , map_info f r
           , List.map (fun (l, e) -> (l, map_info f e)) updates
+          )
+    | Match (i, e, cases) ->
+        Match
+          ( f i
+          , map_info f e
+          , List.map (fun (p, v) -> (Pattern.map_info f p, map_info f v)) cases
           )
 end
 

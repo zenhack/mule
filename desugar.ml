@@ -1,4 +1,5 @@
 
+module SP = Ast.Surface.Pattern
 module S = Ast.Surface.Expr
 module D = Ast.Desugared.Expr
 module RowMap = Ast.Desugared.RowMap
@@ -26,3 +27,45 @@ let rec desugar = function
        * there's nothing we need to worry about shadowing. *)
       let param = Ast.Var "x" in
       D.Lam (param, D.Ctor (label, D.Var param))
+  | S.Match (_, e, cases) ->
+      D.App
+        ( desugar_match RowMap.empty cases
+        , desugar e
+        )
+and desugar_match dict = function
+  | [] -> D.Match
+      { default = None
+      ; cases = finalize_dict dict
+      }
+  | [(SP.Wild _, body)] -> D.Match
+      { default = Some (None, desugar body)
+      ; cases = finalize_dict dict
+      }
+  | [(SP.Var (_, v), body)] -> D.Match
+      { default = Some (Some v, desugar body)
+      ; cases = finalize_dict dict
+      }
+  | (SP.Ctor (_, lbl, p), body) :: cases ->
+      let dict' =
+          RowMap.update
+            lbl
+            (function
+              | None -> Some [(p, body)]
+              | Some cases -> Some ((p, body) :: cases)
+            )
+            dict
+      in
+      desugar_match dict' cases
+  | (_ :: _) ->
+      (* We have something other than a ctor that has more patterns
+       * after it. This should have been caught earlier in the pipeline.
+       *)
+      Debug.impossible "unreachable cases."
+and finalize_dict dict =
+  RowMap.map
+    ( fun cases ->
+      ( Ast.Var ("-" ^ string_of_int (Gensym.gensym()))
+      , desugar_match RowMap.empty (List.rev cases)
+      )
+    )
+    dict
