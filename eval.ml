@@ -94,7 +94,7 @@ and eval_match cases default = function
           | Some (None, body) ->
               eval body
           | Some (Some (Ast.Var param), body) ->
-              eval (subst param value body)
+              eval (subst param (Ctor (lbl, value)) body)
         end
      end
   | value ->
