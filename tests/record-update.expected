@@ -1,0 +1,4 @@
+#mule> Desugared: {x = {}} where { y = {z = {}} }
+inferred type: {y : {z : {}}, x : {}}
+Evaluated: {x = {}, y = {z = {}}}
+#mule> 
