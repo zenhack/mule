@@ -9,10 +9,10 @@ let lazy_p p = return () >>= fun () -> Lazy.force p
 let keywords = StrSet.of_list
   [ "fn"
   ; "rec"
-  ; "case"
-  ; "of"
-  ; "end"
+  ; "match"
   ; "with"
+  ; "end"
+  ; "where"
   ; "_"
   ]
 
@@ -61,7 +61,7 @@ let rec expr = lazy ((
 and ex1 = lazy (
   lazy_p ex2
   >>= fun old -> choice
-    [ (kwd "with" >> lazy_p record_fields
+    [ (kwd "where" >> lazy_p record_fields
         |>> fun fields -> Expr.Update ((), old, fields))
     ; return old
     ]
@@ -89,9 +89,9 @@ and lambda = lazy ((
   |>> fun body -> Expr.Lam ((), param, body)
 ) <?> "lambda")
 and match_expr = lazy ((
-  kwd "case"
+  kwd "match"
   >> lazy_p expr
-  >>= fun e -> kwd "of"
+  >>= fun e -> kwd "with"
   >> optional (kwd "|")
   >> sep_by1 (lazy_p case) (kwd "|")
   >>= fun cases -> kwd "end"

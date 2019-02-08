@@ -55,7 +55,7 @@ module Pretty = struct
     | Expr.Extend(r, fields) ->
         String.concat ""
           [ expr r
-          ; " with { "
+          ; " where { "
           ; String.concat ", "
               (List.map (fun (Label lbl, e) -> lbl ^ " = " ^ expr e) fields)
           ; " }"
