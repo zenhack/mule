@@ -1,0 +1,1 @@
+match Ok {} with Ok x -> x | Ok y -> {} end
