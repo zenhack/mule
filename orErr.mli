@@ -7,3 +7,5 @@ val join : ('e, ('e, 'a) t) t -> ('e, 'a) t
 val (>>=) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
 val (>>) : ('e, 'a) t -> ('e, 'b) t -> ('e, 'b) t
 val (|>>) : ('e, 'a) t -> ('a -> 'b) -> ('e, 'b) t
+
+val sequence : ('e, 'a) t list -> ('e, 'a list) t
