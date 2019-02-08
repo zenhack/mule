@@ -207,6 +207,7 @@ and row_add_rec_binders i fields rest =
 let add_rec_binders ty =
   snd (add_rec_binders ty)
 
+(* Extract a type from a (solved) unification variable. *)
 let rec get_var_type env = function
   | Type i -> Ast.Surface.Type.Var (i, Ast.Var (ivar i))
   | Fn (i, f, x) ->
