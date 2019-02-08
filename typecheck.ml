@@ -124,8 +124,8 @@ let rec walk env =
       end
   | Expr.Match {cases; default} ->
       let final = match default with
-        | Some _ -> UnionFind.make Empty
-        | None -> UnionFind.make (Row (gensym ()))
+        | None -> UnionFind.make Empty
+        | Some _ -> UnionFind.make (Row (gensym ()))
       in
       walk_match env final (RowMap.bindings cases)
       |>> fun (rowVar, bodyVar) ->
