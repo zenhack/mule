@@ -1,0 +1,8 @@
+#mule> Desugared: fn $0. (match-lam
+| x -> (x) (x)
+end) ($0)
+inferred type: (rec t4. (t4) -> (t6)) -> (t6)
+Evaluated: fn $0. (match-lam
+| x -> (x) (x)
+end) ($0)
+#mule> 
