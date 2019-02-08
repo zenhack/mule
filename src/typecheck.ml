@@ -86,10 +86,12 @@ let rec walk env =
         tyvar
       >>= fun retVar ->
       let tailVar = UnionFind.make (Row (gensym ())) in
+      let fieldVar = UnionFind.make (Type (gensym ())) in
       UnionFind.merge unify_row
           rowVar
-          (UnionFind.make (Extend(lbl, retVar, tailVar)))
-      |>> fun _ -> retVar
+          (UnionFind.make (Extend(lbl, fieldVar, tailVar)))
+      |>> fun _ ->
+          retVar
   | Expr.Update (r, updates) ->
       walk env r
       >>= fun origVar ->
