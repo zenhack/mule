@@ -1,9 +1,13 @@
-let typecheck_desugar expr =
+let desugar_typecheck expr =
   let open OrErr in
-  Typecheck.typecheck expr
-  >>= fun ty ->
+  Lint.check expr
+  >> Desugar.desugar expr
+  >>= fun dexp ->
+    print_endline ("Desugared: " ^ Ast.Desugared.Pretty.expr dexp);
+    Typecheck.typecheck dexp
+  |>> fun ty ->
     print_endline ("inferred type: " ^ Pretty.typ ty);
-    Desugar.desugar expr
+    dexp
 
 let rec loop () =
   print_string "#mule> ";
@@ -21,7 +25,7 @@ let rec loop () =
       (* User entered a blank line *)
       ()
   | MParser.Success (Some expr) ->
-      begin match typecheck_desugar expr with
+      begin match desugar_typecheck expr with
       | OrErr.Err (Error.UnboundVar (Ast.Var name)) ->
           print_endline ("unbound variable: " ^ name);
       | OrErr.Err Error.TypeMismatch ->
@@ -32,11 +36,12 @@ let rec loop () =
       | OrErr.Err (Error.DuplicateFields fields) ->
           print_endline "Duplicate fields:";
           print_endline (String.concat ", " fields)
+      | OrErr.Err Error.EmptyMatch ->
+          print_endline "Empty match expression."
       | OrErr.Ok dexp ->
-          print_endline ("Desugared: " ^ Ast.Desugared.Pretty.expr dexp);
           Eval.eval dexp
           |> Ast.Desugared.Pretty.expr
-          |> print_endline
+          |> fun ret -> print_endline ("Evaluated: " ^ ret)
       end
   end;
   loop ()

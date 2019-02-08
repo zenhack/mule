@@ -1,6 +1,5 @@
 module S = Set.Make(String)
 module Env = Map.Make(String)
-module Pattern = Ast.Surface.Pattern
 
 open Gensym
 open OrErr
@@ -56,35 +55,28 @@ and unify_row l r =
   | (Extend _, Empty) -> Err Error.TypeMismatch
   | (Empty, Extend _) -> Err Error.TypeMismatch
 
-let decorate expr =
-  Ast.Surface.Expr.map_info (fun _ -> UnionFind.make (Type (gensym ()))) expr
-
 let rec walk env =
-  let open Ast.Surface in
+  let open Ast.Desugared in
   function
-  | Expr.Var (uVar, Ast.Var v) ->
-      UnionFind.merge unify uVar (Env.find v env)
-  | Expr.Lam (fVar, Ast.Var param, body) ->
+  | Expr.Var (Ast.Var v) ->
+      Ok (Env.find v env)
+  | Expr.Lam (Ast.Var param, body) ->
       let paramVar = UnionFind.make (Type (gensym ())) in
       walk (Env.add param paramVar env) body
-      >>= fun retVar ->
-        UnionFind.merge unify
-          fVar
-          (UnionFind.make (Fn (gensym (), paramVar, retVar)))
-  | Expr.App (retVar, f, arg) ->
+      |>> fun retVar -> UnionFind.make (Fn (gensym (), paramVar, retVar))
+  | Expr.App (f, arg) ->
       walk env f
       >>= fun fVar -> walk env arg
       >>= fun argVar ->
+        let retVar = UnionFind.make (Type (gensym ())) in
         UnionFind.merge unify
           fVar
           (UnionFind.make (Fn (gensym (), argVar, retVar)))
       >> Ok retVar
-  | Expr.Record (retVar, fields) ->
-      walk_fields env (UnionFind.make Empty) fields
-      >>= fun rowVar -> UnionFind.merge unify
-          retVar
-          (UnionFind.make (Record (gensym (), rowVar)))
-  | Expr.GetField (retVar, e, lbl) ->
+  | Expr.Record fields ->
+      walk_fields env (UnionFind.make Empty) (RowMap.bindings fields)
+      |>> fun row -> UnionFind.make (Record (gensym (), row))
+  | Expr.GetField (e, lbl) ->
       walk env e
       >>= fun tyvar ->
       let rowVar = UnionFind.make (Row (gensym ())) in
@@ -92,13 +84,13 @@ let rec walk env =
       UnionFind.merge unify
         recVar
         tyvar
-      >>= fun _ ->
+      >>= fun retVar ->
       let tailVar = UnionFind.make (Row (gensym ())) in
       UnionFind.merge unify_row
           rowVar
           (UnionFind.make (Extend(lbl, retVar, tailVar)))
       |>> fun _ -> retVar
-  | Expr.Update (retVar, r, updates) ->
+  | Expr.Update (r, updates) ->
       walk env r
       >>= fun origVar ->
         let tailVar = UnionFind.make (Row (gensym())) in
@@ -107,91 +99,61 @@ let rec walk env =
         UnionFind.merge unify
           origVar
           (UnionFind.make (Record (gensym(), tailVar)))
-      >>
-        UnionFind.merge unify
-          retVar
-          (UnionFind.make (Record (gensym(), updateVar)))
-  | Expr.Ctor (retVar, lbl) ->
-      let paramVar = UnionFind.make (Type (gensym ())) in
-      let rowVar = UnionFind.make
-          (Extend
-            ( lbl
-            , paramVar
-            , UnionFind.make (Row (gensym ()))
-            )
-          )
-      in
-      UnionFind.merge unify
-        retVar
-        (UnionFind.make
-          (Fn
-            ( gensym ()
-            , paramVar
-            , UnionFind.make (Union (gensym (), rowVar))
+      |>> fun _ -> UnionFind.make (Record (gensym(), updateVar))
+  | Expr.Ctor (lbl, param) ->
+      walk env param
+      |>> fun paramVar -> UnionFind.make
+        ( Union
+          ( gensym ()
+          , UnionFind.make
+            ( Extend
+                ( lbl
+                , paramVar
+                , UnionFind.make (Row (gensym ()))
+                )
             )
           )
         )
-  | Expr.Match (retVar, e, cases) ->
-      walk_match env retVar e cases
-and walk_fields env final =
-  function
+  | Expr.Match {cases; default} when RowMap.is_empty cases ->
+      begin match default with
+        | None -> Err EmptyMatch
+        | Some (Some paramVar, body) ->
+            walk env (Expr.Lam (paramVar, body))
+        | Some (None, body) ->
+            walk env (Expr.Lam (Ast.Var "_", body))
+      end
+  | Expr.Match {cases; default} ->
+      let final = match default with
+        | Some _ -> UnionFind.make Empty
+        | None -> UnionFind.make (Row (gensym ()))
+      in
+      walk_match env final (RowMap.bindings cases)
+      |>> fun (rowVar, bodyVar) ->
+          UnionFind.make
+            ( Fn
+                ( gensym ()
+                , UnionFind.make (Union(gensym (), rowVar))
+                , bodyVar
+                )
+            )
+and walk_match env final = function
+  | [] -> Ok (final, UnionFind.make (Type (gensym ())))
+  | ((lbl, (Ast.Var var, body)) :: rest) ->
+      let ty = UnionFind.make (Type (gensym ())) in
+      walk (Env.add var ty env) body
+      >>= fun bodyVar -> walk_match env final rest
+      >>= fun (row, body') -> UnionFind.merge unify bodyVar body'
+      |>> fun bvar ->
+        ( UnionFind.make (Extend(lbl, ty, row))
+        , bvar
+        )
+and walk_fields env final = function
   | [] -> Ok final
   | ((lbl, ty) :: fs) ->
       walk env ty
       >>= fun lblVar -> walk_fields env final fs
       |>> fun tailVar ->
         UnionFind.make (Extend(lbl, lblVar, tailVar))
-and walk_match env retVar e cases =
-    walk env e
-    >>= fun argVar ->
-    (cases
-      |> List.map
-          ( fun (p, body) ->
-              walk_pattern env p
-              >>= fun (pVar, bound) ->
-                walk
-                  (Env.union (fun _ _ v -> Some v) env bound)
-                  body
-              |>> fun bodyVar -> (pVar, bodyVar)
-          )
-      |> List.fold_left
-          (fun l r -> l
-            >>= fun (lp, le) -> r
-            >>= fun (rp, re) ->
-              UnionFind.merge unify lp rp
-              >>= fun p -> UnionFind.merge unify le re
-              |>> fun e -> (p, e)
-          )
-          (Ok
-            ( UnionFind.make (Type (gensym ()))
-            , UnionFind.make (Type (gensym()))
-            )
-          )
-    )
-    >>= fun (p, e) -> UnionFind.merge unify p argVar
-    >>= fun _ -> UnionFind.merge unify e retVar
-and walk_pattern env = function
-  | Pattern.Wild _ ->
-      Ok (UnionFind.make (Type (gensym())), Env.empty)
-  | Pattern.Var (uVar, Ast.Var name) ->
-      Ok (uVar, Env.singleton name uVar)
-  | Pattern.Ctor (uVar, lbl, p) ->
-      walk_pattern env p
-      >>= fun (nextPVar, boundVars) ->
-      let rowVar = UnionFind.make
-          ( Extend
-              ( lbl
-              , nextPVar
-              , UnionFind.make (Row (gensym()))
-              )
-          )
-      in
-      UnionFind.merge unify
-        uVar
-        (UnionFind.make (Union (gensym(), rowVar)))
-      >>= fun retVar -> Ok (retVar, boundVars)
-
-
 
 let ivar i = "t" ^ string_of_int i
 
@@ -284,7 +246,5 @@ let get_var_type uvar =
     |> add_rec_binders
 
 let typecheck expr =
-  Lint.check expr
-  >>= fun () -> Ok (decorate expr)
-  >>= walk Env.empty
+  walk Env.empty expr
   |>> get_var_type

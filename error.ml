@@ -4,5 +4,6 @@ type t =
   | TypeMismatch
   | DuplicateFields of (string list)
   | UnreachableCases
+  | EmptyMatch
 
 exception MuleExn of t
