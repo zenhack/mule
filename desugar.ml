@@ -16,7 +16,7 @@ let rec desugar = function
         |> RowMap.of_seq
       )
   | S.Update(_, e, fields) ->
-      D.Extend
+      D.Update
         ( desugar e
         , List.map (fun (l, v) -> (l, desugar v)) fields
         )

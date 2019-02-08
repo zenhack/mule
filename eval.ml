@@ -14,8 +14,8 @@ let rec subst param arg expr = match expr with
       Record (RowMap.map (subst param arg) fields)
   | GetField (e, lbl) ->
       GetField (subst param arg e, lbl)
-  | Extend(e, fields) ->
-      Extend
+  | Update(e, fields) ->
+      Update
         ( subst param arg e
         , List.map (fun (l, v) -> (l, subst param arg v)) fields
         )
@@ -69,7 +69,7 @@ let rec eval = function
         ("Tried to get a field on something that's not a record. " ^
         "this should have been caught by the type checker!")
       end
-  | Extend(r, new_fields) ->
+  | Update(r, new_fields) ->
       begin match eval r with
       | Record old_fields ->
           Record

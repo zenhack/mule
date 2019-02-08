@@ -13,7 +13,7 @@ module Expr = struct
     | App of (t * t)
     | Record of t RowMap.t
     | GetField of (t * label)
-    | Extend of (t * (label * t) list)
+    | Update of (t * (label * t) list)
     | Ctor of (label * t)
     | Match of {
         cases: (var * t) RowMap.t;
@@ -52,7 +52,7 @@ module Pretty = struct
               |> String.concat ", "
           ; "}"
           ]
-    | Expr.Extend(r, fields) ->
+    | Expr.Update(r, fields) ->
         String.concat ""
           [ expr r
           ; " where { "
