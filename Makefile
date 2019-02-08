@@ -9,9 +9,10 @@ repl: all
 	rlwrap ./_build/default/main.exe
 check: $(checks)
 %.check: all %.in %.expected
-	./_build/default/main.exe < $*.in > $*.actual
-	diff -u $*.expected $*.actual
-	touch $@
+	@echo CHECK $*
+	@./_build/default/main.exe < $*.in > $*.actual
+	@diff -u $*.expected $*.actual
+	@touch $@
 clean:
 	rm -rf _build tests/*.check tests/*.actual
 
