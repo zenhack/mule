@@ -20,7 +20,7 @@ let rec unify l r = OrErr.(
   | (Fn (i, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl
       >>= fun l' -> UnionFind.merge unify lr rr
-      >>= fun r' -> Ok (Fn (i, l', r'))
+      |>> fun r' -> Fn (i, l', r')
   | (Record (i, row_l), Record(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r
       |>> fun row_ret -> Record (i, row_ret)
@@ -72,7 +72,7 @@ let rec walk env =
         UnionFind.merge unify
           fVar
           (UnionFind.make (Fn (gensym (), argVar, retVar)))
-      >> Ok retVar
+      |>> fun _ -> retVar
   | Expr.Record fields ->
       walk_fields env (UnionFind.make Empty) (RowMap.bindings fields)
       |>> fun row -> UnionFind.make (Record (gensym (), row))
