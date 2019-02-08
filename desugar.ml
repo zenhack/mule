@@ -7,7 +7,22 @@ module RowMap = Ast.Desugared.RowMap
 let rec desugar = function
   | S.Var(_, v) -> D.Var v
   | S.App (_, f, x) -> D.App (desugar f, desugar x)
-  | S.Lam (_, param, body) -> D.Lam (param, desugar body)
+  | S.Lam (i, pat :: pats, body) ->
+      let var = Gensym.anon_var () in
+      D.Lam
+        ( var
+        , desugar
+            (S.Match
+              ( i
+              , S.Var (i, var)
+              , [ (pat
+                  , S.Lam (i, pats, body)
+                  )
+                ]
+              )
+            )
+        )
+  | S.Lam (_, [], body) -> desugar body
   | S.Record (_, fields) ->
       D.Record (
         fields
@@ -61,7 +76,7 @@ and desugar_match dict = function
 and finalize_dict dict =
   RowMap.map
     ( fun cases ->
-      let v = Ast.Var ("$" ^ string_of_int (Gensym.gensym())) in
+      let v = Gensym.anon_var () in
       ( v
       , D.App
           ( desugar_match RowMap.empty (List.rev cases)

@@ -17,7 +17,7 @@ end
 module Expr = struct
   type 'i t =
     | App of ('i * 'i t * 'i t)
-    | Lam of ('i * var * 'i t)
+    | Lam of ('i * ('i Pattern.t) list * 'i t)
     | Var of ('i * var)
     | Record of ('i * (label * 'i t) list)
     | GetField of ('i * 'i t * label)
@@ -27,7 +27,12 @@ module Expr = struct
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
-    | Lam (i, param, body) -> Lam (f i, param, map_info f body)
+    | Lam (i, params, body) ->
+        Lam
+          ( f i
+          , List.map (Pattern.map_info f) params
+          , map_info f body
+          )
     | Var (i, v) -> Var (f i, v)
     | Record (i, fields) ->
         let new_fields = List.map (fun (l, v) -> (l, map_info f v)) fields in

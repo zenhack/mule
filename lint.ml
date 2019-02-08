@@ -10,8 +10,10 @@ let rec free_vars env = Ast.Surface.Expr.(
         S.empty
       else
         S.singleton v
-  | Lam (_, Ast.Var v, body) ->
-      free_vars (S.add v env) body
+  | Lam (i, (pat :: pats), body) ->
+      case_free_vars env (pat, (Lam (i, pats, body)))
+  | Lam (_, [], body) ->
+      free_vars env body
   | App (_, f, x) ->
       S.union (free_vars env f) (free_vars env x)
   | Record (_, fields) -> fields_free_vars env fields
@@ -33,8 +35,8 @@ and case_free_vars env (p, body) =
   match p with
     | Ast.Surface.Pattern.Wild _ ->
         free_vars env body
-    | Ast.Surface.Pattern.Var(i, v) ->
-        free_vars env (Lam (i, v, body))
+    | Ast.Surface.Pattern.Var(_, Ast.Var v) ->
+        free_vars (S.add v env) body
     | Ast.Surface.Pattern.Ctor (_, _, p') ->
         case_free_vars env (p', body)
 and fields_free_vars env fields =

@@ -83,10 +83,10 @@ and ex3 = lazy (
 )
 and lambda = lazy ((
   kwd "fn"
-  >> var
-  >>= fun param -> kwd "."
+  >> many1 (lazy_p pattern)
+  >>= fun params -> kwd "."
   >> lazy_p expr
-  |>> fun body -> Expr.Lam ((), param, body)
+  |>> fun body -> Expr.Lam ((), params, body)
 ) <?> "lambda")
 and match_expr = lazy ((
   kwd "match"
@@ -105,7 +105,8 @@ and case = lazy (
 )
 and pattern = lazy ((
   choice
-    [ (kwd "_" |>> fun _ -> Pattern.Wild ())
+    [ parens (lazy_p pattern)
+    ; (kwd "_" |>> fun _ -> Pattern.Wild ())
     ; (var |>> fun v -> Pattern.Var((), v))
     ; (ctor
         >>= fun lbl -> lazy_p pattern
