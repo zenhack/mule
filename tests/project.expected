@@ -1,0 +1,4 @@
+#mule> inferred type: {}
+Desugared: ({x = {}}).x
+{}
+#mule> 
