@@ -1,0 +1,4 @@
+#mule> Desugared: {x = {}}
+inferred type: {x : {}}
+Evaluated: {x = {}}
+#mule> 
