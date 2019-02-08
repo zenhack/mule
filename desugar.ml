@@ -57,10 +57,7 @@ and desugar_match dict = function
       in
       desugar_match dict' cases
   | (_ :: _) ->
-      (* We have something other than a ctor that has more patterns
-       * after it. This should have been caught earlier in the pipeline.
-       *)
-      Debug.impossible "unreachable cases."
+      raise (Error.MuleExn Error.UnreachableCases)
 and finalize_dict dict =
   RowMap.map
     ( fun cases ->
@@ -73,3 +70,7 @@ and finalize_dict dict =
       )
     )
     dict
+
+let desugar e =
+  try OrErr.Ok (desugar e)
+  with Error.MuleExn err -> OrErr.Err err
