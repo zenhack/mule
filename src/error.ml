@@ -1,6 +1,6 @@
 
 type t =
-  | UnboundVar of Ast.var
+  | UnboundVar of Ast.Var.t
   | TypeMismatch
   | DuplicateFields of (Ast.Label.t list)
   | UnreachableCases

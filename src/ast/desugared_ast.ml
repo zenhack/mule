@@ -18,16 +18,16 @@ end
 
 module Expr = struct
   type t =
-    | Var of var
-    | Lam of (var * t)
+    | Var of Var.t
+    | Lam of (Var.t * t)
     | App of (t * t)
     | Record of t RowMap.t
     | GetField of (t * Label.t)
     | Update of (t * (Label.t * t) list)
     | Ctor of (Label.t * t)
     | Match of {
-        cases: (var * t) RowMap.t;
-        default: (var option * t) option;
+        cases: (Var.t * t) RowMap.t;
+        default: (Var.t option * t) option;
       }
     [@@deriving sexp_of]
 end
@@ -43,14 +43,14 @@ end
 module Pretty = struct
   let rec expr indent =
     function
-    | Expr.Var (Var name) ->
-        name
+    | Expr.Var var ->
+        Var.to_string var
     | Expr.Ctor (name, e) ->
         "(" ^ Label.to_string name ^ " " ^ expr indent e ^ ")"
-    | Expr.Lam (Var name, body) ->
+    | Expr.Lam (var, body) ->
         String.concat ""
           [ "fn "
-          ; name
+          ; Var.to_string var
           ; ". "
           ; expr indent body
           ]
@@ -86,13 +86,13 @@ module Pretty = struct
         String.concat ""
           [ "match-lam"
           ; RowMap.to_seq cases
-              |> Seq.map (fun (lbl, (Var v, e)) -> String.concat ""
+              |> Seq.map (fun (lbl, (v, e)) -> String.concat ""
                   [ "\n"
                   ; indent
                   ; "| "
                   ; Label.to_string lbl
                   ; " "
-                  ; v
+                  ; Var.to_string v
                   ; " -> "
                   ; expr new_indent e
                   ])
@@ -106,11 +106,11 @@ module Pretty = struct
                   ; "| _ -> "
                   ; expr new_indent e
                   ]
-              | Some (Some (Var v), e) -> String.concat ""
+              | Some (Some v, e) -> String.concat ""
                   [ "\n"
                   ; indent
                   ; "| "
-                  ; v
+                  ; Var.to_string v
                   ; " -> "
                   ; expr new_indent e
                   ]

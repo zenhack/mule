@@ -6,7 +6,7 @@ let typ t =
   *)
 let rec typ = Ast.Surface.Type.(
   function
-  | Var (_, Ast.Var v) -> v
+  | Var (_, v) -> Ast.Var.to_string v
   | Fn (_, f, x) ->
       String.concat ""
         [ "("
@@ -15,10 +15,10 @@ let rec typ = Ast.Surface.Type.(
         ; typ x
         ; ")"
         ]
-  | Recur (_, Ast.Var v, body) ->
+  | Recur (_, v, body) ->
       String.concat ""
         [ "rec "
-        ; v
+        ; Ast.Var.to_string v
         ; ". "
         ; typ body
         ]
@@ -31,7 +31,7 @@ let rec typ = Ast.Surface.Type.(
               fields
             )
         ; (match rest with
-            | Some (Ast.Var v) -> ", ..." ^ v
+            | Some v -> ", ..." ^ Ast.Var.to_string v
             | None -> "")
         ; "}"
         ]
@@ -39,7 +39,7 @@ let rec typ = Ast.Surface.Type.(
       (String.concat " | "
         (List.map (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")") ctors))
       ^ match rest with
-        | Some (Ast.Var v) -> " | ..." ^ v
+        | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""
   )
 )

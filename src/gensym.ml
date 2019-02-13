@@ -7,4 +7,4 @@ let gensym () =
   result
 
 let anon_var () =
-  Ast.Var ("$" ^ string_of_int (gensym ()))
+  Ast.Var.of_string ("$" ^ string_of_int (gensym ()))

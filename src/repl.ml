@@ -26,8 +26,8 @@ let rec loop () =
       ()
   | MParser.Success (Some expr) ->
       begin match desugar_typecheck expr with
-      | OrErr.Err (Error.UnboundVar (Ast.Var name)) ->
-          print_endline ("unbound variable: " ^ name);
+      | OrErr.Err (Error.UnboundVar var) ->
+          print_endline ("unbound variable: " ^ Ast.Var.to_string var);
       | OrErr.Err Error.TypeMismatch ->
           (* Most useful error message EVER: *)
           print_endline "Type mismatch"

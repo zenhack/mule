@@ -40,7 +40,7 @@ let rec desugar = function
   | S.Ctor (_, label) ->
       (* The choice of variable name here doesn't matter, since
        * there's nothing we need to worry about shadowing. *)
-      let param = Ast.Var "x" in
+      let param = Ast.Var.of_string "x" in
       D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (_, e, cases) ->
       D.App

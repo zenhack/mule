@@ -1,22 +1,17 @@
 open Sexplib.Std
 module Sexp = Sexplib.Sexp
 
-type var =
-  Var of string
-  [@@deriving sexp]
-
-module Label : sig
+module StringWrapper : sig
   type t
 
   val of_string : string -> t
   val to_string : t -> string
 
-  val compare : t -> t -> int
-
   val sexp_of_t : t -> Sexp.t
   val t_of_sexp : Sexp.t -> t
-end = struct
 
+  val compare : t -> t -> int
+end = struct
   type t = string [@@deriving sexp]
 
   let of_string s = s
@@ -24,3 +19,6 @@ end = struct
 
   let compare = String.compare
 end
+
+module Var : module type of StringWrapper = StringWrapper
+module Label : module type of StringWrapper = StringWrapper

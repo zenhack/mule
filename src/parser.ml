@@ -41,11 +41,11 @@ let var = token (
     if StrSet.mem name keywords then
       fail "reserved word"
     else
-      return (Ast.Var name)
+      return (Ast.Var.of_string name)
 )
 
 let label =
-  var |>> fun (Ast.Var name) -> Ast.Label.of_string name
+  var |>> fun v -> Ast.Var.to_string v |> Ast.Label.of_string
 
 let ctor = token (
   uppercase

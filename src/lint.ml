@@ -1,34 +1,34 @@
 open OrErr
 open Ast.Surface.Expr
-module S = Set.Make(String)
+module VSet = Set.Make(Ast.Var)
 module LSet = Set.Make(Ast.Label)
 
 (* Free variables in an expression *)
 let rec free_vars env = Ast.Surface.Expr.(
   function
-  | Var (_, Ast.Var v) ->
-      if S.mem v env then
-        S.empty
+  | Var (_, v) ->
+      if VSet.mem v env then
+        VSet.empty
       else
-        S.singleton v
+        VSet.singleton v
   | Lam (i, (pat :: pats), body) ->
       case_free_vars env (pat, (Lam (i, pats, body)))
   | Lam (_, [], body) ->
       free_vars env body
   | App (_, f, x) ->
-      S.union (free_vars env f) (free_vars env x)
+      VSet.union (free_vars env f) (free_vars env x)
   | Record (_, fields) -> fields_free_vars env fields
   | Update(_, e, fields) ->
-      S.union
+      VSet.union
         (free_vars env e)
         (fields_free_vars env fields)
   | GetField(_, e, _) ->
       free_vars env e
   | Ctor _ ->
-      S.empty
+      VSet.empty
   | Match (_, e, cases) ->
       List.fold_left
-        S.union
+        VSet.union
         (free_vars env e)
         (List.map (case_free_vars env) cases)
 )
@@ -36,20 +36,20 @@ and case_free_vars env (p, body) =
   match p with
     | Ast.Surface.Pattern.Wild _ ->
         free_vars env body
-    | Ast.Surface.Pattern.Var(_, Ast.Var v) ->
-        free_vars (S.add v env) body
+    | Ast.Surface.Pattern.Var(_, v) ->
+        free_vars (VSet.add v env) body
     | Ast.Surface.Pattern.Ctor (_, _, p') ->
         case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
     |> List.map (fun (_, v) -> free_vars env v)
-    |> List.fold_left S.union S.empty
+    |> List.fold_left VSet.union VSet.empty
 
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
-  let free = free_vars S.empty expr in
-  match S.find_first_opt (fun _ -> true) free with
-  | Some x -> Err (Error.UnboundVar (Ast.Var x))
+  let free = free_vars VSet.empty expr in
+  match VSet.find_first_opt (fun _ -> true) free with
+  | Some x -> Err (Error.UnboundVar x)
   | None -> Ok ()
 
 (* Check for duplicate record fields *)

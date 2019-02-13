@@ -2,11 +2,11 @@ open Ast.Desugared.Expr
 open Ast.Desugared
 
 let rec subst param arg expr = match expr with
-  | Var (Ast.Var v) when v = param -> arg
+  | Var v when v = param -> arg
   | Var _ -> expr
   | Ctor (lbl, value) ->
       Ctor (lbl, subst param arg value)
-  | Lam (Ast.Var param', body) ->
+  | Lam (param', body) ->
       Lam (subst_binding param' param arg body)
   | App (f, x) ->
       App (subst param arg f, subst param arg x)
@@ -22,13 +22,13 @@ let rec subst param arg expr = match expr with
   | Match {cases; default} ->
       Match
         { cases = RowMap.map
-          (fun (Ast.Var param', body) ->
+          (fun (param', body) ->
             subst_binding param' param arg body)
           cases
         ; default = match default with
             | None ->
                 None
-            | Some (Some (Ast.Var param'), body) ->
+            | Some (Some param', body) ->
                 let (p', b') = subst_binding param' param arg body in
                 Some (Some p', b')
             | Some (None, body) ->
@@ -36,15 +36,15 @@ let rec subst param arg expr = match expr with
         }
 and subst_binding param' param arg body =
   if param == param' then
-    (Ast.Var param', body)
+    (param', body)
   else
-    (Ast.Var param', subst param arg body)
+    (param', subst param arg body)
 
 
 let rec eval = function
-  | Var (Ast.Var v) ->
+  | Var v ->
       Debug.impossible
-        ("Unbound variable \"" ^ v ^ "\"; this should have been caught sooner.")
+        ("Unbound variable \"" ^ Ast.Var.to_string v ^ "\"; this should have been caught sooner.")
   | Lam lam -> Lam lam
   | Match m -> Match m
   | Ctor c -> Ctor c
@@ -52,7 +52,7 @@ let rec eval = function
       let f' = eval f in
       let arg' = eval arg in
       begin match f' with
-      | Lam (Ast.Var param, body) ->
+      | Lam (param, body) ->
           eval (subst param arg' body)
       | Match {cases; default} ->
           eval_match cases default arg'
@@ -85,7 +85,7 @@ let rec eval = function
 and eval_match cases default = function
  | Ctor (lbl, value) ->
      begin match RowMap.find_opt lbl cases with
-      | Some (Ast.Var param, body) ->
+      | Some (param, body) ->
         eval (subst param value body)
       | None ->
         begin match default with
@@ -93,7 +93,7 @@ and eval_match cases default = function
               Debug.impossible "Match failed"
           | Some (None, body) ->
               eval body
-          | Some (Some (Ast.Var param), body) ->
+          | Some (Some param, body) ->
               eval (subst param (Ctor (lbl, value)) body)
         end
      end
@@ -103,6 +103,6 @@ and eval_match cases default = function
             Debug.impossible "Match failed"
         | Some (None, body) ->
             eval body
-        | Some (Some (Ast.Var param), body) ->
+        | Some (Some param, body) ->
             eval (subst param value body)
       end

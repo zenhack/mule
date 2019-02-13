@@ -4,7 +4,7 @@ open Common_ast
 module Pattern = struct
   type 'i t =
     | Ctor of ('i * Label.t * 'i t)
-    | Var of ('i * var)
+    | Var of ('i * Var.t)
     | Wild of 'i
     [@@deriving sexp]
 
@@ -20,7 +20,7 @@ module Expr = struct
   type 'i t =
     | App of ('i * 'i t * 'i t)
     | Lam of ('i * ('i Pattern.t) list * 'i t)
-    | Var of ('i * var)
+    | Var of ('i * Var.t)
     | Record of ('i * (Label.t * 'i t) list)
     | GetField of ('i * 'i t * Label.t)
     | Ctor of ('i * Label.t)
@@ -60,10 +60,10 @@ end
 module Type = struct
   type 'i t =
     | Fn of ('i * 'i t * 'i t)
-    | Recur of ('i * var * 'i t)
-    | Var of ('i * var)
-    | Record of ('i * (Label.t * 'i t) list * var option)
-    | Union of ('i * (Label.t * 'i t) list * var option)
+    | Recur of ('i * Var.t * 'i t)
+    | Var of ('i * Var.t)
+    | Record of ('i * (Label.t * 'i t) list * Var.t option)
+    | Union of ('i * (Label.t * 'i t) list * Var.t option)
     [@@deriving sexp]
 
   let get_info = function

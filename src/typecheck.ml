@@ -1,5 +1,5 @@
-module S = Set.Make(String)
-module Env = Map.Make(String)
+module S = Set.Make(Ast.Var)
+module Env = Map.Make(Ast.Var)
 
 open Gensym
 open OrErr
@@ -58,9 +58,9 @@ and unify_row l r =
 let rec walk env =
   let open Ast.Desugared in
   function
-  | Expr.Var (Ast.Var v) ->
+  | Expr.Var v ->
       Ok (Env.find v env)
-  | Expr.Lam (Ast.Var param, body) ->
+  | Expr.Lam (param, body) ->
       let paramVar = UnionFind.make (Type (gensym ())) in
       walk (Env.add param paramVar env) body
       |>> fun retVar -> UnionFind.make (Fn (gensym (), paramVar, retVar))
@@ -122,7 +122,7 @@ let rec walk env =
         | Some (Some paramVar, body) ->
             walk env (Expr.Lam (paramVar, body))
         | Some (None, body) ->
-            walk env (Expr.Lam (Ast.Var "_", body))
+            walk env (Expr.Lam (Ast.Var.of_string "_", body))
       end
   | Expr.Match {cases; default} ->
       let final = match default with
@@ -140,7 +140,7 @@ let rec walk env =
             )
 and walk_match env final = function
   | [] -> Ok (final, UnionFind.make (Type (gensym ())))
-  | ((lbl, (Ast.Var var, body)) :: rest) ->
+  | ((lbl, (var, body)) :: rest) ->
       let ty = UnionFind.make (Type (gensym ())) in
       walk (Env.add var ty env) body
       >>= fun bodyVar -> walk_match env final rest
@@ -157,13 +157,13 @@ and walk_fields env final = function
       |>> fun tailVar ->
         UnionFind.make (Extend(lbl, lblVar, tailVar))
 
-let ivar i = "t" ^ string_of_int i
+let ivar i = Ast.Var.of_string ("t" ^ string_of_int i)
 
 let maybe_add_rec i vars ty =
   let myvar = ivar i in
   if S.mem myvar vars then
     ( S.remove myvar vars
-    , Ast.Surface.Type.Recur(i, Ast.Var myvar, ty)
+    , Ast.Surface.Type.Recur(i, myvar, ty)
     )
   else
     (vars, ty)
@@ -171,7 +171,7 @@ let maybe_add_rec i vars ty =
 let rec add_rec_binders ty =
   let open Ast.Surface.Type in
   match ty with
-  | Var (_, (Ast.Var v)) ->
+  | Var (_, v) ->
       ( S.singleton v
       , ty
       )
@@ -192,7 +192,7 @@ let rec add_rec_binders ty =
       maybe_add_rec i vars (Union ret)
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
-    | Some (Ast.Var v) -> S.singleton v
+    | Some v -> S.singleton v
     | None -> S.empty
   in
   let fields_vars = List.map
@@ -211,7 +211,7 @@ let add_rec_binders ty =
 
 (* Extract a type from a (solved) unification variable. *)
 let rec get_var_type env = function
-  | Type i -> Ast.Surface.Type.Var (i, Ast.Var (ivar i))
+  | Type i -> Ast.Surface.Type.Var (i, (ivar i))
   | Fn (i, f, x) ->
       if S.mem (ivar i) env then
         get_var_type env (Type i)
@@ -233,7 +233,7 @@ let rec get_var_type env = function
       in
       Ast.Surface.Type.Union (i, ctors, rest)
 and get_var_row env = function
-  | Row i -> ([], Some (Ast.Var (ivar i)))
+  | Row i -> ([], Some (ivar i))
   | Empty -> ([], None)
   | Extend (lbl, ty, rest) ->
       let (fields, rest) = get_var_row env (UnionFind.get rest) in
