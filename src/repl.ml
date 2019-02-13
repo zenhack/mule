@@ -35,7 +35,10 @@ let rec loop () =
           print_endline "Unreachable cases in match"
       | OrErr.Err (Error.DuplicateFields fields) ->
           print_endline "Duplicate fields:";
-          print_endline (String.concat ", " fields)
+          fields
+            |> List.map Ast.Label.to_string
+            |> String.concat ","
+            |> print_endline
       | OrErr.Err Error.EmptyMatch ->
           print_endline "Empty match expression."
       | OrErr.Ok dexp ->

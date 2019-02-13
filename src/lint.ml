@@ -1,6 +1,7 @@
 open OrErr
 open Ast.Surface.Expr
 module S = Set.Make(String)
+module LSet = Set.Make(Ast.Label)
 
 (* Free variables in an expression *)
 let rec free_vars env = Ast.Surface.Expr.(
@@ -55,18 +56,18 @@ let check_unbound_vars expr =
 let check_duplicate_record_fields =
   let rec go =
     let rec check_fields all dups = function
-      | (Ast.Label x, v) :: xs ->
+      | (x, v) :: xs ->
           go v >>
-          if S.mem x all then
-            check_fields all (S.add x dups) xs
+          if LSet.mem x all then
+            check_fields all (LSet.add x dups) xs
           else
-            check_fields (S.add x all) dups xs
+            check_fields (LSet.add x all) dups xs
       | [] ->
-          if S.is_empty dups then
+          if LSet.is_empty dups then
             Ok ()
           else
             Err
-              ( Error.DuplicateFields (List.of_seq (S.to_seq dups))
+              ( Error.DuplicateFields (List.of_seq (LSet.to_seq dups))
               )
     in
     let rec check_cases = function
@@ -75,10 +76,10 @@ let check_duplicate_record_fields =
     in
     function
     | Record (_, fields) ->
-        check_fields S.empty S.empty fields
+        check_fields LSet.empty LSet.empty fields
     | Update(_, e, fields) ->
         go e
-        >> check_fields S.empty S.empty fields
+        >> check_fields LSet.empty LSet.empty fields
 
     (* The rest of this is just walking down the tree *)
     | Lam (_, _, body) -> go body

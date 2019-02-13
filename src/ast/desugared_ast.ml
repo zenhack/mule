@@ -1,10 +1,6 @@
 open Common_ast
 
-module RowMap = Map.Make(struct
-  type t = label
-
-  let compare (Label l) (Label r) = String.compare l r
-end)
+module RowMap = Map.Make(Label)
 
 module Expr = struct
   type t =
@@ -12,9 +8,9 @@ module Expr = struct
     | Lam of (var * t)
     | App of (t * t)
     | Record of t RowMap.t
-    | GetField of (t * label)
-    | Update of (t * (label * t) list)
-    | Ctor of (label * t)
+    | GetField of (t * Label.t)
+    | Update of (t * (Label.t * t) list)
+    | Ctor of (Label.t * t)
     | Match of {
         cases: (var * t) RowMap.t;
         default: (var option * t) option;
@@ -26,8 +22,8 @@ module Pretty = struct
     function
     | Expr.Var (Var name) ->
         name
-    | Expr.Ctor (Label name, e) ->
-        "(" ^ name ^ " " ^ expr indent e ^ ")"
+    | Expr.Ctor (name, e) ->
+        "(" ^ Label.to_string name ^ " " ^ expr indent e ^ ")"
     | Expr.Lam (Var name, body) ->
         String.concat ""
           [ "fn "
@@ -47,7 +43,7 @@ module Pretty = struct
         String.concat ""
           [ "{"
           ; RowMap.to_seq fields
-              |> Seq.map (fun (Label lbl, e) -> lbl ^ " = " ^ expr indent e)
+              |> Seq.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e)
               |> List.of_seq
               |> String.concat ", "
           ; "}"
@@ -57,21 +53,21 @@ module Pretty = struct
           [ expr indent r
           ; " where { "
           ; String.concat ", "
-              (List.map (fun (Label lbl, e) -> lbl ^ " = " ^ expr indent e) fields)
+              (List.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e) fields)
           ; " }"
           ]
-    | Expr.GetField (e, Label lbl) ->
-        "(" ^ expr indent e ^ ")." ^ lbl
+    | Expr.GetField (e, lbl) ->
+        "(" ^ expr indent e ^ ")." ^ Label.to_string lbl
     | Expr.Match {cases; default} ->
         let new_indent = indent ^ "  " in
         String.concat ""
           [ "match-lam"
           ; RowMap.to_seq cases
-              |> Seq.map (fun (Label lbl, (Var v, e)) -> String.concat ""
+              |> Seq.map (fun (lbl, (Var v, e)) -> String.concat ""
                   [ "\n"
                   ; indent
                   ; "| "
-                  ; lbl
+                  ; Label.to_string lbl
                   ; " "
                   ; v
                   ; " -> "

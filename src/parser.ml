@@ -45,12 +45,12 @@ let var = token (
 )
 
 let label =
-  var |>> fun (Ast.Var name) -> Ast.Label name
+  var |>> fun (Ast.Var name) -> Ast.Label.of_string name
 
 let ctor = token (
   uppercase
   >>= fun c -> many_chars (letter <|> char '_' <|> digit)
-  |>> fun cs -> Ast.Label (String.make 1 c ^ cs)
+  |>> fun cs -> Ast.Label.of_string (String.make 1 c ^ cs)
 ) <?> "constructor"
 
 let rec expr = lazy ((

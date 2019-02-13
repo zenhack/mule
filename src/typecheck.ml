@@ -11,7 +11,7 @@ type u_type =
   | Record of (int * u_row UnionFind.var)
   | Union of (int * u_row UnionFind.var)
 and u_row =
-  | Extend of (Ast.label * u_type UnionFind.var * u_row UnionFind.var)
+  | Extend of (Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
   | Row of int
 

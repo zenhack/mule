@@ -2,7 +2,7 @@ open Common_ast
 
 module Pattern = struct
   type 'i t =
-    | Ctor of ('i * label * 'i t)
+    | Ctor of ('i * Label.t * 'i t)
     | Var of ('i * var)
     | Wild of 'i
 
@@ -19,10 +19,10 @@ module Expr = struct
     | App of ('i * 'i t * 'i t)
     | Lam of ('i * ('i Pattern.t) list * 'i t)
     | Var of ('i * var)
-    | Record of ('i * (label * 'i t) list)
-    | GetField of ('i * 'i t * label)
-    | Ctor of ('i * label)
-    | Update of ('i * 'i t * (label * 'i t) list)
+    | Record of ('i * (Label.t * 'i t) list)
+    | GetField of ('i * 'i t * Label.t)
+    | Ctor of ('i * Label.t)
+    | Update of ('i * 'i t * (Label.t* 'i t) list)
     | Match of ('i * 'i t * ('i Pattern.t * 'i t) list)
 
   let rec map_info f = function
@@ -59,8 +59,8 @@ module Type = struct
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * var * 'i t)
     | Var of ('i * var)
-    | Record of ('i * (label * 'i t) list * var option)
-    | Union of ('i * (label * 'i t) list * var option)
+    | Record of ('i * (Label.t * 'i t) list * var option)
+    | Union of ('i * (Label.t * 'i t) list * var option)
 
   let get_info = function
     | Fn(i, _, _) -> i

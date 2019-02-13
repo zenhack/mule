@@ -2,7 +2,7 @@
 type t =
   | UnboundVar of Ast.var
   | TypeMismatch
-  | DuplicateFields of (string list)
+  | DuplicateFields of (Ast.Label.t list)
   | UnreachableCases
   | EmptyMatch
 

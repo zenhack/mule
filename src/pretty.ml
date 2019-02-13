@@ -22,7 +22,7 @@ let rec typ = Ast.Surface.Type.(
         [ "{"
         ; String.concat ", "
             (List.map
-              (fun (Ast.Label lbl, ty) -> lbl ^ " : " ^ typ ty)
+              (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ ty)
               fields
             )
         ; (match rest with
@@ -32,7 +32,7 @@ let rec typ = Ast.Surface.Type.(
         ]
   | Union (_, ctors, rest) -> (
       (String.concat " | "
-        (List.map (fun (Ast.Label lbl, ty) -> "(" ^ lbl ^ " " ^ typ ty ^ ")") ctors))
+        (List.map (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")") ctors))
       ^ match rest with
         | Some (Ast.Var v) -> " | ..." ^ v
         | None -> ""
