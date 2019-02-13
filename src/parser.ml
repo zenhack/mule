@@ -56,29 +56,29 @@ let ctor = token (
 let rec expr = lazy ((
   lazy_p ex1
   >>= fun t -> many (lazy_p ex1)
-  |>> fun ts -> List.fold_left (fun f x -> Expr.App ((), f, x)) t ts
+  |>> fun ts -> List.fold_left (fun f x -> Expr.App (f, x)) t ts
 ) <?> "expression")
 and ex1 = lazy (
   lazy_p ex2
   >>= fun old -> choice
     [ (kwd "where" >> lazy_p record_fields
-        |>> fun fields -> Expr.Update ((), old, fields))
+        |>> fun fields -> Expr.Update (old, fields))
     ; return old
     ]
 )
 and ex2 = lazy (
   lazy_p ex3
   >>= fun head -> many (kwd "." >> label)
-  |>> List.fold_left (fun e l -> Expr.GetField((), e, l)) head
+  |>> List.fold_left (fun e l -> Expr.GetField(e, l)) head
 )
 and ex3 = lazy (
   choice
     [ lazy_p lambda
     ; lazy_p match_expr
-    ; (var |>> fun v -> Expr.Var ((), v))
+    ; (var |>> fun v -> Expr.Var v)
     ; parens (lazy_p expr)
     ; lazy_p record
-    ; (ctor |>> fun c -> Expr.Ctor (((), c)))
+    ; (ctor |>> fun c -> Expr.Ctor c)
     ]
 )
 and lambda = lazy ((
@@ -86,7 +86,7 @@ and lambda = lazy ((
   >> many1 (lazy_p pattern)
   >>= fun params -> kwd "."
   >> lazy_p expr
-  |>> fun body -> Expr.Lam ((), params, body)
+  |>> fun body -> Expr.Lam (params, body)
 ) <?> "lambda")
 and match_expr = lazy ((
   kwd "match"
@@ -95,7 +95,7 @@ and match_expr = lazy ((
   >> optional (kwd "|")
   >> sep_by1 (lazy_p case) (kwd "|")
   >>= fun cases -> kwd "end"
-  |>> fun _ -> Expr.Match((), e, cases)
+  |>> fun _ -> Expr.Match(e, cases)
 ) <?> "match expression")
 and case = lazy (
   lazy_p pattern
@@ -106,11 +106,11 @@ and case = lazy (
 and pattern = lazy ((
   choice
     [ parens (lazy_p pattern)
-    ; (kwd "_" |>> fun _ -> Pattern.Wild ())
-    ; (var |>> fun v -> Pattern.Var((), v))
+    ; (kwd "_" |>> fun _ -> Pattern.Wild)
+    ; (var |>> fun v -> Pattern.Var v)
     ; (ctor
         >>= fun lbl -> lazy_p pattern
-        |>> fun p -> Pattern.Ctor ((), lbl, p)
+        |>> fun p -> Pattern.Ctor (lbl, p)
       )
     ;
     ]
@@ -120,7 +120,7 @@ and record_fields = lazy ((
 ) <?> "record")
 and record = lazy (
   lazy_p record_fields
-  |>> fun fields -> Expr.Record ((), fields)
+  |>> fun fields -> Expr.Record fields
 )
 and field_def = lazy (
   label

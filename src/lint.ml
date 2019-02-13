@@ -6,27 +6,27 @@ module LSet = Set.Make(Ast.Label)
 (* Free variables in an expression *)
 let rec free_vars env = Ast.Surface.Expr.(
   function
-  | Var (_, v) ->
+  | Var v ->
       if VSet.mem v env then
         VSet.empty
       else
         VSet.singleton v
-  | Lam (i, (pat :: pats), body) ->
-      case_free_vars env (pat, (Lam (i, pats, body)))
-  | Lam (_, [], body) ->
+  | Lam ((pat :: pats), body) ->
+      case_free_vars env (pat, (Lam (pats, body)))
+  | Lam ([], body) ->
       free_vars env body
-  | App (_, f, x) ->
+  | App (f, x) ->
       VSet.union (free_vars env f) (free_vars env x)
-  | Record (_, fields) -> fields_free_vars env fields
-  | Update(_, e, fields) ->
+  | Record fields -> fields_free_vars env fields
+  | Update(e, fields) ->
       VSet.union
         (free_vars env e)
         (fields_free_vars env fields)
-  | GetField(_, e, _) ->
+  | GetField(e, _) ->
       free_vars env e
   | Ctor _ ->
       VSet.empty
-  | Match (_, e, cases) ->
+  | Match (e, cases) ->
       List.fold_left
         VSet.union
         (free_vars env e)
@@ -34,11 +34,11 @@ let rec free_vars env = Ast.Surface.Expr.(
 )
 and case_free_vars env (p, body) =
   match p with
-    | Ast.Surface.Pattern.Wild _ ->
+    | Ast.Surface.Pattern.Wild ->
         free_vars env body
-    | Ast.Surface.Pattern.Var(_, v) ->
+    | Ast.Surface.Pattern.Var v ->
         free_vars (VSet.add v env) body
-    | Ast.Surface.Pattern.Ctor (_, _, p') ->
+    | Ast.Surface.Pattern.Ctor (_, p') ->
         case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
@@ -75,18 +75,18 @@ let check_duplicate_record_fields =
       | ((_, body) :: cs) -> go body >> check_cases cs
     in
     function
-    | Record (_, fields) ->
+    | Record fields ->
         check_fields LSet.empty LSet.empty fields
-    | Update(_, e, fields) ->
+    | Update(e, fields) ->
         go e
         >> check_fields LSet.empty LSet.empty fields
 
     (* The rest of this is just walking down the tree *)
-    | Lam (_, _, body) -> go body
-    | Match(_, e, cases) ->
+    | Lam (_, body) -> go body
+    | Match(e, cases) ->
         go e >> check_cases cases
-    | App (_, f, x) -> go f >> go x
-    | GetField(_, e, _) -> go e
+    | App (f, x) -> go f >> go x
+    | GetField(e, _) -> go e
 
     | Var _ -> Ok ()
     | Ctor _ -> Ok ()
