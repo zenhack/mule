@@ -1,4 +1,9 @@
-type var = Var of string
+open Sexplib.Std
+module Sexp = Sexplib.Sexp
+
+type var =
+  Var of string
+  [@@deriving sexp]
 
 module Label : sig
   type t
@@ -7,11 +12,15 @@ module Label : sig
   val to_string : t -> string
 
   val compare : t -> t -> int
+
+  val sexp_of_t : t -> Sexp.t
+  val t_of_sexp : Sexp.t -> t
 end = struct
-  type t = Label of string
 
-  let of_string s = Label s
-  let to_string (Label s) = s
+  type t = string [@@deriving sexp]
 
-  let compare (Label l) (Label r) = String.compare l r
+  let of_string s = s
+  let to_string s = s
+
+  let compare = String.compare
 end

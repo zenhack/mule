@@ -1,4 +1,9 @@
 
+(*
+let typ t =
+  Ast.Surface.Type.sexp_of_t (fun _ -> sexp_of_unit ()) t
+  |> Sexplib.Sexp.to_string_hum
+  *)
 let rec typ = Ast.Surface.Type.(
   function
   | Var (_, Ast.Var v) -> v

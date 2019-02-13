@@ -1,3 +1,4 @@
+open Sexplib.Std
 open Common_ast
 
 module Pattern = struct
@@ -5,6 +6,7 @@ module Pattern = struct
     | Ctor of ('i * Label.t * 'i t)
     | Var of ('i * var)
     | Wild of 'i
+    [@@deriving sexp]
 
   let rec map_info f = function
     | Ctor (i, lbl, p) ->
@@ -24,6 +26,7 @@ module Expr = struct
     | Ctor of ('i * Label.t)
     | Update of ('i * 'i t * (Label.t* 'i t) list)
     | Match of ('i * 'i t * ('i Pattern.t * 'i t) list)
+    [@@deriving sexp]
 
   let rec map_info f = function
     | App (i, l, r) -> App (f i, map_info f l, map_info f r)
@@ -61,6 +64,7 @@ module Type = struct
     | Var of ('i * var)
     | Record of ('i * (Label.t * 'i t) list * var option)
     | Union of ('i * (Label.t * 'i t) list * var option)
+    [@@deriving sexp]
 
   let get_info = function
     | Fn(i, _, _) -> i

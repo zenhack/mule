@@ -1,6 +1,20 @@
+open Sexplib.Std
+module Sexp = Sexplib.Sexp
 open Common_ast
 
-module RowMap = Map.Make(Label)
+module RowMap : sig
+  include module type of Map.Make(Label)
+  val sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t
+end = struct
+  include Map.Make(Label)
+
+  type 'a binding = (Label.t * 'a)
+  [@@deriving sexp_of]
+
+  let sexp_of_t sexp_of_val map =
+    bindings map
+    |> sexp_of_list (sexp_of_binding sexp_of_val)
+end
 
 module Expr = struct
   type t =
@@ -15,7 +29,16 @@ module Expr = struct
         cases: (var * t) RowMap.t;
         default: (var option * t) option;
       }
+    [@@deriving sexp_of]
 end
+
+(*
+module Pretty = struct
+  let expr e =
+    Expr.sexp_of_t e
+    |> Sexp.to_string_hum
+end
+*)
 
 module Pretty = struct
   let rec expr indent =
