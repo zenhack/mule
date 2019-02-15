@@ -70,6 +70,9 @@ and desugar_match dict = function
             dict
       in
       desugar_match dict' cases
+  | (SP.Annotated (p, _), body) :: cases ->
+      (* TODO: we'll want to actually do something with these eventually *)
+      desugar_match dict ((p, body) :: cases)
   | (_ :: _) ->
       raise (Error.MuleExn Error.UnreachableCases)
 and finalize_dict dict =

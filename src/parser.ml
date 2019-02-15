@@ -53,6 +53,37 @@ let ctor = token (
   |>> fun cs -> Ast.Label.of_string (String.make 1 c ^ cs)
 ) <?> "constructor"
 
+let rec typ_term = lazy (
+  choice
+    [ (var |>> fun v -> Type.Var ((), v))
+    ; lazy_p record_type
+    ; lazy_p recur_type
+    ; parens (lazy_p typ)
+    ]
+) and recur_type = lazy (
+  kwd "rec"
+  >> var
+  >>= fun v -> kwd "."
+  >> lazy_p typ
+  |>> fun ty -> Type.Recur((), v, ty)
+) and record_type = lazy (
+  braces (sep_end_by (lazy_p field_decl) (kwd ","))
+  |>> fun fields ->
+      (* TODO: support ...r notation for row variables *)
+      Type.Record((), fields, None)
+) and field_decl = lazy (
+  label
+  >>= fun l -> kwd ":"
+  >> lazy_p typ
+  |>> fun ty -> (l, ty)
+  (*
+) and typ_ctor = lazy (
+  ctor
+  >>= fun l -> lazy_p typ_term
+  |>> fun ty -> (l, ty)
+*)
+) and typ = lazy (lazy_p typ_term)
+
 let rec expr = lazy ((
   lazy_p ex1
   >>= fun t -> many (lazy_p ex1)
@@ -114,6 +145,11 @@ and pattern = lazy ((
       )
     ;
     ]
+    >>= fun p -> option (kwd ":" >> lazy_p typ)
+    |>> fun ty -> begin match ty with
+      | Some ty' -> Pattern.Annotated(p, ty')
+      | None -> p
+    end
 ) <?> "pattern")
 and record_fields = lazy ((
   braces (sep_end_by (lazy_p field_def) (kwd ","))

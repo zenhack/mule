@@ -40,6 +40,8 @@ and case_free_vars env (p, body) =
         free_vars (VSet.add v env) body
     | Ast.Surface.Pattern.Ctor (_, p') ->
         case_free_vars env (p', body)
+    | Ast.Surface.Pattern.Annotated (p', _) ->
+        case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
     |> List.map (fun (_, v) -> free_vars env v)

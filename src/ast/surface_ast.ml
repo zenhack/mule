@@ -1,27 +1,6 @@
 open Sexplib.Std
 open Common_ast
 
-module Pattern = struct
-  type t =
-    | Ctor of (Label.t * t)
-    | Var of Var.t
-    | Wild
-    [@@deriving sexp]
-end
-
-module Expr = struct
-  type t =
-    | App of (t * t)
-    | Lam of (Pattern.t list * t)
-    | Var of Var.t
-    | Record of (Label.t * t) list
-    | GetField of (t * Label.t)
-    | Ctor of Label.t
-    | Update of (t * (Label.t * t) list)
-    | Match of (t * (Pattern.t * t) list)
-    [@@deriving sexp]
-end
-
 module Type = struct
   type 'i t =
     | Fn of ('i * 'i t * 'i t)
@@ -37,4 +16,26 @@ module Type = struct
     | Var(i, _) -> i
     | Record(i, _, _) -> i
     | Union(i, _, _) -> i
+end
+
+module Pattern = struct
+  type t =
+    | Ctor of (Label.t * t)
+    | Var of Var.t
+    | Wild
+    | Annotated of (t * unit Type.t)
+    [@@deriving sexp]
+end
+
+module Expr = struct
+  type t =
+    | App of (t * t)
+    | Lam of (Pattern.t list * t)
+    | Var of Var.t
+    | Record of (Label.t * t) list
+    | GetField of (t * Label.t)
+    | Ctor of Label.t
+    | Update of (t * (Label.t * t) list)
+    | Match of (t * (Pattern.t * t) list)
+    [@@deriving sexp]
 end
