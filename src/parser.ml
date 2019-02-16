@@ -56,10 +56,15 @@ let ctor = token (
 let rec typ_term = lazy (
   choice
     [ (var |>> fun v -> Type.Var v)
+    ; (ctor |>> fun c -> Type.Ctor c)
     ; lazy_p record_type
     ; lazy_p recur_type
     ; parens (lazy_p typ)
     ]
+) and typ_app = lazy (
+  (lazy_p typ_term)
+  >>= fun t -> many (lazy_p typ_term)
+  |>> List.fold_left (fun f x -> Type.App (f, x)) t
 ) and recur_type = lazy (
   kwd "rec"
   >> var
@@ -79,13 +84,13 @@ let rec typ_term = lazy (
   >>= fun l -> kwd ":"
   >> lazy_p typ
   |>> fun ty -> Type.Field (l, ty)
-  (*
-) and typ_ctor = lazy (
-  ctor
-  >>= fun l -> lazy_p typ_term
-  |>> fun ty -> (l, ty)
-*)
-) and typ = lazy (lazy_p typ_term)
+) and typ = lazy (
+  expression
+  [ [ Infix ((kwd "|" >>$ fun l r -> Type.Union (l, r)), Assoc_right) ]
+  ; [ Infix ((kwd "->" >>$ fun p r -> Type.Fn(p, r)), Assoc_right) ]
+  ]
+  (lazy_p typ_app)
+)
 
 let rec expr = lazy ((
   lazy_p ex1
