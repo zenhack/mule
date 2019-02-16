@@ -1,6 +1,7 @@
 module S = Set.Make(Ast.Var)
 module Env = Map.Make(Ast.Var)
 
+open Ast.Desugared
 open Gensym
 open OrErr
 
@@ -55,9 +56,7 @@ and unify_row l r =
   | (Extend _, Empty) -> Err Error.TypeMismatch
   | (Empty, Extend _) -> Err Error.TypeMismatch
 
-let rec walk env =
-  let open Ast.Desugared in
-  function
+let rec walk env = function
   | Expr.Var v ->
       Ok (Env.find v env)
   | Expr.Lam (param, body) ->
@@ -163,33 +162,32 @@ let maybe_add_rec i vars ty =
   let myvar = ivar i in
   if S.mem myvar vars then
     ( S.remove myvar vars
-    , Ast.Surface.Type.Recur(i, myvar, ty)
+    , Type.Recur(i, myvar, ty)
     )
   else
     (vars, ty)
 
 let rec add_rec_binders ty =
-  let open Ast.Surface.Type in
   match ty with
-  | Var (_, v) ->
+  | Type.Var (_, v) ->
       ( S.singleton v
       , ty
       )
-  | Recur(i, v, t) ->
+  | Type.Recur(i, v, t) ->
       let (vs, ts) = add_rec_binders t in
       ( S.remove (ivar i) vs
-      , Recur(i, v, ts)
+      , Type.Recur(i, v, ts)
       )
-  | Fn (i, f, x) ->
+  | Type.Fn (i, f, x) ->
       let (fv, ft) = add_rec_binders f in
       let (xv, xt) = add_rec_binders x in
-      maybe_add_rec i (S.union fv xv) (Fn(i, ft, xt))
-  | Record(i, fields, rest) ->
+      maybe_add_rec i (S.union fv xv) (Type.Fn(i, ft, xt))
+  | Type.Record(i, fields, rest) ->
       let (vars, ret) = row_add_rec_binders i fields rest in
-      maybe_add_rec i vars (Record ret)
-  | Union(i, ctors, rest) ->
+      maybe_add_rec i vars (Type.Record ret)
+  | Type.Union(i, ctors, rest) ->
       let (vars, ret) = row_add_rec_binders i ctors rest in
-      maybe_add_rec i vars (Union ret)
+      maybe_add_rec i vars (Type.Union ret)
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
     | Some v -> S.singleton v
@@ -211,7 +209,7 @@ let add_rec_binders ty =
 
 (* Extract a type from a (solved) unification variable. *)
 let rec get_var_type env = function
-  | Type i -> Ast.Surface.Type.Var (i, (ivar i))
+  | Type i -> Type.Var (i, (ivar i))
   | Fn (i, f, x) ->
       if S.mem (ivar i) env then
         get_var_type env (Type i)
@@ -226,12 +224,12 @@ let rec get_var_type env = function
       let (fields, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get fields)
       in
-      Ast.Surface.Type.Record (i, fields, rest)
+      Type.Record (i, fields, rest)
   | Union (i, ctors) ->
       let (ctors, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
       in
-      Ast.Surface.Type.Union (i, ctors, rest)
+      Type.Union (i, ctors, rest)
 and get_var_row env = function
   | Row i -> ([], Some (ivar i))
   | Empty -> ([], None)

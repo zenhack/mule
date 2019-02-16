@@ -3,7 +3,7 @@ let desugar_typecheck expr =
   Lint.check expr
   >> Desugar.desugar expr
   >>= fun dexp ->
-    print_endline ("Desugared: " ^ Ast.Desugared.Pretty.expr dexp);
+    print_endline ("Desugared: " ^ Pretty.expr dexp);
     Typecheck.typecheck dexp
   |>> fun ty ->
     print_endline ("inferred type: " ^ Pretty.typ ty);
@@ -43,7 +43,7 @@ let rec loop () =
           print_endline "Empty match expression."
       | OrErr.Ok dexp ->
           Eval.eval dexp
-          |> Ast.Desugared.Pretty.expr
+          |> Pretty.expr
           |> fun ret -> print_endline ("Evaluated: " ^ ret)
       end
   end;

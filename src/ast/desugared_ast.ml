@@ -16,6 +16,16 @@ end = struct
     |> sexp_of_list (sexp_of_binding sexp_of_val)
 end
 
+module Type = struct
+  type 'i t =
+    | Fn of ('i * 'i t * 'i t)
+    | Recur of ('i * Var.t * 'i t)
+    | Var of ('i * Var.t)
+    | Record of ('i * (Label.t * 'i t) list * Var.t option)
+    | Union of ('i * (Label.t * 'i t) list * Var.t option)
+    [@@deriving sexp]
+end
+
 module Expr = struct
   type t =
     | Var of Var.t
@@ -30,94 +40,4 @@ module Expr = struct
         default: (Var.t option * t) option;
       }
     [@@deriving sexp_of]
-end
-
-(*
-module Pretty = struct
-  let expr e =
-    Expr.sexp_of_t e
-    |> Sexp.to_string_hum
-end
-*)
-
-module Pretty = struct
-  let rec expr indent =
-    function
-    | Expr.Var var ->
-        Var.to_string var
-    | Expr.Ctor (name, e) ->
-        "(" ^ Label.to_string name ^ " " ^ expr indent e ^ ")"
-    | Expr.Lam (var, body) ->
-        String.concat ""
-          [ "fn "
-          ; Var.to_string var
-          ; ". "
-          ; expr indent body
-          ]
-    | Expr.App (f, x) ->
-        String.concat ""
-          [ "("
-          ; expr indent f
-          ; ") ("
-          ; expr indent x
-          ; ")"
-          ]
-    | Expr.Record fields ->
-        String.concat ""
-          [ "{"
-          ; RowMap.to_seq fields
-              |> Seq.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e)
-              |> List.of_seq
-              |> String.concat ", "
-          ; "}"
-          ]
-    | Expr.Update(r, fields) ->
-        String.concat ""
-          [ expr indent r
-          ; " where { "
-          ; String.concat ", "
-              (List.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e) fields)
-          ; " }"
-          ]
-    | Expr.GetField (e, lbl) ->
-        "(" ^ expr indent e ^ ")." ^ Label.to_string lbl
-    | Expr.Match {cases; default} ->
-        let new_indent = indent ^ "  " in
-        String.concat ""
-          [ "match-lam"
-          ; RowMap.to_seq cases
-              |> Seq.map (fun (lbl, (v, e)) -> String.concat ""
-                  [ "\n"
-                  ; indent
-                  ; "| "
-                  ; Label.to_string lbl
-                  ; " "
-                  ; Var.to_string v
-                  ; " -> "
-                  ; expr new_indent e
-                  ])
-              |> List.of_seq
-              |> String.concat ""
-          ; begin match default with
-              | None -> ""
-              | Some (None, e) -> String.concat ""
-                  [ "\n"
-                  ; indent
-                  ; "| _ -> "
-                  ; expr new_indent e
-                  ]
-              | Some (Some v, e) -> String.concat ""
-                  [ "\n"
-                  ; indent
-                  ; "| "
-                  ; Var.to_string v
-                  ; " -> "
-                  ; expr new_indent e
-                  ]
-            end
-          ; "\n"
-          ; indent
-          ; "end"
-          ]
-  let expr e = expr "" e
 end
