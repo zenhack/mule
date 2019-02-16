@@ -67,15 +67,18 @@ let rec typ_term = lazy (
   >> lazy_p typ
   |>> fun ty -> Type.Recur(v, ty)
 ) and record_type = lazy (
-  braces (sep_end_by (lazy_p field_decl) (kwd ","))
-  |>> fun fields ->
-      (* TODO: support ...r notation for row variables *)
-      Type.Record(fields, None)
+  braces (sep_end_by (lazy_p record_item) (kwd ","))
+  |>> fun items -> Type.Record items
+) and record_item = lazy (
+  choice
+    [ lazy_p field_decl
+    ; kwd "..." >> (var |>> fun v -> Type.Rest v)
+    ]
 ) and field_decl = lazy (
   label
   >>= fun l -> kwd ":"
   >> lazy_p typ
-  |>> fun ty -> (l, ty)
+  |>> fun ty -> Type.Field (l, ty)
   (*
 ) and typ_ctor = lazy (
   ctor

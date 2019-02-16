@@ -6,8 +6,15 @@ module Type = struct
     | Fn of (t * t)
     | Recur of (Var.t * t)
     | Var of Var.t
-    | Record of ((Label.t * t) list * Var.t option)
-    | Union of ((Label.t * t) list * Var.t option)
+    | Record of (record_item list)
+    | Ctor of Label.t
+    | App of (t * t)
+    | Union of (t * t)
+    | RowRest of Var.t
+    [@@deriving sexp]
+  and record_item =
+    | Field of (Label.t * t)
+    | Rest of Var.t
     [@@deriving sexp]
 end
 
