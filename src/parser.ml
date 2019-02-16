@@ -55,7 +55,7 @@ let ctor = token (
 
 let rec typ_term = lazy (
   choice
-    [ (var |>> fun v -> Type.Var ((), v))
+    [ (var |>> fun v -> Type.Var v)
     ; lazy_p record_type
     ; lazy_p recur_type
     ; parens (lazy_p typ)
@@ -65,12 +65,12 @@ let rec typ_term = lazy (
   >> var
   >>= fun v -> kwd "."
   >> lazy_p typ
-  |>> fun ty -> Type.Recur((), v, ty)
+  |>> fun ty -> Type.Recur(v, ty)
 ) and record_type = lazy (
   braces (sep_end_by (lazy_p field_decl) (kwd ","))
   |>> fun fields ->
       (* TODO: support ...r notation for row variables *)
-      Type.Record((), fields, None)
+      Type.Record(fields, None)
 ) and field_decl = lazy (
   label
   >>= fun l -> kwd ":"

@@ -2,12 +2,12 @@ open Sexplib.Std
 open Common_ast
 
 module Type = struct
-  type 'i t =
-    | Fn of ('i * 'i t * 'i t)
-    | Recur of ('i * Var.t * 'i t)
-    | Var of ('i * Var.t)
-    | Record of ('i * (Label.t * 'i t) list * Var.t option)
-    | Union of ('i * (Label.t * 'i t) list * Var.t option)
+  type t =
+    | Fn of (t * t)
+    | Recur of (Var.t * t)
+    | Var of Var.t
+    | Record of ((Label.t * t) list * Var.t option)
+    | Union of ((Label.t * t) list * Var.t option)
     [@@deriving sexp]
 end
 
@@ -16,7 +16,7 @@ module Pattern = struct
     | Ctor of (Label.t * t)
     | Var of Var.t
     | Wild
-    | Annotated of (t * unit Type.t)
+    | Annotated of (t * Type.t)
     [@@deriving sexp]
 end
 
