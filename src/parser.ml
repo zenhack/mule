@@ -61,6 +61,7 @@ let rec typ_term = lazy (
     ; (ctor |>> fun c -> Type.Ctor c)
     ; lazy_p record_type
     ; lazy_p recur_type
+    ; lazy_p all_type
     ; parens (lazy_p typ)
     ]
 ) and typ_app = lazy (
@@ -73,6 +74,12 @@ let rec typ_term = lazy (
   >>= fun v -> kwd "."
   >> lazy_p typ
   |>> fun ty -> Type.Recur(v, ty)
+) and all_type = lazy (
+  kwd "all"
+  >> many1 var
+  >>= fun vs -> kwd "."
+  >> lazy_p typ
+  |>> fun ty -> Type.All(vs, ty)
 ) and record_type = lazy (
   braces (sep_end_by (lazy_p record_item) (kwd ","))
   |>> fun items -> Type.Record items
