@@ -26,10 +26,14 @@ module Expr = struct
             args;
           emit ")"
       | Object fields ->
-          emit "{";
+          (* We need to wrap objects in an extra set of parens, because for
+           * some crazy reason, (x => {'x': ...}) isn't legal javascript.
+           *)
+          emit "({";
           List.iter
             (fun (k, v) -> go (String k); emit ":"; go v; emit ",")
-            fields
+            fields;
+          emit "})"
       | GetProp(obj, prop) ->
           emit "("; go obj; emit ")["; go prop; emit "]"
       | String s ->
@@ -40,9 +44,9 @@ module Expr = struct
       | Func (var, body) ->
           emit "("; emit (Var.to_string var); emit "$=>"; go body; emit ")"
       | Ternary (cond, t, f) ->
-          emit "("; go cond; emit ")?"; go t; emit "):("; go f; emit ")"
+          emit "("; go cond; emit ")?("; go t; emit "):("; go f; emit ")"
       | Eq3 (l, r) ->
-          emit "("; go l; emit ") == ("; go r; emit ")"
+          emit "("; go l; emit ")===("; go r; emit ")"
       | Undefined ->
           emit "undefined"
     in go

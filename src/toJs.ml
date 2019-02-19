@@ -47,14 +47,14 @@ let rec toJs = function
         , Js.GetProp (Js.Var param, String "$")
         )
       in
-      let args = [Js.GetProp(Js.Var param, String "v")] in
+      let ctor_args = [Js.GetProp(Js.Var param, String "v")] in
       Js.Func
         ( param
         , begin match default with
           | None ->
               (* In this case there's no default, so it's straighforward; just
                * get the value from the object and apply it. *)
-              Js.App (matched, args)
+              Js.App (matched, ctor_args)
           | Some def ->
               (* There's a default, so we need to check if the value is actually
                * there.
@@ -81,11 +81,12 @@ let rec toJs = function
                            * as the function parameter. otherwise, we can just
                            * insert the body directly, as we don't use the argument.
                            *)
-                          | (Some p, body) -> Js.App (Js.Func(p, toJs body), args)
+                          | (Some p, body) ->
+                              Js.App (Js.Func(p, toJs body), [Js.Var param])
                           | (None, body) -> toJs body
                         end
-                        (* We hit one of the actually patterns; just use it: *)
-                      , Js.App (Js.Var param', args)
+                        (* We hit one of the actual patterns; just use it: *)
+                      , Js.App (Js.Var param', ctor_args)
                       )
                   )
                   , [matched]
