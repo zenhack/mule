@@ -1,14 +1,13 @@
 var $mulecp = function(old, updates) {
+	var copy = function(dst, src) {
+		var props = Object.getOwnPropertyNames(src)
+		for(var i = 0; i < props.length; i++) {
+			var p = props[i]
+			dst[p] = src[p]
+		}
+	}
 	var ret = {}
-	var oldProps = Object.getOwnPropertyNames(old)
-	for(var i = 0; i < oldProps.length; i++) {
-		var prop = oldProps[i]
-		ret[prop] = old[prop]
-	}
-	var newProps = Object.getOwnPropertyNames(updates)
-	for(var i = 0; i < newProps.length; i++) {
-		var prop = newProps[i]
-		ret[prop] = updates[prop]
-	}
+	copy(ret, old)
+	copy(ret, updates)
 	return ret
 }
