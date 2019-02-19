@@ -1,22 +1,23 @@
-module Js = Ast.Js
-module D = Ast.Desugared
 open Ast
+module Js = Ast.Js.Expr
+module DE = Ast.Desugared.Expr
+module D = Ast.Desugared
 
 let rec toJs = function
-  | D.Var v ->
+  | DE.Var v ->
       Js.Var v
-  | D.Lam (param, body) ->
+  | DE.Lam (param, body) ->
       Js.Func(param, toJs body)
-  | D.App (f, x) ->
+  | DE.App (f, x) ->
       Js.App(toJs f, [toJs x])
-  | D.Record fields ->
+  | DE.Record fields ->
       D.RowMap.bindings fields
         |> List.map
             (fun (l, e) -> (Label.to_string l, toJs e))
         |> fun fields' -> Js.Object fields'
-  | D.GetField (e, l) ->
+  | DE.GetField (e, l) ->
       Js.GetProp(toJs e, Js.String (Label.to_string l))
-  | D.Update(e, changes) ->
+  | DE.Update(e, changes) ->
       Js.App
         ( Js.Var (Var.of_string "$mulecp")
         , [ toJs e
@@ -27,25 +28,26 @@ let rec toJs = function
                     , toJs v
                     )
                   )
+                  changes
               )
           ]
         )
-  | D.Ctor (l, v) ->
+  | DE.Ctor (l, v) ->
       Js.Object
         [ ("$", Js.String (Label.to_string l))
         ; ("v", toJs v)
         ]
-  | D.Match {cases; default} ->
+  | DE.Match {cases; default} ->
       let param = Gensym.anon_var () in
       (* We implement a match by putting a bunch of lambdas in an object,
        * and then getting the property from the object that matches the
        * ctor. *)
       let matched = Js.GetProp
-        ( toJs (D.Record (RowMap.map (fun (v, body) -> D.Lam (v, body)) cases))
-        , Js.GetProp (tmp, String "$")
+        ( toJs (DE.Record (D.RowMap.map (fun (v, body) -> DE.Lam (v, body)) cases))
+        , Js.GetProp (Js.Var param, String "$")
         )
       in
-      let args = [Js.GetProp(param, String "v")] in
+      let args = [Js.GetProp(Js.Var param, String "v")] in
       Js.Func
         ( param
         , begin match default with
@@ -68,12 +70,12 @@ let rec toJs = function
                * we're using a lambda in place of the let, and the Ternary operator
                * as an if-expression, so it's not as nice looking as that.
                *)
-              let param' = Gensym.annon_var () in
+              let param' = Gensym.anon_var () in
               Js.App
                 (Js.Func
                   ( param'
                   , Js.Ternary
-                      ( Js.Eq3(param', Js.Undefined)
+                      ( Js.Eq3(Js.Var param', Js.Undefined)
                       , begin match def with
                           (* If there's a variable name for the default, we use it
                            * as the function parameter. otherwise, we can just
@@ -83,10 +85,10 @@ let rec toJs = function
                           | (None, body) -> toJs body
                         end
                         (* We hit one of the actually patterns; just use it: *)
-                      , Js.App (param', matched)
+                      , Js.App (Js.Var param', args)
                       )
                   )
-                , matched
+                  , [matched]
                 )
         end
         )

@@ -42,6 +42,9 @@ let rec loop () =
       | OrErr.Err Error.EmptyMatch ->
           print_endline "Empty match expression."
       | OrErr.Ok dexp ->
+          print_endline "Javascript: ";
+          (ToJs.toJs dexp |> Ast.Js.Expr.fmt print_string);
+          print_endline "";
           Eval.eval dexp
           |> Pretty.expr
           |> fun ret -> print_endline ("Evaluated: " ^ ret)
