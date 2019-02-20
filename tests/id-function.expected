@@ -2,6 +2,8 @@
 | x -> x
 end) ($0)
 inferred type: (t4) -> (t4)
+Javascript: 
+($0$=>($7$=>($8$=>(($8$)===(undefined))?((x$=>x$)($7$,)):($8$(($7$)['v'],)))((({}))[($7$)['$']],))($0$,))
 Evaluated: fn $0. (match-lam
 | x -> x
 end) ($0)

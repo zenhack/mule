@@ -2,6 +2,8 @@
 | x -> (x) (x)
 end) ($0)
 inferred type: (rec t4. (t4) -> (t6)) -> (t6)
+Javascript: 
+($0$=>($9$=>($10$=>(($10$)===(undefined))?((x$=>x$(x$,))($9$,)):($10$(($9$)['v'],)))((({}))[($9$)['$']],))($0$,))
 Evaluated: fn $0. (match-lam
 | x -> (x) (x)
 end) ($0)
