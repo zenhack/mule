@@ -6,7 +6,7 @@ let desugar_typecheck expr =
     print_endline ("Desugared: " ^ Pretty.expr dexp);
     Typecheck.typecheck dexp
   |>> fun ty ->
-    print_endline ("inferred type: " ^ Pretty.typ ty);
+    print_endline ("inferred type: " ^ Pretty.monotype ty);
     dexp
 
 let rec loop () =

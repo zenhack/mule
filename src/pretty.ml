@@ -80,15 +80,15 @@ let rec expr indent = function
         ]
 let expr e = expr "" e
 
-let rec typ = Type.(
+let rec monotype = Type.(
   function
   | Var (_, v) -> Ast.Var.to_string v
   | Fn (_, f, x) ->
       String.concat ""
         [ "("
-        ; typ f
+        ; monotype f
         ; ") -> ("
-        ; typ x
+        ; monotype x
         ; ")"
         ]
   | Recur (_, v, body) ->
@@ -96,14 +96,14 @@ let rec typ = Type.(
         [ "rec "
         ; Ast.Var.to_string v
         ; ". "
-        ; typ body
+        ; monotype body
         ]
   | Record (_, fields, rest) ->
       String.concat ""
         [ "{"
         ; String.concat ", "
             (List.map
-              (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ ty)
+              (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ monotype ty)
               fields
             )
         ; (match rest with
@@ -113,7 +113,7 @@ let rec typ = Type.(
         ]
   | Union (_, ctors, rest) -> (
       (String.concat " | "
-        (List.map (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")") ctors))
+        (List.map (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ monotype ty ^ ")") ctors))
       ^ match rest with
         | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""

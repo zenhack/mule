@@ -17,13 +17,21 @@ end = struct
 end
 
 module Type = struct
-  type 'i t =
-    | Fn of ('i * 'i t * 'i t)
-    | Recur of ('i * Var.t * 'i t)
+  type 'i mono =
+    | Fn of ('i * 'i mono * 'i mono)
+    | Recur of ('i * Var.t * 'i mono)
     | Var of ('i * Var.t)
-    | Record of ('i * (Label.t * 'i t) list * Var.t option)
-    | Union of ('i * (Label.t * 'i t) list * Var.t option)
+    | Record of ('i * (Label.t * 'i mono) list * Var.t option)
+    | Union of ('i * (Label.t * 'i mono) list * Var.t option)
     [@@deriving sexp]
+  and 'i poly =
+    | Bottom of 'i
+    | All of ('i * 'i prefix * 'i mono)
+  and 'i prefix
+    = (Var.t * 'i bound) list
+  and 'i bound =
+    | Flex of ('i poly)
+    | Rigid of ('i poly)
 end
 
 module Expr = struct
