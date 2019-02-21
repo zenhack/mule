@@ -1,0 +1,35 @@
+Mule draws on a number of research papers, especially in the design of
+its type system. Throughout the source we include {citations} in
+comments, to refer to the works from which ideas come.  Pointers to
+these sources are centralized here. Each entry is of the form:
+
+    Title
+    Authors
+    Conference/Journal (abbreviated)
+    URL (if available)
+
+If a URL is missing it is because we have so far been unable to find a copy
+not behind a paywall; if you are able to find a freely available copy, please
+submit a patch adding a link.
+
+Please keep this list sorted alphabetically by the {citation} tag.
+
+{MLF}
+
+    MLF: Raising ML to the power of System F
+    Didier Le Botlan and Didier Rémy
+    ICFP '03
+    http://pauillac.inria.fr/~remy/work/mlf/icfp.pdf
+
+{MLF-Graph}
+
+    A graphical presentation of MLF types with a linear-time unification algorithm
+    Didier Rémy and Boris Yakobowski
+    TLDI '07
+
+{Records}
+
+    Extensible records with scoped labels
+    Daan Leijen
+    TFP '05
+    https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
