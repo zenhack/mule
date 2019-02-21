@@ -5,16 +5,31 @@ open Ast.Desugared
 open Gensym
 open OrErr
 
+
 (* The type of values associated with unification variables *)
-type u_type =
-  | Type of int
-  | Fn of (int * u_type UnionFind.var * u_type UnionFind.var)
-  | Record of (int * u_row UnionFind.var)
-  | Union of (int * u_row UnionFind.var)
+type u_mono =
+  | Type of tyvar
+  | Fn of (tyvar * u_mono UnionFind.var * u_mono UnionFind.var)
+  | Record of (tyvar * u_row UnionFind.var)
+  | Union of (tyvar * u_row UnionFind.var)
 and u_row =
-  | Extend of (Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
+  | Extend of (Ast.Label.t * u_mono UnionFind.var * u_row UnionFind.var)
   | Empty
   | Row of int
+and bound_ty = (* Rigid | *) Flex
+and bound = (bound_ty * poly)
+and poly =
+  | Bottom
+  (* | Mono of u_mono
+  | All of ((int * bound) list * poly)
+  *)
+and tyvar = (int * bound ref)
+
+let gen_ty_var () =
+  (gensym (), ref (Flex, Bottom))
+
+let gen_ty_u () =
+  UnionFind.make (Type (gen_ty_var ()))
 
 let rec unify l r = OrErr.(
   match l, r with
@@ -59,32 +74,32 @@ let rec walk env = function
   | Expr.Var v ->
       Ok (Env.find v env)
   | Expr.Lam (param, body) ->
-      let paramVar = UnionFind.make (Type (gensym ())) in
+      let paramVar = gen_ty_u () in
       walk (Env.add param paramVar env) body
-      |>> fun retVar -> UnionFind.make (Fn (gensym (), paramVar, retVar))
+      |>> fun retVar -> UnionFind.make (Fn (gen_ty_var (), paramVar, retVar))
   | Expr.App (f, arg) ->
       walk env f
       >>= fun fVar -> walk env arg
       >>= fun argVar ->
-        let retVar = UnionFind.make (Type (gensym ())) in
+        let retVar = gen_ty_u () in
         UnionFind.merge unify
           fVar
-          (UnionFind.make (Fn (gensym (), argVar, retVar)))
+          (UnionFind.make (Fn (gen_ty_var (), argVar, retVar)))
       |>> fun _ -> retVar
   | Expr.Record fields ->
       walk_fields env (UnionFind.make Empty) (RowMap.bindings fields)
-      |>> fun row -> UnionFind.make (Record (gensym (), row))
+      |>> fun row -> UnionFind.make (Record (gen_ty_var (), row))
   | Expr.GetField (e, lbl) ->
       walk env e
       >>= fun tyvar ->
       let rowVar = UnionFind.make (Row (gensym ())) in
-      let recVar = UnionFind.make (Record (gensym(), rowVar)) in
+      let recVar = UnionFind.make (Record (gen_ty_var (), rowVar)) in
       UnionFind.merge unify
         recVar
         tyvar
       >>= fun _ ->
       let tailVar = UnionFind.make (Row (gensym ())) in
-      let fieldVar = UnionFind.make (Type (gensym ())) in
+      let fieldVar = gen_ty_u () in
       UnionFind.merge unify_row
           rowVar
           (UnionFind.make (Extend(lbl, fieldVar, tailVar)))
@@ -98,13 +113,13 @@ let rec walk env = function
       >>= fun updateVar ->
         UnionFind.merge unify
           origVar
-          (UnionFind.make (Record (gensym(), tailVar)))
-      |>> fun _ -> UnionFind.make (Record (gensym(), updateVar))
+          (UnionFind.make (Record (gen_ty_var (), tailVar)))
+      |>> fun _ -> UnionFind.make (Record (gen_ty_var (), updateVar))
   | Expr.Ctor (lbl, param) ->
       walk env param
       |>> fun paramVar -> UnionFind.make
         ( Union
-          ( gensym ()
+          ( gen_ty_var ()
           , UnionFind.make
             ( Extend
                 ( lbl
@@ -131,15 +146,15 @@ let rec walk env = function
       |>> fun (rowVar, bodyVar) ->
           UnionFind.make
             ( Fn
-                ( gensym ()
-                , UnionFind.make (Union(gensym (), rowVar))
+                ( gen_ty_var ()
+                , UnionFind.make (Union(gen_ty_var (), rowVar))
                 , bodyVar
                 )
             )
 and walk_match env final = function
-  | [] -> Ok (final, UnionFind.make (Type (gensym ())))
+  | [] -> Ok (final, gen_ty_u ())
   | ((lbl, (var, body)) :: rest) ->
-      let ty = UnionFind.make (Type (gensym ())) in
+      let ty = gen_ty_u () in
       walk (Env.add var ty env) body
       >>= fun bodyVar -> walk_match env final rest
       >>= fun (row, body') -> UnionFind.merge unify bodyVar body'
@@ -187,6 +202,9 @@ let rec add_rec_binders ty =
   | Type.Union(i, ctors, rest) ->
       let (vars, ret) = row_add_rec_binders i ctors rest in
       maybe_add_rec i vars (Type.Union ret)
+  | Type.All(i, bound, body) ->
+      let (vars, body') = add_rec_binders body in
+      maybe_add_rec i vars (Type.All(i, bound, body'))
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
     | Some v -> S.singleton v
@@ -208,10 +226,10 @@ let add_rec_binders ty =
 
 (* Extract a type from a (solved) unification variable. *)
 let rec get_var_type env = function
-  | Type i -> Type.Var (i, (ivar i))
-  | Fn (i, f, x) ->
+  | Type (i, _) -> Type.Var (i, (ivar i))
+  | Fn ((i, b), f, x) ->
       if S.mem (ivar i) env then
-        get_var_type env (Type i)
+        get_var_type env (Type (i, b))
       else
         let env' = S.add (ivar i) env in
         Fn
@@ -219,12 +237,12 @@ let rec get_var_type env = function
           , get_var_type env' (UnionFind.get f)
           , get_var_type env' (UnionFind.get x)
           )
-  | Record (i, fields) ->
+  | Record ((i, _), fields) ->
       let (fields, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get fields)
       in
       Type.Record (i, fields, rest)
-  | Union (i, ctors) ->
+  | Union ((i, _), ctors) ->
       let (ctors, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
       in

@@ -1,2 +1,2 @@
-val monotype : 'i Ast.Desugared.Type.mono -> string
+val typ : 'i Ast.Desugared.Type.t -> string
 val expr : Ast.Desugared.Expr.t -> string

@@ -3,20 +3,18 @@ open Common_ast
 module RowMap = Map.Make(Label)
 
 module Type = struct
-  type 'i mono =
-    | Fn of ('i * 'i mono * 'i mono)
-    | Recur of ('i * Var.t * 'i mono)
+  type 'i t =
+    | Fn of ('i * 'i t * 'i t)
+    | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
-    | Record of ('i * (Label.t * 'i mono) list * Var.t option)
-    | Union of ('i * (Label.t * 'i mono) list * Var.t option)
-  and 'i poly =
-    | Bottom
-    | All of ('i prefix * 'i mono)
+    | Record of ('i * (Label.t * 'i t) list * Var.t option)
+    | Union of ('i * (Label.t * 'i t) list * Var.t option)
+    | All of ('i * 'i prefix * 'i t)
   and 'i prefix
     = (Var.t * 'i bound) list
   and 'i bound =
-    | Flex of ('i poly)
-    | Rigid of ('i poly)
+    | Flex of ('i t)
+    | Rigid of ('i t)
 end
 
 module Expr = struct
