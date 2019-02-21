@@ -33,6 +33,17 @@ let gen_ty_u () =
 
 let rec unify l r = OrErr.(
   match l, r with
+  (* same type variable. *)
+  | Type (lv, _), Type (rv, rb) when lv = rv ->
+      Ok (Type (rv, rb))
+
+  (* Top level type constructor that matches. In the
+   * literature, these are treated uniformly and opaquely.
+   * We have a case for each just because (a) we have a
+   * so few of them them, and (b) we have to deal with
+   * different kinds of argument variables. In principle we
+   * could factor out the commonalities, and maybe we will
+   * eventually, but for now there just isn't that much. *)
   | (Fn (i, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl
       >>= fun l' -> UnionFind.merge unify lr rr
@@ -43,8 +54,17 @@ let rec unify l r = OrErr.(
   | (Union (i, row_l), Union(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r
       |>> fun row_ret -> Union(i, row_ret)
+
+  (* Type constructor mismatches. we could have a catchall,
+   * but this means we don't forget a case. it would be nice
+   * to refactor so we don't have to list every combination
+   * though. *)
+  | Fn _, Record _ | Fn _, Union _
+  | Record _, Fn _ | Record _, Union _
+  | Union _, Fn _ | Union _, Record _ ->
+      Err Error.TypeMismatch
+
   | Type _, t | t, Type _ -> Ok t
-  | (_, _) -> Err Error.TypeMismatch
 )
 and unify_row l r =
   match l, r with
