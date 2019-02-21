@@ -10,8 +10,8 @@ module Type = struct
     | Record of ('i * (Label.t * 'i mono) list * Var.t option)
     | Union of ('i * (Label.t * 'i mono) list * Var.t option)
   and 'i poly =
-    | Bottom of 'i
-    | All of ('i * 'i prefix * 'i mono)
+    | Bottom
+    | All of ('i prefix * 'i mono)
   and 'i prefix
     = (Var.t * 'i bound) list
   and 'i bound =

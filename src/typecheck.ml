@@ -28,8 +28,7 @@ let rec unify l r = OrErr.(
   | (Union (i, row_l), Union(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r
       |>> fun row_ret -> Union(i, row_ret)
-  | (Type _, r) -> Ok r
-  | (l, Type _) -> Ok l
+  | Type _, t | t, Type _ -> Ok t
   | (_, _) -> Err Error.TypeMismatch
 )
 and unify_row l r =
