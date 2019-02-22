@@ -26,6 +26,7 @@ Please keep this list sorted alphabetically by the {citation} tag.
     A graphical presentation of MLF types with a linear-time unification algorithm
     Didier Rémy and Boris Yakobowski
     TLDI '07
+    http://gallium.inria.fr/~remy/mlf/mlf-graphic-types-tldi.pdf
 
 {Records}
 
