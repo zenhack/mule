@@ -6,11 +6,7 @@ these sources are centralized here. Each entry is of the form:
     Title
     Authors
     Conference/Journal (abbreviated)
-    URL (if available)
-
-If a URL is missing it is because we have so far been unable to find a copy
-not behind a paywall; if you are able to find a freely available copy, please
-submit a patch adding a link.
+    URL
 
 Please keep this list sorted alphabetically by the {citation} tag.
 
