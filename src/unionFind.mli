@@ -20,7 +20,7 @@ val get : 'a var -> 'a
  * returns [Err], the variables are now considered the same.
  *)
 val merge
-  : ('a -> 'a -> ('e, 'a) OrErr.t)
+  : ('a -> 'a -> 'a)
   -> 'a var
   -> 'a var
-  -> ('e, 'a var) OrErr.t
+  -> 'a var

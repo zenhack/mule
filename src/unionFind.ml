@@ -1,6 +1,4 @@
 
-open OrErr
-
 type 'a var =
   'a var_state ref
 and 'a var_state =
@@ -30,13 +28,10 @@ let get var =
 let merge f l r =
   let (lrep, lval), (rrep, rval) = (get_rep_val l, get_rep_val r) in
   if lrep == rrep then
-    Ok lrep
+    lrep
   else begin
     rrep := Ptr lrep;
-    match f lval rval with
-    | Ok value ->
-        lrep := Repr value;
-        Ok lrep
-    | Err e ->
-        Err e
+    let value = f lval rval in
+      lrep := Repr value;
+      lrep
   end
