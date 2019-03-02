@@ -7,13 +7,13 @@ open OrErr
 
 
 (* The type of values associated with unification variables *)
-type u_mono =
+type u_type =
   | Type of tyvar
-  | Fn of (tyvar * u_mono UnionFind.var * u_mono UnionFind.var)
+  | Fn of (tyvar * u_type UnionFind.var * u_type UnionFind.var)
   | Record of (tyvar * u_row UnionFind.var)
   | Union of (tyvar * u_row UnionFind.var)
 and u_row =
-  | Extend of (Ast.Label.t * u_mono UnionFind.var * u_row UnionFind.var)
+  | Extend of (Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
   | Row of int
 and bound_ty = (* Rigid | *) Flex
@@ -24,7 +24,7 @@ and bound = {
 and tyvar = (int * bound ref)
 and g_node = {
   g_bound: g_node option;
-  g_child: u_mono UnionFind.var Lazy.t;
+  g_child: u_type UnionFind.var Lazy.t;
 }
 
 let gen_ty_var g =
@@ -284,8 +284,8 @@ let get_var_type uvar =
 
 let with_g
   : (g_node option)
-  -> (g_node Lazy.t -> (u_mono UnionFind.var * 'a))
-  -> (g_node * u_mono UnionFind.var * 'a)
+  -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
+  -> (g_node * u_type UnionFind.var * 'a)
   = fun parent f ->
       let rec g = lazy {
         g_bound = parent;
