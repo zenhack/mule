@@ -19,12 +19,12 @@ and u_row =
 and bound_ty = (* Rigid | *) Flex
 and bound = {
   b_ty: bound_ty;
-  b_at: g_node UnionFind.var;
+  b_at: g_node;
 }
 and tyvar = (int * bound ref)
 and g_node = {
-  g_bound: (bound ref) option;
-  g_child: [ `G of g_node UnionFind.var | `Ty of u_mono UnionFind.var Lazy.t ]
+  g_bound: g_node option;
+  g_child: u_mono UnionFind.var Lazy.t;
 }
 
 let gen_ty_var g =
@@ -282,14 +282,28 @@ let get_var_type uvar =
     |> get_var_type S.empty
     |> add_rec_binders
 
-let typecheck = fun expr ->
+let with_g
+  : (g_node option)
+  -> (g_node Lazy.t -> (u_mono UnionFind.var * 'a))
+  -> (g_node * u_mono UnionFind.var * 'a)
+  = fun parent f ->
+      let rec g = lazy {
+        g_bound = parent;
+        g_child = lazy (fst (Lazy.force ret));
+      }
+      and ret = lazy (f g)
+      in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
+
+let typecheck expr =
   try
-    let rec g = lazy (UnionFind.make {
-      g_bound = None;
-      g_child = `Ty ty
-    })
-    and ty = lazy (walk Env.empty g expr)
-    in Ok (get_var_type (Lazy.force ty))
+    let (_, _, ret) =
+      with_g None begin fun g ->
+        let ty = walk Env.empty g expr in
+        ( ty
+        , (Ok (get_var_type ty))
+        )
+      end
+    in ret
   with
     Error.MuleExn e ->
       Err e
