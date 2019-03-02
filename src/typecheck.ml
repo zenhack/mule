@@ -16,16 +16,50 @@ and u_row =
   | Extend of (Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
   | Empty
   | Row of int
-and bound_ty = (* Rigid | *) Flex
+and bound_ty = Rigid | Flex
 and bound = {
   b_ty: bound_ty;
   b_at: g_node;
 }
 and tyvar = (int * bound ref)
 and g_node = {
-  g_bound: g_node option;
+  g_bound: (bound_ty * g_node) option;
   g_child: u_type UnionFind.var Lazy.t;
 }
+
+type permission = F | R | L
+
+(* Get the "permission" of a node, based on the node's binding path
+ * (starting from the node and working up the tree). See section 3.1
+ * in {MLF-Graph}. *)
+let rec get_permission: bound_ty list -> permission = function
+  | [] -> F
+  | (Rigid :: _) -> R
+  | (Flex :: bs) ->
+      begin match get_permission bs with
+        | F -> F
+        | R -> L
+        | L -> L
+      end
+
+let rec gnode_bound_list {g_bound; _} = match g_bound with
+  | None -> []
+  | Some (b_ty, g) -> b_ty :: gnode_bound_list g
+
+let tyvar_bound_list (_, bound) =
+  let {b_ty; b_at} = !bound in
+  b_ty :: gnode_bound_list b_at
+
+let get_tyvar = function
+  | Type v -> v
+  | Fn (v, _, _) -> v
+  | Record (v, _) -> v
+  | Union (v, _) -> v
+let ty_bound_list ty =
+  tyvar_bound_list (get_tyvar ty)
+
+let ty_permission ty =
+  get_permission (ty_bound_list ty)
 
 type constraint_ops =
   { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
@@ -282,7 +316,7 @@ let get_var_type uvar =
     |> add_rec_binders
 
 let with_g
-  : (g_node option)
+  : ((bound_ty * g_node) option)
   -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
   -> (g_node * u_type UnionFind.var * 'a)
   = fun parent f ->
@@ -314,6 +348,11 @@ let build_constraints expr =
 
 
 let typecheck expr =
+  (* TODO: this is here to squelch warnings about not using these, which we
+   * will do in the future; at which point we should remove this: *)
+  let _ = Rigid in
+  let _ = fun x -> ty_permission x in
+
   let (constraints, ty) = build_constraints expr in
   try
     List.iter (function
