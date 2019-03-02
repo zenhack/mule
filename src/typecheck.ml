@@ -31,7 +31,7 @@ let gen_ty_var () =
 let gen_ty_u () =
   UnionFind.make (Type (gen_ty_var ()))
 
-let rec unify l r = OrErr.(
+let rec unify l r =
   match l, r with
   (* same type variable. *)
   | Type (lv, _), Type (rv, rb) when lv = rv ->
@@ -65,7 +65,6 @@ let rec unify l r = OrErr.(
       Err Error.TypeMismatch
 
   | Type _, t | t, Type _ -> Ok t
-)
 and unify_row l r =
   match l, r with
   | (Empty, Empty) -> Ok Empty
