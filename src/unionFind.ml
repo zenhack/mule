@@ -28,10 +28,9 @@ let get var =
 let merge f l r =
   let (lrep, lval), (rrep, rval) = (get_rep_val l, get_rep_val r) in
   if lrep == rrep then
-    lrep
+    ()
   else begin
     rrep := Ptr lrep;
     let value = f lval rval in
-      lrep := Repr value;
-      lrep
+    lrep := Repr value
   end

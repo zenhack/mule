@@ -27,6 +27,12 @@ and g_node = {
   g_child: u_type UnionFind.var Lazy.t;
 }
 
+type constraint_ops =
+  { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
+  ; constrain_row  : u_row UnionFind.var  -> u_row UnionFind.var  -> unit
+  ; constrain_inst : g_node -> u_type UnionFind.var -> unit
+  }
+
 let gen_ty_var g =
   (gensym (), ref {
     b_ty = Flex;
@@ -50,15 +56,15 @@ let rec unify l r =
    * could factor out the commonalities, and maybe we will
    * eventually, but for now there just isn't that much. *)
   | (Fn (i, ll, lr), Fn (_, rl, rr)) ->
-      let l' = UnionFind.merge unify ll rl in
-      let r' = UnionFind.merge unify lr rr in
-      Fn (i, l', r')
+      UnionFind.merge unify ll rl;
+      UnionFind.merge unify lr rr;
+      Fn (i, ll, lr)
   | (Record (i, row_l), Record(_, row_r)) ->
-      let row_ret = UnionFind.merge unify_row row_l row_r in
-      Record (i, row_ret)
+      UnionFind.merge unify_row row_l row_r;
+      Record (i, row_l)
   | (Union (i, row_l), Union(_, row_r)) ->
-      let row_ret = UnionFind.merge unify_row row_l row_r in
-      Union(i, row_ret)
+      UnionFind.merge unify_row row_l row_r;
+      Union(i, row_l)
 
   (* Type constructor mismatches. we could have a catchall,
    * but this means we don't forget a case. it would be nice
@@ -74,71 +80,64 @@ and unify_row l r =
   match l, r with
   | (Empty, Empty) -> Empty
   | (Extend (l_lbl, l_ty, l_rest), Extend (r_lbl, r_ty, r_rest)) ->
-      if l_lbl = r_lbl then
-        let ret_ty = UnionFind.merge unify l_ty r_ty in
-        let ret_rest = UnionFind.merge unify_row l_rest r_rest in
-        Extend (l_lbl, ret_ty, ret_rest)
-      else
-        let _ = UnionFind.merge unify_row
+      if l_lbl = r_lbl then begin
+        UnionFind.merge unify l_ty r_ty;
+        UnionFind.merge unify_row l_rest r_rest;
+        Extend (l_lbl, l_ty, l_rest)
+      end else begin
+        UnionFind.merge unify_row
           r_rest
-          (UnionFind.make (Extend(l_lbl, l_ty, UnionFind.make (Row (gensym())))))
-        in
-        let rest = UnionFind.merge unify_row
+          (UnionFind.make (Extend(l_lbl, l_ty, UnionFind.make (Row (gensym())))));
+        UnionFind.merge unify_row
           l_rest
-          (UnionFind.make (Extend(r_lbl, r_ty, UnionFind.make (Row (gensym())))))
-        in
-        Extend(l_lbl, l_ty, rest)
+          (UnionFind.make (Extend(r_lbl, r_ty, UnionFind.make (Row (gensym())))));
+        Extend(l_lbl, l_ty, l_rest)
+      end
 
   | (Row _, r) -> r
   | (l, Row _) -> l
   | (Extend _, Empty) -> raise (Error.MuleExn Error.TypeMismatch)
   | (Empty, Extend _) -> raise (Error.MuleExn Error.TypeMismatch)
 
-let rec walk env g = function
+let rec walk cops env g = function
   | Expr.Var v ->
       Env.find v env
   | Expr.Lam (param, body) ->
       let paramVar = gen_ty_u g in
-      let retVar = walk (Env.add param paramVar env) g body in
+      let retVar = walk cops (Env.add param paramVar env) g body in
       UnionFind.make (Fn (gen_ty_var g, paramVar, retVar))
   | Expr.App (f, arg) ->
-      let fVar = walk env g f in
-      let argVar = walk env g arg in
+      let fVar = walk cops env g f in
+      let argVar = walk cops env g arg in
       let retVar = gen_ty_u g in
-      let _ = UnionFind.merge unify
+      cops.constrain_ty
         fVar
-        (UnionFind.make (Fn (gen_ty_var g, argVar, retVar)))
-      in
+        (UnionFind.make (Fn (gen_ty_var g, argVar, retVar)));
       retVar
   | Expr.Record fields ->
-      let row = walk_fields env g (UnionFind.make Empty) (RowMap.bindings fields) in
+      let row = walk_fields cops env g (UnionFind.make Empty) (RowMap.bindings fields) in
       UnionFind.make (Record (gen_ty_var g, row))
   | Expr.GetField (e, lbl) ->
-      let tyvar = walk env g e in
+      let tyvar = walk cops env g e in
       let rowVar = UnionFind.make (Row (gensym ())) in
       let recVar = UnionFind.make (Record (gen_ty_var g, rowVar)) in
-      let _ = UnionFind.merge unify
-        recVar
-        tyvar
-      in
+      cops.constrain_ty recVar tyvar;
       let tailVar = UnionFind.make (Row (gensym ())) in
       let fieldVar = gen_ty_u g in
-      let _ = UnionFind.merge unify_row
+      cops.constrain_row
         rowVar
-        (UnionFind.make (Extend(lbl, fieldVar, tailVar)))
-      in
+        (UnionFind.make (Extend(lbl, fieldVar, tailVar)));
       fieldVar
   | Expr.Update (r, updates) ->
-      let origVar = walk env g r in
+      let origVar = walk cops env g r in
       let tailVar = UnionFind.make (Row (gensym())) in
-      let updateVar = walk_fields env g tailVar updates in
-      let _ = UnionFind.merge unify
+      let updateVar = walk_fields cops env g tailVar updates in
+      cops.constrain_ty
           origVar
-          (UnionFind.make (Record (gen_ty_var g, tailVar)))
-      in
+          (UnionFind.make (Record (gen_ty_var g, tailVar)));
       UnionFind.make (Record (gen_ty_var g, updateVar))
   | Expr.Ctor (lbl, param) ->
-      let paramVar = walk env g param in
+      let paramVar = walk cops env g param in
       UnionFind.make
         ( Union
           ( gen_ty_var g
@@ -155,16 +154,16 @@ let rec walk env g = function
       begin match default with
         | None -> raise (Error.MuleExn EmptyMatch)
         | Some (Some paramVar, body) ->
-            walk env g (Expr.Lam (paramVar, body))
+            walk cops env g (Expr.Lam (paramVar, body))
         | Some (None, body) ->
-            walk env g (Expr.Lam (Ast.Var.of_string "_", body))
+            walk cops env g (Expr.Lam (Ast.Var.of_string "_", body))
       end
   | Expr.Match {cases; default} ->
       let final = match default with
         | None -> UnionFind.make Empty
         | Some _ -> UnionFind.make (Row (gensym ()))
       in
-      let (rowVar, bodyVar) = walk_match env g final (RowMap.bindings cases) in
+      let (rowVar, bodyVar) = walk_match cops env g final (RowMap.bindings cases) in
       UnionFind.make
         ( Fn
             ( gen_ty_var g
@@ -172,21 +171,21 @@ let rec walk env g = function
             , bodyVar
             )
         )
-and walk_match env g final = function
+and walk_match cops env g final = function
   | [] -> (final, gen_ty_u g)
   | ((lbl, (var, body)) :: rest) ->
       let ty = gen_ty_u g in
-      let bodyVar = walk (Env.add var ty env) g body in
-      let (row, body') = walk_match env g final rest in
-      let bvar = UnionFind.merge unify bodyVar body' in
+      let bodyVar = walk cops (Env.add var ty env) g body in
+      let (row, body') = walk_match cops env g final rest in
+      cops.constrain_ty bodyVar body';
       ( UnionFind.make (Extend(lbl, ty, row))
-      , bvar
+      , bodyVar
       )
-and walk_fields env g final = function
+and walk_fields cops env g final = function
   | [] -> final
   | ((lbl, ty) :: fs) ->
-      let lblVar = walk env g ty in
-      let tailVar = walk_fields env g final fs in
+      let lblVar = walk cops env g ty in
+      let tailVar = walk_fields cops env g final fs in
       UnionFind.make (Extend(lbl, lblVar, tailVar))
 
 let ivar i = Ast.Var.of_string ("t" ^ string_of_int i)
@@ -295,10 +294,16 @@ let with_g
       in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
 
 let typecheck expr =
+  let cops =
+    { constrain_ty   = (fun l r -> UnionFind.merge unify l r)
+    ; constrain_row  = (fun l r -> UnionFind.merge unify_row l r)
+    ; constrain_inst = (fun _ _ -> ())
+    }
+  in
   try
     let (_, _, ret) =
       with_g None begin fun g ->
-        let ty = walk Env.empty g expr in
+        let ty = walk cops Env.empty g expr in
         ( ty
         , (Ok (get_var_type ty))
         )

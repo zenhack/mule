@@ -23,4 +23,4 @@ val merge
   : ('a -> 'a -> 'a)
   -> 'a var
   -> 'a var
-  -> 'a var
+  -> unit
