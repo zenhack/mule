@@ -293,22 +293,34 @@ let with_g
       and ret = lazy (f g)
       in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
 
-let typecheck expr =
+type unify_edge =
+  | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
+  | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
+
+let build_constraints expr =
+  let ucs = ref [] in (* unification constraints *)
   let cops =
-    { constrain_ty   = (fun l r -> UnionFind.merge unify l r)
-    ; constrain_row  = (fun l r -> UnionFind.merge unify_row l r)
+    { constrain_ty   = (fun l r -> ucs := UnifyTypes(l, r) :: !ucs)
+    ; constrain_row  = (fun l r -> ucs := UnifyRows(l, r) :: !ucs)
     ; constrain_inst = (fun _ _ -> ())
     }
   in
+  let (_, ty, ()) =
+    with_g None begin fun g ->
+      (walk cops Env.empty g expr, ())
+    end
+  in
+  (!ucs, ty)
+
+
+let typecheck expr =
+  let (constraints, ty) = build_constraints expr in
   try
-    let (_, _, ret) =
-      with_g None begin fun g ->
-        let ty = walk cops Env.empty g expr in
-        ( ty
-        , (Ok (get_var_type ty))
-        )
-      end
-    in ret
+    List.iter (function
+      | UnifyTypes(l, r) -> UnionFind.merge unify l r
+      | UnifyRows(l, r) -> UnionFind.merge unify_row l r
+    ) constraints;
+    Ok (get_var_type ty)
   with
     Error.MuleExn e ->
       Err e
