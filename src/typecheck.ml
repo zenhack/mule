@@ -55,8 +55,7 @@ let rec get_permission: bound_ty list -> permission = function
   | (Flex :: bs) ->
       begin match get_permission bs with
         | F -> F
-        | R -> L
-        | L -> L
+        | R | L -> L
       end
 
 let rec gnode_bound_list {g_bound; _} = match g_bound with
