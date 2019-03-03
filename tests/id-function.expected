@@ -1,9 +1,9 @@
 #mule> Desugared: fn $0. (match-lam
 | x -> x
 end) ($0)
-inferred type: (t4) -> (t4)
+inferred type: (t10) -> (t10)
 Javascript: 
-($0$=>($7$=>($8$=>(($8$)===(undefined))?((x$=>x$)($7$,)):($8$(($7$)['v'],)))((({}))[($7$)['$']],))($0$,))
+($0$=>($12$=>($13$=>(($13$)===(undefined))?((x$=>x$)($12$,)):($13$(($12$)['v'],)))((({}))[($12$)['$']],))($0$,))
 Evaluated: fn $0. (match-lam
 | x -> x
 end) ($0)

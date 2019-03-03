@@ -37,8 +37,9 @@ let with_g
   -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
   -> (g_node * u_type UnionFind.var * 'a)
   = fun parent f ->
+      let gid = gensym () in
       let rec g = lazy {
-        g_id = gensym ();
+        g_id = gid;
         g_bound = parent;
         g_child = lazy (fst (Lazy.force ret));
       }
@@ -163,9 +164,10 @@ let rec walk cops env g = function
       Env.find v env
   | Expr.Lam (param, body) ->
       let (g', ty, retVar) = with_g (Some (Flex, g)) begin fun g ->
+          let fVar = (gen_ty_var (Lazy.force g)) in
           let paramVar = gen_ty_u (Lazy.force g) in
           let retVar = walk cops (Env.add param paramVar env) (Lazy.force g) body in
-          ( UnionFind.make (Fn (gen_ty_var (Lazy.force g), paramVar, retVar))
+          ( UnionFind.make (Fn (fVar, paramVar, retVar))
           , retVar
           )
         end
@@ -204,8 +206,9 @@ let rec walk cops env g = function
         (UnionFind.make (Fn (gen_ty_var g, argVar, retVar)));
       retVar
   | Expr.Record fields ->
+      let rVar = gen_ty_var g in
       let row = walk_fields cops env g (UnionFind.make Empty) (RowMap.bindings fields) in
-      UnionFind.make (Record (gen_ty_var g, row))
+      UnionFind.make (Record (rVar, row))
   | Expr.GetField (e, lbl) ->
       let tyvar = walk cops env g e in
       let rowVar = UnionFind.make (Row (gensym ())) in
@@ -218,18 +221,20 @@ let rec walk cops env g = function
         (UnionFind.make (Extend(lbl, fieldVar, tailVar)));
       fieldVar
   | Expr.Update (r, updates) ->
+      let retTyV = gen_ty_var g in
       let origVar = walk cops env g r in
       let tailVar = UnionFind.make (Row (gensym())) in
       let updateVar = walk_fields cops env g tailVar updates in
       cops.constrain_ty
           origVar
           (UnionFind.make (Record (gen_ty_var g, tailVar)));
-      UnionFind.make (Record (gen_ty_var g, updateVar))
+      UnionFind.make (Record (retTyV, updateVar))
   | Expr.Ctor (lbl, param) ->
+      let uVar = gen_ty_var g in
       let paramVar = walk cops env g param in
       UnionFind.make
         ( Union
-          ( gen_ty_var g
+          ( uVar
           , UnionFind.make
             ( Extend
                 ( lbl
