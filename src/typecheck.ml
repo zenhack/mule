@@ -165,8 +165,16 @@ let rec walk cops env g = function
       cops.constrain_inst g' retVar;
       ty
   | Expr.App (f, arg) ->
-      let fVar = walk cops env g f in
-      let argVar = walk cops env g arg in
+      let (gF, fVar, ()) = with_g
+        (Some(Flex, g))
+        (fun g -> walk cops env (Lazy.force g) f, ())
+      in
+      cops.constrain_inst gF fVar;
+      let (gArg, argVar, ()) = with_g
+        (Some(Flex, g))
+        (fun g -> (walk cops env (Lazy.force g) arg, ()))
+      in
+      cops.constrain_inst gArg argVar;
       let retVar = gen_ty_u g in
       cops.constrain_ty
         fVar
