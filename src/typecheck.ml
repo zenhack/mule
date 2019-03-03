@@ -5,7 +5,6 @@ open Ast.Desugared
 open Gensym
 open OrErr
 
-
 (* The type of values associated with unification variables *)
 type u_type =
   | Type of tyvar
@@ -351,7 +350,6 @@ let build_constraints expr =
     end
   in
   (!ucs, ty)
-
 
 let typecheck expr =
   (* TODO: this is here to squelch warnings about not using these, which we
