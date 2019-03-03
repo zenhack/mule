@@ -18,7 +18,10 @@ and u_row =
 and bound_ty = Rigid | Flex
 and bound = {
   b_ty: bound_ty;
-  b_at: g_node;
+  b_at:
+    [ `Ty of u_type UnionFind.var
+    | `G of g_node
+    ];
 }
 and tyvar = (int * bound ref)
 and g_node = {
@@ -56,21 +59,24 @@ let rec get_permission: bound_ty list -> permission = function
 let rec gnode_bound_list {g_bound; _} = match g_bound with
   | None -> []
   | Some (b_ty, g) -> b_ty :: gnode_bound_list g
-
-let tyvar_bound_list (_, bound) =
-  let {b_ty; b_at} = !bound in
-  b_ty :: gnode_bound_list b_at
-
 let get_tyvar = function
   | Type v -> v
   | Fn (v, _, _) -> v
   | Record (v, _) -> v
   | Union (v, _) -> v
-let ty_bound_list ty =
-  tyvar_bound_list (get_tyvar ty)
 
-let ty_permission ty =
-  get_permission (ty_bound_list ty)
+let rec tyvar_bound_list: tyvar -> bound_ty list =
+  fun (_, bound) ->
+    let {b_ty; b_at} = !bound in
+    match b_at with
+    | `G g -> b_ty :: gnode_bound_list g
+    | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
+and ty_bound_list ty =
+tyvar_bound_list (get_tyvar ty)
+
+let ty_permission: u_type -> permission =
+  fun ty ->
+    get_permission (ty_bound_list ty)
 
 type constraint_ops =
   { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
@@ -81,7 +87,7 @@ type constraint_ops =
 let gen_ty_var g =
   (gensym (), ref {
     b_ty = Flex;
-    b_at = g;
+    b_at = `G g;
   })
 
 let gen_ty_u g =
