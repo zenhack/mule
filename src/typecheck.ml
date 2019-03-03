@@ -109,7 +109,13 @@ let rec unify l r =
   | Union _, Fn _ | Union _, Record _ ->
       raise (Error.MuleExn Error.TypeMismatch)
 
-  | Type _, t | t, Type _ -> t
+  | ((Type _) as v), t | t, ((Type _) as v) ->
+      (* Corresponds to "grafting" in {MLF-Graph}. Only valid for flexible
+       * bottom vars. *)
+      begin match ty_permission v with
+        | F -> t
+        | _ -> raise (Error.MuleExn Error.TypeMismatch)
+      end
 and unify_row l r =
   match l, r with
   | (Empty, Empty) -> Empty
@@ -351,7 +357,6 @@ let typecheck expr =
   (* TODO: this is here to squelch warnings about not using these, which we
    * will do in the future; at which point we should remove this: *)
   let _ = Rigid in
-  let _ = fun x -> ty_permission x in
 
   let (constraints, ty) = build_constraints expr in
   try
