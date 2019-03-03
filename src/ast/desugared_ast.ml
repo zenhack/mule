@@ -30,4 +30,5 @@ module Expr = struct
         cases: (Var.t * t) RowMap.t;
         default: (Var.t option * t) option;
       }
+    | WithType of (t * unit Type.t)
 end

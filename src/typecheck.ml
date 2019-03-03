@@ -237,6 +237,9 @@ let rec walk cops env g = function
             , bodyVar
             )
         )
+  | Expr.WithType(v, _ty) ->
+      (* TODO *)
+      walk cops env g v
 and walk_match cops env g final = function
   | [] -> (final, gen_ty_u g)
   | ((lbl, (var, body)) :: rest) ->

@@ -32,6 +32,8 @@ let rec toJs = function
               )
           ]
         )
+  | DE.WithType(v, _) ->
+      toJs v
   | DE.Ctor (l, v) ->
       Js.Object
         [ ("$", Js.String (Label.to_string l))

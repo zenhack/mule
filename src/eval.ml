@@ -34,6 +34,8 @@ let rec subst param arg expr = match expr with
             | Some (None, body) ->
                 Some (None, subst param arg body)
         }
+  | WithType (v, _) ->
+      subst param arg v
 and subst_binding param' param arg body =
   if param == param' then
     (param', body)
@@ -82,6 +84,8 @@ let rec eval = function
           ("Tried to do a record update on something that's not a record. " ^
           "This should have been caught by the type checker!")
       end
+  | WithType(v, _) ->
+      eval v
 and eval_match cases default = function
  | Ctor (lbl, value) ->
      begin match RowMap.find_opt lbl cases with
