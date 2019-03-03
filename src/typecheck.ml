@@ -25,6 +25,7 @@ and bound = {
 }
 and tyvar = (int * bound ref)
 and g_node = {
+  g_id: int;
   g_bound: (bound_ty * g_node) option;
   g_child: u_type UnionFind.var Lazy.t;
 }
@@ -37,6 +38,7 @@ let with_g
   -> (g_node * u_type UnionFind.var * 'a)
   = fun parent f ->
       let rec g = lazy {
+        g_id = gensym ();
         g_bound = parent;
         g_child = lazy (fst (Lazy.force ret));
       }
