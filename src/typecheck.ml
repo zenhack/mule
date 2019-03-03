@@ -96,11 +96,59 @@ let gen_ty_var g =
 let gen_ty_u g =
   UnionFind.make (Type (gen_ty_var g))
 
+
+let b_at_id = function
+  | `G {g_id; _} -> g_id
+  | `Ty u -> fst (get_tyvar (UnionFind.get u))
+
+let bound_id {b_at; _} = b_at_id b_at
+
+let bound_next {b_at; _} = match b_at with
+  | `G {g_bound; _} ->
+      begin match g_bound with
+        | None -> None
+        | Some (bty, g) -> Some
+            { b_ty = bty
+            ; b_at = `G g
+            }
+      end
+  | `Ty u ->
+      Some (!(snd (get_tyvar (UnionFind.get u))))
+
+let rec bound_lca: bound -> bound -> bound =
+  fun l r ->
+    let lid, rid = bound_id l, bound_id r in
+    if lid = rid then
+      l
+    else if lid < rid then
+      begin match bound_next r with
+        | Some b -> bound_lca l b
+        | None -> failwith "No LCA!"
+      end
+    else
+      begin match bound_next l with
+        | Some b -> bound_lca b r
+        | None -> failwith "No LCA!"
+      end
+
+(* "Unify" to bounding edges. This does a combination of raising and
+ * weakening as needed to make them the same. *)
+let unify_bound l r =
+  let {b_at; _} = bound_lca l r in
+  match l.b_ty, r.b_ty with
+  | Flex, Flex -> {b_at; b_ty = Flex}
+  | _ -> {b_at; b_ty = Rigid}
+
+let unify_tyvar: tyvar -> tyvar -> tyvar =
+ fun (i, bl) (_, br) ->
+  (i, ref (unify_bound (!bl) (!br)))
+
 let rec unify l r =
+  let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   match l, r with
   (* same type variable. *)
-  | Type (lv, _), Type (rv, rb) when lv = rv ->
-      Type (rv, rb)
+  | Type (lv, _), Type (rv, _) when lv = rv ->
+      l
 
   (* Top level type constructor that matches. In the
    * literature, these are treated uniformly and opaquely.
@@ -109,16 +157,16 @@ let rec unify l r =
    * different kinds of argument variables. In principle we
    * could factor out the commonalities, and maybe we will
    * eventually, but for now there just isn't that much. *)
-  | (Fn (i, ll, lr), Fn (_, rl, rr)) ->
+  | (Fn (_, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl;
       UnionFind.merge unify lr rr;
-      Fn (i, ll, lr)
-  | (Record (i, row_l), Record(_, row_r)) ->
+      Fn (tv, ll, lr)
+  | (Record (_, row_l), Record(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r;
-      Record (i, row_l)
-  | (Union (i, row_l), Union(_, row_r)) ->
+      Record (tv, row_l)
+  | (Union (_, row_l), Union(_, row_r)) ->
       UnionFind.merge unify_row row_l row_r;
-      Union(i, row_l)
+      Union(tv, row_l)
 
   (* Type constructor mismatches. we could have a catchall,
    * but this means we don't forget a case. it would be nice
