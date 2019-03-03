@@ -28,6 +28,18 @@ and g_node = {
 
 type permission = F | R | L
 
+let with_g
+  : ((bound_ty * g_node) option)
+  -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
+  -> (g_node * u_type UnionFind.var * 'a)
+  = fun parent f ->
+      let rec g = lazy {
+        g_bound = parent;
+        g_child = lazy (fst (Lazy.force ret));
+      }
+      and ret = lazy (f g)
+      in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
+
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
  * in {MLF-Graph}. *)
@@ -69,7 +81,7 @@ type constraint_ops =
 let gen_ty_var g =
   (gensym (), ref {
     b_ty = Flex;
-    b_at = Lazy.force g;
+    b_at = g;
   })
 
 let gen_ty_u g =
@@ -142,9 +154,16 @@ let rec walk cops env g = function
   | Expr.Var v ->
       Env.find v env
   | Expr.Lam (param, body) ->
-      let paramVar = gen_ty_u g in
-      let retVar = walk cops (Env.add param paramVar env) g body in
-      UnionFind.make (Fn (gen_ty_var g, paramVar, retVar))
+      let (g', ty, retVar) = with_g (Some (Flex, g)) begin fun g ->
+          let paramVar = gen_ty_u (Lazy.force g) in
+          let retVar = walk cops (Env.add param paramVar env) (Lazy.force g) body in
+          ( UnionFind.make (Fn (gen_ty_var (Lazy.force g), paramVar, retVar))
+          , retVar
+          )
+        end
+      in
+      cops.constrain_inst g' retVar;
+      ty
   | Expr.App (f, arg) ->
       let fVar = walk cops env g f in
       let argVar = walk cops env g arg in
@@ -320,18 +339,6 @@ let get_var_type uvar =
     |> get_var_type S.empty
     |> add_rec_binders
 
-let with_g
-  : ((bound_ty * g_node) option)
-  -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
-  -> (g_node * u_type UnionFind.var * 'a)
-  = fun parent f ->
-      let rec g = lazy {
-        g_bound = parent;
-        g_child = lazy (fst (Lazy.force ret));
-      }
-      and ret = lazy (f g)
-      in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
-
 type unify_edge =
   | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
   | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
@@ -346,7 +353,7 @@ let build_constraints expr =
   in
   let (_, ty, ()) =
     with_g None begin fun g ->
-      (walk cops Env.empty g expr, ())
+      (walk cops Env.empty (Lazy.force g) expr, ())
     end
   in
   (!ucs, ty)
