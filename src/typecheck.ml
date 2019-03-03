@@ -75,7 +75,11 @@ let rec tyvar_bound_list: tyvar -> bound_ty list =
     | `G g -> b_ty :: gnode_bound_list g
     | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
 and ty_bound_list ty =
-tyvar_bound_list (get_tyvar ty)
+  tyvar_bound_list (get_tyvar ty)
+
+let tyvar_permission: tyvar -> permission =
+  fun tv ->
+    get_permission (tyvar_bound_list tv)
 
 let ty_permission: u_type -> permission =
   fun ty ->
@@ -146,9 +150,22 @@ let unify_tyvar: tyvar -> tyvar -> tyvar =
 let rec unify l r =
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   match l, r with
-  (* same type variable. *)
   | Type (lv, _), Type (rv, _) when lv = rv ->
+      (* same type variable; just return it *)
       l
+
+  | ((Type _) as v), t | t, ((Type _) as v) ->
+      (* Corresponds to "grafting" in {MLF-Graph}. Only valid for flexible
+       * bottom vars. *)
+      begin match ty_permission v with
+        | F -> t
+        | _ -> raise (Error.MuleExn Error.TypeMismatch)
+      end
+
+  | _ when tyvar_permission tv = L ->
+      (* We need to do a merge, but our permissions are locked;
+       * fail. *)
+      raise (Error.MuleExn Error.TypeMismatch)
 
   (* Top level type constructor that matches. In the
    * literature, these are treated uniformly and opaquely.
@@ -176,14 +193,6 @@ let rec unify l r =
   | Record _, Fn _ | Record _, Union _
   | Union _, Fn _ | Union _, Record _ ->
       raise (Error.MuleExn Error.TypeMismatch)
-
-  | ((Type _) as v), t | t, ((Type _) as v) ->
-      (* Corresponds to "grafting" in {MLF-Graph}. Only valid for flexible
-       * bottom vars. *)
-      begin match ty_permission v with
-        | F -> t
-        | _ -> raise (Error.MuleExn Error.TypeMismatch)
-      end
 and unify_row l r =
   match l, r with
   | (Empty, Empty) -> Empty
