@@ -455,10 +455,6 @@ let build_constraints expr =
   (!ucs, ty)
 
 let typecheck expr =
-  (* TODO: this is here to squelch warnings about not using these, which we
-   * will do in the future; at which point we should remove this: *)
-  let _ = Rigid in
-
   let (constraints, ty) = build_constraints expr in
   try
     List.iter (function
