@@ -85,6 +85,8 @@ let rec expr indent = function
       "(" ^ expr indent e ^ ")." ^ Label.to_string lbl
   | Expr.WithType(v, ty) ->
       "(" ^ expr indent v ^ " : " ^ typ ty ^ ")"
+  | Expr.Let (v, e, body) ->
+      "let " ^ Var.to_string v ^ " = " ^ expr indent e ^ " in " ^ expr indent body
   | Expr.Match {cases; default} ->
       let new_indent = indent ^ "  " in
       String.concat ""

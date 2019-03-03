@@ -31,4 +31,5 @@ module Expr = struct
         default: (Var.t option * t) option;
       }
     | WithType of (t * unit Type.t)
+    | Let of (Var.t * t * t)
 end

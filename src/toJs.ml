@@ -10,6 +10,8 @@ let rec toJs = function
       Js.Func(param, toJs body)
   | DE.App (f, x) ->
       Js.App(toJs f, [toJs x])
+  | DE.Let(v, e, body) ->
+      toJs (DE.App (DE.Lam(v, body), e))
   | DE.Record fields ->
       D.RowMap.bindings fields
         |> List.map

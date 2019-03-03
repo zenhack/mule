@@ -8,6 +8,10 @@ let rec subst param arg expr = match expr with
       Ctor (lbl, subst param arg value)
   | Lam (param', body) ->
       Lam (subst_binding param' param arg body)
+  | Let(param', e, body) when param == param' ->
+      Let(param', e, body)
+  | Let(param', e, body) ->
+      Let(param', subst param arg e, subst param arg body)
   | App (f, x) ->
       App (subst param arg f, subst param arg x)
   | Record fields ->
@@ -84,6 +88,8 @@ let rec eval = function
           ("Tried to do a record update on something that's not a record. " ^
           "This should have been caught by the type checker!")
       end
+  | Let(v, e, body) ->
+      eval (subst v (eval e) body)
   | WithType(v, _) ->
       eval v
 and eval_match cases default = function
