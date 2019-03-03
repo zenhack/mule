@@ -1,8 +1,55 @@
 
 module SP = Ast.Surface.Pattern
 module S = Ast.Surface.Expr
+module ST = Ast.Surface.Type
 module D = Ast.Desugared.Expr
+module DT = Ast.Desugared.Type
 module RowMap = Ast.Desugared.RowMap
+
+let rec desugar_type = function
+  | ST.Fn(param, ret) ->
+      DT.Fn((), desugar_type param, desugar_type ret)
+  | ST.All([], body) ->
+      desugar_type body
+  | ST.All(v::vs, body) ->
+      DT.All((), v, desugar_type (ST.All(vs, body)))
+  | ST.Recur(v, body) ->
+      DT.Recur((), v, desugar_type body)
+  | ST.Var v ->
+      DT.Var((), v)
+  | ST.Union u ->
+      DT.Union (desugar_union_type None u)
+  | ST.Record r ->
+      desugar_record_type [] r
+  | ST.App(ST.Ctor l, t) ->
+      DT.Union((), [(l, desugar_type t)], None)
+  | ST.RowRest v ->
+      DT.Union((), [], Some v)
+  | _ ->
+      failwith "TODO"
+and desugar_union_type tail (l, r) =
+  match desugar_type l, desugar_type r, tail with
+  | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), (Some v)
+  | DT.Union((), lbls_l, None), DT.Union((), lbls_r, Some v), None
+  | DT.Union((), lbls_l, Some v), DT.Union((), lbls_r, None), None ->
+      ((), lbls_l @ lbls_r, Some v)
+  | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), None ->
+      ((), lbls_l @ lbls_r, None)
+  | _ -> raise
+    (Error.MuleExn
+      (Error.MalformedType
+        "Unions must be composed of ctors and at most one ...r"))
+and desugar_record_type fields = function
+  | [] ->
+      DT.Record((), fields, None)
+  | [ST.Rest v] ->
+      DT.Record((), fields, Some v)
+  | (ST.Field (l, t) :: rest) ->
+      desugar_record_type ((l, desugar_type t)::fields) rest
+  | (ST.Rest _ :: _) -> raise
+    (Error.MuleExn
+      (Error.MalformedType "row variable before the end of a record type."))
+
 
 let rec desugar = function
   | S.Var v -> D.Var v
@@ -59,6 +106,18 @@ and desugar_match dict = function
       { default = Some (Some v, desugar body)
       ; cases = finalize_dict dict
       }
+  | [(SP.Annotated (SP.Var v, ty), body)] ->
+      let v' = Gensym.anon_var () in
+      let let_ = D.Let
+        ( v
+        , D.WithType(D.Var v', desugar_type ty)
+        , desugar body
+        )
+      in
+      D.Match
+        { default = Some(Some v', let_)
+        ; cases = finalize_dict dict
+        }
   | (SP.Ctor (lbl, p), body) :: cases ->
       let dict' =
           RowMap.update
@@ -70,7 +129,6 @@ and desugar_match dict = function
             dict
       in
       desugar_match dict' cases
-  (* | (SP.Annotated (SP.Var v, ty), body) :: cases -> *)
   | (SP.Annotated (p, _), body) :: cases ->
       (* TODO: we'll want to actually do something with these eventually *)
       desugar_match dict ((p, body) :: cases)

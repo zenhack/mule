@@ -28,6 +28,8 @@ let rec loop () =
       begin match desugar_typecheck expr with
       | OrErr.Err (Error.UnboundVar var) ->
           print_endline ("unbound variable: " ^ Ast.Var.to_string var);
+      | OrErr.Err (Error.MalformedType msg) ->
+          print_endline ("malformed_type: " ^ msg)
       | OrErr.Err Error.TypeMismatch ->
           (* Most useful error message EVER: *)
           print_endline "Type mismatch"

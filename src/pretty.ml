@@ -39,10 +39,9 @@ let rec typ = Type.(
         | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""
   )
-  | All(_, bnd, body) ->
-      "all " ^ bound bnd ^ ". " ^ typ body
+  | All(_, var, body) ->
+      "all " ^ Var.to_string var ^ ". " ^ typ body
 )
-and bound _ = "TODO"
 
 let rec expr indent = function
   | Expr.Var var ->

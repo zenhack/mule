@@ -9,12 +9,7 @@ module Type = struct
     | Var of ('i * Var.t)
     | Record of ('i * (Label.t * 'i t) list * Var.t option)
     | Union of ('i * (Label.t * 'i t) list * Var.t option)
-    | All of ('i * 'i prefix * 'i t)
-  and 'i prefix
-    = (Var.t * 'i bound) list
-  and 'i bound =
-    | Flex of ('i t)
-    | Rigid of ('i t)
+    | All of ('i * Var.t * 'i t)
 end
 
 module Expr = struct
