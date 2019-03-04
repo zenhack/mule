@@ -475,15 +475,15 @@ let build_constraints expr =
       (walk cops Env.empty (Lazy.force g) expr, ())
     end
   in
-  (!ucs, ty)
+  (!ucs, !ics, ty)
 
 let typecheck expr =
-  let (constraints, ty) = build_constraints expr in
+  let (ucs, _ics, ty) = build_constraints expr in
   try
     List.iter (function
       | UnifyTypes(l, r) -> UnionFind.merge unify l r
       | UnifyRows(l, r) -> UnionFind.merge unify_row l r
-    ) constraints;
+    ) ucs;
     Ok (get_var_type ty)
   with
     Error.MuleExn e ->
