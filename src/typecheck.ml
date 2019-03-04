@@ -23,7 +23,7 @@ and bound = {
     | `G of g_node
     ];
 }
-and tyvar = (int * bound ref)
+and tyvar = (int * bound)
 and g_node = {
   g_id: int;
   g_bound: (bound_ty * g_node) option;
@@ -69,7 +69,7 @@ let get_tyvar = function
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
   fun (_, bound) ->
-    let {b_ty; b_at} = !bound in
+    let {b_ty; b_at} = bound in
     match b_at with
     | `G g -> b_ty :: gnode_bound_list g
     | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
@@ -90,8 +90,8 @@ type constraint_ops =
   ; constrain_inst : g_node -> u_type UnionFind.var -> unit
   }
 
-let gen_ty_var g =
-  (gensym (), ref {
+let gen_ty_var: g_node -> tyvar = fun g ->
+  (gensym (), {
     b_ty = Flex;
     b_at = `G g;
   })
@@ -116,7 +116,7 @@ let bound_next {b_at; _} = match b_at with
             }
       end
   | `Ty u ->
-      Some (!(snd (get_tyvar (UnionFind.get u))))
+      Some (snd (get_tyvar (UnionFind.get u)))
 
 let raised_bound b = match b with
   | {b_ty = Rigid; _} ->
@@ -153,7 +153,7 @@ let unify_bound l r =
 
 let unify_tyvar: tyvar -> tyvar -> tyvar =
  fun (i, bl) (_, br) ->
-  (i, ref (unify_bound (!bl) (!br)))
+  (i, unify_bound bl br)
 
 let rec unify l r =
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
