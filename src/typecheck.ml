@@ -1,6 +1,11 @@
 module S = Set.Make(Ast.Var)
 module Env = Map.Make(Ast.Var)
 
+module IntMap = Map.Make(struct
+  type t = int
+  let compare = compare
+end)
+
 open Ast.Desugared
 open Gensym
 open OrErr
@@ -449,10 +454,20 @@ type unify_edge =
 
 let build_constraints expr =
   let ucs = ref [] in (* unification constraints *)
+  let ics = ref IntMap.empty in
   let cops =
     { constrain_ty   = (fun l r -> ucs := UnifyTypes(l, r) :: !ucs)
     ; constrain_row  = (fun l r -> ucs := UnifyRows(l, r) :: !ucs)
-    ; constrain_inst = (fun _ _ -> ())
+    ; constrain_inst =
+        begin fun g t ->
+          ics := begin IntMap.update g.g_id
+            begin function
+              | None -> Some (g, [t])
+              | Some (_, ts) -> Some (g, (t :: ts))
+            end
+            !ics
+          end
+        end
     }
   in
   let (_, ty, ()) =
