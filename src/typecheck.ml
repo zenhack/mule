@@ -118,18 +118,27 @@ let bound_next {b_at; _} = match b_at with
   | `Ty u ->
       Some (!(snd (get_tyvar (UnionFind.get u))))
 
+let raised_bound b = match b with
+  | {b_ty = Rigid; _} ->
+      raise (Error.MuleExn Error.TypeMismatch)
+  | _ ->
+      bound_next b
+
+(* Compute the lease common ancestor of two bounds.
+ * If that ancestor is not reachable without raising
+ * past rigid edges, fail. *)
 let rec bound_lca: bound -> bound -> bound =
   fun l r ->
     let lid, rid = bound_id l, bound_id r in
     if lid = rid then
       l
     else if lid < rid then
-      begin match bound_next r with
+      begin match raised_bound r with
         | Some b -> bound_lca l b
         | None -> failwith "No LCA!"
       end
     else
-      begin match bound_next l with
+      begin match raised_bound l with
         | Some b -> bound_lca b r
         | None -> failwith "No LCA!"
       end
