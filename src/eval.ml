@@ -49,7 +49,7 @@ and subst_binding param' param arg body =
 
 let rec eval = function
   | Var v ->
-      Debug.impossible
+      failwith
         ("Unbound variable \"" ^ Ast.Var.to_string v ^ "\"; this should have been caught sooner.")
   | Lam lam -> Lam lam
   | Match m -> Match m
@@ -63,7 +63,7 @@ let rec eval = function
       | Match {cases; default} ->
           eval_match cases default arg'
       | _ ->
-        Debug.impossible ("Tried to call non-function: " ^ Pretty.expr f')
+        failwith ("Tried to call non-function: " ^ Pretty.expr f')
       end
   | Record fields ->
       Record (RowMap.map eval fields)
@@ -71,7 +71,7 @@ let rec eval = function
       begin match eval e with
       | Record fields ->
           RowMap.find lbl fields
-      | _ -> Debug.impossible
+      | _ -> failwith
         ("Tried to get a field on something that's not a record. " ^
         "this should have been caught by the type checker!")
       end
@@ -84,7 +84,7 @@ let rec eval = function
                 old_fields
                 new_fields
             )
-      | _ -> Debug.impossible
+      | _ -> failwith
           ("Tried to do a record update on something that's not a record. " ^
           "This should have been caught by the type checker!")
       end
@@ -100,7 +100,7 @@ and eval_match cases default = function
       | None ->
         begin match default with
           | None ->
-              Debug.impossible "Match failed"
+              failwith "Match failed"
           | Some (None, body) ->
               eval body
           | Some (Some param, body) ->
@@ -110,7 +110,7 @@ and eval_match cases default = function
   | value ->
       begin match default with
         | None ->
-            Debug.impossible "Match failed"
+            failwith "Match failed"
         | Some (None, body) ->
             eval body
         | Some (Some param, body) ->
