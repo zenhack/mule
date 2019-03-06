@@ -1,0 +1,28 @@
+# WIP sketch of an API for accessing javascript primitive operations.
+{ type cmd a
+, type value
+, type string
+, type bool
+
+, get_prop : string -> value -> cmd value
+, set_prop : string -> value -> value -> cmd {}
+, call : value -> vec value -> cmd value
+, try : cmd a -> cmd (Ok a | Err value)
+
+, op=== : value -> value -> cmd bool
+, op!== : value -> value -> cmd bool
+, op<   : value -> value -> cmd value
+, op>   : value -> value -> cmd value
+, op<=  : value -> value -> cmd value
+, op>=  : value -> value -> cmd value
+, op+   : value -> value -> cmd value
+, op*   : value -> value -> cmd value
+, op%   : value -> value -> cmd value
+, op-   : value -> value -> cmd value
+, op/   : value -> value -> cmd value
+
+, null : value
+, undefined : value
+, function : (vec value -> cmd value) -> value
+, object : vec (string.t := value) -> cmd value
+}
