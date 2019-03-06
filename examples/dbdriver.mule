@@ -1,0 +1,20 @@
+{ type cmd a
+
+, type addr
+  "The address of a database to connect to"
+
+, type connection
+  """A connection to the database."""
+
+, type tx
+  """An ongoing transaction."""
+
+, type error
+
+, connect : addr -> cmd (Ok connection | Err error)
+
+, newTx : connection -> cmd (Ok tx | Err error)
+
+, commit : tx -> cmd (Ok {} | Err error)
+, rollback : tx -> cmd (Ok {} | Err error)
+}

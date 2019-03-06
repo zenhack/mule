@@ -1,0 +1,45 @@
+let {bool, order} = import "./basics" in
+{ seq :
+  { type t a
+
+  , gen  : all a. ({} -> Cons a (t a) | Nil) -> t a
+  , next : all a. t a -> Cons a (t a) | Nil
+  , map  : all a b. (a -> b) -> t a -> t b
+  } =
+    { type t a =
+      { type old
+      , transform : old -> a
+      , next : {} -> Cons a (t a)
+      }
+    , gen = fn f.
+        { transform = fn x.x
+        , next = f
+        }
+    , map = fn f {transform, next}.
+        { transform = transform >> f
+        , next = next
+        }
+    , next = fn {transform, next}.
+        match next {} with
+          | Cons x xs -> Cons (transform x) (map transform xs)
+          | Nil -> Nil
+        end
+    }
+#  , cons  : all a. a -> t a -> t a
+#  , nil   : all a. t a
+#  , foldl : all a b. (b -> a -> b) -> b -> t a -> b
+#  , just  : all a. a -> t a
+#  , then  : all a b. t a -> (a -> t b) -> t b
+#
+#  }
+, set : (e : { type t, cmp : t -> t -> LT | EQ | GT }) ->
+  { type t
+  , type elt = e.t
+
+  , empty : t
+  , insert : elt -> t -> t
+  , contains : elt -> t -> True | False
+  , delete : elt -> t -> t
+  , iter : t -> seq.t elt
+  } =
+}

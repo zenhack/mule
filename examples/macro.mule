@@ -1,0 +1,34 @@
+{ type cmd a
+, type var
+, type label = string.t
+, type exp =
+    | Var var
+    | App exp exp
+    | Dot exp label
+    | Fn pat exp
+    | Match exp (vec (Case pat exp))
+    | Record (vec (Field label exp))
+    | Vec (vec exp)
+    | Tag label
+    | QQ exp
+    | UnQ exp
+, type ty =
+    | Var var
+    | App ty ty
+    | Fn ty ty
+    | All var ty
+    | Record row
+    | Union row
+    | QQ ty
+    | UnQ ty
+, type pat =
+    | Or pat pat
+    | Var var
+    | App pat (vec pat)
+    | Tag label
+    | QQ pat
+    | UnQ pat
+, reify : var -> cmd (Exp exp | Type ty | Free)
+, newTyVar : cmd var
+, newExpVar : cmd var
+}

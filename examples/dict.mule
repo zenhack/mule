@@ -1,0 +1,56 @@
+let type ord = import "mule/types".ord in
+fn
+{ seq : import "mule/types".seq
+}
+.
+{ type sig =
+    { type t v
+    , type key
+
+    , empty : all v. t v
+
+    , fromSeq : all v. seq.t (key := v) -> t v
+    , toSeq   : all v. t v -> seq.t (key := v)
+
+    , get : all v. key -> t v -> (Some v | None)
+    , set : all v. key -> v -> t v -> t v
+    , del : all v. key -> t v -> t v
+    }
+, make : (k:ord) -> sig where { type key = k.t } =
+    fn key.
+    { type key = key.t
+    , type t v =
+        | Leaf
+        | Node
+            { color : Red | Black
+            , k : key
+            , v : v
+            , l : t v
+            , r : t v
+            }
+
+    , empty = Leaf
+
+    , fromSeq =
+        seq.foldl (fn dict (k := v). put k v dict) empty
+    , toSeq dict =
+        match dict with
+          | Leaf -> seq.empty
+          | Node {k, v, l, r} ->
+              seq.append
+                (toSeq l)
+                (seq.cons (k := v) (toSeq r))
+        end
+
+    , get k dict =
+        match dict with
+          | Leaf -> None
+          | Node {k=k_, v, l, r} ->
+              match key.compare k k_ with
+                | EQ -> Some v
+                | LT -> get k l
+                | GT -> get k r
+              end
+        end
+    }
+}

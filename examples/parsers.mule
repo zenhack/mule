@@ -1,0 +1,80 @@
+fn
+{ int :
+  { type t
+  , succ : t -> t
+  }
+, char :
+  { type t
+  }
+, string :
+  { type t
+  , len : t -> int.t
+  , append : t -> t -> t
+  , empty : t
+  }
+}. {
+  type error
+  """An error that occurs when parsing."""
+  =
+  { pos : int.t
+    """Where the error occurred.
+
+    Expressed as the number of characters from the start of the input.
+    """
+
+  , err :
+      | Unexpected
+        { wanted : EOF | Char char.t | Named string.t
+        , got : EOF | Char char.t
+        }
+      | InContext
+          { name : int.t
+          , err : error
+          }
+    """What kind of problem occurred?"""
+  }
+
+  type t a =
+    | Done string.t (Ok a | Err error)
+    | More (string.t -> parser a)
+
+  feed : all a. string -> t a -> t a
+  """Feed the parser another chunk of input"""
+  = fn data p. match p with
+      | Done v rest -> Done v (string.append rest data)
+      | Error e rest -> Error e (string.append rest data)
+      | More f -> f data
+    end
+
+  any : t char.t
+  """Match any single character."""
+  = More fn s. match string.len s with
+      | 0 -> Error UnexpectedEOF s
+      | _ -> Done (string.drop 1 s) (Ok (string.index 0 s))
+    end
+
+  just : all a. a -> t a
+  """Return the value, without consuming any input."""
+  =
+    fn v. Done string.empty (Ok v)
+
+  then : all a b. t a -> (a -> t b) -> t b
+  """`then p f` runs parser `p`, and passes its result to `f`."""
+  =
+    fn p f. match p with
+      | Done _ (Err _) -> p
+      | Done rest (Ok v) -> feed rest (f v)
+      | More g -> More fn s. andThen (g s) f
+    end
+
+  eof : t {}
+  """Match the end of input
+
+  Fails if any more data is available, otherwise succeeds without
+  consuming input.
+  """
+  = More fn s. match string.len s with
+      | 0 -> just {}
+      | _ -> Done s (Err _)
+    end
+}

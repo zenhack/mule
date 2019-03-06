@@ -1,0 +1,4 @@
+{ type t a
+, force : t a -> a
+, delay : ({} -> a) -> t a
+}

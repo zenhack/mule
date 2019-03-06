@@ -1,0 +1,4 @@
+This directory contains examples of mule source code.
+
+Much of this is speculative; most of it doesn't run yet. Some features
+sketched here (like implicits) may not actually make the final cut.

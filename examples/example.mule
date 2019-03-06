@@ -1,0 +1,39 @@
+# Example mule source
+
+type list =
+  { type t a = Cons a (t a) | Nil
+  , map : all a b. (a -> b) -> t a -> t b
+  , traverse : all a b. (f : applicative) -> (a -> f.t b) -> f.t (list b)
+  , length : t a -> int
+  }
+
+type functor =
+  { type t a
+  , map : all a b. (a -> b) -> t a -> t b
+  }
+
+type applicative =
+  { type t a
+  , just : all a. a -> t a
+  , app : all a b. t (a -> b) -> t a -> t b
+  }
+
+let omega : all b. rec a. (a -> b) -> b = fn x. x x
+
+let applicative_functor : (f : applicative) -> functor where { type t a = f.t a } =
+  fn f.
+  { type t a = f.t a
+  , map = fn g t. f.app (f.just g) t
+  }
+
+type monad =
+  { type t a
+  , just : all a. a -> t a
+  , then : all a b. t a -> (a -> t b) -> t b
+  }
+
+let monad_applicative : (m : monad) -> applicative where { type t a = m.t a } =
+  { type t a = m.t a
+  , just = m.just
+  , app = fn f x. ~run m ((~do f) (~do x))
+  }
