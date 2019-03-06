@@ -4,7 +4,7 @@ module VSet = Set.Make(Ast.Var)
 module LSet = Set.Make(Ast.Label)
 
 (* Free variables in an expression *)
-let rec free_vars env = Ast.Surface.Expr.(
+let rec free_vars env =
   function
   | Var v ->
       if VSet.mem v env then
@@ -31,7 +31,10 @@ let rec free_vars env = Ast.Surface.Expr.(
         VSet.union
         (free_vars env e)
         (List.map (case_free_vars env) cases)
-)
+  | Let (pat, e, body) ->
+      VSet.union
+        (case_free_vars env (pat, e))
+        (case_free_vars env (pat, body))
 and case_free_vars env (p, body) =
   match p with
     | Ast.Surface.Pattern.Wild ->
@@ -89,6 +92,7 @@ let check_duplicate_record_fields =
         go e >> check_cases cases
     | App (f, x) -> go f >> go x
     | GetField(e, _) -> go e
+    | Let (_, e, body) -> go e >> go body
 
     | Var _ -> Ok ()
     | Ctor _ -> Ok ()

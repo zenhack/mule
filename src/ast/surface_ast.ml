@@ -34,4 +34,5 @@ module Expr = struct
     | Ctor of Label.t
     | Update of (t * (Label.t * t) list)
     | Match of (t * (Pattern.t * t) list)
+    | Let of (Pattern.t * t * t)
 end

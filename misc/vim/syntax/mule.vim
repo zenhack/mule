@@ -2,6 +2,7 @@
 syntax keyword muleKeywords
 	\ fn
 	\ let
+	\ in
 	\ match
 	\ with
 	\ end

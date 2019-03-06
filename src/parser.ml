@@ -16,6 +16,8 @@ let keywords = StrSet.of_list
   ; "end"
   ; "where"
   ; "_"
+  ; "let"
+  ; "in"
   ]
 
 (* [token p] is [p] followed by optional whitespace. *)
@@ -123,6 +125,7 @@ and ex3 = lazy (
   choice
     [ lazy_p lambda
     ; lazy_p match_expr
+    ; lazy_p let_expr
     ; (var |>> fun v -> Expr.Var v)
     ; parens (lazy_p expr)
     ; lazy_p record
@@ -136,6 +139,15 @@ and lambda = lazy ((
   >> lazy_p expr
   |>> fun body -> Expr.Lam (params, body)
 ) <?> "lambda")
+and let_expr = lazy ((
+  kwd "let"
+  >> lazy_p pattern
+  >>= fun pat -> kwd "="
+  >> lazy_p expr
+  >>= fun e -> kwd "in"
+  >> lazy_p expr
+  |>> fun body -> Expr.Let(pat, e, body)
+) <?> "let expression")
 and match_expr = lazy ((
   kwd "match"
   >> lazy_p expr

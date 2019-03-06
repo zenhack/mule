@@ -93,6 +93,8 @@ let rec desugar = function
         ( desugar_match RowMap.empty cases
         , desugar e
         )
+  | S.Let(pat, e, body) ->
+      desugar (S.Match(e, [(pat, body)]))
 and desugar_match dict = function
   | [] -> D.Match
       { default = None
