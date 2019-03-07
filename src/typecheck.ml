@@ -124,14 +124,17 @@ let gen_ty_var: g_node -> tyvar = fun g ->
     b_at = `G g;
   })
 
-(* XXX: this is inconsistent; we take a g-node for types but a bound for
- * rows. This reflects the needs of the code elsewhere in the module, but
- * is conceptually a bit odd.
- *)
-let gen_ty_u g =
-  UnionFind.make (Type (gen_ty_var g))
+(* (* We don't use this, but conceptually it belongs here: *)
+let gen_ty_u bound =
+  UnionFind.make (Type (gensym(), bound))
+*)
 let gen_row_u bound =
   UnionFind.make (Row (gensym(), bound))
+
+let gen_ty_u_g g =
+  UnionFind.make (Type (gen_ty_var g))
+let gen_row_u_g g =
+  UnionFind.make (Row (gen_ty_var g))
 
 
 let b_at_id = function
@@ -282,8 +285,8 @@ let rec walk cops env g = function
       Env.find v env
   | Expr.Lam (param, body) ->
       let (g', ty, retVar) = with_g (Some (Flex, g)) begin fun g ->
-          let fVar = (gen_ty_var (Lazy.force g)) in
-          let paramVar = gen_ty_u (Lazy.force g) in
+          let fVar = gen_ty_var (Lazy.force g) in
+          let paramVar = gen_ty_u_g (Lazy.force g) in
           let retVar = walk cops (Env.add param paramVar env) (Lazy.force g) body in
           ( UnionFind.make (Fn (fVar, paramVar, retVar))
           , retVar
@@ -318,7 +321,7 @@ let rec walk cops env g = function
         (fun g -> (walk cops env (Lazy.force g) arg, ()))
       in
       cops.constrain_inst gArg argVar;
-      let retVar = gen_ty_u g in
+      let retVar = gen_ty_u_g g in
       cops.constrain_ty
         fVar
         (UnionFind.make (Fn (gen_ty_var g, argVar, retVar)));
@@ -334,7 +337,7 @@ let rec walk cops env g = function
       let recVar = UnionFind.make (Record (gen_ty_var g, rowVar)) in
       cops.constrain_ty recVar tyvar;
       let tailVar = UnionFind.make (Row (gen_ty_var g)) in
-      let fieldVar = gen_ty_u g in
+      let fieldVar = gen_ty_u_g g in
       cops.constrain_row
         rowVar
         (UnionFind.make (Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
@@ -389,9 +392,9 @@ let rec walk cops env g = function
       (* TODO *)
       walk cops env g v
 and walk_match cops env g final = function
-  | [] -> (final, gen_ty_u g)
+  | [] -> (final, gen_ty_u_g g)
   | ((lbl, (var, body)) :: rest) ->
-      let ty = gen_ty_u g in
+      let ty = gen_ty_u_g g in
       let bodyVar = walk cops (Env.add var ty env) g body in
       let (row, body') = walk_match cops env g final rest in
       cops.constrain_ty bodyVar body';
@@ -546,7 +549,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
     let new_root_tv = gen_ty_var new_g in
-    let new_root = gen_ty_u new_g in
+    let new_root = gen_ty_u_g new_g in
 
     let rec go = fun nv ->
       let n = UnionFind.get nv in
@@ -554,7 +557,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       if not (older_bound (`G old_g) old_bound) then
         (* We've hit the frontier; replace it with a bottom node and
          * constrain it to be equal to the old thing. *)
-        let new_var = gen_ty_u new_g in
+        let new_var = gen_ty_u_g new_g in
         cops.constrain_ty nv new_var;
         new_var
       else
@@ -597,7 +600,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       in
       if not (older_bound (`G old_g) old_bound) then
         (* On the frontier. *)
-        let new_var = gen_row_u { b_at = `G new_g; b_ty = Flex } in
+        let new_var = gen_row_u_g new_g in
         cops.constrain_row row_var new_var;
         new_var
       else
