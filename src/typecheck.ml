@@ -608,14 +608,19 @@ let _ =
   (* avoid a warning about not using expand; we'll do that soon. *)
   expand
 
+let solve_constraints cs =
+  List.iter (function
+    | UnifyTypes(l, r) -> UnionFind.merge unify l r
+    | UnifyRows(l, r) -> UnionFind.merge unify_row l r
+  ) cs.unification;
+  cs.ty
+
 let typecheck expr =
-  let cs = build_constraints expr in
   try
-    List.iter (function
-      | UnifyTypes(l, r) -> UnionFind.merge unify l r
-      | UnifyRows(l, r) -> UnionFind.merge unify_row l r
-    ) cs.unification;
-    Ok (get_var_type cs.ty)
+    build_constraints expr
+    |> solve_constraints
+    |> get_var_type
+    |> fun t -> Ok t
   with
     Error.MuleExn e ->
       Err e
