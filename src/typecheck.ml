@@ -452,9 +452,15 @@ type unify_edge =
   | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
   | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
 
-let build_constraints expr =
+type built_constraints =
+  { unification: unify_edge list
+  ; instatiation: (g_node * (u_type UnionFind.var) list) IntMap.t
+  ; ty: u_type UnionFind.var
+  }
+
+let build_constraints: Expr.t -> built_constraints = fun expr ->
   let ucs = ref [] in (* unification constraints *)
-  let ics = ref IntMap.empty in
+  let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
     { constrain_ty   = (fun l r -> ucs := UnifyTypes(l, r) :: !ucs)
     ; constrain_row  = (fun l r -> ucs := UnifyRows(l, r) :: !ucs)
@@ -475,16 +481,19 @@ let build_constraints expr =
       (walk cops Env.empty (Lazy.force g) expr, ())
     end
   in
-  (!ucs, !ics, ty)
+  { unification = !ucs
+  ; instatiation = !ics
+  ; ty = ty
+  }
 
 let typecheck expr =
-  let (ucs, _ics, ty) = build_constraints expr in
+  let cs = build_constraints expr in
   try
     List.iter (function
       | UnifyTypes(l, r) -> UnionFind.merge unify l r
       | UnifyRows(l, r) -> UnionFind.merge unify_row l r
-    ) ucs;
-    Ok (get_var_type ty)
+    ) cs.unification;
+    Ok (get_var_type cs.ty)
   with
     Error.MuleExn e ->
       Err e
