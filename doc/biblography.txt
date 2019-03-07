@@ -17,7 +17,7 @@ Please keep this list sorted alphabetically by the {citation} tag.
     ICFP '03
     http://pauillac.inria.fr/~remy/work/mlf/icfp.pdf
 
-{MLF-Graph}
+{MLF-Graph-Unify}
 
     A graphical presentation of MLF types with a linear-time unification algorithm
     Didier Rémy and Boris Yakobowski

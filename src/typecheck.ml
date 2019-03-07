@@ -54,7 +54,7 @@ let with_g
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
- * in {MLF-Graph}. *)
+ * in {MLF-Graph-Unify}. *)
 let rec get_permission: bound_ty list -> permission = function
   | [] -> F
   | (Rigid :: _) -> R
@@ -197,7 +197,7 @@ let rec unify l r =
       l
 
   | ((Type _) as v), t | t, ((Type _) as v) ->
-      (* Corresponds to "grafting" in {MLF-Graph}. Only valid for flexible
+      (* Corresponds to "grafting" in {MLF-Graph-Unify}. Only valid for flexible
        * bottom vars. *)
       begin match ty_permission v with
         | F -> t
