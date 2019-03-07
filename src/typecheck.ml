@@ -273,6 +273,12 @@ and unify_row l r =
 
 let rec walk cops env g = function
   | Expr.Var v ->
+      (* FIXME: we need to make sure to make an instance edge if the variable refers
+       * to something that can be instatiated. This probably means changing env to
+       * allow carrying g-nodes or something.
+       *
+       * I(@zenhack) also suspect we may be misplacing some g-nodes; need to audit.
+       *)
       Env.find v env
   | Expr.Lam (param, body) ->
       let (g', ty, retVar) = with_g (Some (Flex, g)) begin fun g ->
