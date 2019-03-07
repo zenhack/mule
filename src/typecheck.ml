@@ -23,10 +23,7 @@ and u_row =
 and bound_ty = Rigid | Flex
 and bound = {
   b_ty: bound_ty;
-  b_at:
-    [ `Ty of u_type UnionFind.var
-    | `G of g_node
-    ];
+  b_at: bound_target;
 }
 and tyvar = (int * bound)
 and g_node = {
@@ -34,6 +31,10 @@ and g_node = {
   g_bound: (bound_ty * g_node) option;
   g_child: u_type UnionFind.var Lazy.t;
 }
+and bound_target =
+  [ `Ty of u_type UnionFind.var
+  | `G of g_node
+  ]
 
 type permission = F | R | L
 
@@ -66,11 +67,26 @@ let rec get_permission: bound_ty list -> permission = function
 let rec gnode_bound_list {g_bound; _} = match g_bound with
   | None -> []
   | Some (b_ty, g) -> b_ty :: gnode_bound_list g
-let get_tyvar = function
+let get_tyvar: u_type -> tyvar = function
   | Type v -> v
   | Fn (v, _, _) -> v
   | Record (v, _) -> v
   | Union (v, _) -> v
+let get_ty_bound: u_type -> bound =
+  fun ty -> snd (get_tyvar ty)
+
+let bound_target_id: bound_target -> int = function
+  | `Ty tv ->
+      fst (get_tyvar (UnionFind.get tv))
+  | `G g ->
+      g.g_id
+
+let bound_id: bound -> int =
+  fun b -> bound_target_id b.b_at
+
+let older_bound: bound_target -> bound -> bool =
+  fun targ bound ->
+    bound_target_id targ < bound_id bound
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
   fun (_, bound) ->
@@ -485,6 +501,74 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
   ; instatiation = !ics
   ; ty = ty
   }
+
+(* Expand an instatiation constraint rooted at a g_node. See
+ * section 3.1 of {MLF-Graph-Infer}.
+ *)
+let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
+  fun cops old_g new_g ->
+    let old_root = Lazy.force old_g.g_child in
+
+    (* Generate the unification variable for the root up front, so it's
+     * visible everywhere. *)
+    let new_root_tv = gen_ty_var new_g in
+    let new_root = gen_ty_u new_g in
+
+    let rec go = fun nv ->
+      let n = UnionFind.get nv in
+      let old_bound = get_ty_bound n in
+      if not (older_bound (`G old_g) old_bound) then
+        (* We've hit the frontier; replace it with a bottom node and
+         * constrain it to be equal to the old thing. *)
+        let new_var = gen_ty_u new_g in
+        cops.constrain_ty nv new_var;
+        new_var
+      else
+        (* First, generate the new bound. *)
+        let new_tyvar =
+          if nv = old_root then
+            new_root_tv
+          else
+            ( gensym ()
+            , { b_ty = old_bound.b_ty
+              ; b_at = `Ty new_root
+              }
+            )
+        in
+        (* Now do a deep copy, subbing in the new bound. *)
+        let ret = UnionFind.make (match n with
+          | Type _ -> Type new_tyvar
+          | Fn (_, param, ret) -> Fn(new_tyvar, go param, go ret)
+          | Record(_, row) -> Record(new_tyvar, go_row row)
+          | Union(_, row) -> Union(new_tyvar, go_row row))
+        in
+        if nv = old_root then
+          (* If we were the root we have to unify with the variable created above;
+           * we couldn't set this at the top because of the cyclic dependency.
+           *)
+          begin
+            UnionFind.merge unify new_root ret;
+            ret
+          end
+        else
+          ret
+
+    and go_row row_var =
+      let row = UnionFind.get row_var in
+      match row with
+        | Extend(l, ty, rest) ->
+            UnionFind.make (Extend(l, go ty, go_row rest))
+        | Empty ->
+            UnionFind.make Empty
+        | Row _n ->
+            (* When we solve this, we'll also have to handle the case where the row
+             * is on the frontier. *)
+            failwith "TODO: row variables need to be bound somewhere."
+    in go old_root
+
+let _ =
+  (* avoid a warning about not using expand; we'll do that soon. *)
+  expand
 
 let typecheck expr =
   let cs = build_constraints expr in
