@@ -1,0 +1,1 @@
+let f = fn x. x.y in { a = f { y = {} }, b = f { y = { z = {} } } }

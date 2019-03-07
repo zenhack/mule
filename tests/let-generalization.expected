@@ -1,0 +1,7 @@
+#mule> Desugared: (match-lam
+| f -> {a = (f) ({y = {}}), b = (f) ({y = {z = {}}})}
+end) (fn $0. (match-lam
+| x -> (x).y
+end) ($0))
+Type mismatch
+#mule> 
