@@ -124,17 +124,14 @@ let gen_ty_var: g_node -> tyvar = fun g ->
     b_at = `G g;
   })
 
-(* (* We don't use this, but conceptually it belongs here: *)
-let gen_ty_u bound =
-  UnionFind.make (Type (gensym(), bound))
-*)
-let gen_row_u bound =
-  UnionFind.make (Row (gensym(), bound))
+
+let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
+  UnionFind.make (Type (gensym(), {b_ty = Flex; b_at = targ}))
+let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
+  UnionFind.make (Row (gensym(), {b_ty = Flex; b_at = targ}))
 
 let gen_ty_u_g g =
   UnionFind.make (Type (gen_ty_var g))
-let gen_row_u_g g =
-  UnionFind.make (Row (gen_ty_var g))
 
 
 let b_at_id = function
@@ -257,8 +254,11 @@ and unify_row l r =
          * MLF papers don't talk about this since the stuff from {Records}
          * is an extension.
          *)
-        let new_rest_r = gen_row_u (get_row_bound (UnionFind.get r_rest)) in
-        let new_rest_l = gen_row_u (get_row_bound (UnionFind.get l_rest)) in
+        let new_with_bound v =
+          UnionFind.make (Row (gensym (), get_row_bound (UnionFind.get v)))
+        in
+        let new_rest_r = new_with_bound r_rest in
+        let new_rest_l = new_with_bound l_rest in
 
         UnionFind.merge unify_row
           r_rest
@@ -542,14 +542,17 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
 (* Expand an instatiation constraint rooted at a g_node. See
  * section 3.1 of {MLF-Graph-Infer}.
  *)
-let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
-  fun cops old_g new_g ->
+let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
+  fun cops old_g new_targ ->
     let old_root = Lazy.force old_g.g_child in
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
-    let new_root_tv = gen_ty_var new_g in
-    let new_root = gen_ty_u_g new_g in
+    let new_root_tv = (gensym (), {
+      b_ty = Flex;
+      b_at = new_targ;
+    }) in
+    let new_root = gen_ty_u new_targ in
 
     let rec go = fun nv ->
       let n = UnionFind.get nv in
@@ -557,7 +560,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       if not (older_bound (`G old_g) old_bound) then
         (* We've hit the frontier; replace it with a bottom node and
          * constrain it to be equal to the old thing. *)
-        let new_var = gen_ty_u_g new_g in
+        let new_var = gen_ty_u new_targ in
         cops.constrain_ty nv new_var;
         new_var
       else
@@ -600,7 +603,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       in
       if not (older_bound (`G old_g) old_bound) then
         (* On the frontier. *)
-        let new_var = gen_row_u_g new_g in
+        let new_var = gen_row_u new_targ in
         cops.constrain_row row_var new_var;
         new_var
       else
