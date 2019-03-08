@@ -330,16 +330,16 @@ let rec walk cops env g = function
        *)
       Env.find v env
   | Expr.Lam (param, body) ->
-      let (g', ty, retVar) = with_g (Some (Flex, g)) begin fun g ->
-          let fVar = gen_ty_var (Lazy.force g) in
+      let (g', ty, fVar) = with_g (Some (Flex, g)) begin fun g ->
+          let fVar = gen_ty_u_g (Lazy.force g) in
           let paramVar = gen_ty_u_g (Lazy.force g) in
           let retVar = walk cops (Env.add param paramVar env) (Lazy.force g) body in
-          ( UnionFind.make (Fn (fVar, paramVar, retVar))
-          , retVar
+          ( UnionFind.make (Fn (get_tyvar (UnionFind.get fVar), paramVar, retVar))
+          , fVar
           )
         end
       in
-      cops.constrain_inst g' retVar;
+      cops.constrain_inst g' fVar;
       ty
   | Expr.Let(v, e, body) ->
       let (gE, eVar, ()) = with_g
