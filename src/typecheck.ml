@@ -511,7 +511,11 @@ type built_constraints =
   ; ty: u_type UnionFind.var
   }
 
-let build_constraints: Expr.t -> built_constraints = fun expr ->
+let make_cops: unit ->
+  ( constraint_ops
+  * (unify_edge list) ref
+  * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
+  ) = fun () ->
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
@@ -528,7 +532,10 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
           end
         end
     }
-  in
+  in (cops, ucs, ics)
+
+let build_constraints: Expr.t -> built_constraints = fun expr ->
+  let cops, ucs, ics = make_cops () in
   let (_, ty, ()) =
     with_g None begin fun g ->
       (walk cops Env.empty (Lazy.force g) expr, ())
@@ -625,13 +632,26 @@ let propogate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
     in
     cops.constrain_ty instance var
 
-let _ = propogate
-
 let solve_constraints cs =
-  List.iter (function
-    | UnifyTypes(l, r) -> UnionFind.merge unify l r
-    | UnifyRows(l, r) -> UnionFind.merge unify_row l r
-  ) cs.unification;
+  let solve_unify vars =
+    List.iter (function
+      | UnifyTypes(l, r) -> UnionFind.merge unify l r
+      | UnifyRows(l, r) -> UnionFind.merge unify_row l r
+    ) vars
+  in
+  solve_unify cs.unification;
+  IntMap.bindings cs.instatiation
+  |> List.sort (fun (l, _) (r, _) -> compare r l)
+  |> List.iter
+    (fun (_, (g, ts)) ->
+      List.iter
+        (fun t ->
+          let cops, ucs, _ = make_cops () in
+          propogate cops g t;
+          solve_unify !ucs
+        )
+        ts
+    );
   cs.ty
 
 let typecheck expr =
