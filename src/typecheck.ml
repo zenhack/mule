@@ -36,6 +36,11 @@ and bound_target =
   | `G of g_node
   ]
 
+(* Helpers for signaling type errors *)
+let typeErr e = raise (Error.MuleExn (Error.TypeError e))
+let permErr op = typeErr (Error.PermissionErr op)
+let ctorErr l r = typeErr (Error.MismatchedCtors (l, r))
+
 type permission = F | R | L
 
 let with_g
@@ -154,7 +159,7 @@ let bound_next {b_at; _} = match b_at with
 
 let raised_bound b = match b with
   | {b_ty = Rigid; _} ->
-      raise (Error.MuleExn Error.TypeMismatch)
+      permErr `Raise
   | _ ->
       bound_next b
 
@@ -201,13 +206,13 @@ let rec unify l r =
        * bottom vars. *)
       begin match ty_permission v with
         | F -> t
-        | _ -> raise (Error.MuleExn Error.TypeMismatch)
+        | _ -> permErr `Graft
       end
 
   | _ when tyvar_permission tv = L ->
       (* We need to do a merge, but our permissions are locked;
        * fail. *)
-      raise (Error.MuleExn Error.TypeMismatch)
+      permErr `Merge
 
   (* Top level type constructor that matches. In the
    * literature, these are treated uniformly and opaquely.
@@ -228,13 +233,15 @@ let rec unify l r =
       Union(tv, row_l)
 
   (* Type constructor mismatches. we could have a catchall,
-   * but this means we don't forget a case. it would be nice
-   * to refactor so we don't have to list every combination
-   * though. *)
-  | Fn _, Record _ | Fn _, Union _
-  | Record _, Fn _ | Record _, Union _
-  | Union _, Fn _ | Union _, Record _ ->
-      raise (Error.MuleExn Error.TypeMismatch)
+   * but this means we don't forget a case, and we can produce
+   * better error messages. it would be nice to refactor so
+   * we don't have to list every combination though. *)
+  | Fn     _, Record _ -> ctorErr `Fn     `Record
+  | Fn     _, Union  _ -> ctorErr `Fn     `Union
+  | Record _, Fn     _ -> ctorErr `Record `Fn
+  | Record _, Union  _ -> ctorErr `Record `Union
+  | Union  _,  Fn    _ -> ctorErr `Union  `Fn
+  | Union  _, Record _ -> ctorErr `Union  `Record
 and unify_row l r =
   let tv = unify_tyvar (get_row_var l) (get_row_var r) in
   match l, r with
@@ -271,8 +278,8 @@ and unify_row l r =
 
   | (Row _, r) -> r
   | (l, Row _) -> l
-  | (Extend _, Empty _) -> raise (Error.MuleExn Error.TypeMismatch)
-  | (Empty _, Extend _) -> raise (Error.MuleExn Error.TypeMismatch)
+  | (Extend _, Empty _) -> ctorErr `Extend `Empty
+  | (Empty _, Extend _) -> ctorErr `Empty `Extend
 
 let rec walk cops env g = function
   | Expr.Var v ->

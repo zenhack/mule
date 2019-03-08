@@ -26,23 +26,8 @@ let rec loop () =
       ()
   | MParser.Success (Some expr) ->
       begin match desugar_typecheck expr with
-      | OrErr.Err (Error.UnboundVar var) ->
-          print_endline ("unbound variable: " ^ Ast.Var.to_string var);
-      | OrErr.Err (Error.MalformedType msg) ->
-          print_endline ("malformed_type: " ^ msg)
-      | OrErr.Err Error.TypeMismatch ->
-          (* Most useful error message EVER: *)
-          print_endline "Type mismatch"
-      | OrErr.Err Error.UnreachableCases ->
-          print_endline "Unreachable cases in match"
-      | OrErr.Err (Error.DuplicateFields fields) ->
-          print_endline "Duplicate fields:";
-          fields
-            |> List.map Ast.Label.to_string
-            |> String.concat ","
-            |> print_endline
-      | OrErr.Err Error.EmptyMatch ->
-          print_endline "Empty match expression."
+      | OrErr.Err e ->
+          print_endline (Error.show e)
       | OrErr.Ok dexp ->
           print_endline "Javascript: ";
           (ToJs.toJs dexp |> Ast.Js.Expr.fmt print_string);
