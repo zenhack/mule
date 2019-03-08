@@ -616,9 +616,16 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
               UnionFind.make (Row new_var)
     in go old_root
 
-let _ =
-  (* avoid a warning about not using expand; we'll do that soon. *)
-  expand
+let propogate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
+  fun cops g var ->
+    let instance = expand
+      cops
+      g
+      (get_ty_bound (UnionFind.get var)).b_at
+    in
+    cops.constrain_ty instance var
+
+let _ = propogate
 
 let solve_constraints cs =
   List.iter (function
