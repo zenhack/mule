@@ -3,5 +3,5 @@
   | x -> x
   end) ($0)
 end) ((fn x. (Ok x)) ({}))
-Type mismatch
+Type error: mismatched type constructors: empty row and non-empty row
 #mule> 

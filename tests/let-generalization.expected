@@ -3,5 +3,5 @@
 end) (fn $0. (match-lam
 | x -> (x).y
 end) ($0))
-Type mismatch
+Type error: mismatched type constructors: non-empty row and empty row
 #mule> 
