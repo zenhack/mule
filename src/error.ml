@@ -2,7 +2,7 @@
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor =
   [ `Fn | `Record | `Union (* types *)
-  | `Empty | `Extend (* rows *)
+  | `Empty | `Extend of Ast.Label.t (* rows *)
   ]
 type type_error
   = MismatchedCtors of (ctor * ctor)
@@ -23,7 +23,7 @@ let show_ctor = function
   | `Record -> "record"
   | `Union -> "union"
   | `Empty -> "empty row"
-  | `Extend -> "non-empty row"
+  | `Extend lbl -> "row containing " ^ Ast.Label.to_string lbl
 
 let show_op = function
   | `Graft -> "graft"

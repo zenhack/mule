@@ -278,8 +278,8 @@ and unify_row l r =
 
   | (Row _, r) -> r
   | (l, Row _) -> l
-  | (Extend _, Empty _) -> ctorErr `Extend `Empty
-  | (Empty _, Extend _) -> ctorErr `Empty `Extend
+  | (Extend (_, lbl, _, _), Empty _) -> ctorErr (`Extend lbl) `Empty
+  | (Empty _, Extend (_, lbl, _, _)) -> ctorErr `Empty (`Extend lbl)
 
 let rec walk cops env g = function
   | Expr.Var v ->
