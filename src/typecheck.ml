@@ -5,6 +5,10 @@ module IntMap = Map.Make(struct
   type t = int
   let compare = compare
 end)
+module IntSet = Set.Make(struct
+  type t = int
+  let compare = compare
+end)
 
 open Ast.Desugared
 open Gensym
@@ -85,6 +89,41 @@ let get_row_var: u_row -> tyvar = function
   | Row v -> v
 let get_row_bound: u_row -> bound =
   fun r -> snd (get_row_var r)
+
+let rec show_u_type_v s v =
+  let t = UnionFind.get v in
+  let (n, _) = get_tyvar t in
+  if IntSet.mem n s then
+    "t" ^ string_of_int n
+  else
+    let s = IntSet.add n s in
+    match t with
+    | Type _ -> "t" ^ string_of_int n
+    | Fn (_, l, r) ->
+        "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
+    | Record(_, row) ->
+        "Record{" ^ show_u_row_v s row ^ "}"
+    | Union(_, row) ->
+        "Union(" ^ show_u_row_v s row ^ ")"
+and show_u_row_v s v =
+  let r = UnionFind.get v in
+  let (n, _) = get_row_var r in
+  if IntSet.mem n s then
+    "r" ^ string_of_int n
+  else
+    let s = IntSet.add n s in
+    match r with
+    | Row (n, _) ->
+        "r" ^ string_of_int n
+    | Empty _ ->
+        "<empty>"
+    | Extend (_, lbl, ty, rest) ->
+        "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
+let show_u_type_v = show_u_type_v IntSet.empty
+let show_u_row_v  = show_u_row_v  IntSet.empty
+
+let show_g {g_child; _} =
+  show_u_type_v (Lazy.force g_child)
 
 
 let bound_target_id: bound_target -> int = function
@@ -523,13 +562,35 @@ let make_cops: unit ->
   * (unify_edge list) ref
   * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
   ) = fun () ->
+  let report =
+    if Config.dump_constraints then
+      fun f -> print_endline (f ())
+    else
+      fun _ -> ()
+  in
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
-    { constrain_ty   = (fun l r -> ucs := UnifyTypes(l, r) :: !ucs)
-    ; constrain_row  = (fun l r -> ucs := UnifyRows(l, r) :: !ucs)
+    { constrain_ty   =
+      (fun l r ->
+        report (fun () -> "constrain types: "
+          ^ show_u_type_v l
+          ^ " = "
+          ^ show_u_type_v r);
+        ucs := UnifyTypes(l, r) :: !ucs)
+    ; constrain_row  = (fun l r ->
+        report (fun () -> "constrain rows: "
+            ^ show_u_row_v l
+            ^ " = "
+            ^ show_u_row_v r);
+          ucs := UnifyRows(l, r) :: !ucs)
     ; constrain_inst =
         begin fun g t ->
+          report
+            (fun () -> "constrain_inst: "
+              ^ show_u_type_v t
+              ^ " <: "
+              ^ show_g g);
           ics := begin IntMap.update g.g_id
             begin function
               | None -> Some (g, [t])
