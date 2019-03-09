@@ -756,6 +756,7 @@ and emit_all_nodes_g g dict =
     dict := IntMap.add g.g_id () !dict;
     Debug.show_node `G g.g_id;
     emit_all_nodes_ty (Lazy.force g.g_child) dict;
+    Debug.show_edge `Structural g.g_id (fst (get_tyvar (UnionFind.get (Lazy.force g.g_child))));
     begin match g.g_bound with
     | Some (b_ty, g') ->
         Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
