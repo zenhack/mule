@@ -93,7 +93,11 @@ let rec desugar = function
         ( desugar_match RowMap.empty cases
         , desugar e
         )
+  | S.Let(SP.Var v, e, body) ->
+      D.Let (v, desugar e, desugar body)
   | S.Let(pat, e, body) ->
+      (* TODO: rework with so it stays a let binding; otherwise it won't generalize inner
+       * variables. *)
       desugar (S.Match(e, [(pat, body)]))
 and desugar_match dict = function
   | [] -> D.Match
