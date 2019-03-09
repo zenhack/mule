@@ -1,1 +1,3 @@
-match Ok {} with Err x -> x end
+match Ok {} with
+  | Err x -> x
+end
