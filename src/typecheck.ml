@@ -25,7 +25,7 @@ and u_row =
   | Extend of (tyvar * Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
   | Empty of tyvar
   | Row of tyvar
-and bound_ty = Rigid | Flex
+and bound_ty = [ `Rigid | `Flex ]
 and bound = {
   b_ty: bound_ty;
   b_at: bound_target;
@@ -70,8 +70,8 @@ let with_g
  * in {MLF-Graph-Unify}. *)
 let rec get_permission: bound_ty list -> permission = function
   | [] -> F
-  | (Rigid :: _) -> R
-  | (Flex :: bs) ->
+  | (`Rigid :: _) -> R
+  | (`Flex :: bs) ->
       begin match get_permission bs with
         | F -> F
         | R | L -> L
@@ -168,15 +168,15 @@ type constraint_ops =
 
 let gen_ty_var: g_node -> tyvar = fun g ->
   (gensym (), {
-    b_ty = Flex;
+    b_ty = `Flex;
     b_at = `G g;
   })
 
 
 let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
-  UnionFind.make (Type (gensym(), {b_ty = Flex; b_at = targ}))
+  UnionFind.make (Type (gensym(), {b_ty = `Flex; b_at = targ}))
 let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
-  UnionFind.make (Row (gensym(), {b_ty = Flex; b_at = targ}))
+  UnionFind.make (Row (gensym(), {b_ty = `Flex; b_at = targ}))
 
 let gen_ty_u_g g =
   UnionFind.make (Type (gen_ty_var g))
@@ -201,7 +201,7 @@ let bound_next {b_at; _} = match b_at with
       Some (snd (get_tyvar (UnionFind.get u)))
 
 let raised_bound b = match b with
-  | {b_ty = Rigid; _} ->
+  | {b_ty = `Rigid; _} ->
       permErr `Raise
   | _ ->
       bound_next b
@@ -230,8 +230,8 @@ let rec bound_lca: bound -> bound -> bound =
 let unify_bound l r =
   let {b_at; _} = bound_lca l r in
   match l.b_ty, r.b_ty with
-  | Flex, Flex -> {b_at; b_ty = Flex}
-  | _ -> {b_at; b_ty = Rigid}
+  | `Flex, `Flex -> {b_at; b_ty = `Flex}
+  | _ -> {b_at; b_ty = `Rigid}
 
 let unify_tyvar: tyvar -> tyvar -> tyvar =
  fun (i, bl) (_, br) ->
@@ -340,7 +340,7 @@ let rec walk cops env g = function
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
       let (g_body, _) =
         with_g
-          (Some (Flex, g))
+          (Some (`Flex, g))
           (fun g -> walk
             cops
             (Env.add param (`Ty param_var) env)
@@ -351,7 +351,7 @@ let rec walk cops env g = function
       f_var
   | Expr.Let(v, e, body) ->
       let (g_e, _) = with_g
-        (Some(Flex, g))
+        (Some(`Flex, g))
         (fun g -> walk cops env (Lazy.force g) e)
       in
       walk cops (Env.add v (`G g_e) env) g body
@@ -360,12 +360,12 @@ let rec walk cops env g = function
       let ret_var = gen_ty_u_g g in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
       let (g_f, _) = with_g
-        (Some(Flex, g))
+        (Some(`Flex, g))
         (fun g -> walk cops env (Lazy.force g) f)
       in
       cops.constrain_inst g_f f_var;
       let (g_arg, _) = with_g
-        (Some(Flex, g))
+        (Some(`Flex, g))
         (fun g -> walk cops env (Lazy.force g) arg)
       in
       cops.constrain_inst g_arg param_var;
@@ -551,7 +551,7 @@ type unify_edge =
 
 type built_constraints =
   { unification: unify_edge list
-  ; instatiation: (g_node * (u_type UnionFind.var) list) IntMap.t
+  ; instantiation: (g_node * (u_type UnionFind.var) list) IntMap.t
   ; ty: u_type UnionFind.var
   }
 
@@ -603,11 +603,11 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
     end
   in
   { unification = !ucs
-  ; instatiation = !ics
+  ; instantiation = !ics
   ; ty = ty
   }
 
-(* Expand an instatiation constraint rooted at a g_node. See
+(* Expand an instantiation constraint rooted at a g_node. See
  * section 3.1 of {MLF-Graph-Infer}.
  *)
 let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
@@ -617,7 +617,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
     let new_root_tv = (gensym (), {
-      b_ty = Flex;
+      b_ty = `Flex;
       b_at = new_targ;
     }) in
     let new_root = gen_ty_u new_targ in
@@ -693,15 +693,133 @@ let propogate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
     in
     cops.constrain_ty instance var
 
-let solve_constraints cs =
-  let solve_unify vars =
+let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
+  fun v dict ->
+    let t = UnionFind.get v in
+    let (n, {b_at; b_ty}) = get_tyvar t in
+    if IntMap.mem n !dict then
+      ()
+    else begin
+      dict := IntMap.add n () !dict;
+      begin match b_at with
+      | `Ty parent ->
+          emit_all_nodes_ty parent dict;
+          let p_id = fst (get_tyvar (UnionFind.get parent)) in
+          Debug.show_edge (`Binding b_ty) p_id n
+      | `G g ->
+          emit_all_nodes_g g dict;
+          Debug.show_edge (`Binding b_ty) g.g_id n
+      end;
+      begin match t with
+        | Type _ ->
+            Debug.show_node `TyVar n
+        | Fn(_, param, ret) ->
+            Debug.show_node `TyFn n;
+            Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get param)));
+            Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get ret)));
+            emit_all_nodes_ty param dict;
+            emit_all_nodes_ty ret dict
+            (* TODO: bounding edges *)
+        | Record (_, row) ->
+            Debug.show_node `TyRecord n;
+            Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get row)));
+            emit_all_nodes_row row dict
+        | Union (_, row) ->
+            Debug.show_node `TyUnion n;
+            Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get row)));
+            emit_all_nodes_row row dict
+      end
+    end
+and emit_all_nodes_row v dict =
+    let r = UnionFind.get v in
+    let n = fst (get_row_var r) in
+    if IntMap.mem n !dict then
+      ()
+    else
+      dict := IntMap.add n () !dict;
+      begin match r with
+      | Empty _ ->
+          Debug.show_node `RowEmpty n
+      | Row _ ->
+          Debug.show_node `RowVar n
+      | Extend (_, lbl, h, t) ->
+          Debug.show_node (`RowExtend lbl) n;
+          Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get h)));
+          Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get t)));
+          emit_all_nodes_ty h dict;
+          emit_all_nodes_row t dict
+      end
+and emit_all_nodes_g g dict =
+  if IntMap.mem g.g_id !dict then
+    ()
+  else begin
+    dict := IntMap.add g.g_id () !dict;
+    Debug.show_node `G g.g_id;
+    emit_all_nodes_ty (Lazy.force g.g_child) dict;
+    begin match g.g_bound with
+    | Some (b_ty, g') ->
+        Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
+        emit_all_nodes_g g' dict
+    | None ->
+        ()
+    end
+  end
+
+
+let render_graph cs =
+  if Config.render_constraints then
+    let visited = ref IntMap.empty in
+    Debug.start_graph ();
+    emit_all_nodes_ty cs.ty visited;
     List.iter (function
+      | UnifyTypes(l, r) ->
+          let id n = fst (get_tyvar (UnionFind.get n)) in
+          Debug.show_edge `Unify (id l) (id r);
+          emit_all_nodes_ty l visited;
+          emit_all_nodes_ty r visited
+      | UnifyRows(l, r) ->
+          let id n = fst (get_row_var (UnionFind.get n)) in
+          Debug.show_edge `Unify (id l) (id r);
+          emit_all_nodes_row l visited;
+          emit_all_nodes_row r visited
+    ) cs.unification;
+    cs.instantiation
+    |> IntMap.bindings
+    |> List.iter (fun (_, (g, ts)) ->
+      emit_all_nodes_g g visited;
+      ts |> List.iter
+        (fun t ->
+          let t_id = fst (get_tyvar (UnionFind.get t)) in
+          Debug.show_edge `Instance g.g_id t_id;
+          emit_all_nodes_ty t visited)
+    );
+    Debug.end_graph ()
+  else
+    ()
+
+let solve_constraints cs =
+  let render_ucs = ref cs.unification in
+  let render_ics = ref cs.instantiation in
+  let render () = render_graph
+    { unification = !render_ucs
+    ; instantiation = !render_ics
+    ; ty = cs.ty
+    }
+  in
+  render ();
+  let solve_unify vars =
+    render_ucs := vars;
+    List.iter (fun c ->
+      begin match c with
       | UnifyTypes(l, r) -> UnionFind.merge unify l r
       | UnifyRows(l, r) -> UnionFind.merge unify_row l r
+      end;
+      render_ucs := List.tl !render_ucs;
+      render ();
     ) vars
   in
   solve_unify cs.unification;
-  IntMap.bindings cs.instatiation
+  IntMap.bindings cs.instantiation
   |> List.sort (fun (l, _) (r, _) -> compare r l)
   |> List.iter
     (fun (_, (g, ts)) ->
@@ -709,9 +827,17 @@ let solve_constraints cs =
         (fun t ->
           let cops, ucs, _ = make_cops () in
           propogate cops g t;
-          solve_unify !ucs
+          solve_unify !ucs;
+          render_ics :=
+            IntMap.update g.g_id (function
+                | Some (g, (_ :: ts)) -> Some (g, ts)
+                | v -> v
+            ) !render_ics;
+          render ()
         )
-        ts
+        ts;
+      render_ics := IntMap.remove g.g_id !render_ics;
+      render ()
     );
   cs.ty
 
