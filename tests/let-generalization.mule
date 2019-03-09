@@ -1,4 +1,4 @@
-let f = fn x. x.y in
-  { a = f { y = {} }
-  , b = f { y = { z = {} } }
+let f = fn x. x in
+  { a = f (fn y. y)
+  , b = f (Ok {})
   }
