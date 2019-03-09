@@ -53,17 +53,17 @@ let ctorErr l r = typeErr (Error.MismatchedCtors (l, r))
 
 let with_g
   : ((bound_ty * g_node) option)
-  -> (g_node Lazy.t -> (u_type UnionFind.var * 'a))
-  -> (g_node * u_type UnionFind.var * 'a)
+  -> (g_node Lazy.t -> u_type UnionFind.var)
+  -> (g_node * u_type UnionFind.var)
   = fun parent f ->
       let gid = gensym () in
       let rec g = lazy {
         g_id = gid;
         g_bound = parent;
-        g_child = lazy (fst (Lazy.force ret));
+        g_child = ret;
       }
       and ret = lazy (f g)
-      in (Lazy.force g, fst (Lazy.force ret), snd (Lazy.force ret))
+      in (Lazy.force g, Lazy.force ret)
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
@@ -326,62 +326,50 @@ and unify_row l r =
 
 let rec walk cops env g = function
   | Expr.Var v ->
-      (* FIXME: we need to make sure to make an instance edge if the variable refers
-       * to something that can be instatiated. This probably means changing env to
-       * allow carrying g-nodes or something.
-       *
-       * I(@zenhack) also suspect we may be misplacing some g-nodes; need to audit.
-       *)
+      let tv = gen_ty_u_g g in
       begin match Env.find v env with
-        | `Ty tv -> tv
+        | `Ty tv' ->
+            cops.constrain_ty tv' tv
         | `G g' ->
-            let tv = gen_ty_u_g g in
-            cops.constrain_inst g' tv;
-            tv
-      end
+            cops.constrain_inst g' tv
+      end;
+      tv
   | Expr.Lam (param, body) ->
-      let (g', ty, fVar) = with_g (Some (Flex, g)) begin fun g ->
-          let fVar = gen_ty_u_g (Lazy.force g) in
-          let paramVar = gen_ty_u_g (Lazy.force g) in
-          let retVar = walk cops (Env.add param (`Ty paramVar) env) (Lazy.force g) body in
-          ( UnionFind.make (Fn (get_tyvar (UnionFind.get fVar), paramVar, retVar))
-          , fVar
-          )
-        end
+      let param_var = gen_ty_u_g g in
+      let ret_var = gen_ty_u_g g in
+      let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
+      let (g_body, _) =
+        with_g
+          (Some (Flex, g))
+          (fun g -> walk
+            cops
+            (Env.add param (`Ty param_var) env)
+            (Lazy.force g)
+            body)
       in
-      cops.constrain_inst g' fVar;
-      ty
+      cops.constrain_inst g_body ret_var;
+      f_var
   | Expr.Let(v, e, body) ->
-      let (gE, _eVar, ()) = with_g
+      let (g_e, _) = with_g
         (Some(Flex, g))
-        (fun g -> walk cops env (Lazy.force g) e, ())
+        (fun g -> walk cops env (Lazy.force g) e)
       in
-      (* cops.constrain_inst gE eVar; *)
-      let (_gBody, bodyVar, ()) = with_g
-        (Some(Flex, g))
-        (fun g ->
-          ( walk cops (Env.add v (`G gE) env) (Lazy.force g) body
-          , ()
-          ))
-      in
-      (* cops.constrain_inst gBody bodyVar; *)
-      bodyVar
+      walk cops (Env.add v (`G g_e) env) g body
   | Expr.App (f, arg) ->
-      let (gF, fVar, ()) = with_g
+      let param_var = gen_ty_u_g g in
+      let ret_var = gen_ty_u_g g in
+      let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
+      let (g_f, _) = with_g
         (Some(Flex, g))
-        (fun g -> walk cops env (Lazy.force g) f, ())
+        (fun g -> walk cops env (Lazy.force g) f)
       in
-      cops.constrain_inst gF fVar;
-      let (gArg, argVar, ()) = with_g
+      cops.constrain_inst g_f f_var;
+      let (g_arg, _) = with_g
         (Some(Flex, g))
-        (fun g -> (walk cops env (Lazy.force g) arg, ()))
+        (fun g -> walk cops env (Lazy.force g) arg)
       in
-      cops.constrain_inst gArg argVar;
-      let retVar = gen_ty_u_g g in
-      cops.constrain_ty
-        fVar
-        (UnionFind.make (Fn (gen_ty_var g, argVar, retVar)));
-      retVar
+      cops.constrain_inst g_arg param_var;
+      ret_var
   | Expr.Record fields ->
       let rVar = gen_ty_var g in
       let tailVar = UnionFind.make (Empty (gen_ty_var g)) in
@@ -614,9 +602,9 @@ let make_cops: unit ->
 
 let build_constraints: Expr.t -> built_constraints = fun expr ->
   let cops, ucs, ics = make_cops () in
-  let (_, ty, ()) =
+  let (_, ty) =
     with_g None begin fun g ->
-      (walk cops Env.empty (Lazy.force g) expr, ())
+      walk cops Env.empty (Lazy.force g) expr
     end
   in
   { unification = !ucs
