@@ -560,12 +560,7 @@ let make_cops: unit ->
   * (unify_edge list) ref
   * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
   ) = fun () ->
-  let report =
-    if Config.dump_constraints then
-      fun f -> print_endline (f ())
-    else
-      fun _ -> ()
-  in
+  let report = Debug.report Config.dump_constraints in
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
