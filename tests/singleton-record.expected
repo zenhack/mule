@@ -1,6 +1,5 @@
-#mule> Desugared: {x = {}}
+Desugared: {x = {}}
 inferred type: {x : {}}
 Javascript: 
 ({'x':({}),})
 Evaluated: {x = {}}
-#mule> 

@@ -1,7 +1,6 @@
-#mule> Desugared: (match-lam
+Desugared: (match-lam
 | f -> {a = (f) ({y = {}}), b = (f) ({y = {z = {}}})}
 end) (fn $0. (match-lam
 | x -> (x).y
 end) ($0))
 Type error: mismatched type constructors: row containing z and empty row
-#mule> 

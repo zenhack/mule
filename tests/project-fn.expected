@@ -1,4 +1,4 @@
-#mule> Desugared: fn $0. (match-lam
+Desugared: fn $0. (match-lam
 | x -> (x).y
 end) ($0)
 inferred type: ({y : t15, ...t11}) -> (t15)
@@ -7,4 +7,3 @@ Javascript:
 Evaluated: fn $0. (match-lam
 | x -> (x).y
 end) ($0)
-#mule> 

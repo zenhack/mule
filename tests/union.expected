@@ -1,6 +1,5 @@
-#mule> Desugared: (fn x. (Ok x)) ({})
+Desugared: (fn x. (Ok x)) ({})
 inferred type: (Ok {}) | ...t6
 Javascript: 
 (x$=>({'$':'Ok','v':x$,}))(({}),)
 Evaluated: (Ok {})
-#mule> 

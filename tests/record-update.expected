@@ -1,6 +1,5 @@
-#mule> Desugared: {x = {}} where { y = {z = {}} }
+Desugared: {x = {}} where { y = {z = {}} }
 inferred type: {y : {z : {}}, x : {}}
 Javascript: 
 $mulecp$(({'x':({}),}),({'y':({'z':({}),}),}),)
 Evaluated: {x = {}, y = {z = {}}}
-#mule> 

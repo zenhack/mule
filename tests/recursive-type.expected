@@ -1,4 +1,4 @@
-#mule> Desugared: fn $0. (match-lam
+Desugared: fn $0. (match-lam
 | x -> (x) (x)
 end) ($0)
 inferred type: (rec t12. (t12) -> (t14)) -> (t14)
@@ -7,4 +7,3 @@ Javascript:
 Evaluated: fn $0. (match-lam
 | x -> (x) (x)
 end) ($0)
-#mule> 

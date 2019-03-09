@@ -328,12 +328,18 @@ let rec walk cops env g = function
        *
        * I(@zenhack) also suspect we may be misplacing some g-nodes; need to audit.
        *)
-      Env.find v env
+      begin match Env.find v env with
+        | `Ty tv -> tv
+        | `G g' ->
+            let tv = gen_ty_u_g g in
+            cops.constrain_inst g' tv;
+            tv
+      end
   | Expr.Lam (param, body) ->
       let (g', ty, fVar) = with_g (Some (Flex, g)) begin fun g ->
           let fVar = gen_ty_u_g (Lazy.force g) in
           let paramVar = gen_ty_u_g (Lazy.force g) in
-          let retVar = walk cops (Env.add param paramVar env) (Lazy.force g) body in
+          let retVar = walk cops (Env.add param (`Ty paramVar) env) (Lazy.force g) body in
           ( UnionFind.make (Fn (get_tyvar (UnionFind.get fVar), paramVar, retVar))
           , fVar
           )
@@ -342,19 +348,19 @@ let rec walk cops env g = function
       cops.constrain_inst g' fVar;
       ty
   | Expr.Let(v, e, body) ->
-      let (gE, eVar, ()) = with_g
+      let (gE, _eVar, ()) = with_g
         (Some(Flex, g))
         (fun g -> walk cops env (Lazy.force g) e, ())
       in
-      cops.constrain_inst gE eVar;
-      let (gBody, bodyVar, ()) = with_g
+      (* cops.constrain_inst gE eVar; *)
+      let (_gBody, bodyVar, ()) = with_g
         (Some(Flex, g))
         (fun g ->
-          ( walk cops (Env.add v eVar env) (Lazy.force g) body
+          ( walk cops (Env.add v (`G gE) env) (Lazy.force g) body
           , ()
           ))
       in
-      cops.constrain_inst gBody bodyVar;
+      (* cops.constrain_inst gBody bodyVar; *)
       bodyVar
   | Expr.App (f, arg) ->
       let (gF, fVar, ()) = with_g
@@ -441,7 +447,7 @@ and walk_match cops env g final = function
   | [] -> (final, gen_ty_u_g g)
   | ((lbl, (var, body)) :: rest) ->
       let ty = gen_ty_u_g g in
-      let bodyVar = walk cops (Env.add var ty env) g body in
+      let bodyVar = walk cops (Env.add var (`Ty ty) env) g body in
       let (row, body') = walk_match cops env g final rest in
       cops.constrain_ty bodyVar body';
       ( UnionFind.make (Extend(gen_ty_var g, lbl, ty, row))
