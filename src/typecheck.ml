@@ -1,6 +1,7 @@
 module S = Set.Make(Ast.Var)
 module Env = Map.Make(Ast.Var)
 
+
 module IntMap = Map.Make(struct
   type t = int
   let compare = compare
@@ -40,12 +41,15 @@ and bound_target =
   | `G of g_node
   ]
 
+type permission = F | R | L
+
+let perm_eq: permission -> permission -> bool = (=)
+let (=): int -> int -> bool = (=)
+
 (* Helpers for signaling type errors *)
 let typeErr e = raise (Error.MuleExn (Error.TypeError e))
 let permErr op = typeErr (Error.PermissionErr op)
 let ctorErr l r = typeErr (Error.MismatchedCtors (l, r))
-
-type permission = F | R | L
 
 let with_g
   : ((bound_ty * g_node) option)
@@ -248,7 +252,7 @@ let rec unify l r =
         | _ -> permErr `Graft
       end
 
-  | _ when tyvar_permission tv = L ->
+  | _ when perm_eq (tyvar_permission tv) L ->
       (* We need to do a merge, but our permissions are locked;
        * fail. *)
       permErr `Merge
@@ -287,7 +291,7 @@ and unify_row l r =
   | (Empty _, Empty _) -> Empty tv
   | (Extend (_, l_lbl, l_ty, l_rest), Extend (_, r_lbl, r_ty, r_rest)) ->
       let ret = Extend (tv, l_lbl, l_ty, l_rest) in
-      if l_lbl = r_lbl then begin
+      if Ast.Label.equal l_lbl r_lbl then begin
         UnionFind.merge unify l_ty r_ty;
         UnionFind.merge unify_row l_rest r_rest;
         ret
@@ -647,7 +651,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
       else
         (* First, generate the new bound. *)
         let new_tyvar =
-          if nv = old_root then
+          if UnionFind.equal nv old_root then
             new_root_tv
           else
             ( gensym ()
@@ -663,7 +667,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
           | Record(_, row) -> Record(new_tyvar, go_row row)
           | Union(_, row) -> Union(new_tyvar, go_row row))
         in
-        if nv = old_root then
+        if UnionFind.equal nv old_root then
           (* If we were the root we have to unify with the variable created above;
            * we couldn't set this at the top because of the cyclic dependency.
            *)

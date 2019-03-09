@@ -14,16 +14,21 @@ let make v = ref (Repr v)
  *
  * performs path compression.
  *)
-let rec get_rep_val var = match !var with
-  | Repr value -> (var, value)
-  | Ptr var' ->
-      let (rep, value) = get_rep_val var' in
-      var := Ptr rep;
-      (rep, value)
+let rec get_rep_val: 'a var -> ('a var * 'a) =
+  fun var -> match !var with
+    | Repr value -> (var, value)
+    | Ptr var' ->
+        let (rep, value) = get_rep_val var' in
+        var := Ptr rep;
+        (rep, value)
 
 let get var =
   let (_, value) = get_rep_val var in
   value
+
+let equal l r =
+  let (l', _), (r', _) = get_rep_val l, get_rep_val r in
+  l' == r'
 
 let merge f l r =
   let (lrep, lval), (rrep, rval) = (get_rep_val l, get_rep_val r) in

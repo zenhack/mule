@@ -15,6 +15,9 @@ val make : 'a -> 'a var
 (* Get the value of the set. *)
 val get : 'a var -> 'a
 
+(* Compare two variables for equality *)
+val equal : 'a var -> 'a var -> bool
+
 (* Unify two variables, given a function to merge their values. As soon as this
  * function is called, the variables are considred unified; even if the funtion
  * returns [Err], the variables are now considered the same.

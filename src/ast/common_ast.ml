@@ -5,6 +5,8 @@ module StringWrapper : sig
   val to_string : t -> string
 
   val compare : t -> t -> int
+
+  val equal : t -> t -> bool
 end = struct
   type t = string
 
@@ -12,6 +14,8 @@ end = struct
   let to_string s = s
 
   let compare = String.compare
+
+  let equal = String.equal
 end
 
 module Var : module type of StringWrapper = StringWrapper
