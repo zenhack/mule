@@ -153,6 +153,39 @@ and finalize_dict dict =
     )
     dict
 
+let rec simplify e = match e with
+  | D.Lam (param, body) ->
+      begin match simplify body with
+        | D.App(f, D.Var v) when Ast.Var.equal v param -> f
+        | b -> D.Lam(param, b)
+      end
+  | D.Match {cases; default = Some (Some param, body)}
+      when RowMap.is_empty cases ->
+        simplify (D.Lam(param, body))
+  | D.App(f, x) ->
+      begin match D.App(simplify f, simplify x) with
+        | D.App (D.Lam(p, D.Ctor(c, D.Var v)), arg) when Ast.Var.equal v p ->
+            D.Ctor(c, arg)
+        | e' -> e'
+      end
+  | D.Record m ->
+      D.Record (RowMap.map simplify m)
+  | D.GetField (e, f) ->
+      D.GetField(simplify e, f)
+  | D.Update (e', fields) ->
+      D.Update
+        ( simplify e'
+        , List.map (fun (l, f) -> (l, simplify f)) fields
+        )
+  | D.Ctor (l, e') ->
+      D.Ctor(l, simplify e')
+  | D.Var _ | D.Match _ ->
+      e (* TODO: don't be lazy about match. *)
+  | D.WithType (e', ty) ->
+      D.WithType(simplify e', ty)
+  | D.Let(v, e', body) ->
+      D.Let (v, simplify e', simplify body)
+
 let desugar e =
-  try OrErr.Ok (desugar e)
+  try OrErr.Ok (simplify (desugar e))
   with Error.MuleExn err -> OrErr.Err err
