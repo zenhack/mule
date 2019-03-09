@@ -206,7 +206,7 @@ let raised_bound b = match b with
   | _ ->
       bound_next b
 
-(* Compute the lease common ancestor of two bounds.
+(* Compute the least common ancestor of two bounds.
  * If that ancestor is not reachable without raising
  * past rigid edges, fail. *)
 let rec bound_lca: bound -> bound -> bound =
