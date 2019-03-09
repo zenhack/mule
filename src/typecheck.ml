@@ -684,7 +684,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
               UnionFind.make (Row new_var)
     in go old_root
 
-let propogate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
+let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
     let instance = expand
       cops
@@ -827,7 +827,7 @@ let solve_constraints cs =
       List.iter
         (fun t ->
           let cops, ucs, _ = make_cops () in
-          propogate cops g t;
+          propagate cops g t;
           solve_unify !ucs;
           render_ics :=
             IntMap.update g.g_id (function
