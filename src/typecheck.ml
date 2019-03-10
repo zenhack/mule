@@ -610,17 +610,17 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
 (* Expand an instantiation constraint rooted at a g_node. See
  * section 3.1 of {MLF-Graph-Infer}.
  *)
-let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
-  fun cops old_g new_targ ->
+let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
+  fun cops old_g new_g ->
     let old_root = Lazy.force old_g.g_child in
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
     let new_root_tv = (gensym (), {
       b_ty = `Flex;
-      b_at = new_targ;
+      b_at = `G new_g;
     }) in
-    let new_root = gen_ty_u new_targ in
+    let new_root = gen_ty_u (`G new_g) in
 
     let rec go = fun nv ->
       let n = UnionFind.get nv in
@@ -628,7 +628,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
       if not (older_bound (`G old_g) old_bound) then
         (* We've hit the frontier; replace it with a bottom node and
          * constrain it to be equal to the old thing. *)
-        let new_var = gen_ty_u new_targ in
+        let new_var = gen_ty_u (`G new_g) in
         cops.constrain_ty nv new_var;
         new_var
       else
@@ -671,7 +671,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
       in
       if not (older_bound (`G old_g) old_bound) then
         (* On the frontier. *)
-        let new_var = gen_row_u new_targ in
+        let new_var = gen_row_u (`G new_g) in
         cops.constrain_row row_var new_var;
         new_var
       else
@@ -686,12 +686,13 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
 
 let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
-    let instance = expand
-      cops
-      g
-      (get_ty_bound (UnionFind.get var)).b_at
-    in
-    cops.constrain_ty instance var
+    begin match (get_ty_bound (UnionFind.get var)).b_at with
+      | `G g' ->
+        let instance = expand cops g g' in
+        cops.constrain_ty instance var
+      | `Ty _ ->
+          failwith "propagate: node not bound at g-node."
+    end
 
 let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
   fun v dict ->
