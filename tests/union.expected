@@ -1,5 +1,5 @@
-Desugared: (fn x. (Ok x)) ({})
-inferred type: (Ok {}) | ...t11
+Desugared: (Ok {})
+inferred type: (Ok {}) | ...t4
 Javascript: 
-(x$=>({'$':'Ok','v':x$,}))(({}),)
+({'$':'Ok','v':({}),})
 Evaluated: (Ok {})

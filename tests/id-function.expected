@@ -1,9 +1,5 @@
-Desugared: fn $0. (match-lam
-| x -> x
-end) ($0)
+Desugared: fn x. x
 inferred type: (t3) -> (t3)
 Javascript: 
-($0$=>($29$=>($30$=>(($30$)===(undefined))?((x$=>x$)($29$,)):($30$(($29$)['v'],)))((({}))[($29$)['$']],))($0$,))
-Evaluated: fn $0. (match-lam
-| x -> x
-end) ($0)
+(x$=>x$)
+Evaluated: fn x. x

@@ -1,4 +1,2 @@
-Desugared: let f = fn $0. (match-lam
-| x -> (x).y
-end) ($0) in {a = (f) ({y = {}}), b = (f) ({y = {z = {}}})}
-Type error: mismatched type constructors: row containing z and empty row
+Desugared: let f = fn x. x in {a = (f) (fn y. y), b = (f) ((Ok {}))}
+Type error: mismatched type constructors: union and function

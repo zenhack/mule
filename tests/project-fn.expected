@@ -1,9 +1,5 @@
-Desugared: fn $0. (match-lam
-| x -> (x).y
-end) ($0)
-inferred type: ({y : t3, ...t17}) -> (t3)
+Desugared: fn x. (x).y
+inferred type: ({y : t3, ...t9}) -> (t3)
 Javascript: 
-($0$=>($34$=>($35$=>(($35$)===(undefined))?((x$=>(x$)['y'])($34$,)):($35$(($34$)['v'],)))((({}))[($34$)['$']],))($0$,))
-Evaluated: fn $0. (match-lam
-| x -> (x).y
-end) ($0)
+(x$=>(x$)['y'])
+Evaluated: fn x. (x).y
