@@ -6,6 +6,50 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module RowMap = Ast.Desugared.RowMap
 
+module VSet = Set.Make(Ast.Var)
+
+let rec free_vars: D.t -> VSet.t = function
+  | D.Lam(param, body) ->
+      free_vars body
+      |> VSet.remove param
+  | D.Match {cases; default} ->
+      let def_fvs = match default with
+        | None -> VSet.empty
+        | Some (None, e) -> free_vars e
+        | Some (Some v, e) -> free_vars (D.Lam(v, e))
+      in
+      RowMap.fold
+        (fun _key -> VSet.union)
+        (RowMap.map
+          (fun (param, body) -> free_vars (D.Lam (param, body)))
+          cases)
+        VSet.empty
+      |> VSet.union def_fvs
+  | D.App(f, x) ->
+      VSet.union (free_vars f) (free_vars x)
+  | D.Record r ->
+      RowMap.fold
+        (fun _key -> VSet.union)
+        (RowMap.map free_vars r)
+        VSet.empty
+  | D.GetField(e, _) ->
+      free_vars e
+  | D.Update(e, fields) ->
+      List.fold_left
+        (fun old (_l, f) -> VSet.union (free_vars f) old)
+        (free_vars e)
+        fields
+  | D.Ctor(_l, e) ->
+      free_vars e
+  | D.Var v ->
+      VSet.singleton v
+  | D.WithType(e, _ty) ->
+      free_vars e
+  | D.Let(v, e, body) ->
+      VSet.union
+        (free_vars e)
+        (VSet.remove v (free_vars body))
+
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
       DT.Fn((), desugar_type param, desugar_type ret)
@@ -156,7 +200,10 @@ and finalize_dict dict =
 let rec simplify e = match e with
   | D.Lam (param, body) ->
       begin match simplify body with
-        | D.App(f, D.Var v) when Ast.Var.equal v param -> f
+        | D.App(f, D.Var v) when
+            Ast.Var.equal v param
+            && not (VSet.mem param (free_vars f)) ->
+              f
         | b -> D.Lam(param, b)
       end
   | D.Match {cases; default = Some (Some param, body)}

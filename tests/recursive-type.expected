@@ -1,9 +1,5 @@
-Desugared: fn $0. (match-lam
-| x -> (x) (x)
-end) ($0)
-inferred type: (rec t16. (t16) -> (t3)) -> (t3)
+Desugared: fn x. (x) (x)
+inferred type: (rec t8. (t8) -> (t3)) -> (t3)
 Javascript: 
-($0$=>($41$=>($42$=>(($42$)===(undefined))?((x$=>x$(x$,))($41$,)):($42$(($41$)['v'],)))((({}))[($41$)['$']],))($0$,))
-Evaluated: fn $0. (match-lam
-| x -> (x) (x)
-end) ($0)
+(x$=>x$(x$,))
+Evaluated: fn x. (x) (x)
