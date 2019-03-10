@@ -19,8 +19,8 @@ val get : 'a var -> 'a
 val equal : 'a var -> 'a var -> bool
 
 (* Unify two variables, given a function to merge their values. As soon as this
- * function is called, the variables are considred unified; even if the funtion
- * returns [Err], the variables are now considered the same.
+ * function is called, the variables are considred unified; if examined during
+ * the merging function's execution they will appear to be already merged.
  *)
 val merge
   : ('a -> 'a -> 'a)
