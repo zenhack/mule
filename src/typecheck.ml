@@ -129,19 +129,19 @@ let show_u_row_v  = show_u_row_v  IntSet.empty
 let show_g {g_child; _} =
   show_u_type_v (Lazy.force g_child)
 
-
-let bound_target_id: bound_target -> int = function
-  | `Ty tv ->
-      fst (get_tyvar (UnionFind.get tv))
-  | `G g ->
-      g.g_id
-
-let bound_id: bound -> int =
-  fun b -> bound_target_id b.b_at
-
-let older_bound: bound_target -> bound -> bool =
-  fun targ bound ->
-    bound_target_id targ < bound_id bound
+let rec in_constraint_interior: g_node -> bound -> bool =
+  fun g child -> begin match child.b_at with
+    | `Ty t ->
+        in_constraint_interior g (snd (get_tyvar (UnionFind.get t)))
+    | `G g' ->
+        if g.g_id = g'.g_id then
+          true
+        else begin match g'.g_bound with
+          | None -> false
+          | Some (b_ty, next) ->
+              in_constraint_interior g { b_ty; b_at = `G next }
+        end
+  end
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
   fun (_, bound) ->
@@ -625,7 +625,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     let rec go = fun nv ->
       let n = UnionFind.get nv in
       let old_bound = get_ty_bound n in
-      if not (older_bound (`G old_g) old_bound) then
+      if not (in_constraint_interior old_g old_bound) then
         (* We've hit the frontier; replace it with a bottom node and
          * constrain it to be equal to the old thing. *)
         let new_var = gen_ty_u (`G new_g) in
@@ -669,7 +669,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
         b_at = `Ty new_root
       })
       in
-      if not (older_bound (`G old_g) old_bound) then
+      if not (in_constraint_interior old_g old_bound) then
         (* On the frontier. *)
         let new_var = gen_row_u (`G new_g) in
         cops.constrain_row row_var new_var;
