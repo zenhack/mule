@@ -32,7 +32,7 @@ and bound = {
 }
 and tyvar =
   { ty_id: int
-  ; ty_bound: bound
+  ; mutable ty_bound: bound
   }
 and g_node = {
   g_id: int;
@@ -89,13 +89,13 @@ let get_tyvar: u_type -> tyvar = function
   | Record (v, _) -> v
   | Union (v, _) -> v
 let get_ty_bound: u_type -> bound =
-  fun ty -> (get_tyvar ty).ty_bound
+  fun ty -> ((get_tyvar ty).ty_bound)
 let get_row_var: u_row -> tyvar = function
   | Extend(v, _, _, _) -> v
   | Empty v -> v
   | Row v -> v
 let get_row_bound: u_row -> bound =
-  fun r -> (get_row_var r).ty_bound
+  fun r -> ((get_row_var r).ty_bound)
 
 let rec show_u_type_v s v =
   let t = UnionFind.get v in
@@ -238,8 +238,9 @@ let rec bound_lca: bound -> bound -> bound =
         | None -> failwith "No LCA!"
       end
 
-(* "Unify" to bounding edges. This does a combination of raising and
- * weakening as needed to make them the same. *)
+(* "Unify" two binding edges. This does a combination of raising and
+ * weakening as needed to make them the same. It does not modify anything,
+ * but rather returns the new common bound.*)
 let unify_bound l r =
   let {b_at; _} = bound_lca l r in
   match l.b_ty, r.b_ty with
@@ -247,10 +248,11 @@ let unify_bound l r =
   | _ -> {b_at; b_ty = `Rigid}
 
 let unify_tyvar: tyvar -> tyvar -> tyvar =
-  fun {ty_id; ty_bound = bl} {ty_bound = br; _} ->
-    { ty_id
-    ; ty_bound = unify_bound bl br
-    }
+  fun l r ->
+    let new_bound = unify_bound l.ty_bound r.ty_bound in
+    l.ty_bound <- new_bound;
+    r.ty_bound <- new_bound;
+    l
 
 let rec unify l r =
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
