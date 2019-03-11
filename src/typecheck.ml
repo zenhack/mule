@@ -30,7 +30,10 @@ and bound = {
   b_ty: bound_ty;
   b_at: bound_target;
 }
-and tyvar = (int * bound)
+and tyvar =
+  { ty_id: int
+  ; ty_bound: bound
+  }
 and g_node = {
   g_id: int;
   g_bound: (bound_ty * g_node) option;
@@ -86,17 +89,17 @@ let get_tyvar: u_type -> tyvar = function
   | Record (v, _) -> v
   | Union (v, _) -> v
 let get_ty_bound: u_type -> bound =
-  fun ty -> snd (get_tyvar ty)
+  fun ty -> (get_tyvar ty).ty_bound
 let get_row_var: u_row -> tyvar = function
   | Extend(v, _, _, _) -> v
   | Empty v -> v
   | Row v -> v
 let get_row_bound: u_row -> bound =
-  fun r -> snd (get_row_var r)
+  fun r -> (get_row_var r).ty_bound
 
 let rec show_u_type_v s v =
   let t = UnionFind.get v in
-  let (n, _) = get_tyvar t in
+  let n = (get_tyvar t).ty_id in
   if IntSet.mem n s then
     "t" ^ string_of_int n
   else
@@ -111,14 +114,14 @@ let rec show_u_type_v s v =
         "Union(" ^ show_u_row_v s row ^ ")"
 and show_u_row_v s v =
   let r = UnionFind.get v in
-  let (n, _) = get_row_var r in
+  let n = (get_row_var r).ty_id in
   if IntSet.mem n s then
     "r" ^ string_of_int n
   else
     let s = IntSet.add n s in
     match r with
-    | Row (n, _) ->
-        "r" ^ string_of_int n
+    | Row {ty_id; _} ->
+        "r" ^ string_of_int ty_id
     | Empty _ ->
         "<empty>"
     | Extend (_, lbl, ty, rest) ->
@@ -132,7 +135,7 @@ let show_g {g_child; _} =
 let rec in_constraint_interior: g_node -> bound -> bool =
   fun g child -> begin match child.b_at with
     | `Ty t ->
-        in_constraint_interior g (snd (get_tyvar (UnionFind.get t)))
+        in_constraint_interior g ((get_tyvar (UnionFind.get t)).ty_bound)
     | `G g' ->
         if g.g_id = g'.g_id then
           true
@@ -144,8 +147,7 @@ let rec in_constraint_interior: g_node -> bound -> bool =
   end
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
-  fun (_, bound) ->
-    let {b_ty; b_at} = bound in
+  fun {ty_bound = {b_ty; b_at}; _} ->
     match b_at with
     | `G g -> b_ty :: gnode_bound_list g
     | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
@@ -167,16 +169,27 @@ type constraint_ops =
   }
 
 let gen_ty_var: g_node -> tyvar = fun g ->
-  (gensym (), {
-    b_ty = `Flex;
-    b_at = `G g;
-  })
+  { ty_id = gensym ()
+  ; ty_bound =
+    { b_ty = `Flex
+    ; b_at = `G g
+    }
+  }
 
 
 let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
-  UnionFind.make (Type (gensym(), {b_ty = `Flex; b_at = targ}))
+  UnionFind.make (Type
+    { ty_id = gensym()
+    ; ty_bound =
+      { b_ty = `Flex
+      ; b_at = targ
+      }
+    })
 let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
-  UnionFind.make (Row (gensym(), {b_ty = `Flex; b_at = targ}))
+  UnionFind.make (Row
+    { ty_id = gensym()
+    ; ty_bound = {b_ty = `Flex; b_at = targ}
+    })
 
 let gen_ty_u_g g =
   UnionFind.make (Type (gen_ty_var g))
@@ -184,7 +197,7 @@ let gen_ty_u_g g =
 
 let b_at_id = function
   | `G {g_id; _} -> g_id
-  | `Ty u -> fst (get_tyvar (UnionFind.get u))
+  | `Ty u -> (get_tyvar (UnionFind.get u)).ty_id
 
 let bound_id {b_at; _} = b_at_id b_at
 
@@ -198,7 +211,7 @@ let bound_next {b_at; _} = match b_at with
             }
       end
   | `Ty u ->
-      Some (snd (get_tyvar (UnionFind.get u)))
+      Some ((get_tyvar (UnionFind.get u)).ty_bound)
 
 let raised_bound b = match b with
   | {b_ty = `Rigid; _} ->
@@ -234,13 +247,15 @@ let unify_bound l r =
   | _ -> {b_at; b_ty = `Rigid}
 
 let unify_tyvar: tyvar -> tyvar -> tyvar =
- fun (i, bl) (_, br) ->
-  (i, unify_bound bl br)
+  fun {ty_id; ty_bound = bl} {ty_bound = br; _} ->
+    { ty_id
+    ; ty_bound = unify_bound bl br
+    }
 
 let rec unify l r =
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   match l, r with
-  | Type (lv, _), Type (rv, _) when lv = rv ->
+  | Type {ty_id = lv; _}, Type {ty_id = rv; _} when lv = rv ->
       (* same type variable; just return it *)
       l
 
@@ -305,7 +320,10 @@ and unify_row l r =
          * is an extension.
          *)
         let new_with_bound v =
-          UnionFind.make (Row (gensym (), get_row_bound (UnionFind.get v)))
+          UnionFind.make (Row
+            { ty_id = gensym ()
+            ; ty_bound = get_row_bound (UnionFind.get v)
+            })
         in
         let new_rest_r = new_with_bound r_rest in
         let new_rest_l = new_with_bound l_rest in
@@ -508,10 +526,10 @@ let add_rec_binders ty =
 
 (* Extract a type from a (solved) unification variable. *)
 let rec get_var_type env = function
-  | Type (i, _) -> Type.Var (i, (ivar i))
-  | Fn ((i, b), f, x) ->
+  | Type {ty_id = i; _} -> Type.Var (i, (ivar i))
+  | Fn ({ty_id = i; ty_bound = b}, f, x) ->
       if S.mem (ivar i) env then
-        get_var_type env (Type (i, b))
+        get_var_type env (Type {ty_id = i; ty_bound = b})
       else
         let env' = S.add (ivar i) env in
         Fn
@@ -519,18 +537,18 @@ let rec get_var_type env = function
           , get_var_type env' (UnionFind.get f)
           , get_var_type env' (UnionFind.get x)
           )
-  | Record ((i, _), fields) ->
+  | Record ({ty_id = i; _}, fields) ->
       let (fields, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get fields)
       in
       Type.Record (i, fields, rest)
-  | Union ((i, _), ctors) ->
+  | Union ({ty_id = i; _}, ctors) ->
       let (ctors, rest) =
         get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
       in
       Type.Union (i, ctors, rest)
 and get_var_row env = function
-  | Row (i, _) -> ([], Some (ivar i))
+  | Row {ty_id = i; _} -> ([], Some (ivar i))
   | Empty _ -> ([], None)
   | Extend (_, lbl, ty, rest) ->
       let (fields, rest) = get_var_row env (UnionFind.get rest) in
@@ -616,10 +634,14 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
-    let new_root_tv = (gensym (), {
-      b_ty = `Flex;
-      b_at = `G new_g;
-    }) in
+    let new_root_tv =
+      { ty_id = gensym ()
+      ; ty_bound =
+        { b_ty = `Flex
+        ; b_at = `G new_g
+        }
+      }
+    in
     let new_root = gen_ty_u (`G new_g) in
 
     let rec go = fun nv ->
@@ -637,11 +659,12 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
           if UnionFind.equal nv old_root then
             new_root_tv
           else
-            ( gensym ()
-            , { b_ty = old_bound.b_ty
+            { ty_id = gensym ()
+            ; ty_bound =
+              { b_ty = old_bound.b_ty
               ; b_at = `Ty new_root
               }
-            )
+            }
         in
         (* Now do a deep copy, subbing in the new bound. *)
         let ret = UnionFind.make (match n with
@@ -664,10 +687,13 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     and go_row row_var =
       let row = UnionFind.get row_var in
       let old_bound = get_row_bound row in
-      let new_var = (gensym (), {
-        b_ty = old_bound.b_ty;
-        b_at = `Ty new_root
-      })
+      let new_var =
+        { ty_id = gensym ()
+        ; ty_bound =
+          { b_ty = old_bound.b_ty
+          ; b_at = `Ty new_root
+          }
+        }
       in
       if not (in_constraint_interior old_g old_bound) then
         (* On the frontier. *)
@@ -697,7 +723,7 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
 let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
   fun v dict ->
     let t = UnionFind.get v in
-    let (n, {b_at; b_ty}) = get_tyvar t in
+    let {ty_id = n; ty_bound = {b_at; b_ty}} = get_tyvar t in
     if IntMap.mem n !dict then
       ()
     else begin
@@ -705,7 +731,7 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
       begin match b_at with
       | `Ty parent ->
           emit_all_nodes_ty parent dict;
-          let p_id = fst (get_tyvar (UnionFind.get parent)) in
+          let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
           Debug.show_edge (`Binding b_ty) p_id n
       | `G g ->
           emit_all_nodes_g g dict;
@@ -716,24 +742,24 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
             Debug.show_node `TyVar n
         | Fn(_, param, ret) ->
             Debug.show_node `TyFn n;
-            Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get param)));
-            Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get ret)));
+            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get param)).ty_id);
+            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get ret)).ty_id);
             emit_all_nodes_ty param dict;
             emit_all_nodes_ty ret dict
             (* TODO: bounding edges *)
         | Record (_, row) ->
             Debug.show_node `TyRecord n;
-            Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get row)));
+            Debug.show_edge `Structural n ((get_row_var (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
         | Union (_, row) ->
             Debug.show_node `TyUnion n;
-            Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get row)));
+            Debug.show_edge `Structural n ((get_row_var (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
       end
     end
 and emit_all_nodes_row v dict =
     let r = UnionFind.get v in
-    let n = fst (get_row_var r) in
+    let n = (get_row_var r).ty_id in
     if IntMap.mem n !dict then
       ()
     else
@@ -745,8 +771,8 @@ and emit_all_nodes_row v dict =
           Debug.show_node `RowVar n
       | Extend (_, lbl, h, t) ->
           Debug.show_node (`RowExtend lbl) n;
-          Debug.show_edge `Structural n (fst (get_tyvar (UnionFind.get h)));
-          Debug.show_edge `Structural n (fst (get_row_var (UnionFind.get t)));
+          Debug.show_edge `Structural n ((get_tyvar (UnionFind.get h)).ty_id);
+          Debug.show_edge `Structural n ((get_row_var (UnionFind.get t)).ty_id);
           emit_all_nodes_ty h dict;
           emit_all_nodes_row t dict
       end
@@ -757,7 +783,7 @@ and emit_all_nodes_g g dict =
     dict := IntMap.add g.g_id () !dict;
     Debug.show_node `G g.g_id;
     emit_all_nodes_ty (Lazy.force g.g_child) dict;
-    Debug.show_edge `Structural g.g_id (fst (get_tyvar (UnionFind.get (Lazy.force g.g_child))));
+    Debug.show_edge `Structural g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
     begin match g.g_bound with
     | Some (b_ty, g') ->
         Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
@@ -775,12 +801,12 @@ let render_graph cs =
     emit_all_nodes_ty cs.ty visited;
     List.iter (function
       | UnifyTypes(l, r) ->
-          let id n = fst (get_tyvar (UnionFind.get n)) in
+          let id n = (get_tyvar (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_ty l visited;
           emit_all_nodes_ty r visited
       | UnifyRows(l, r) ->
-          let id n = fst (get_row_var (UnionFind.get n)) in
+          let id n = (get_row_var (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_row l visited;
           emit_all_nodes_row r visited
@@ -791,7 +817,7 @@ let render_graph cs =
       emit_all_nodes_g g visited;
       ts |> List.iter
         (fun t ->
-          let t_id = fst (get_tyvar (UnionFind.get t)) in
+          let t_id = (get_tyvar (UnionFind.get t)).ty_id in
           Debug.show_edge `Instance g.g_id t_id;
           emit_all_nodes_ty t visited)
     );

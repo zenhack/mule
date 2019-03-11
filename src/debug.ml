@@ -16,11 +16,14 @@ type node_type =
   | `G
   ]
 
+
 let report enabled =
   if enabled then
     fun f -> print_endline (f ())
   else
     fun _ -> ()
+
+let frame_no: int ref = ref 0
 
 let edges: (edge_type * int * int) list ref = ref []
 let nodes: (node_type * int) list ref = ref []
@@ -62,7 +65,8 @@ let fmt_edge_ty = function
   | `Binding `Rigid -> "[style=dashed, dir=back]"
 
 let end_graph () =
-  let path = "/tmp/graph.dot" in
+  let path = Printf.sprintf "/tmp/graph-%03d.dot" !frame_no in
+  frame_no := !frame_no + 1;
   let dest = open_out path in
   Printf.fprintf dest "digraph g {\n";
   !nodes |> List.iter
