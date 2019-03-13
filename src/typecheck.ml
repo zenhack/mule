@@ -569,6 +569,62 @@ type unify_edge =
   | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
   | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
 
+type inst_edge =
+  { ie_g_node: g_node
+  ; ie_ty_node: u_type UnionFind.var
+  }
+
+
+let inst_bound: inst_edge -> g_node =
+  fun {ie_ty_node; _} ->
+    let rec go u =
+      let bound = (get_tyvar (UnionFind.get u)).ty_bound in
+      match bound.b_at with
+      | `Ty u' -> go u'
+      | `G g -> g
+    in
+    go ie_ty_node
+
+
+let top_sort_inst: (g_node * (u_type UnionFind.var list)) IntMap.t -> (g_node * u_type UnionFind.var list) list
+  = fun d ->
+      let visited = ref IntSet.empty in
+      let accum = ref [] in
+      let rec go (g, ts) =
+        if IntSet.mem g.g_id !visited then
+          ()
+        else begin
+          List.iter (fun t ->
+            let g' = inst_bound
+              { ie_ty_node = t
+              ; ie_g_node = g
+              }
+            in
+            if IntSet.mem g'.g_id !visited then
+              ()
+            else
+              begin match IntMap.find_opt g'.g_id d with
+                | Some v ->
+                    visited := IntSet.add g'.g_id !visited;
+                    go v;
+                    accum := v :: !accum
+                | None -> ()
+              end
+          ) ts;
+        end
+      in
+      IntMap.iter (fun _ v -> go v) d;
+      IntMap.iter
+        (fun k v ->
+          if not (IntSet.mem k !visited) then
+            (* This will happen for our top-level nodes, which don't
+             * have any edges pointing into them. *)
+            accum := v :: !accum
+          else
+            ()
+        ) d;
+      !accum
+
 type built_constraints =
   { unification: unify_edge list
   ; instantiation: (g_node * (u_type UnionFind.var) list) IntMap.t
@@ -614,6 +670,7 @@ let make_cops: unit ->
         end
     }
   in (cops, ucs, ics)
+
 
 let build_constraints: Expr.t -> built_constraints = fun expr ->
   let cops, ucs, ics = make_cops () in
@@ -880,25 +937,17 @@ let solve_constraints cs =
     ) vars
   in
   solve_unify cs.unification;
-  IntMap.bindings cs.instantiation
-  |> List.sort (fun (l, _) (r, _) -> compare r l)
+  top_sort_inst cs.instantiation
   |> List.iter
-    (fun (_, (g, ts)) ->
+    (fun (g, ts) ->
       List.iter
         (fun t ->
           let cops, ucs, _ = make_cops () in
           propagate cops g t;
           solve_unify !ucs;
-          render_ics :=
-            IntMap.update g.g_id (function
-                | Some (g, (_ :: ts)) -> Some (g, ts)
-                | v -> v
-            ) !render_ics;
           render ()
-        )
-        ts;
-      render_ics := IntMap.remove g.g_id !render_ics;
-      render ()
+        ) ts;
+        render_ics := IntMap.remove g.g_id !render_ics;
     );
   cs.ty
 

@@ -1,2 +1,5 @@
 Desugared: let f = fn x. x in {a = (f) (fn y. y), b = (f) ((Ok {}))}
-Type error: mismatched type constructors: union and function
+inferred type: {a : (t53) -> (t53), b : (Ok {}) | ...t39}
+Javascript: 
+(f$=>({'a':f$((y$=>y$),),'b':f$(({'$':'Ok','v':({}),}),),}))((x$=>x$),)
+Evaluated: {a = fn y. y, b = (Ok {})}
