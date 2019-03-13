@@ -813,20 +813,12 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
 let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
   fun v dict ->
     let t = UnionFind.get v in
-    let {ty_id = n; ty_bound = {b_at; b_ty}} = get_tyvar t in
+    let {ty_id = n; ty_bound} = get_tyvar t in
     if IntMap.mem n !dict then
       ()
     else begin
       dict := IntMap.add n () !dict;
-      begin match b_at with
-      | `Ty parent ->
-          emit_all_nodes_ty parent dict;
-          let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
-          Debug.show_edge (`Binding b_ty) p_id n
-      | `G g ->
-          emit_all_nodes_g g dict;
-          Debug.show_edge (`Binding b_ty) g.g_id n
-      end;
+      emit_bind_edge n ty_bound dict;
       begin match t with
         | Type _ ->
             Debug.show_node `TyVar n
@@ -849,11 +841,12 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
     end
 and emit_all_nodes_row v dict =
     let r = UnionFind.get v in
-    let n = (get_row_var r).ty_id in
+    let {ty_id = n; ty_bound} = get_row_var r in
     if IntMap.mem n !dict then
       ()
-    else
+    else begin
       dict := IntMap.add n () !dict;
+      emit_bind_edge n ty_bound dict;
       begin match r with
       | Empty _ ->
           Debug.show_node `RowEmpty n
@@ -866,6 +859,7 @@ and emit_all_nodes_row v dict =
           emit_all_nodes_ty h dict;
           emit_all_nodes_row t dict
       end
+    end
 and emit_all_nodes_g g dict =
   if IntMap.mem g.g_id !dict then
     ()
@@ -882,6 +876,15 @@ and emit_all_nodes_g g dict =
         ()
     end
   end
+and emit_bind_edge n {b_at; b_ty} dict =
+    match b_at with
+    | `Ty parent ->
+        emit_all_nodes_ty parent dict;
+        let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
+        Debug.show_edge (`Binding b_ty) p_id n
+    | `G g ->
+        emit_all_nodes_g g dict;
+        Debug.show_edge (`Binding b_ty) g.g_id n
 
 
 let render_graph cs =
