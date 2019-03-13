@@ -1,0 +1,16 @@
+# Sketch of posixy API.
+{ type cmd a
+, type fd
+, type errno
+, type openflag
+
+, o_rdonly : openflag
+, o_rdwr : openflag
+, o_append : openflag
+, o_creat : openflag
+, o_excl : openflag
+
+, open : string -> vec openflag -> mode -> cmd (Ok fd | Err errno)
+, openat : fd -> string -> vec openflag -> mode -> cmd (Ok fd | Err errno)
+, close : fd -> cmd (Ok {} | Err errno)
+}
