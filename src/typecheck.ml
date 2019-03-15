@@ -247,6 +247,8 @@ let unify_bound l r =
   | `Flex, `Flex -> {b_at; b_ty = `Flex}
   | _ -> {b_at; b_ty = `Rigid}
 
+(* Thin wrapper around [unify_bound], which updates the [tyvar]s' bounds
+ * in-place. *)
 let unify_tyvar: tyvar -> tyvar -> tyvar =
   fun l r ->
     let new_bound = unify_bound l.ty_bound r.ty_bound in
