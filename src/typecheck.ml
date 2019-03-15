@@ -213,6 +213,7 @@ let bound_next {b_at; _} = match b_at with
   | `Ty u ->
       Some ((get_tyvar (UnionFind.get u)).ty_bound)
 
+(* Raise b one step, if it is legal to do so, otherwise throw an error. *)
 let raised_bound b = match b with
   | {b_ty = `Rigid; _} ->
       permErr `Raise
@@ -257,7 +258,12 @@ let unify_tyvar: tyvar -> tyvar -> tyvar =
     l
 
 let rec unify l r =
+  (* First, work out what the tyvar for the final result will be. This has a
+   * side effect of raising the two arguments' bounds until they agree,
+   * weakening one of them to do so if needed.
+   *)
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
+
   match l, r with
   | Type {ty_id = lv; _}, Type {ty_id = rv; _} when lv = rv ->
       (* same type variable; just return it *)
@@ -276,7 +282,7 @@ let rec unify l r =
    * forward, We need to make sure the merge is legal. We deal explicitly
    * with requirement 3 here; the other parts are sidestepped (see below).
    *
-   * The call to unify_tyvar above ensures that the nodes' bound and flag
+   * The call to unify_tyvar above ensures that the nodes' bounds and flags
    * are the same. The remaining part of requirement 3 is that the permissions
    * are not locked, so check for that, and fail if they are locked:
    *)
@@ -294,6 +300,14 @@ let rec unify l r =
    * - 4 follows vaccuously from the fact that merging the roots
    *   will not cause any other nodes to be merged (since they already
    *   have been).
+   *
+   * For this argument to work it is important that we can consider
+   * the merge of the roots not to have "started" until the subgraphs
+   * are fully merged. The only threat to this is the fact that we
+   * have modified the two roots above, in the call to [unify_tyvar].
+   * However, the modifications that [unify_tyvar] makes are all legal
+   * raisings and weakenings, so can be thought of as their own atomic
+   * steps, not part of the merge.
    *)
   | (Fn (_, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl;
