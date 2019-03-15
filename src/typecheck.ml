@@ -302,7 +302,7 @@ let rec unify l r =
   | Fn     _, Union  _ -> ctorErr `Fn     `Union
   | Record _, Fn     _ -> ctorErr `Record `Fn
   | Record _, Union  _ -> ctorErr `Record `Union
-  | Union  _,  Fn    _ -> ctorErr `Union  `Fn
+  | Union  _, Fn     _ -> ctorErr `Union  `Fn
   | Union  _, Record _ -> ctorErr `Union  `Record
 and unify_row l r =
   let tv = unify_tyvar (get_row_var l) (get_row_var r) in
