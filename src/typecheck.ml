@@ -271,18 +271,30 @@ let rec unify l r =
         | _ -> permErr `Graft
       end
 
+  (* Neither side of these is a type variable, so we need to do a merge.
+   * See the definition in section 3.2.2 of {MLF-Graph-Unify}. Before moving
+   * forward, We need to make sure the merge is legal. We deal explicitly
+   * with requirement 3 here; the other parts are sidestepped (see below).
+   *
+   * The call to unify_tyvar above ensures that the nodes' bound and flag
+   * are the same. The remaining part of requirement 3 is that the permissions
+   * are not locked, so check for that, and fail if they are locked:
+   *)
   | _ when perm_eq (tyvar_permission tv) L ->
-      (* We need to do a merge, but our permissions are locked;
-       * fail. *)
       permErr `Merge
 
-  (* Top level type constructor that matches. In the
-   * literature, these are treated uniformly and opaquely.
-   * We have a case for each just because (a) we have a
-   * so few of them them, and (b) we have to deal with
-   * different kinds of argument variables. In principle we
-   * could factor out the commonalities, and maybe we will
-   * eventually, but for now there just isn't that much. *)
+  (* Top level type constructors that match. We recursively
+   * merge the types in a bottom-up fashion. Doing this makes it
+   * easy to see that the conditions for being a valid merge
+   * are satisfied (See {MLF-Graph-Unify} section 3.2.2 for the
+   * definition):
+   *
+   * - 1 & 2 are trivial, since the subgraphs are always identical.
+   * - 3 is checked separately, above.
+   * - 4 follows vaccuously from the fact that merging the roots
+   *   will not cause any other nodes to be merged (since they already
+   *   have been).
+   *)
   | (Fn (_, ll, lr), Fn (_, rl, rr)) ->
       UnionFind.merge unify ll rl;
       UnionFind.merge unify lr rr;
@@ -294,10 +306,16 @@ let rec unify l r =
       UnionFind.merge unify_row row_l row_r;
       Union(tv, row_l)
 
-  (* Type constructor mismatches. we could have a catchall,
-   * but this means we don't forget a case, and we can produce
-   * better error messages. it would be nice to refactor so
-   * we don't have to list every combination though. *)
+
+  (* Top level type constructors that _do not_ match. In this case
+   * unfication fails.
+   *
+   * we could have a catchall, but this way we can give the user
+   * a little more information, and even while it's a bit verbose
+   * it also means that the compiler will catch if we miss a case
+   * that should be handled differently. it would be nice to
+   * refactor so we don't have to list every combination though.
+   *)
   | Fn     _, Record _ -> ctorErr `Fn     `Record
   | Fn     _, Union  _ -> ctorErr `Fn     `Union
   | Record _, Fn     _ -> ctorErr `Record `Fn
