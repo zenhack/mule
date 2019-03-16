@@ -426,8 +426,7 @@ let rec walk cops env g = function
       ret_var
   | Expr.Record fields ->
       let rVar = gen_ty_var g in
-      let tailVar = UnionFind.make (Empty (gen_ty_var g)) in
-      let row = walk_fields cops env g tailVar (RowMap.bindings fields) in
+      let row = walk_fields cops env g (RowMap.bindings fields) in
       UnionFind.make (Record (rVar, row))
   | Expr.GetField (e, lbl) ->
       let tyvar = walk cops env g e in
@@ -499,11 +498,11 @@ and walk_match cops env g final = function
       ( UnionFind.make (Extend(gen_ty_var g, lbl, ty, row))
       , bodyVar
       )
-and walk_fields cops env g final = function
-  | [] -> final
+and walk_fields cops env g = function
+  | [] -> UnionFind.make (Empty (gen_ty_var g))
   | ((lbl, ty) :: fs) ->
       let lblVar = walk cops env g ty in
-      let tailVar = walk_fields cops env g final fs in
+      let tailVar = walk_fields cops env g fs in
       UnionFind.make (Extend(gen_ty_var g, lbl, lblVar, tailVar))
 
 let ivar i = Ast.Var.of_string ("t" ^ string_of_int i)
