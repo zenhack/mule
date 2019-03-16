@@ -19,19 +19,12 @@ let rec toJs = function
         |> fun fields' -> Js.Object fields'
   | DE.GetField (e, l) ->
       Js.GetProp(toJs e, Js.String (Label.to_string l))
-  | DE.Update(e, changes) ->
+  | DE.Update (e, (lbl, field)) ->
+      (* TODO: update more than one field at a time. *)
       Js.App
         ( Js.Var (Var.of_string "$mulecp")
         , [ toJs e
-          ; Js.Object
-              ( List.map
-                  (fun (l, v) ->
-                    ( Label.to_string l
-                    , toJs v
-                    )
-                  )
-                  changes
-              )
+          ; Js.Object [(Label.to_string lbl, toJs field)]
           ]
         )
   | DE.WithType(v, _) ->

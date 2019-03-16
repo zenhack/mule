@@ -440,15 +440,15 @@ let rec walk cops env g = function
         rowVar
         (UnionFind.make (Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
       fieldVar
-  | Expr.Update (r, updates) ->
-      let retTyV = gen_ty_var g in
-      let origVar = walk cops env g r in
-      let tailVar = UnionFind.make (Row (gen_ty_var g)) in
-      let updateVar = walk_fields cops env g tailVar updates in
+  | Expr.Update (r, (lbl, ty)) ->
+      let head_var = walk cops env g ty in
+      let tail_var = UnionFind.make(Row(gen_ty_var g)) in
+      let orig_var = walk cops env g r in
+      let updated_var = UnionFind.make (Extend(gen_ty_var g, lbl, head_var, tail_var)) in
       cops.constrain_ty
-          origVar
-          (UnionFind.make (Record (gen_ty_var g, tailVar)));
-      UnionFind.make (Record (retTyV, updateVar))
+          orig_var
+          (UnionFind.make (Record (gen_ty_var g, tail_var)));
+      UnionFind.make (Record (gen_ty_var g, updated_var))
   | Expr.Ctor (lbl, param) ->
       let uVar = gen_ty_var g in
       let paramVar = walk cops env g param in

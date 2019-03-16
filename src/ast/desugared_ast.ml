@@ -19,7 +19,7 @@ module Expr = struct
     | App of (t * t)
     | Record of t RowMap.t
     | GetField of (t * Label.t)
-    | Update of (t * (Label.t * t) list)
+    | Update of (t * (Label.t * t))
     | Ctor of (Label.t * t)
     | Match of {
         cases: (Var.t * t) RowMap.t;

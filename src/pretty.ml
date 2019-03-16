@@ -72,12 +72,11 @@ let rec expr indent = function
             |> String.concat ", "
         ; "}"
         ]
-  | Expr.Update(r, fields) ->
+  | Expr.Update(r, (lbl, field)) ->
       String.concat ""
         [ expr indent r
         ; " where { "
-        ; String.concat ", "
-            (List.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e) fields)
+        ; Label.to_string lbl ^ " = " ^ expr indent field
         ; " }"
         ]
   | Expr.GetField (e, lbl) ->
