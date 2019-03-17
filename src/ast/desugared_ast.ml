@@ -17,7 +17,7 @@ module Expr = struct
     | Var of Var.t
     | Lam of (Var.t * t)
     | App of (t * t)
-    | Record of t RowMap.t
+    | EmptyRecord
     | GetField of (t * Label.t)
     | Update of (t * (Label.t * t))
     | Ctor of (Label.t * t)

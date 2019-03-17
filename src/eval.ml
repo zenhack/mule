@@ -14,8 +14,8 @@ let rec subst param arg expr = match expr with
       Let(param', subst param arg e, subst param arg body)
   | App (f, x) ->
       App (subst param arg f, subst param arg x)
-  | Record fields ->
-      Record (RowMap.map (subst param arg) fields)
+  | EmptyRecord ->
+      EmptyRecord
   | GetField (e, lbl) ->
       GetField (subst param arg e, lbl)
   | Update(e, (lbl, field)) ->
@@ -65,24 +65,24 @@ let rec eval = function
       | _ ->
         failwith ("Tried to call non-function: " ^ Pretty.expr f')
       end
-  | Record fields ->
-      Record (RowMap.map eval fields)
+  | EmptyRecord ->
+      EmptyRecord
   | GetField (e, lbl) ->
       begin match eval e with
-      | Record fields ->
-          RowMap.find lbl fields
+      | Update(rest, (lbl', field)) ->
+          if lbl == lbl' then
+            field
+          else
+            eval (GetField (rest, lbl))
+      | EmptyRecord -> failwith
+        ("Missing record key! " ^
+        "this should have been caught by the type checker!")
       | _ -> failwith
         ("Tried to get a field on something that's not a record. " ^
         "this should have been caught by the type checker!")
       end
   | Update(r, (lbl, field)) ->
-      begin match eval r with
-      | Record old_fields ->
-          Record (RowMap.add lbl (eval field) old_fields)
-      | _ -> failwith
-          ("Tried to do a record update on something that's not a record. " ^
-          "This should have been caught by the type checker!")
-      end
+      Update(eval r, (lbl, eval field))
   | Let(v, e, body) ->
       eval (subst v (eval e) body)
   | WithType(v, _) ->

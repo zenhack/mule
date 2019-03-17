@@ -27,11 +27,8 @@ let rec free_vars: D.t -> VSet.t = function
       |> VSet.union def_fvs
   | D.App(f, x) ->
       VSet.union (free_vars f) (free_vars x)
-  | D.Record r ->
-      RowMap.fold
-        (fun _key -> VSet.union)
-        (RowMap.map free_vars r)
-        VSet.empty
+  | D.EmptyRecord ->
+      VSet.empty
   | D.GetField(e, _) ->
       free_vars e
   | D.Update(e, (_l, field)) ->
@@ -110,13 +107,10 @@ let rec desugar = function
             )
         )
   | S.Lam ([], body) -> desugar body
-  | S.Record fields ->
-      D.Record (
-        fields
-        |> List.to_seq
-        |> Seq.map (fun (l, e) -> (l, desugar e))
-        |> RowMap.of_seq
-      )
+  | S.Record [] ->
+      D.EmptyRecord
+  | S.Record ((l, v)::fs) ->
+      D.Update(desugar (S.Record fs), (l, desugar v))
   | S.Update(e, fields) ->
       List.fold_left
         (fun old (lbl, field) ->
@@ -214,10 +208,10 @@ let rec simplify e = match e with
             D.Ctor(c, arg)
         | e' -> e'
       end
-  | D.Record m ->
-      D.Record (RowMap.map simplify m)
   | D.GetField (e, f) ->
       D.GetField(simplify e, f)
+  | D.EmptyRecord ->
+      D.EmptyRecord
   | D.Update (e', (lbl, field)) ->
       D.Update
         ( simplify e'

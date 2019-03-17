@@ -63,15 +63,8 @@ let rec expr indent = function
         ; expr indent x
         ; ")"
         ]
-  | Expr.Record fields ->
-      String.concat ""
-        [ "{"
-        ; RowMap.to_seq fields
-            |> Seq.map (fun (lbl, e) -> Label.to_string lbl ^ " = " ^ expr indent e)
-            |> List.of_seq
-            |> String.concat ", "
-        ; "}"
-        ]
+  | Expr.EmptyRecord ->
+      "{}"
   | Expr.Update(r, (lbl, field)) ->
       String.concat ""
         [ expr indent r

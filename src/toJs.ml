@@ -12,11 +12,8 @@ let rec toJs = function
       Js.App(toJs f, [toJs x])
   | DE.Let(v, e, body) ->
       toJs (DE.App (DE.Lam(v, body), e))
-  | DE.Record fields ->
-      D.RowMap.bindings fields
-        |> List.map
-            (fun (l, e) -> (Label.to_string l, toJs e))
-        |> fun fields' -> Js.Object fields'
+  | DE.EmptyRecord ->
+      Js.Object []
   | DE.GetField (e, l) ->
       Js.GetProp(toJs e, Js.String (Label.to_string l))
   | DE.Update (e, (lbl, field)) ->
@@ -40,7 +37,12 @@ let rec toJs = function
        * and then getting the property from the object that matches the
        * ctor. *)
       let matched = Js.GetProp
-        ( toJs (DE.Record (D.RowMap.map (fun (v, body) -> DE.Lam (v, body)) cases))
+        ( Js.Object
+          ( cases
+            |> D.RowMap.map (fun (v, body) -> DE.Lam (v, body))
+            |> D.RowMap.bindings
+            |> List.map (fun (l, v) -> (Label.to_string l, toJs v))
+          )
         , Js.GetProp (Js.Var param, String "$")
         )
       in
