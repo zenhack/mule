@@ -31,7 +31,7 @@ let rec free_vars: D.t -> VSet.t = function
       VSet.empty
   | D.GetField(e, _) ->
       free_vars e
-  | D.Update(e, (_l, field)) ->
+  | D.Update(e, _l, field) ->
       VSet.union (free_vars e) (free_vars field)
   | D.Ctor(_l, e) ->
       free_vars e
@@ -110,14 +110,11 @@ let rec desugar = function
   | S.Record [] ->
       D.EmptyRecord
   | S.Record ((l, v)::fs) ->
-      D.Update(desugar (S.Record fs), (l, desugar v))
-  | S.Update(e, fields) ->
-      List.fold_left
-        (fun old (lbl, field) ->
-          D.Update (old, (lbl, desugar field))
-        )
-        (desugar e)
-        fields
+      D.Update(desugar (S.Record fs), l, desugar v)
+  | S.Update(e, []) ->
+      desugar e
+  | S.Update(e, ((l, v)::fs)) ->
+      D.Update (desugar (S.Update(e, fs)), l, desugar v)
   | S.GetField (e, l) ->
       D.GetField (desugar e, l)
   | S.Ctor label ->
@@ -212,10 +209,11 @@ let rec simplify e = match e with
       D.GetField(simplify e, f)
   | D.EmptyRecord ->
       D.EmptyRecord
-  | D.Update (e', (lbl, field)) ->
+  | D.Update (e', lbl, field) ->
       D.Update
         ( simplify e'
-        , (lbl, simplify field)
+        , lbl
+        , simplify field
         )
   | D.Ctor (l, e') ->
       D.Ctor(l, simplify e')

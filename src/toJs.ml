@@ -16,7 +16,7 @@ let rec toJs = function
       Js.Object []
   | DE.GetField (e, l) ->
       Js.GetProp(toJs e, Js.String (Label.to_string l))
-  | DE.Update (e, (lbl, field)) ->
+  | DE.Update (e, lbl, field) ->
       (* TODO: update more than one field at a time. *)
       Js.App
         ( Js.Var (Var.of_string "$mulecp")

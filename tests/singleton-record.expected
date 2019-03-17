@@ -1,5 +1,5 @@
-Desugared: {x = {}}
+Desugared: ({} where { x = {} })
 inferred type: {x : {}}
 Javascript: 
-({'x':({}),})
-Evaluated: {x = {}}
+$mulecp$(({}),({'x':({}),}),)
+Evaluated: ({} where { x = {} })

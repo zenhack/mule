@@ -437,7 +437,7 @@ let rec walk cops env g = function
         rowVar
         (UnionFind.make (Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
       fieldVar
-  | Expr.Update (r, (lbl, ty)) ->
+  | Expr.Update (r, lbl, ty) ->
       let head_var = walk cops env g ty in
       let tail_var = UnionFind.make(Row(gen_ty_var g)) in
       let orig_var = walk cops env g r in

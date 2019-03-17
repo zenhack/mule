@@ -1,6 +1,9 @@
 open Ast.Desugared.Expr
 open Ast.Desugared
 
+module Var = Ast.Var
+module Label = Ast.Label
+
 let rec subst param arg expr = match expr with
   | Var v when v = param -> arg
   | Var _ -> expr
@@ -8,7 +11,7 @@ let rec subst param arg expr = match expr with
       Ctor (lbl, subst param arg value)
   | Lam (param', body) ->
       Lam (subst_binding param' param arg body)
-  | Let(param', e, body) when param == param' ->
+  | Let(param', e, body) when Var.equal param param' ->
       Let(param', e, body)
   | Let(param', e, body) ->
       Let(param', subst param arg e, subst param arg body)
@@ -18,10 +21,11 @@ let rec subst param arg expr = match expr with
       EmptyRecord
   | GetField (e, lbl) ->
       GetField (subst param arg e, lbl)
-  | Update(e, (lbl, field)) ->
+  | Update(e, lbl, field) ->
       Update
         ( subst param arg e
-        , (lbl, subst param arg field)
+        , lbl
+        , subst param arg field
         )
   | Match {cases; default} ->
       Match
@@ -41,7 +45,7 @@ let rec subst param arg expr = match expr with
   | WithType (v, _) ->
       subst param arg v
 and subst_binding param' param arg body =
-  if param == param' then
+  if Var.equal param param' then
     (param', body)
   else
     (param', subst param arg body)
@@ -69,8 +73,8 @@ let rec eval = function
       EmptyRecord
   | GetField (e, lbl) ->
       begin match eval e with
-      | Update(rest, (lbl', field)) ->
-          if lbl == lbl' then
+      | Update(rest, lbl', field) ->
+          if Label.equal lbl lbl' then
             field
           else
             eval (GetField (rest, lbl))
@@ -81,8 +85,8 @@ let rec eval = function
         ("Tried to get a field on something that's not a record. " ^
         "this should have been caught by the type checker!")
       end
-  | Update(r, (lbl, field)) ->
-      Update(eval r, (lbl, eval field))
+  | Update(r, lbl, field) ->
+      Update(eval r, lbl, eval field)
   | Let(v, e, body) ->
       eval (subst v (eval e) body)
   | WithType(v, _) ->
