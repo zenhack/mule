@@ -1,5 +1,3 @@
 Desugared: (Ok {})
 inferred type: (Ok {}) | ...t4
-Javascript: 
-({'$':'Ok','v':({}),})
 Evaluated: (Ok {})

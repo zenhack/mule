@@ -1,5 +1,3 @@
 Desugared: fn x. x
 inferred type: (t3) -> (t3)
-Javascript: 
-(x$=>x$)
 Evaluated: fn x. x

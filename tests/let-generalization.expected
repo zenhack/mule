@@ -1,5 +1,3 @@
 Desugared: let f = fn x. x in (({} where { b = (f) ((Ok {})) }) where { a = (f) (fn y. y) })
 inferred type: {a : (t59) -> (t59), b : (Ok {}) | ...t45}
-Javascript: 
-(f$=>$mulecp$($mulecp$(({}),({'b':f$(({'$':'Ok','v':({}),}),),}),),({'a':f$((y$=>y$),),}),))((x$=>x$),)
 Evaluated: (({} where { b = (Ok {}) }) where { a = fn y. y })

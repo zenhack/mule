@@ -1,5 +1,3 @@
 Desugared: (({} where { x = {} }) where { y = ({} where { z = {} }) })
 inferred type: {y : {z : {}}, x : {}}
-Javascript: 
-$mulecp$($mulecp$(({}),({'x':({}),}),),({'y':$mulecp$(({}),({'z':({}),}),),}),)
 Evaluated: (({} where { x = {} }) where { y = ({} where { z = {} }) })

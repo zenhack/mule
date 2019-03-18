@@ -27,9 +27,6 @@ let run input =
           Stdio.print_endline (MuleErr.show e);
           Error ()
       | Ok dexp ->
-          Stdio.print_endline "Javascript: ";
-          (ToJs.toJs dexp |> Ast.Js.Expr.fmt Caml.print_string);
-          Stdio.print_endline "";
           Eval.eval dexp
           |> Pretty.expr
           |> fun ret -> Stdio.print_endline ("Evaluated: " ^ ret);

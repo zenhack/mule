@@ -1,5 +1,3 @@
 Desugared: fn x. (x).y
 inferred type: ({y : t3, ...t9}) -> (t3)
-Javascript: 
-(x$=>(x$)['y'])
 Evaluated: fn x. (x).y

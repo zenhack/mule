@@ -1,5 +1,3 @@
 Desugared: (({} where { x = {} })).x
 inferred type: {}
-Javascript: 
-($mulecp$(({}),({'x':({}),}),))['x']
 Evaluated: {}
