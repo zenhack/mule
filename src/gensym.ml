@@ -1,3 +1,4 @@
+open Base
 
 let next = ref 0
 
@@ -7,4 +8,4 @@ let gensym () =
   result
 
 let anon_var () =
-  Ast.Var.of_string ("$" ^ string_of_int (gensym ()))
+  Ast.Var.of_string ("$" ^ Int.to_string (gensym ()))
