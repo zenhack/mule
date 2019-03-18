@@ -49,7 +49,7 @@ let show = function
   | DuplicateFields fields ->
       "Duplicate fields:\n" ^
         (fields
-          |> List.map Ast.Label.to_string
-          |> String.concat ",")
+          |> List.map ~f:Ast.Label.to_string
+          |> String.concat ~sep:",")
   | EmptyMatch ->
       "Empty match expression."

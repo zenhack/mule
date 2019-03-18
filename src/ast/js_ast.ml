@@ -21,18 +21,16 @@ module Expr = struct
       | App (f, args) ->
           go f;
           emit "(";
-          List.iter
-            (fun a -> go a; emit ",")
-            args;
+          List.iter args ~f:(fun a -> go a; emit ",");
           emit ")"
       | Object fields ->
           (* We need to wrap objects in an extra set of parens, because for
            * some crazy reason, (x => {'x': ...}) isn't legal javascript.
            *)
           emit "({";
-          List.iter
-            (fun (k, v) -> go (String k); emit ":"; go v; emit ",")
-            fields;
+          List.iter fields ~f:(fun (k, v) ->
+            go (String k); emit ":"; go v; emit ","
+          );
           emit "})"
       | GetProp(obj, prop) ->
           emit "("; go obj; emit ")["; go prop; emit "]"

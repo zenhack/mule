@@ -1,12 +1,10 @@
 open MParser
 open Ast.Surface
 
-module StrSet = Set.Make(String)
-
 let lazy_p p = return () >>= fun () -> Lazy.force p
 
 (* Set of reserved keywords *)
-let keywords = StrSet.of_list
+let keywords = Set.of_list (module String)
   [ "fn"
   ; "rec"
   ; "type"
@@ -42,7 +40,7 @@ let identifier : (string, unit) MParser.t = (
 let var = token (
   identifier
   >>= fun name ->
-    if StrSet.mem name keywords then
+    if Set.mem keywords name then
       fail "reserved word"
     else
       return (Ast.Var.of_string name)
@@ -69,7 +67,7 @@ let rec typ_term = lazy (
 ) and typ_app = lazy (
   (lazy_p typ_term)
   >>= fun t -> many (lazy_p typ_term)
-  |>> List.fold_left (fun f x -> Type.App (f, x)) t
+  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
 ) and recur_type = lazy (
   kwd "rec"
   >> var
@@ -106,7 +104,7 @@ let rec typ_term = lazy (
 let rec expr = lazy ((
   lazy_p ex1
   >>= fun t -> many (lazy_p ex1)
-  |>> fun ts -> List.fold_left (fun f x -> Expr.App (f, x)) t ts
+  |>> fun ts -> List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
 ) <?> "expression")
 and ex1 = lazy (
   lazy_p ex2
@@ -119,7 +117,7 @@ and ex1 = lazy (
 and ex2 = lazy (
   lazy_p ex3
   >>= fun head -> many (kwd "." >> label)
-  |>> List.fold_left (fun e l -> Expr.GetField(e, l)) head
+  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField(e, l))
 )
 and ex3 = lazy (
   choice
