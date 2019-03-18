@@ -1,38 +1,38 @@
+open Base
 open OrErr
+open Ast
 open Ast.Surface.Expr
-module VSet = Set.Make(Ast.Var)
-module LSet = Set.Make(Ast.Label)
 
 (* Free variables in an expression *)
 let rec free_vars env =
   function
   | Var v ->
-      if VSet.mem v env then
-        VSet.empty
+      if Set.mem env v then
+        Set.empty (module Var)
       else
-        VSet.singleton v
+        Set.singleton (module Var) v
   | Lam ((pat :: pats), body) ->
       case_free_vars env (pat, (Lam (pats, body)))
   | Lam ([], body) ->
       free_vars env body
   | App (f, x) ->
-      VSet.union (free_vars env f) (free_vars env x)
+      Set.union (free_vars env f) (free_vars env x)
   | Record fields -> fields_free_vars env fields
   | Update(e, fields) ->
-      VSet.union
+      Set.union
         (free_vars env e)
         (fields_free_vars env fields)
   | GetField(e, _) ->
       free_vars env e
   | Ctor _ ->
-      VSet.empty
+      Set.empty (module Var)
   | Match (e, cases) ->
-      List.fold_left
-        VSet.union
-        (free_vars env e)
-        (List.map (case_free_vars env) cases)
+      List.fold
+        ~f:Set.union
+        ~init:(free_vars env e)
+        (List.map cases ~f:(case_free_vars env))
   | Let (pat, e, body) ->
-      VSet.union
+      Set.union
         (case_free_vars env (pat, e))
         (case_free_vars env (pat, body))
 and case_free_vars env (p, body) =
@@ -40,20 +40,20 @@ and case_free_vars env (p, body) =
     | Ast.Surface.Pattern.Wild ->
         free_vars env body
     | Ast.Surface.Pattern.Var v ->
-        free_vars (VSet.add v env) body
+        free_vars (Set.add env v) body
     | Ast.Surface.Pattern.Ctor (_, p') ->
         case_free_vars env (p', body)
     | Ast.Surface.Pattern.Annotated (p', _) ->
         case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
-    |> List.map (fun (_, v) -> free_vars env v)
-    |> List.fold_left VSet.union VSet.empty
+    |> List.map ~f:(fun (_, v) -> free_vars env v)
+    |> List.fold ~f:Set.union ~init:(Set.empty (module Var))
 
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
-  let free = free_vars VSet.empty expr in
-  match VSet.find_first_opt (fun _ -> true) free with
+  let free = free_vars (Set.empty (module Var)) expr in
+  match Set.find free ~f:(fun _ -> true) with
   | Some x -> Err (MuleErr.UnboundVar x)
   | None -> Ok ()
 
@@ -63,16 +63,16 @@ let check_duplicate_record_fields =
     let rec check_fields all dups = function
       | (x, v) :: xs ->
           go v >>
-          if LSet.mem x all then
-            check_fields all (LSet.add x dups) xs
+          if Set.mem all x then
+            check_fields all (Set.add dups x) xs
           else
-            check_fields (LSet.add x all) dups xs
+            check_fields (Set.add all x) dups xs
       | [] ->
-          if LSet.is_empty dups then
+          if Set.is_empty dups then
             Ok ()
           else
             Err
-              ( MuleErr.DuplicateFields (List.of_seq (LSet.to_seq dups))
+              ( MuleErr.DuplicateFields (Set.to_list dups)
               )
     in
     let rec check_cases = function
@@ -81,10 +81,12 @@ let check_duplicate_record_fields =
     in
     function
     | Record fields ->
-        check_fields LSet.empty LSet.empty fields
+        let empty = Set.empty (module Label) in
+        check_fields empty empty fields
     | Update(e, fields) ->
+        let empty = Set.empty (module Label) in
         go e
-        >> check_fields LSet.empty LSet.empty fields
+        >> check_fields empty empty fields
 
     (* The rest of this is just walking down the tree *)
     | Lam (_, body) -> go body
