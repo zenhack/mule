@@ -1,1 +1,1 @@
-val typecheck : Ast.Desugared.Expr.t -> (MuleErr.t, int Ast.Desugared.Type.t) OrErr.t
+val typecheck : Ast.Desugared.Expr.t -> (int Ast.Desugared.Type.t, MuleErr.t) Result.t

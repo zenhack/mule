@@ -220,5 +220,5 @@ let rec simplify e = match e with
       D.Let (v, simplify e', simplify body)
 
 let desugar e =
-  try OrErr.Ok (simplify (desugar e))
-  with MuleErr.MuleExn err -> OrErr.Err err
+  try Ok (simplify (desugar e))
+  with MuleErr.MuleExn err -> Error err

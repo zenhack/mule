@@ -1,12 +1,12 @@
-open OrErr
+open Result.Monad_infix
 
 let desugar_typecheck expr =
   Lint.check expr
-  >> Desugar.desugar expr
+  >>= fun _ -> Desugar.desugar expr
   >>= fun dexp ->
     Stdio.print_endline ("Desugared: " ^ Pretty.expr dexp);
     Typecheck.typecheck dexp
-  |>> fun ty ->
+  >>| fun ty ->
     Stdio.print_endline ("inferred type: " ^ Pretty.typ ty);
     dexp
 
@@ -17,15 +17,15 @@ let run input =
   | MParser.Failed (msg, _) ->
       Stdio.print_endline "Parse Error:";
       Stdio.print_endline msg;
-      Err ()
+      Error ()
   | MParser.Success None ->
       (* empty input *)
       Ok ()
   | MParser.Success (Some expr) ->
       begin match desugar_typecheck expr with
-      | Err e ->
+      | Error e ->
           Stdio.print_endline (MuleErr.show e);
-          Err ()
+          Error ()
       | Ok dexp ->
           Stdio.print_endline "Javascript: ";
           (ToJs.toJs dexp |> Ast.Js.Expr.fmt Caml.print_string);

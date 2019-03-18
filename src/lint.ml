@@ -1,6 +1,8 @@
-open OrErr
 open Ast
 open Ast.Surface.Expr
+open Result.Monad_infix
+
+let (>>) x y = x >>= fun _ -> y
 
 (* Free variables in an expression *)
 let rec free_vars env =
@@ -53,7 +55,7 @@ and fields_free_vars env fields =
 let check_unbound_vars expr =
   let free = free_vars (Set.empty (module Var)) expr in
   match Set.find free ~f:(fun _ -> true) with
-  | Some x -> Err (MuleErr.UnboundVar x)
+  | Some x -> Error (MuleErr.UnboundVar x)
   | None -> Ok ()
 
 (* Check for duplicate record fields *)
@@ -70,7 +72,7 @@ let check_duplicate_record_fields =
           if Set.is_empty dups then
             Ok ()
           else
-            Err
+            Error
               ( MuleErr.DuplicateFields (Set.to_list dups)
               )
     in

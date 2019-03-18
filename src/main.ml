@@ -9,5 +9,5 @@ let () =
         In.close fd;
         match Run.run str with
           | Ok () -> ()
-          | Err () -> Caml.exit 1
+          | Error () -> Caml.exit 1
       done

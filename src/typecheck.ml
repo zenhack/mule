@@ -8,7 +8,6 @@ module IntMap = MkMap(Int)
 
 open Ast.Desugared
 open Gensym
-open OrErr
 
 (* The type of values associated with unification variables *)
 type u_type =
@@ -973,4 +972,4 @@ let typecheck expr =
     |> fun t -> Ok t
   with
     MuleErr.MuleExn e ->
-      Err e
+      Error e
