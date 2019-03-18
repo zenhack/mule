@@ -1,3 +1,4 @@
+open Base
 
 module SP = Ast.Surface.Pattern
 module S = Ast.Surface.Expr
@@ -6,43 +7,43 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module RowMap = Ast.Desugared.RowMap
 
-module VSet = Set.Make(Ast.Var)
+module MkSet(M:Comparator.S) = struct
+  type t = (M.t, M.comparator_witness) Set.t
+end
+module VSet = MkSet(Ast.Var)
 
 let rec free_vars: D.t -> VSet.t = function
   | D.Lam(param, body) ->
-      free_vars body
-      |> VSet.remove param
+      Set.remove (free_vars body) param
   | D.Match {cases; default} ->
       let def_fvs = match default with
-        | None -> VSet.empty
+        | None -> Set.empty (module Ast.Var)
         | Some (None, e) -> free_vars e
         | Some (Some v, e) -> free_vars (D.Lam(v, e))
       in
-      RowMap.fold
-        (fun _key -> VSet.union)
-        (RowMap.map
-          (fun (param, body) -> free_vars (D.Lam (param, body)))
-          cases)
-        VSet.empty
-      |> VSet.union def_fvs
+      Map.map cases ~f:(fun (param, body) -> free_vars (D.Lam (param, body)))
+      |> Map.fold
+          ~init:(Set.empty (module Ast.Var))
+          ~f:(fun ~key:_ ~data -> Set.union data)
+      |> Set.union def_fvs
   | D.App(f, x) ->
-      VSet.union (free_vars f) (free_vars x)
+      Set.union (free_vars f) (free_vars x)
   | D.EmptyRecord ->
-      VSet.empty
+      Set.empty (module Ast.Var)
   | D.GetField(e, _) ->
       free_vars e
   | D.Update(e, _l, field) ->
-      VSet.union (free_vars e) (free_vars field)
+      Set.union (free_vars e) (free_vars field)
   | D.Ctor(_l, e) ->
       free_vars e
   | D.Var v ->
-      VSet.singleton v
+      Set.singleton (module Ast.Var) v
   | D.WithType(e, _ty) ->
       free_vars e
   | D.Let(v, e, body) ->
-      VSet.union
+      Set.union
         (free_vars e)
-        (VSet.remove v (free_vars body))
+        (Set.remove (free_vars body) v)
 
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
@@ -124,7 +125,7 @@ let rec desugar = function
       D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
       D.App
-        ( desugar_match RowMap.empty cases
+        ( desugar_match (Map.empty (module Ast.Label)) cases
         , desugar e
         )
   | S.Let(SP.Var v, e, body) ->
@@ -160,13 +161,10 @@ and desugar_match dict = function
         }
   | (SP.Ctor (lbl, p), body) :: cases ->
       let dict' =
-          RowMap.update
-            lbl
-            (function
-              | None -> Some [(p, body)]
-              | Some cases -> Some ((p, body) :: cases)
-            )
-            dict
+          Map.update dict lbl ~f:(function
+            | None -> [(p, body)]
+            | Some cases -> ((p, body) :: cases)
+          )
       in
       desugar_match dict' cases
   | (SP.Annotated (p, _), body) :: cases ->
@@ -175,29 +173,28 @@ and desugar_match dict = function
   | (_ :: _) ->
       raise MuleErr.(MuleExn UnreachableCases)
 and finalize_dict dict =
-  RowMap.map
-    ( fun cases ->
+  Map.map dict
+    ~f:( fun cases ->
       let v = Gensym.anon_var () in
       ( v
       , D.App
-          ( desugar_match RowMap.empty (List.rev cases)
+          ( desugar_match (Map.empty (module Ast.Label)) (List.rev cases)
           , D.Var v
           )
       )
     )
-    dict
 
 let rec simplify e = match e with
   | D.Lam (param, body) ->
       begin match simplify body with
         | D.App(f, D.Var v) when
             Ast.Var.equal v param
-            && not (VSet.mem param (free_vars f)) ->
+            && not (Set.mem (free_vars f) param) ->
               f
         | b -> D.Lam(param, b)
       end
   | D.Match {cases; default = Some (Some param, body)}
-      when RowMap.is_empty cases ->
+      when Map.is_empty cases ->
         simplify (D.Lam(param, body))
   | D.App(f, x) ->
       begin match D.App(simplify f, simplify x) with

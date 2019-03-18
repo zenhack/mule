@@ -1,15 +1,12 @@
-module S = Set.Make(Ast.Var)
-module Env = Map.Make(Ast.Var)
+open Base
 
+module MkMap(Key:Comparator.S) = struct
+  type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
+end
 
-module IntMap = Map.Make(struct
-  type t = int
-  let compare = compare
-end)
-module IntSet = Set.Make(struct
-  type t = int
-  let compare = compare
-end)
+module Env = MkMap(Ast.Var)
+
+module IntMap = MkMap(Int)
 
 open Ast.Desugared
 open Gensym
@@ -46,8 +43,7 @@ and bound_target =
 
 type permission = F | R | L
 
-let perm_eq: permission -> permission -> bool = (=)
-let (=): int -> int -> bool = (=)
+let perm_eq: permission -> permission -> bool = Poly.equal
 
 (* Helpers for signaling type errors *)
 let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
@@ -100,12 +96,12 @@ let get_row_bound: u_row -> bound =
 let rec show_u_type_v s v =
   let t = UnionFind.get v in
   let n = (get_tyvar t).ty_id in
-  if IntSet.mem n s then
-    "t" ^ string_of_int n
+  if Set.mem s n then
+    "t" ^ Int.to_string n
   else
-    let s = IntSet.add n s in
+    let s = Set.add s n in
     match t with
-    | Type _ -> "t" ^ string_of_int n
+    | Type _ -> "t" ^ Int.to_string n
     | Fn (_, l, r) ->
         "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
     | Record(_, row) ->
@@ -115,19 +111,19 @@ let rec show_u_type_v s v =
 and show_u_row_v s v =
   let r = UnionFind.get v in
   let n = (get_row_var r).ty_id in
-  if IntSet.mem n s then
-    "r" ^ string_of_int n
+  if Set.mem s n then
+    "r" ^ Int.to_string n
   else
-    let s = IntSet.add n s in
+    let s = Set.add s n in
     match r with
     | Row {ty_id; _} ->
-        "r" ^ string_of_int ty_id
+        "r" ^ Int.to_string ty_id
     | Empty _ ->
         "<empty>"
     | Extend (_, lbl, ty, rest) ->
         "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
-let show_u_type_v = show_u_type_v IntSet.empty
-let show_u_row_v  = show_u_row_v  IntSet.empty
+let show_u_type_v = show_u_type_v (Set.empty (module Int))
+let show_u_row_v  = show_u_row_v  (Set.empty (module Int))
 
 let show_g {g_child; _} =
   show_u_type_v (Lazy.force g_child)
@@ -381,7 +377,7 @@ and unify_row l r =
 let rec walk cops env g = function
   | Expr.Var v ->
       let tv = gen_ty_u_g g in
-      begin match Env.find v env with
+      begin match Map.find_exn env v with
         | `Ty tv' ->
             cops.constrain_ty tv' tv
         | `G g' ->
@@ -397,7 +393,7 @@ let rec walk cops env g = function
           (Some (`Flex, g))
           (fun g -> walk
             cops
-            (Env.add param (`Ty param_var) env)
+            (Map.set env ~key:param ~data:(`Ty param_var))
             (Lazy.force g)
             body)
       in
@@ -408,7 +404,7 @@ let rec walk cops env g = function
         (Some(`Flex, g))
         (fun g -> walk cops env (Lazy.force g) e)
       in
-      walk cops (Env.add v (`G g_e) env) g body
+      walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
   | Expr.App (f, arg) ->
       let param_var = gen_ty_u_g g in
       let ret_var = gen_ty_u_g g in
@@ -462,7 +458,7 @@ let rec walk cops env g = function
             )
           )
         )
-  | Expr.Match {cases; default} when RowMap.is_empty cases ->
+  | Expr.Match {cases; default} when Map.is_empty cases ->
       begin match default with
         | None -> raise (MuleErr.MuleExn EmptyMatch)
         | Some (Some paramVar, body) ->
@@ -475,7 +471,7 @@ let rec walk cops env g = function
         | None -> UnionFind.make (Empty (gen_ty_var g))
         | Some _ -> UnionFind.make (Row (gen_ty_var g))
       in
-      let (rowVar, bodyVar) = walk_match cops env g final (RowMap.bindings cases) in
+      let (rowVar, bodyVar) = walk_match cops env g final (Map.to_alist cases) in
       UnionFind.make
         ( Fn
             ( gen_ty_var g
@@ -490,19 +486,19 @@ and walk_match cops env g final = function
   | [] -> (final, gen_ty_u_g g)
   | ((lbl, (var, body)) :: rest) ->
       let ty = gen_ty_u_g g in
-      let bodyVar = walk cops (Env.add var (`Ty ty) env) g body in
+      let bodyVar = walk cops (Map.set env ~key:var ~data:(`Ty ty)) g body in
       let (row, body') = walk_match cops env g final rest in
       cops.constrain_ty bodyVar body';
       ( UnionFind.make (Extend(gen_ty_var g, lbl, ty, row))
       , bodyVar
       )
 
-let ivar i = Ast.Var.of_string ("t" ^ string_of_int i)
+let ivar i = Ast.Var.of_string ("t" ^ Int.to_string i)
 
 let maybe_add_rec i vars ty =
   let myvar = ivar i in
-  if S.mem myvar vars then
-    ( S.remove myvar vars
+  if Set.mem vars myvar then
+    ( Set.remove vars myvar
     , Type.Recur(i, myvar, ty)
     )
   else
@@ -511,18 +507,18 @@ let maybe_add_rec i vars ty =
 let rec add_rec_binders ty =
   match ty with
   | Type.Var (_, v) ->
-      ( S.singleton v
+      ( Set.singleton (module Ast.Var) v
       , ty
       )
   | Type.Recur(i, v, t) ->
       let (vs, ts) = add_rec_binders t in
-      ( S.remove (ivar i) vs
+      ( Set.remove vs (ivar i)
       , Type.Recur(i, v, ts)
       )
   | Type.Fn (i, f, x) ->
       let (fv, ft) = add_rec_binders f in
       let (xv, xt) = add_rec_binders x in
-      maybe_add_rec i (S.union fv xv) (Type.Fn(i, ft, xt))
+      maybe_add_rec i (Set.union fv xv) (Type.Fn(i, ft, xt))
   | Type.Record(i, fields, rest) ->
       let (vars, ret) = row_add_rec_binders i fields rest in
       maybe_add_rec i vars (Type.Record ret)
@@ -534,19 +530,17 @@ let rec add_rec_binders ty =
       maybe_add_rec i vars (Type.All(i, bound, body'))
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
-    | Some v -> S.singleton v
-    | None -> S.empty
+    | Some v -> Set.singleton (module Ast.Var) v
+    | None -> Set.empty (module Ast.Var)
   in
-  let fields_vars = List.map
-    (fun (lbl, ty) -> (lbl, add_rec_binders ty))
-    fields
+  let fields_vars =
+    List.map fields ~f:(fun (lbl, ty) -> (lbl, add_rec_binders ty))
   in
-  let vars = List.fold_left
-    (fun accum (_, (vars, _)) -> S.union accum vars)
-    row_var
-    fields_vars
+  let vars = List.fold_left fields_vars
+    ~init:row_var
+    ~f:(fun accum (_, (vars, _)) -> Set.union accum vars)
   in
-  let fields' = List.map (fun (lbl, (_, ty)) -> (lbl, ty)) fields_vars in
+  let fields' = List.map fields_vars ~f:(fun (lbl, (_, ty)) -> (lbl, ty)) in
   (vars, (i, fields', rest))
 let add_rec_binders ty =
   snd (add_rec_binders ty)
@@ -555,10 +549,10 @@ let add_rec_binders ty =
 let rec get_var_type env = function
   | Type {ty_id = i; _} -> Type.Var (i, (ivar i))
   | Fn ({ty_id = i; ty_bound = b}, f, x) ->
-      if S.mem (ivar i) env then
+      if Set.mem env (ivar i) then
         get_var_type env (Type {ty_id = i; ty_bound = b})
       else
-        let env' = S.add (ivar i) env in
+        let env' = Set.add env (ivar i) in
         Fn
           ( i
           , get_var_type env' (UnionFind.get f)
@@ -566,12 +560,12 @@ let rec get_var_type env = function
           )
   | Record ({ty_id = i; _}, fields) ->
       let (fields, rest) =
-        get_var_row (S.add (ivar i) env) (UnionFind.get fields)
+        get_var_row (Set.add env (ivar i)) (UnionFind.get fields)
       in
       Type.Record (i, fields, rest)
   | Union ({ty_id = i; _}, ctors) ->
       let (ctors, rest) =
-        get_var_row (S.add (ivar i) env) (UnionFind.get ctors)
+        get_var_row (Set.add env (ivar i)) (UnionFind.get ctors)
       in
       Type.Union (i, ctors, rest)
 and get_var_row env = function
@@ -587,7 +581,7 @@ and get_var_row env = function
       )
 let get_var_type uvar =
   UnionFind.get uvar
-    |> get_var_type S.empty
+    |> get_var_type (Set.empty (module Ast.Var))
     |> add_rec_binders
 
 type unify_edge =
@@ -613,41 +607,40 @@ let inst_bound: inst_edge -> g_node =
 
 let top_sort_inst: (g_node * (u_type UnionFind.var list)) IntMap.t -> (g_node * u_type UnionFind.var list) list
   = fun d ->
-      let visited = ref IntSet.empty in
+      let visited = ref (Set.empty (module Int)) in
       let accum = ref [] in
       let rec go (g, ts) =
-        if IntSet.mem g.g_id !visited then
+        if Set.mem !visited g.g_id then
           ()
         else begin
-          List.iter (fun t ->
+          List.iter ts ~f:(fun t ->
             let g' = inst_bound
               { ie_ty_node = t
               ; ie_g_node = g
               }
             in
-            if IntSet.mem g'.g_id !visited then
+            if Set.mem !visited g'.g_id then
               ()
             else
-              begin match IntMap.find_opt g'.g_id d with
+              begin match Map.find d g'.g_id with
                 | Some v ->
-                    visited := IntSet.add g'.g_id !visited;
+                    visited := Set.add !visited g'.g_id;
                     go v;
                     accum := v :: !accum
                 | None -> ()
               end
-          ) ts;
+          )
         end
       in
-      IntMap.iter (fun _ v -> go v) d;
-      IntMap.iter
-        (fun k v ->
-          if not (IntSet.mem k !visited) then
+      Map.iter d ~f:go;
+      Map.iteri d ~f:(fun ~key ~data ->
+          if not (Set.mem !visited key) then
             (* This will happen for our top-level nodes, which don't
              * have any edges pointing into them. *)
-            accum := v :: !accum
+            accum := data :: !accum
           else
             ()
-        ) d;
+      );
       !accum
 
 type built_constraints =
@@ -663,7 +656,7 @@ let make_cops: unit ->
   ) = fun () ->
   let report = Debug.report Config.dump_constraints in
   let ucs = ref [] in (* unification constraints *)
-  let ics = ref IntMap.empty in (* instantiation constraints *)
+  let ics = ref (Map.empty (module Int)) in (* instantiation constraints *)
   let cops =
     { constrain_ty   =
       (fun l r ->
@@ -685,13 +678,10 @@ let make_cops: unit ->
               ^ show_u_type_v t
               ^ " <: "
               ^ show_g g);
-          ics := begin IntMap.update g.g_id
-            begin function
-              | None -> Some (g, [t])
-              | Some (_, ts) -> Some (g, (t :: ts))
-            end
-            !ics
-          end
+          ics := Map.update !ics g.g_id ~f:(function
+              | None -> (g, [t])
+              | Some (_, ts) -> (g, (t :: ts))
+            )
         end
     }
   in (cops, ucs, ics)
@@ -701,7 +691,7 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
   let cops, ucs, ics = make_cops () in
   let (_, ty) =
     with_g None begin fun g ->
-      walk cops Env.empty (Lazy.force g) expr
+      walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
     end
   in
   { unification = !ucs
@@ -722,8 +712,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
      * new one to the appropriate map. Before copying a node, we first
      * check to see if it's already in the map, and if so just return the
      * existing copy. *)
-    let visited_types = ref IntMap.empty in
-    let visited_rows = ref IntMap.empty in
+    let visited_types = ref (Map.empty (module Int)) in
+    let visited_rows = ref (Map.empty (module Int)) in
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
@@ -741,7 +731,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     let rec go = fun nv ->
       let n = UnionFind.get nv in
       let {ty_id = old_id; ty_bound = old_bound} = get_tyvar n in
-      begin match IntMap.find_opt old_id !visited_types with
+      begin match Map.find !visited_types old_id with
         | Some new_node -> new_node
         | None ->
             if not (in_constraint_interior old_g old_bound) then
@@ -774,7 +764,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 else
                   UnionFind.make (Type {ty_id = gensym (); ty_bound = new_tyvar.ty_bound })
               in
-              visited_types := IntMap.add old_id map_copy !visited_types;
+              visited_types := Map.set !visited_types ~key:old_id ~data:map_copy;
 
               (* Now do a deep copy, subbing in the new bound. *)
               let ret = UnionFind.make (match n with
@@ -790,7 +780,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     and go_row row_var =
       let row = UnionFind.get row_var in
       let {ty_id = old_id; ty_bound = old_bound} = get_row_var row in
-      begin match IntMap.find_opt old_id !visited_rows with
+      begin match Map.find !visited_rows old_id with
         | Some new_node -> new_node
         | None ->
             let new_var =
@@ -804,7 +794,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             let map_copy =
               UnionFind.make (Row {ty_id = gensym (); ty_bound = new_var.ty_bound })
             in
-            visited_rows := IntMap.add old_id map_copy !visited_rows;
+            visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
             if not (in_constraint_interior old_g old_bound) then
               (* On the frontier. *)
               let new_var = gen_row_u (`G new_g) in
@@ -835,14 +825,15 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
           failwith "propagate: node not bound at g-node."
     end
 
+(* TODO: why are we using a map to unit here, rather than a set? *)
 let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
   fun v dict ->
     let t = UnionFind.get v in
     let {ty_id = n; ty_bound} = get_tyvar t in
-    if IntMap.mem n !dict then
+    if Map.mem !dict n then
       ()
     else begin
-      dict := IntMap.add n () !dict;
+      dict := Map.set !dict ~key:n ~data:();
       emit_bind_edge n ty_bound dict;
       begin match t with
         | Type _ ->
@@ -867,10 +858,10 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
 and emit_all_nodes_row v dict =
     let r = UnionFind.get v in
     let {ty_id = n; ty_bound} = get_row_var r in
-    if IntMap.mem n !dict then
+    if Map.mem !dict n then
       ()
     else begin
-      dict := IntMap.add n () !dict;
+      dict := Map.set !dict ~key:n ~data:();
       emit_bind_edge n ty_bound dict;
       begin match r with
       | Empty _ ->
@@ -886,10 +877,10 @@ and emit_all_nodes_row v dict =
       end
     end
 and emit_all_nodes_g g dict =
-  if IntMap.mem g.g_id !dict then
+  if Map.mem !dict g.g_id then
     ()
   else begin
-    dict := IntMap.add g.g_id () !dict;
+    dict := Map.set !dict ~key:g.g_id ~data:();
     Debug.show_node `G g.g_id;
     emit_all_nodes_ty (Lazy.force g.g_child) dict;
     Debug.show_edge `Structural g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
@@ -914,10 +905,10 @@ and emit_bind_edge n {b_at; b_ty} dict =
 
 let render_graph cs =
   if Config.render_constraints then
-    let visited = ref IntMap.empty in
+    let visited = ref (Map.empty (module Int)) in
     Debug.start_graph ();
     emit_all_nodes_ty cs.ty visited;
-    List.iter (function
+    List.iter cs.unification ~f:(function
       | UnifyTypes(l, r) ->
           let id n = (get_tyvar (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
@@ -928,13 +919,12 @@ let render_graph cs =
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_row l visited;
           emit_all_nodes_row r visited
-    ) cs.unification;
+    );
     cs.instantiation
-    |> IntMap.bindings
-    |> List.iter (fun (_, (g, ts)) ->
+    |> Map.to_alist
+    |> List.iter ~f:(fun (_, (g, ts)) ->
       emit_all_nodes_g g visited;
-      ts |> List.iter
-        (fun t ->
+      List.iter ts ~f:(fun t ->
           let t_id = (get_tyvar (UnionFind.get t)).ty_id in
           Debug.show_edge `Instance g.g_id t_id;
           emit_all_nodes_ty t visited)
@@ -955,27 +945,25 @@ let solve_constraints cs =
   render ();
   let solve_unify vars =
     render_ucs := vars;
-    List.iter (fun c ->
+    List.iter vars ~f:(fun c ->
       begin match c with
       | UnifyTypes(l, r) -> UnionFind.merge unify l r
       | UnifyRows(l, r) -> UnionFind.merge unify_row l r
       end;
-      render_ucs := List.tl !render_ucs;
+      render_ucs := List.tl_exn !render_ucs;
       render ();
-    ) vars
+    )
   in
   solve_unify cs.unification;
   top_sort_inst cs.instantiation
-  |> List.iter
-    (fun (g, ts) ->
-      List.iter
-        (fun t ->
-          let cops, ucs, _ = make_cops () in
-          propagate cops g t;
-          solve_unify !ucs;
-          render ()
-        ) ts;
-        render_ics := IntMap.remove g.g_id !render_ics;
+  |> List.iter ~f:(fun (g, ts) ->
+      List.iter ts ~f:(fun t ->
+        let cops, ucs, _ = make_cops () in
+        propagate cops g t;
+        solve_unify !ucs;
+        render ()
+      );
+      render_ics := Map.remove !render_ics g.g_id;
     );
   cs.ty
 

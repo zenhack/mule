@@ -1,7 +1,6 @@
 open Base
 
 open Ast.Desugared.Expr
-open Ast.Desugared
 
 module Var = Ast.Var
 module Label = Ast.Label
@@ -31,10 +30,8 @@ let rec subst param arg expr = match expr with
         )
   | Match {cases; default} ->
       Match
-        { cases = RowMap.map
-          (fun (param', body) ->
+        { cases = Map.map cases ~f:(fun (param', body) ->
             subst_binding param' param arg body)
-          cases
         ; default = match default with
             | None ->
                 None
@@ -95,7 +92,7 @@ let rec eval = function
       eval v
 and eval_match cases default = function
  | Ctor (lbl, value) ->
-     begin match RowMap.find_opt lbl cases with
+     begin match Map.find cases lbl with
       | Some (param, body) ->
         eval (subst param value body)
       | None ->

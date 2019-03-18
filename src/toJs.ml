@@ -1,3 +1,4 @@
+open Base
 open Ast
 module Js = Ast.Js.Expr
 module DE = Ast.Desugared.Expr
@@ -39,9 +40,9 @@ let rec toJs = function
       let matched = Js.GetProp
         ( Js.Object
           ( cases
-            |> D.RowMap.map (fun (v, body) -> DE.Lam (v, body))
-            |> D.RowMap.bindings
-            |> List.map (fun (l, v) -> (Label.to_string l, toJs v))
+            |> Map.map ~f:(fun (v, body) -> DE.Lam (v, body))
+            |> Map.to_alist
+            |> List.map ~f:(fun (l, v) -> (Label.to_string l, toJs v))
           )
         , Js.GetProp (Js.Var param, String "$")
         )

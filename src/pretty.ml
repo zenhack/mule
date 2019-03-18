@@ -1,3 +1,5 @@
+open Base
+
 open Ast
 open Ast.Desugared
 
@@ -5,7 +7,7 @@ let rec typ = Type.(
   function
   | Var (_, v) -> Ast.Var.to_string v
   | Fn (_, f, x) ->
-      String.concat ""
+      String.concat
         [ "("
         ; typ f
         ; ") -> ("
@@ -13,19 +15,18 @@ let rec typ = Type.(
         ; ")"
         ]
   | Recur (_, v, body) ->
-      String.concat ""
+      String.concat
         [ "rec "
         ; Ast.Var.to_string v
         ; ". "
         ; typ body
         ]
   | Record (_, fields, rest) ->
-      String.concat ""
+      String.concat
         [ "{"
-        ; String.concat ", "
-            (List.map
-              (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ ty)
-              fields
+        ; String.concat ~sep:", "
+            (List.map fields
+              ~f:(fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ ty)
             )
         ; (match rest with
             | Some v -> ", ..." ^ Ast.Var.to_string v
@@ -33,8 +34,8 @@ let rec typ = Type.(
         ; "}"
         ]
   | Union (_, ctors, rest) -> (
-      (String.concat " | "
-        (List.map (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")") ctors))
+      (String.concat ~sep:" | "
+        (List.map ctors ~f: (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")")))
       ^ match rest with
         | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""
@@ -49,14 +50,14 @@ let rec expr indent = function
   | Expr.Ctor (name, e) ->
       "(" ^ Label.to_string name ^ " " ^ expr indent e ^ ")"
   | Expr.Lam (var, body) ->
-      String.concat ""
+      String.concat
         [ "fn "
         ; Var.to_string var
         ; ". "
         ; expr indent body
         ]
   | Expr.App (f, x) ->
-      String.concat ""
+      String.concat
         [ "("
         ; expr indent f
         ; ") ("
@@ -66,7 +67,7 @@ let rec expr indent = function
   | Expr.EmptyRecord ->
       "{}"
   | Expr.Update(r, lbl, field) ->
-      String.concat ""
+      String.concat
         [ "("
         ; expr indent r
         ; " where { "
@@ -81,10 +82,10 @@ let rec expr indent = function
       "let " ^ Var.to_string v ^ " = " ^ expr indent e ^ " in " ^ expr indent body
   | Expr.Match {cases; default} ->
       let new_indent = indent ^ "  " in
-      String.concat ""
+      String.concat
         [ "match-lam"
-        ; RowMap.to_seq cases
-            |> Seq.map (fun (lbl, (v, e)) -> String.concat ""
+        ; Map.to_alist cases
+            |> List.map ~f:(fun (lbl, (v, e)) -> String.concat
                 [ "\n"
                 ; indent
                 ; "| "
@@ -93,18 +94,18 @@ let rec expr indent = function
                 ; Var.to_string v
                 ; " -> "
                 ; expr new_indent e
-                ])
-            |> List.of_seq
-            |> String.concat ""
+                ]
+            )
+            |> String.concat
         ; begin match default with
             | None -> ""
-            | Some (None, e) -> String.concat ""
+            | Some (None, e) -> String.concat
                 [ "\n"
                 ; indent
                 ; "| _ -> "
                 ; expr new_indent e
                 ]
-            | Some (Some v, e) -> String.concat ""
+            | Some (Some v, e) -> String.concat
                 [ "\n"
                 ; indent
                 ; "| "

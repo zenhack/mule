@@ -1,6 +1,10 @@
+open Base
+
 open Common_ast
 
-module RowMap = Map.Make(Label)
+module RowMap = struct
+  type 'v t = (Label.t, 'v, Label.comparator_witness) Map.t
+end
 
 module Type = struct
   type 'i t =
