@@ -1,10 +1,11 @@
+
 let rec loop () =
-  print_string "#mule> ";
-  let line = try read_line () with
-    End_of_file ->
+  Out.output_string Stdio.stdout "#mule> ";
+  match In.input_line Stdio.stdin with
+  | Some line ->
+      let _ = Run.run line in
+      loop ()
+  | None ->
       (* Make sure the terminal prompt shows up on a new line: *)
-      print_endline "";
-      exit 0
-  in
-  let _ = Run.run line in
-  loop ()
+      Stdio.print_endline "";
+      Caml.exit 0
