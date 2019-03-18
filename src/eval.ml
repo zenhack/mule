@@ -1,3 +1,5 @@
+open Base
+
 open Ast.Desugared.Expr
 open Ast.Desugared
 
@@ -5,7 +7,7 @@ module Var = Ast.Var
 module Label = Ast.Label
 
 let rec subst param arg expr = match expr with
-  | Var v when v = param -> arg
+  | Var v when Var.equal v param -> arg
   | Var _ -> expr
   | Ctor (lbl, value) ->
       Ctor (lbl, subst param arg value)

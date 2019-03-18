@@ -54,7 +54,7 @@ and fields_free_vars env fields =
 let check_unbound_vars expr =
   let free = free_vars VSet.empty expr in
   match VSet.find_first_opt (fun _ -> true) free with
-  | Some x -> Err (Error.UnboundVar x)
+  | Some x -> Err (MuleErr.UnboundVar x)
   | None -> Ok ()
 
 (* Check for duplicate record fields *)
@@ -72,7 +72,7 @@ let check_duplicate_record_fields =
             Ok ()
           else
             Err
-              ( Error.DuplicateFields (List.of_seq (LSet.to_seq dups))
+              ( MuleErr.DuplicateFields (List.of_seq (LSet.to_seq dups))
               )
     in
     let rec check_cases = function

@@ -1,3 +1,4 @@
+open Base
 
 type 'a var =
   'a var_state ref
@@ -28,11 +29,11 @@ let get var =
 
 let equal l r =
   let (l', _), (r', _) = get_rep_val l, get_rep_val r in
-  l' == r'
+  phys_equal l' r'
 
 let merge f l r =
   let (lrep, lval), (rrep, rval) = (get_rep_val l, get_rep_val r) in
-  if lrep == rrep then
+  if phys_equal lrep rrep then
     ()
   else begin
     rrep := Ptr lrep;

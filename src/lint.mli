@@ -6,4 +6,4 @@
   * This is invoked by the type checker, before doing the more principled
   * hindley-milner type inference algorithm.
   *)
-val check : Ast.Surface.Expr.t -> (Error.t, unit) OrErr.t
+val check : Ast.Surface.Expr.t -> (MuleErr.t, unit) OrErr.t

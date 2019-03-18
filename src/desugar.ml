@@ -74,8 +74,8 @@ and desugar_union_type tail (l, r) =
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), None ->
       ((), lbls_l @ lbls_r, None)
   | _ -> raise
-    (Error.MuleExn
-      (Error.MalformedType
+    (MuleErr.MuleExn
+      (MuleErr.MalformedType
         "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type fields = function
   | [] ->
@@ -85,8 +85,8 @@ and desugar_record_type fields = function
   | (ST.Field (l, t) :: rest) ->
       desugar_record_type ((l, desugar_type t)::fields) rest
   | (ST.Rest _ :: _) -> raise
-    (Error.MuleExn
-      (Error.MalformedType "row variable before the end of a record type."))
+    (MuleErr.MuleExn
+      (MuleErr.MalformedType "row variable before the end of a record type."))
 
 
 let rec desugar = function
@@ -173,7 +173,7 @@ and desugar_match dict = function
       (* TODO: we'll want to actually do something with these eventually *)
       desugar_match dict ((p, body) :: cases)
   | (_ :: _) ->
-      raise (Error.MuleExn Error.UnreachableCases)
+      raise MuleErr.(MuleExn UnreachableCases)
 and finalize_dict dict =
   RowMap.map
     ( fun cases ->
@@ -226,4 +226,4 @@ let rec simplify e = match e with
 
 let desugar e =
   try OrErr.Ok (simplify (desugar e))
-  with Error.MuleExn err -> OrErr.Err err
+  with MuleErr.MuleExn err -> OrErr.Err err

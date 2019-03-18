@@ -50,9 +50,9 @@ let perm_eq: permission -> permission -> bool = (=)
 let (=): int -> int -> bool = (=)
 
 (* Helpers for signaling type errors *)
-let typeErr e = raise (Error.MuleExn (Error.TypeError e))
-let permErr op = typeErr (Error.PermissionErr op)
-let ctorErr l r = typeErr (Error.MismatchedCtors (l, r))
+let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
+let permErr op = typeErr (MuleErr.PermissionErr op)
+let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 
 let with_g
   : ((bound_ty * g_node) option)
@@ -464,7 +464,7 @@ let rec walk cops env g = function
         )
   | Expr.Match {cases; default} when RowMap.is_empty cases ->
       begin match default with
-        | None -> raise (Error.MuleExn EmptyMatch)
+        | None -> raise (MuleErr.MuleExn EmptyMatch)
         | Some (Some paramVar, body) ->
             walk cops env g (Expr.Lam (paramVar, body))
         | Some (None, body) ->
@@ -986,5 +986,5 @@ let typecheck expr =
     |> get_var_type
     |> fun t -> Ok t
   with
-    Error.MuleExn e ->
+    MuleErr.MuleExn e ->
       Err e

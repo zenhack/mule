@@ -1,3 +1,4 @@
+open Base
 
 type edge_type =
   [ `Structural
@@ -19,7 +20,7 @@ type node_type =
 
 let report enabled =
   if enabled then
-    fun f -> print_endline (f ())
+    fun f -> Stdio.print_endline (f ())
   else
     fun _ -> ()
 
@@ -40,9 +41,9 @@ let show_node ty n =
 
 let fmt_node: node_type -> int -> string =
   fun ty n ->
-    String.concat ""
+    String.concat
     [ "  n"
-    ; string_of_int n
+    ; Int.to_string n
     ; " [label=\""
     ; begin match ty with
       | `TyVar -> "T"
@@ -64,18 +65,20 @@ let fmt_edge_ty = function
   | `Binding `Flex -> "[style=dotted, dir=back]"
   | `Binding `Rigid -> "[style=dashed, dir=back]"
 
+module Out = Stdio.Out_channel
+
 let end_graph () =
   let path = Printf.sprintf "/tmp/graph-%03d.dot" !frame_no in
   frame_no := !frame_no + 1;
-  let dest = open_out path in
-  Printf.fprintf dest "digraph g {\n";
-  !nodes |> List.iter
-    (fun (ty, id) ->
-      Printf.fprintf dest "%s" (fmt_node ty id));
-  !edges |> List.iter
-    (fun (ty, from, to_) ->
-      Printf.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty));
-  Printf.fprintf dest "}\n";
-  close_out dest;
-  let _ = Sys.command ("xdot " ^ path) in
+  let dest = Out.create path in
+  Out.fprintf dest "digraph g {\n";
+  List.iter !nodes ~f:(fun (ty, id) ->
+    Out.fprintf dest "%s" (fmt_node ty id)
+  );
+  List.iter !edges ~f:(fun (ty, from, to_) ->
+    Out.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty)
+  );
+  Out.fprintf dest "}\n";
+  Out.close dest;
+  let _ = Caml.Sys.command ("xdot " ^ path) in
   ()

@@ -1,3 +1,5 @@
+open Base
+
 module StringWrapper : sig
   type t
 
