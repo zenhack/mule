@@ -1,5 +1,3 @@
-open Base
-
 type 'a var =
   'a var_state ref
 and 'a var_state =

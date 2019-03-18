@@ -1,5 +1,3 @@
-open Base
-
 module SP = Ast.Surface.Pattern
 module S = Ast.Surface.Expr
 module ST = Ast.Surface.Type

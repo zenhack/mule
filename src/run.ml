@@ -1,4 +1,3 @@
-open Base
 open OrErr
 
 let desugar_typecheck expr =

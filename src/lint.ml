@@ -1,4 +1,3 @@
-open Base
 open OrErr
 open Ast
 open Ast.Surface.Expr

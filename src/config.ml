@@ -1,5 +1,3 @@
-open Base
-
 let env_equal =
   Option.equal String.equal
 

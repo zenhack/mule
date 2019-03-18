@@ -1,5 +1,3 @@
-open Base
-
 open Common_ast
 
 module RowMap = struct

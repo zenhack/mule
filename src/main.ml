@@ -1,5 +1,3 @@
-open Base
-
 let () =
   match Array.length Sys.argv with
   | 1 -> Repl.loop ()

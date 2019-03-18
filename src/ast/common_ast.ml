@@ -1,5 +1,3 @@
-open Base
-
 module Name = struct
   module type S = sig
     include Comparator.S

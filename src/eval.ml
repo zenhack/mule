@@ -1,5 +1,3 @@
-open Base
-
 open Ast.Desugared.Expr
 
 module Var = Ast.Var

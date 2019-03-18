@@ -1,4 +1,3 @@
-open Base
 open Ast
 module Js = Ast.Js.Expr
 module DE = Ast.Desugared.Expr

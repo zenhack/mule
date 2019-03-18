@@ -1,5 +1,3 @@
-open Base
-
 module MkMap(Key:Comparator.S) = struct
   type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
 end

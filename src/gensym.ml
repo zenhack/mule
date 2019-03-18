@@ -1,5 +1,3 @@
-open Base
-
 let next = ref 0
 
 let gensym () =

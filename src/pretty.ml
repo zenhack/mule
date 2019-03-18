@@ -1,5 +1,3 @@
-open Base
-
 open Ast
 open Ast.Desugared
 

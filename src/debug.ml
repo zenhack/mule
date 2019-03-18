@@ -1,5 +1,3 @@
-open Base
-
 type edge_type =
   [ `Structural
   | `Unify

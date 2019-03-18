@@ -1,4 +1,3 @@
-open Base
 open Common_ast
 
 module Type = struct
