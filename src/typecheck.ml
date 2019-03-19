@@ -47,19 +47,22 @@ let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
 let permErr op = typeErr (MuleErr.PermissionErr op)
 let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 
+let fix : ('a Lazy.t -> 'b) -> ('b Lazy.t -> 'a) -> ('b * 'a) =
+  fun f g ->
+    let rec a = lazy (g b)
+    and b = lazy (f a)
+    in (Lazy.force b, Lazy.force a)
+
 let with_g
   : ((bound_ty * g_node) option)
   -> (g_node Lazy.t -> u_type UnionFind.var)
   -> (g_node * u_type UnionFind.var)
-  = fun parent f ->
-      let gid = gensym () in
-      let rec g = lazy {
-        g_id = gid;
-        g_bound = parent;
-        g_child = ret;
+  = fun parent -> fix (fun u ->
+      { g_id = gensym ()
+      ; g_bound = parent
+      ; g_child = u
       }
-      and ret = lazy (f g)
-      in (Lazy.force g, Lazy.force ret)
+    )
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
