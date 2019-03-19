@@ -476,9 +476,15 @@ let rec walk cops env g = function
             , bodyVar
             )
         )
-  | Expr.WithType(v, _ty) ->
-      (* TODO *)
-      walk cops env g v
+  | Expr.WithType(v, ty) ->
+      (* See {MLF-Graph-Infer} section 6. *)
+      let g_cty = make_coercion_type cops env g ty in
+      let cvar = Gensym.anon_var () in
+      walk
+        cops
+        (Map.add_exn env ~key:cvar ~data:(`G g_cty))
+        g
+        (Expr.App(Expr.Var(cvar), v))
 and walk_match cops env g final = function
   | [] -> (final, gen_ty_u_g g)
   | ((lbl, (var, body)) :: rest) ->
@@ -489,6 +495,50 @@ and walk_match cops env g final = function
       ( UnionFind.make (Extend(gen_ty_var g, lbl, ty, row))
       , bodyVar
       )
+and make_coercion_type cops env g ty =
+  (* We construct the type of a coercion as follows:
+   *
+   * 1. Alpha-rename the variables bound within the type. This way
+   *    we don't have to worry about shadowing in later steps.
+   * 2. Collect the names of existentially-bound variables.
+   * 3. Generate a unification variable for each existential, and store
+   *    them in a map.
+   * 4. Walk over the type twice, generating two constraint graphs for it
+   *    which share only the nodes for existential variables (looked up
+   *    in the map we generated.
+   * 5. Make a function node.
+   * 6. Bind each of the copies to the function node. The parameter will
+   *    be bound rigidly, and the result flexibly.
+   * 7. Bind the existentials to the new function node.
+   *)
+  let ty = Type.alpha_rename (Map.empty (module Ast.Var)) ty in
+  let rec collect_exist_vars = function
+    | Type.Fn (_, l, r) ->
+        Set.union (collect_exist_vars l) (collect_exist_vars r)
+    | Type.Recur (_, _, body) ->
+        collect_exist_vars body
+    | Type.Var _ ->
+        Set.empty (module Ast.Var)
+    | Type.Record row -> collect_exist_row row
+    | Type.Union row -> collect_exist_row row
+    | Type.Quant (_, `Exist, v, body) ->
+        Set.add (collect_exist_vars body) v
+    | Type.Quant (_, `All, _, body) ->
+        collect_exist_vars body
+  and collect_exist_row (_, fields, rest) =
+    List.fold
+      fields
+      ~init:(match rest with
+        | None -> Set.empty (module Ast.Var)
+        | Some v -> Set.singleton (module Ast.Var) v
+      )
+      ~f:(fun accum (_, v) ->
+          Set.union accum (collect_exist_vars v)
+      )
+  in
+  let exist_vars = collect_exist_vars ty in
+  let _ = (cops, env, g, exist_vars) in
+  failwith "TODO"
 
 let ivar i = Ast.Var.of_string ("t" ^ Int.to_string i)
 
