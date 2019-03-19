@@ -53,16 +53,11 @@ let fix : ('a Lazy.t -> 'b) -> ('b Lazy.t -> 'a) -> ('b * 'a) =
     and b = lazy (f a)
     in (Lazy.force b, Lazy.force a)
 
-let with_g
-  : ((bound_ty * g_node) option)
-  -> (g_node Lazy.t -> u_type UnionFind.var)
-  -> (g_node * u_type UnionFind.var)
-  = fun parent -> fix (fun u ->
-      { g_id = gensym ()
-      ; g_bound = parent
-      ; g_child = u
-      }
-    )
+let child_g parent child =
+  { g_id = gensym ()
+  ; g_bound = parent
+  ; g_child = child
+  }
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
@@ -388,20 +383,20 @@ let rec walk cops env g = function
       let param_var = gen_ty_u_g g in
       let ret_var = gen_ty_u_g g in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
-      let (g_body, _) =
-        with_g
-          (Some (`Flex, g))
-          (fun g -> walk
-            cops
-            (Map.set env ~key:param ~data:(`Ty param_var))
-            (Lazy.force g)
-            body)
+      let (g_body, _) = fix
+        (child_g (Some (`Flex, g)))
+        (fun g -> walk
+          cops
+          (Map.set env ~key:param ~data:(`Ty param_var))
+          (Lazy.force g)
+          body
+        )
       in
       cops.constrain_inst g_body ret_var;
       f_var
   | Expr.Let(v, e, body) ->
-      let (g_e, _) = with_g
-        (Some(`Flex, g))
+      let (g_e, _) = fix
+        (child_g (Some(`Flex, g)))
         (fun g -> walk cops env (Lazy.force g) e)
       in
       walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
@@ -409,13 +404,13 @@ let rec walk cops env g = function
       let param_var = gen_ty_u_g g in
       let ret_var = gen_ty_u_g g in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
-      let (g_f, _) = with_g
-        (Some(`Flex, g))
+      let (g_f, _) = fix
+        (child_g (Some(`Flex, g)))
         (fun g -> walk cops env (Lazy.force g) f)
       in
       cops.constrain_inst g_f f_var;
-      let (g_arg, _) = with_g
-        (Some(`Flex, g))
+      let (g_arg, _) = fix
+        (child_g (Some(`Flex, g)))
         (fun g -> walk cops env (Lazy.force g) arg)
       in
       cops.constrain_inst g_arg param_var;
@@ -739,10 +734,11 @@ let make_cops: unit ->
 
 let build_constraints: Expr.t -> built_constraints = fun expr ->
   let cops, ucs, ics = make_cops () in
-  let (_, ty) =
-    with_g None begin fun g ->
-      walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
-    end
+  let (_, ty) = fix
+      (child_g None)
+      (fun g ->
+        walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
+      )
   in
   { unification = !ucs
   ; instantiation = !ics
