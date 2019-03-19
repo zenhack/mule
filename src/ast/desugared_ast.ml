@@ -5,13 +5,15 @@ module RowMap = struct
 end
 
 module Type = struct
+  type quantifier = [ `All | `Exist ]
+
   type 'i t =
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
     | Record of ('i * (Label.t * 'i t) list * Var.t option)
     | Union of ('i * (Label.t * 'i t) list * Var.t option)
-    | All of ('i * Var.t * 'i t)
+    | Quant of ('i * quantifier * Var.t * 'i t)
 end
 
 module Expr = struct

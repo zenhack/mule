@@ -38,8 +38,12 @@ let rec typ = Type.(
         | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""
   )
-  | All(_, var, body) ->
-      "all " ^ Var.to_string var ^ ". " ^ typ body
+  | Quant(_, q, var, body) ->
+      let qstr = match q with
+        | `All -> "all "
+        | `Exist -> "exist "
+      in
+      qstr ^ Var.to_string var ^ ". " ^ typ body
 )
 
 let rec expr indent = function

@@ -522,9 +522,9 @@ let rec add_rec_binders ty =
   | Type.Union(i, ctors, rest) ->
       let (vars, ret) = row_add_rec_binders i ctors rest in
       maybe_add_rec i vars (Type.Union ret)
-  | Type.All(i, bound, body) ->
+  | Type.Quant(i, q, bound, body) ->
       let (vars, body') = add_rec_binders body in
-      maybe_add_rec i vars (Type.All(i, bound, body'))
+      maybe_add_rec i vars (Type.Quant(i, q, bound, body'))
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
     | Some v -> Set.singleton (module Ast.Var) v

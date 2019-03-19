@@ -46,10 +46,8 @@ let rec free_vars: D.t -> VSet.t = function
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
       DT.Fn((), desugar_type param, desugar_type ret)
-  | ST.All([], body) ->
-      desugar_type body
-  | ST.All(v::vs, body) ->
-      DT.All((), v, desugar_type (ST.All(vs, body)))
+  | ST.Quant(q, vars, body) ->
+      desugar_q_type q vars body
   | ST.Recur(v, body) ->
       DT.Recur((), v, desugar_type body)
   | ST.Var v ->
@@ -64,6 +62,12 @@ let rec desugar_type = function
       DT.Union((), [], Some v)
   | _ ->
       failwith "TODO"
+and desugar_q_type q vars body =
+  let rec go = function
+    | [] -> desugar_type body
+    | (x :: xs) -> DT.Quant((), q, x, go xs)
+  in
+  go vars
 and desugar_union_type tail (l, r) =
   match desugar_type l, desugar_type r, tail with
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), (Some v)

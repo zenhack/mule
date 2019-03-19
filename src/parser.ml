@@ -9,6 +9,7 @@ let keywords = Set.of_list (module String)
   ; "rec"
   ; "type"
   ; "all"
+  ; "exist"
   ; "match"
   ; "with"
   ; "end"
@@ -62,6 +63,7 @@ let rec typ_term = lazy (
     ; lazy_p record_type
     ; lazy_p recur_type
     ; lazy_p all_type
+    ; lazy_p exist_type
     ; parens (lazy_p typ)
     ]
 ) and typ_app = lazy (
@@ -74,13 +76,15 @@ let rec typ_term = lazy (
   >>= fun v -> kwd "."
   >> lazy_p typ
   |>> fun ty -> Type.Recur(v, ty)
-) and all_type = lazy (
-  kwd "all"
+) and quantified_type binder quantifier = lazy (
+  kwd binder
   >> many1 var
   >>= fun vs -> kwd "."
   >> lazy_p typ
-  |>> fun ty -> Type.All(vs, ty)
-) and record_type = lazy (
+  |>> fun ty -> Type.Quant(quantifier, vs, ty)
+) and all_type = lazy (lazy_p (quantified_type "all" `All))
+and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
+and record_type = lazy (
   braces (sep_end_by (lazy_p record_item) (kwd ","))
   |>> fun items -> Type.Record items
 ) and record_item = lazy (

@@ -1,9 +1,11 @@
 open Common_ast
 
 module Type = struct
+  type quantifier = [ `All | `Exist ]
+
   type t =
     | Fn of (t * t)
-    | All of (Var.t list * t)
+    | Quant of (quantifier * Var.t list * t)
     | Recur of (Var.t * t)
     | Var of Var.t
     | Record of (record_item list)
