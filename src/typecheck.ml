@@ -20,19 +20,19 @@ and u_row =
   | Empty of tyvar
   | Row of tyvar
 and bound_ty = [ `Rigid | `Flex ]
-and bound = {
-  b_ty: bound_ty;
-  b_at: bound_target;
-}
+and bound =
+  { b_ty: bound_ty
+  ; b_at: bound_target
+  }
 and tyvar =
   { ty_id: int
   ; mutable ty_bound: bound
   }
-and g_node = {
-  g_id: int;
-  g_bound: (bound_ty * g_node) option;
-  g_child: u_type UnionFind.var Lazy.t;
-}
+and g_node =
+  { g_id: int
+  ; g_bound: (bound_ty * g_node) option
+  ; g_child: u_type UnionFind.var Lazy.t
+  }
 and bound_target =
   [ `Ty of u_type UnionFind.var
   | `G of g_node
