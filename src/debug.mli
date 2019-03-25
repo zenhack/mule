@@ -2,7 +2,7 @@
 val report: bool -> (unit -> string) -> unit
 
 type edge_type =
-  [ `Structural
+  [ `Structural of string
   | `Unify
   | `Instance
   | `Binding of [ `Flex | `Rigid ]

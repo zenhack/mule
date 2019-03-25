@@ -886,18 +886,18 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
             Debug.show_node `TyVar n
         | Fn(_, param, ret) ->
             Debug.show_node `TyFn n;
-            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get param)).ty_id);
-            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get ret)).ty_id);
+            Debug.show_edge (`Structural "p") n ((get_tyvar (UnionFind.get param)).ty_id);
+            Debug.show_edge (`Structural "r") n ((get_tyvar (UnionFind.get ret)).ty_id);
             emit_all_nodes_ty param dict;
             emit_all_nodes_ty ret dict
             (* TODO: bounding edges *)
         | Record (_, row) ->
             Debug.show_node `TyRecord n;
-            Debug.show_edge `Structural n ((get_row_var (UnionFind.get row)).ty_id);
+            Debug.show_edge (`Structural "f") n ((get_row_var (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
         | Union (_, row) ->
             Debug.show_node `TyUnion n;
-            Debug.show_edge `Structural n ((get_row_var (UnionFind.get row)).ty_id);
+            Debug.show_edge (`Structural "v") n ((get_row_var (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
       end
     end
@@ -916,8 +916,8 @@ and emit_all_nodes_row v dict =
           Debug.show_node `RowVar n
       | Extend (_, lbl, h, t) ->
           Debug.show_node (`RowExtend lbl) n;
-          Debug.show_edge `Structural n ((get_tyvar (UnionFind.get h)).ty_id);
-          Debug.show_edge `Structural n ((get_row_var (UnionFind.get t)).ty_id);
+          Debug.show_edge (`Structural "h") n ((get_tyvar (UnionFind.get h)).ty_id);
+          Debug.show_edge (`Structural "t") n ((get_row_var (UnionFind.get t)).ty_id);
           emit_all_nodes_ty h dict;
           emit_all_nodes_row t dict
       end
@@ -929,7 +929,7 @@ and emit_all_nodes_g g dict =
     dict := Map.set !dict ~key:g.g_id ~data:();
     Debug.show_node `G g.g_id;
     emit_all_nodes_ty (Lazy.force g.g_child) dict;
-    Debug.show_edge `Structural g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
+    Debug.show_edge (`Structural "") g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
     begin match g.g_bound with
     | Some (b_ty, g') ->
         Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;

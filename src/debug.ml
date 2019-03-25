@@ -1,5 +1,5 @@
 type edge_type =
-  [ `Structural
+  [ `Structural of string
   | `Unify
   | `Instance
   | `Binding of [ `Flex | `Rigid ]
@@ -57,7 +57,7 @@ let fmt_node: node_type -> int -> string =
     ]
 
 let fmt_edge_ty = function
-  | `Structural -> ""
+  | `Structural s -> "[label=\"" ^ s ^ "\"]"
   | `Unify -> "[color=green, dir=none]"
   | `Instance -> "[color=red]"
   | `Binding `Flex -> "[style=dotted, dir=back]"
