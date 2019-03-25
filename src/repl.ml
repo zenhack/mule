@@ -1,6 +1,7 @@
 
 let rec loop () =
   Out.output_string Stdio.stdout "#mule> ";
+  Out.flush Stdio.stdout;
   match In.input_line Stdio.stdin with
   | Some line ->
       let _ = Run.run line in
