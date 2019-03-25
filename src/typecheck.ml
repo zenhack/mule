@@ -182,9 +182,6 @@ let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
     ; ty_bound = {b_ty = `Flex; b_at = targ}
     })
 
-let gen_ty_u_g g =
-  UnionFind.make (Type (gen_ty_var g))
-
 
 let b_at_id = function
   | `G {g_id; _} -> g_id
@@ -371,7 +368,7 @@ and unify_row l r =
 
 let rec walk cops env g = function
   | Expr.Var v ->
-      let tv = gen_ty_u_g g in
+      let tv = gen_ty_u (`G g) in
       begin match Map.find_exn env v with
         | `Ty tv' ->
             cops.constrain_ty tv' tv
@@ -380,8 +377,8 @@ let rec walk cops env g = function
       end;
       tv
   | Expr.Lam (param, body) ->
-      let param_var = gen_ty_u_g g in
-      let ret_var = gen_ty_u_g g in
+      let param_var = gen_ty_u (`G g) in
+      let ret_var = gen_ty_u (`G g) in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
       let (g_body, _) = fix
         (child_g (Some (`Flex, g)))
@@ -401,8 +398,8 @@ let rec walk cops env g = function
       in
       walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
   | Expr.App (f, arg) ->
-      let param_var = gen_ty_u_g g in
-      let ret_var = gen_ty_u_g g in
+      let param_var = gen_ty_u (`G g) in
+      let ret_var = gen_ty_u (`G g) in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
       let (g_f, _) = fix
         (child_g (Some(`Flex, g)))
@@ -423,7 +420,7 @@ let rec walk cops env g = function
       let recVar = UnionFind.make (Record (gen_ty_var g, rowVar)) in
       cops.constrain_ty recVar tyvar;
       let tailVar = UnionFind.make (Row (gen_ty_var g)) in
-      let fieldVar = gen_ty_u_g g in
+      let fieldVar = gen_ty_u (`G g) in
       cops.constrain_row
         rowVar
         (UnionFind.make (Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
@@ -484,9 +481,9 @@ let rec walk cops env g = function
         g
         (Expr.App(Expr.Var(cvar), v))
 and walk_match cops env g final = function
-  | [] -> (final, gen_ty_u_g g)
+  | [] -> (final, gen_ty_u (`G g))
   | ((lbl, (var, body)) :: rest) ->
-      let ty = gen_ty_u_g g in
+      let ty = gen_ty_u (`G g) in
       let bodyVar = walk cops (Map.set env ~key:var ~data:(`Ty ty)) g body in
       let (row, body') = walk_match cops env g final rest in
       cops.constrain_ty bodyVar body';
