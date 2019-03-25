@@ -59,6 +59,9 @@ let child_g parent child =
   ; g_child = child
   }
 
+let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
+  fun parent f -> fst (fix (child_g (Some(`Flex, parent))) f)
+
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
  * in {MLF-Graph-Unify}. *)
@@ -377,8 +380,7 @@ let rec walk cops env g = function
       let param_var = gen_ty_u (`G g) in
       let ret_var = gen_ty_u (`G g) in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
-      let (g_body, _) = fix
-        (child_g (Some (`Flex, g)))
+      let g_body = with_g g
         (fun g -> walk
           cops
           (Map.set env ~key:param ~data:(`Ty param_var))
@@ -389,24 +391,15 @@ let rec walk cops env g = function
       cops.constrain_inst g_body ret_var;
       f_var
   | Expr.Let(v, e, body) ->
-      let (g_e, _) = fix
-        (child_g (Some(`Flex, g)))
-        (fun g -> walk cops env (Lazy.force g) e)
-      in
+      let g_e = with_g g (fun g -> walk cops env (Lazy.force g) e) in
       walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
   | Expr.App (f, arg) ->
       let param_var = gen_ty_u (`G g) in
       let ret_var = gen_ty_u (`G g) in
       let f_var = UnionFind.make(Fn (gen_ty_var g, param_var, ret_var)) in
-      let (g_f, _) = fix
-        (child_g (Some(`Flex, g)))
-        (fun g -> walk cops env (Lazy.force g) f)
-      in
+      let g_f = with_g g (fun g -> walk cops env (Lazy.force g) f) in
       cops.constrain_inst g_f f_var;
-      let (g_arg, _) = fix
-        (child_g (Some(`Flex, g)))
-        (fun g -> walk cops env (Lazy.force g) arg)
-      in
+      let g_arg = with_g g (fun g -> walk cops env (Lazy.force g) arg) in
       cops.constrain_inst g_arg param_var;
       ret_var
   | Expr.EmptyRecord ->
