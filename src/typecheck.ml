@@ -170,16 +170,13 @@ let gen_ty_var: g_node -> tyvar = fun g ->
 
 let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
   UnionFind.make (Type
-    { ty_id = gensym()
-    ; ty_bound =
-      { b_ty = `Flex
-      ; b_at = targ
-      }
+    { ty_id = gensym ()
+    ; ty_bound = { b_ty = `Flex; b_at = targ }
     })
 let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
   UnionFind.make (Row
-    { ty_id = gensym()
-    ; ty_bound = {b_ty = `Flex; b_at = targ}
+    { ty_id = gensym ()
+    ; ty_bound = { b_ty = `Flex; b_at = targ }
     })
 
 
