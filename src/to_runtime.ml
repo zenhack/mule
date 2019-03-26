@@ -9,8 +9,10 @@ let rec translate: D.t -> R.t = function
   | D.App(f, x) -> R.App(translate f, translate x)
   | D.EmptyRecord -> R.Record (Map.empty (module Label))
   | D.GetField (record, lbl) -> R.App(R.GetField lbl, translate record)
-  | D.Update(old, label, field) ->
-      R.(Update {old = translate old ; label; field = translate field})
+  | D.Update label ->
+      let old = Gensym.anon_var () in
+      let field = Gensym.anon_var () in
+      R.Lam(old, R.Lam(field, R.Update { old = R.Var old; label; field = R.Var field }))
   | D.Ctor (label, e) -> R.Ctor(label, translate e)
   | D.Match{cases; default} ->
       R.Match

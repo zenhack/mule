@@ -68,14 +68,8 @@ let rec expr indent = function
         ]
   | Expr.EmptyRecord ->
       "{}"
-  | Expr.Update(r, lbl, field) ->
-      String.concat
-        [ "("
-        ; expr indent r
-        ; " where { "
-        ; Label.to_string lbl ^ " = " ^ expr indent field
-        ; " })"
-        ]
+  | Expr.Update lbl ->
+      "(_ where { " ^ Label.to_string lbl ^ " = _ })"
   | Expr.GetField (e, lbl) ->
       "(" ^ expr indent e ^ ")." ^ Label.to_string lbl
   | Expr.WithType(v, ty) ->

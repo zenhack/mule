@@ -162,13 +162,15 @@ type constraint_ops =
   ; constrain_inst : g_node -> u_type UnionFind.var -> unit
   }
 
-let gen_ty_var: g_node -> tyvar = fun g ->
+let ty_var_at: bound_target -> tyvar = fun b_at ->
   { ty_id = gensym ()
   ; ty_bound =
     { b_ty = `Flex
-    ; b_at = `G g
+    ; b_at = b_at
     }
   }
+
+let gen_ty_var: g_node -> tyvar = fun g -> ty_var_at (`G g)
 
 
 let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
@@ -415,15 +417,41 @@ let rec walk cops env g = function
         rowVar
         (UnionFind.make (Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
       fieldVar
-  | Expr.Update (r, lbl, ty) ->
-      let head_var = walk cops env g ty in
-      let tail_var = gen_row_u (`G g) in
-      let orig_var = walk cops env g r in
-      let updated_var = UnionFind.make (Extend(gen_ty_var g, lbl, head_var, tail_var)) in
-      cops.constrain_ty
-          orig_var
-          (UnionFind.make (Record (gen_ty_var g, tail_var)));
-      UnionFind.make (Record (gen_ty_var g, updated_var))
+  | Expr.Update lbl ->
+      (* Record updates have the type:
+       *
+       * all a r. {...r} -> a -> {lbl: a, ...r}
+       *)
+      let fn_var = gen_ty_u (`G g) in
+      let b_at = `Ty fn_var in
+
+      let head_var = gen_ty_u b_at in
+      let tail_var = gen_row_u b_at in
+      let ret =
+        UnionFind.make
+          (Fn
+            ( gen_ty_var g
+            , UnionFind.make
+              (Record
+                ( ty_var_at b_at
+                , tail_var))
+            , UnionFind.make
+              (Fn
+                ( ty_var_at b_at
+                , head_var
+                , UnionFind.make
+                  (Record
+                    ( ty_var_at b_at
+                    , UnionFind.make
+                      (Extend
+                        ( ty_var_at b_at
+                        , lbl
+                        , head_var
+                        , tail_var
+                        ))))))))
+      in
+      cops.constrain_ty fn_var ret;
+      ret
   | Expr.Ctor (lbl, param) ->
       let uVar = gen_ty_var g in
       let paramVar = walk cops env g param in
