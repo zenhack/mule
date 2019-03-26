@@ -1,4 +1,4 @@
-open Ast.Desugared.Expr
+open Ast.Runtime.Expr
 
 module Var = Ast.Var
 module Label = Ast.Label
@@ -10,37 +10,23 @@ let rec subst param arg expr = match expr with
       Ctor (lbl, subst param arg value)
   | Lam (param', body) ->
       Lam (subst_binding param' param arg body)
-  | Let(param', e, body) when Var.equal param param' ->
-      Let(param', e, body)
-  | Let(param', e, body) ->
-      Let(param', subst param arg e, subst param arg body)
   | App (f, x) ->
       App (subst param arg f, subst param arg x)
-  | EmptyRecord ->
-      EmptyRecord
-  | GetField (e, lbl) ->
-      GetField (subst param arg e, lbl)
-  | Update(e, lbl, field) ->
+  | Record r ->
+      Record (Map.map r ~f:(subst param arg))
+  | GetField lbl ->
+      GetField lbl
+  | Update {old; label; field} ->
       Update
-        ( subst param arg e
-        , lbl
-        , subst param arg field
-        )
+        { old = subst param arg old
+        ; label
+        ; field = subst param arg field
+        }
   | Match {cases; default} ->
       Match
-        { cases = Map.map cases ~f:(fun (param', body) ->
-            subst_binding param' param arg body)
-        ; default = match default with
-            | None ->
-                None
-            | Some (Some param', body) ->
-                let (p', b') = subst_binding param' param arg body in
-                Some (Some p', b')
-            | Some (None, body) ->
-                Some (None, subst param arg body)
+        { cases = Map.map cases ~f:(subst param arg)
+        ; default = Option.map default ~f:(subst param arg)
         }
-  | WithType (v, _) ->
-      subst param arg v
 and subst_binding param' param arg body =
   if Var.equal param param' then
     (param', body)
@@ -54,6 +40,7 @@ let rec eval = function
         ("Unbound variable \"" ^ Ast.Var.to_string v ^ "\"; this should have been caught sooner.")
   | Lam lam -> Lam lam
   | Match m -> Match m
+  | GetField l -> GetField l
   | Ctor c -> Ctor c
   | App (f, arg) ->
       let f' = eval f in
@@ -63,52 +50,41 @@ let rec eval = function
           eval (subst param arg' body)
       | Match {cases; default} ->
           eval_match cases default arg'
+      | GetField label ->
+          begin match arg' with
+            | Record r ->
+                Map.find_exn r label
+            | _ ->
+                failwith "Tried to get field of non-record"
+          end
       | _ ->
-        failwith ("Tried to call non-function: " ^ Pretty.expr f')
+        failwith "Tried to call non-function"
       end
-  | EmptyRecord ->
-      EmptyRecord
-  | GetField (e, lbl) ->
-      begin match eval e with
-      | Update(rest, lbl', field) ->
-          if Label.equal lbl lbl' then
-            field
-          else
-            eval (GetField (rest, lbl))
-      | EmptyRecord -> failwith
-        ("Missing record key! " ^
-        "this should have been caught by the type checker!")
-      | _ -> failwith
-        ("Tried to get a field on something that's not a record. " ^
-        "this should have been caught by the type checker!")
+  | Record r ->
+      Record (Map.map r ~f:eval)
+  | Update {old; label; field} ->
+      begin match eval old with
+        | Record r -> Record (Map.set ~key:label ~data:(eval field) r)
+        | _ -> failwith "Tried to set field on non-record"
       end
-  | Update(r, lbl, field) ->
-      Update(eval r, lbl, eval field)
-  | Let(v, e, body) ->
-      eval (subst v (eval e) body)
-  | WithType(v, _) ->
-      eval v
-and eval_match cases default = function
+and eval_match cases default =
+  function
  | Ctor (lbl, value) ->
      begin match Map.find cases lbl with
-      | Some (param, body) ->
-        eval (subst param value body)
+      | Some f ->
+          eval (App(f, value))
       | None ->
         begin match default with
+          | Some f ->
+              eval (App(f, Ctor(lbl, value)))
           | None ->
               failwith "Match failed"
-          | Some (None, body) ->
-              eval body
-          | Some (Some param, body) ->
-              eval (subst param (Ctor (lbl, value)) body)
         end
      end
   | value ->
-      begin match default with
-        | None ->
-            failwith "Match failed"
-        | Some (None, body) ->
-            eval body
-        | Some (Some param, body) ->
-            eval (subst param value body)
-      end
+     begin match default with
+       | Some f ->
+           eval (App(f, value))
+       | None ->
+           failwith "Match failed"
+     end

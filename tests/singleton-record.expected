@@ -1,3 +1,4 @@
 Desugared: ({} where { x = {} })
 inferred type: {x : {}}
-Evaluated: ({} where { x = {} })
+Runtime term: ({}) where { x = {} }
+Evaluated: {x = {}}

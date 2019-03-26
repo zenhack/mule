@@ -1,3 +1,4 @@
 Desugared: (({} where { x = {} }) where { y = ({} where { z = {} }) })
 inferred type: {y : {z : {}}, x : {}}
-Evaluated: (({} where { x = {} }) where { y = ({} where { z = {} }) })
+Runtime term: (({}) where { x = {} }) where { y = ({}) where { z = {} } }
+Evaluated: {x = {}, y = {z = {}}}

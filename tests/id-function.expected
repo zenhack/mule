@@ -1,3 +1,4 @@
 Desugared: fn x. x
 inferred type: (t3) -> (t3)
+Runtime term: fn x. x
 Evaluated: fn x. x

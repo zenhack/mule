@@ -27,8 +27,9 @@ let run input =
           Stdio.print_endline (MuleErr.show e);
           Error ()
       | Ok dexp ->
-          Eval.eval dexp
-          |> Pretty.expr
-          |> fun ret -> Stdio.print_endline ("Evaluated: " ^ ret);
+          let rexp = To_runtime.translate dexp in
+          Stdio.print_endline ("Runtime term: " ^ Ast.Runtime.Expr.pretty rexp);
+          let ret = Eval.eval rexp in
+          Stdio.print_endline ("Evaluated: " ^ Ast.Runtime.Expr.pretty ret);
           Ok ()
       end
