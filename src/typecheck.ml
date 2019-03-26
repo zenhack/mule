@@ -17,9 +17,9 @@ type u_type =
   | `Union of (tyvar * u_row UnionFind.var)
   ]
 and u_row =
-  [ `Extend of (tyvar * Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
+  [ `Free of tyvar
+  | `Extend of (tyvar * Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
   | `Empty of tyvar
-  | `Free of tyvar
   ]
 and bound_ty = [ `Rigid | `Flex ]
 and bound =
@@ -79,19 +79,14 @@ let rec get_permission: bound_ty list -> permission = function
 let rec gnode_bound_list {g_bound; _} = match g_bound with
   | None -> []
   | Some (b_ty, g) -> b_ty :: gnode_bound_list g
-let get_tyvar: u_type -> tyvar = function
+let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Free v -> v
   | `Fn (v, _, _) -> v
   | `Record (v, _) -> v
   | `Union (v, _) -> v
-let get_ty_bound: u_type -> bound =
-  fun ty -> ((get_tyvar ty).ty_bound)
-let get_row_var: u_row -> tyvar = function
   | `Extend(v, _, _, _) -> v
   | `Empty v -> v
-  | `Free v -> v
-let get_row_bound: u_row -> bound =
-  fun r -> ((get_row_var r).ty_bound)
+let get_u_bound x = (get_tyvar x).ty_bound
 
 let rec show_u_type_v s v =
   let t = UnionFind.get v in
@@ -110,7 +105,7 @@ let rec show_u_type_v s v =
         "Union(" ^ show_u_row_v s row ^ ")"
 and show_u_row_v s v =
   let r = UnionFind.get v in
-  let n = (get_row_var r).ty_id in
+  let n = (get_tyvar r).ty_id in
   if Set.mem s n then
     "r" ^ Int.to_string n
   else
@@ -175,17 +170,11 @@ let ty_var_at: bound_target -> tyvar = fun b_at ->
 let gen_ty_var: g_node -> tyvar = fun g -> ty_var_at (`G g)
 
 
-let gen_ty_u: bound_target -> u_type UnionFind.var = fun targ ->
+let gen_u: bound_target -> [> `Free of tyvar ] UnionFind.var = fun targ ->
   UnionFind.make (`Free
     { ty_id = gensym ()
     ; ty_bound = { b_ty = `Flex; b_at = targ }
     })
-let gen_row_u: bound_target -> u_row UnionFind.var = fun targ ->
-  UnionFind.make (`Free
-    { ty_id = gensym ()
-    ; ty_bound = { b_ty = `Flex; b_at = targ }
-    })
-
 
 let b_at_id = function
   | `G {g_id; _} -> g_id
@@ -329,7 +318,7 @@ let rec unify l r =
   | `Union  _, `Fn     _ -> ctorErr `Union  `Fn
   | `Union  _, `Record _ -> ctorErr `Union  `Record
 and unify_row l r =
-  let tv = unify_tyvar (get_row_var l) (get_row_var r) in
+  let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   match l, r with
   | (`Empty _, `Empty _) -> `Empty tv
   | (`Extend (_, l_lbl, l_ty, l_rest), `Extend (_, r_lbl, r_ty, r_rest)) ->
@@ -350,7 +339,7 @@ and unify_row l r =
         let new_with_bound v =
           UnionFind.make (`Free
             { ty_id = gensym ()
-            ; ty_bound = get_row_bound (UnionFind.get v)
+            ; ty_bound = get_u_bound (UnionFind.get v)
             })
         in
         let new_rest_r = new_with_bound r_rest in
@@ -372,7 +361,7 @@ and unify_row l r =
 
 let rec walk cops env g = function
   | Expr.Var v ->
-      let tv = gen_ty_u (`G g) in
+      let tv = gen_u (`G g) in
       begin match Map.find_exn env v with
         | `Ty tv' ->
             cops.constrain_ty tv' tv
@@ -381,8 +370,8 @@ let rec walk cops env g = function
       end;
       tv
   | Expr.Lam (param, body) ->
-      let param_var = gen_ty_u (`G g) in
-      let ret_var = gen_ty_u (`G g) in
+      let param_var = gen_u (`G g) in
+      let ret_var = gen_u (`G g) in
       let f_var = UnionFind.make(`Fn (gen_ty_var g, param_var, ret_var)) in
       let g_body = with_g g
         (fun g -> walk
@@ -398,8 +387,8 @@ let rec walk cops env g = function
       let g_e = with_g g (fun g -> walk cops env (Lazy.force g) e) in
       walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
   | Expr.App (f, arg) ->
-      let param_var = gen_ty_u (`G g) in
-      let ret_var = gen_ty_u (`G g) in
+      let param_var = gen_u (`G g) in
+      let ret_var = gen_u (`G g) in
       let f_var = UnionFind.make(`Fn (gen_ty_var g, param_var, ret_var)) in
       let g_f = with_g g (fun g -> walk cops env (Lazy.force g) f) in
       cops.constrain_inst g_f f_var;
@@ -414,7 +403,7 @@ let rec walk cops env g = function
       let recVar = UnionFind.make (`Record (gen_ty_var g, rowVar)) in
       cops.constrain_ty recVar tyvar;
       let tailVar = UnionFind.make (`Free (gen_ty_var g)) in
-      let fieldVar = gen_ty_u (`G g) in
+      let fieldVar = gen_u (`G g) in
       cops.constrain_row
         rowVar
         (UnionFind.make (`Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
@@ -424,11 +413,11 @@ let rec walk cops env g = function
        *
        * all a r. {...r} -> a -> {lbl: a, ...r}
        *)
-      let fn_var = gen_ty_u (`G g) in
+      let fn_var = gen_u (`G g) in
       let b_at = `Ty fn_var in
 
-      let head_var = gen_ty_u b_at in
-      let tail_var = gen_row_u b_at in
+      let head_var = gen_u b_at in
+      let tail_var = gen_u b_at in
       let ret =
         UnionFind.make
           (`Fn
@@ -501,9 +490,9 @@ let rec walk cops env g = function
         g
         (Expr.App(Expr.Var(cvar), v))
 and walk_match cops env g final = function
-  | [] -> (final, gen_ty_u (`G g))
+  | [] -> (final, gen_u (`G g))
   | ((lbl, (var, body)) :: rest) ->
-      let ty = gen_ty_u (`G g) in
+      let ty = gen_u (`G g) in
       let bodyVar = walk cops (Map.set env ~key:var ~data:(`Ty ty)) g body in
       let (row, body') = walk_match cops env g final rest in
       cops.constrain_ty bodyVar body';
@@ -788,7 +777,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
         }
       }
     in
-    let new_root = gen_ty_u (`G new_g) in
+    let new_root = gen_u (`G new_g) in
 
     (* XXX: go and go_row have too much redundancy *)
     let rec go = fun nv ->
@@ -801,7 +790,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               begin
                 (* We've hit the frontier; replace it with a bottom node and
                  * constrain it to be equal to the old thing. *)
-                let new_var = gen_ty_u (`G new_g) in
+                let new_var = gen_u (`G new_g) in
                 cops.constrain_ty nv new_var;
                 new_var
               end
@@ -842,7 +831,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
     and go_row row_var =
       let row = UnionFind.get row_var in
-      let {ty_id = old_id; ty_bound = old_bound} = get_row_var row in
+      let {ty_id = old_id; ty_bound = old_bound} = get_tyvar row in
       begin match Map.find !visited_rows old_id with
         | Some new_node -> new_node
         | None ->
@@ -860,7 +849,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
             if not (in_constraint_interior old_g old_bound) then
               (* On the frontier. *)
-              let new_var = gen_row_u (`G new_g) in
+              let new_var = gen_u (`G new_g) in
               cops.constrain_row row_var new_var;
               new_var
             else begin
@@ -880,7 +869,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
 let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
-    begin match (get_ty_bound (UnionFind.get var)).b_at with
+    begin match (get_u_bound (UnionFind.get var)).b_at with
       | `G g' ->
         let instance = expand cops g g' in
         cops.constrain_ty instance var
@@ -910,17 +899,17 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
             (* TODO: bounding edges *)
         | `Record (_, row) ->
             Debug.show_node `TyRecord n;
-            Debug.show_edge (`Structural "f") n ((get_row_var (UnionFind.get row)).ty_id);
+            Debug.show_edge (`Structural "f") n ((get_tyvar (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
         | `Union (_, row) ->
             Debug.show_node `TyUnion n;
-            Debug.show_edge (`Structural "v") n ((get_row_var (UnionFind.get row)).ty_id);
+            Debug.show_edge (`Structural "v") n ((get_tyvar (UnionFind.get row)).ty_id);
             emit_all_nodes_row row dict
       end
     end
 and emit_all_nodes_row v dict =
     let r = UnionFind.get v in
-    let {ty_id = n; ty_bound} = get_row_var r in
+    let {ty_id = n; ty_bound} = get_tyvar r in
     if Map.mem !dict n then
       ()
     else begin
@@ -934,7 +923,7 @@ and emit_all_nodes_row v dict =
       | `Extend (_, lbl, h, t) ->
           Debug.show_node (`RowExtend lbl) n;
           Debug.show_edge (`Structural "h") n ((get_tyvar (UnionFind.get h)).ty_id);
-          Debug.show_edge (`Structural "t") n ((get_row_var (UnionFind.get t)).ty_id);
+          Debug.show_edge (`Structural "t") n ((get_tyvar (UnionFind.get t)).ty_id);
           emit_all_nodes_ty h dict;
           emit_all_nodes_row t dict
       end
@@ -978,7 +967,7 @@ let render_graph cs =
           emit_all_nodes_ty l visited;
           emit_all_nodes_ty r visited
       | UnifyRows(l, r) ->
-          let id n = (get_row_var (UnionFind.get n)).ty_id in
+          let id n = (get_tyvar (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_row l visited;
           emit_all_nodes_row r visited
