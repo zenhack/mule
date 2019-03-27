@@ -4,6 +4,6 @@
   * - check for unbound variables.
   *
   * This is invoked by the type checker, before doing the more principled
-  * hindley-milner type inference algorithm.
+  * type inference algorithm.
   *)
 val check : Ast.Surface.Expr.t -> (unit, MuleErr.t) Result.t
