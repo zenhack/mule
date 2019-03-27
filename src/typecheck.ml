@@ -344,13 +344,17 @@ and unify_row l r =
         in
         let new_rest_r = new_with_bound r_rest in
         let new_rest_l = new_with_bound l_rest in
-
+        let new_tv () =
+          { ty_id = gensym ()
+          ; ty_bound = tv.ty_bound
+          }
+        in
         UnionFind.merge unify_row
           r_rest
-          (UnionFind.make (`Extend(tv, l_lbl, l_ty, new_rest_r)));
+          (UnionFind.make (`Extend(new_tv (), l_lbl, l_ty, new_rest_r)));
         UnionFind.merge unify_row
           l_rest
-          (UnionFind.make (`Extend(tv, r_lbl, r_ty, new_rest_l)));
+          (UnionFind.make (`Extend(new_tv (), r_lbl, r_ty, new_rest_l)));
         ret
       end
 
