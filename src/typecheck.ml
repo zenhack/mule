@@ -769,14 +769,6 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)
-    let new_root_tv =
-      { ty_id = gensym ()
-      ; ty_bound =
-        { b_ty = `Flex
-        ; b_at = `G new_g
-        }
-      }
-    in
     let new_root = gen_u (`G new_g) in
 
     (* XXX: go and go_row have too much redundancy *)
@@ -797,24 +789,28 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             else
               (* First, generate the new bound. *)
               let new_tyvar =
-                if UnionFind.equal nv old_root then
-                  new_root_tv
-                else
-                  { ty_id = gensym ()
-                  ; ty_bound =
-                    { b_ty = old_bound.b_ty
-                    ; b_at = `Ty new_root
-                    }
-                  }
+                { ty_id = gensym ()
+                ; ty_bound =
+                    if UnionFind.equal nv old_root then
+                      { b_ty = `Flex
+                      ; b_at = `G new_g
+                      }
+                    else
+                      { b_ty = old_bound.b_ty
+                      ; b_at = `Ty new_root
+                      }
+                }
               in
-
               (* Add a copy to the map up front, in case we hit a recursive type.
                * We'll have to unify it with the final result below. *)
               let map_copy =
                 if UnionFind.equal nv old_root then
                   new_root
                 else
-                  UnionFind.make (`Free {ty_id = gensym (); ty_bound = new_tyvar.ty_bound })
+                  UnionFind.make (`Free
+                    { ty_id = gensym ()
+                    ; ty_bound = new_tyvar.ty_bound
+                    })
               in
               visited_types := Map.set !visited_types ~key:old_id ~data:map_copy;
 
