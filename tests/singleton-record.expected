@@ -1,4 +1,4 @@
-Desugared: ({} where { x = {} })
+Desugared: (((_ where { x = _ })) ({})) ({})
 inferred type: {x : {}}
-Runtime term: ({}) where { x = {} }
+Runtime term: ((fn $55. fn $56. ($55) where { x = $56 }) ({})) ({})
 Evaluated: {x = {}}
