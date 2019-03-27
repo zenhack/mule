@@ -831,7 +831,15 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       begin match Map.find !visited_rows old_id with
         | Some new_node -> new_node
         | None ->
-            let new_var =
+          if not (in_constraint_interior old_g old_bound) then
+            begin
+              (* On the frontier. *)
+              let new_var = gen_u (`G new_g) in
+              cops.constrain_row row_var new_var;
+              new_var
+            end
+          else begin
+            let new_tv =
               { ty_id = gensym ()
               ; ty_bound =
                 { b_ty = old_bound.b_ty
@@ -839,27 +847,22 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 }
               }
             in
-            let map_copy =
-              UnionFind.make (`Free {ty_id = gensym (); ty_bound = new_var.ty_bound })
+            let map_copy = UnionFind.make
+              (`Free
+                { ty_id = gensym ()
+                ; ty_bound = new_tv.ty_bound
+                }
+              )
             in
             visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
-            if not (in_constraint_interior old_g old_bound) then
-              (* On the frontier. *)
-              let new_var = gen_u (`G new_g) in
-              cops.constrain_row row_var new_var;
-              new_var
-            else begin
-              let ret = match row with
-                | `Extend(_, l, ty, rest) ->
-                    UnionFind.make (`Extend(new_var, l, go ty, go_row rest))
-                | `Empty _ ->
-                    UnionFind.make (`Empty new_var)
-                | `Free _ ->
-                    UnionFind.make (`Free new_var)
-              in
-              UnionFind.merge unify_row map_copy ret;
-              ret
-            end
+            let ret = UnionFind.make (match row with
+              | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty, go_row rest)
+              | `Empty _ -> `Empty new_tv
+              | `Free _ -> `Free new_tv)
+            in
+            UnionFind.merge unify_row map_copy ret;
+            ret
+          end
       end
     in go old_root
 
