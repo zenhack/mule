@@ -169,6 +169,14 @@ let ty_var_at: bound_target -> tyvar = fun b_at ->
     }
   }
 
+let tv_pair_at: bound_target -> (tyvar * tyvar) = fun b_at ->
+  let x = ty_var_at b_at in
+  ( x
+  , { ty_id = gensym ()
+    ; ty_bound = x.ty_bound
+    }
+  )
+
 let gen_ty_var: g_node -> tyvar = fun g -> ty_var_at (`G g)
 
 
@@ -400,7 +408,8 @@ let rec walk cops env g = function
       cops.constrain_inst g_arg param_var;
       ret_var
   | Expr.EmptyRecord ->
-      UnionFind.make (`Record (gen_ty_var g, UnionFind.make (`Empty(gen_ty_var g))))
+      let tv_rec, tv_row = tv_pair_at (`G g) in
+      UnionFind.make (`Record (tv_rec, UnionFind.make (`Empty tv_row)))
   | Expr.GetField lbl ->
       (* Field accesses have the type:
        *
@@ -410,16 +419,18 @@ let rec walk cops env g = function
       let b_at = `Ty fn_var in
       let head_var = gen_u b_at in
 
+      let tv_rec, tv_row = tv_pair_at b_at in
+
       let ret =
         UnionFind.make
           (`Fn
             ( gen_ty_var g
             , UnionFind.make
               (`Record
-                ( ty_var_at b_at
+                ( tv_rec
                 , UnionFind.make
                   (`Extend
-                    ( ty_var_at b_at
+                    ( tv_row
                     , lbl
                     , head_var
                     , gen_u b_at
@@ -437,25 +448,28 @@ let rec walk cops env g = function
       let b_at = `Ty fn_var in
 
       let head_var = gen_u b_at in
-      let tail_var = gen_u b_at in
+
+      let tv_tail_rec, tv_tail_row = tv_pair_at b_at in
+      let tail_var = UnionFind.make (`Free(tv_tail_row)) in
+
+      let tv_rec, tv_row = tv_pair_at b_at in
+
       let ret =
         UnionFind.make
           (`Fn
             ( gen_ty_var g
             , UnionFind.make
-              (`Record
-                ( ty_var_at b_at
-                , tail_var))
+              (`Record (tv_tail_rec, tail_var))
             , UnionFind.make
               (`Fn
                 ( ty_var_at b_at
                 , head_var
                 , UnionFind.make
                   (`Record
-                    ( ty_var_at b_at
+                    ( tv_rec
                     , UnionFind.make
                       (`Extend
-                        ( ty_var_at b_at
+                        ( tv_row
                         , lbl
                         , head_var
                         , tail_var
@@ -464,16 +478,16 @@ let rec walk cops env g = function
       cops.constrain_ty fn_var ret;
       ret
   | Expr.Ctor (lbl, param) ->
-      let uVar = gen_ty_var g in
-      let paramVar = walk cops env g param in
+      let tv_union, tv_row = tv_pair_at (`G g) in
+      let param_var = walk cops env g param in
       UnionFind.make
         ( `Union
-          ( uVar
+          ( tv_union
           , UnionFind.make
             ( `Extend
-                ( gen_ty_var g
+                ( tv_row
                 , lbl
-                , paramVar
+                , param_var
                 , UnionFind.make (`Free (gen_ty_var g))
                 )
             )
@@ -493,10 +507,12 @@ let rec walk cops env g = function
         | Some _ -> UnionFind.make (`Free (gen_ty_var g))
       in
       let (rowVar, bodyVar) = walk_match cops env g final (Map.to_alist cases) in
+      let bound = (get_tyvar (UnionFind.get rowVar)).ty_bound in
+      let tv = { ty_id = gensym (); ty_bound = bound } in
       UnionFind.make
         ( `Fn
             ( gen_ty_var g
-            , UnionFind.make (`Union(gen_ty_var g, rowVar))
+            , UnionFind.make (`Union(tv, rowVar))
             , bodyVar
             )
         )
@@ -809,9 +825,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               end
             else
               (* First, generate the new bound. *)
-              let new_tyvar =
-                { ty_id = gensym ()
-                ; ty_bound = UnionFind.make
+              let new_bound = UnionFind.make
                   ( if UnionFind.equal nv old_root then
                       { b_ty = `Flex
                       ; b_at = `G new_g
@@ -821,6 +835,10 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                       ; b_at = `Ty new_root
                       }
                   )
+              in
+              let new_tyvar =
+                { ty_id = gensym ()
+                ; ty_bound = new_bound
                 }
               in
               (* Add a copy to the map up front, in case we hit a recursive type.
@@ -840,8 +858,21 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               let ret = UnionFind.make (match n with
                 | `Free _ -> `Free new_tyvar
                 | `Fn (_, param, ret) -> `Fn(new_tyvar, go param, go ret)
-                | `Record(_, row) -> `Record(new_tyvar, go_row row)
-                | `Union(_, row) -> `Union(new_tyvar, go_row row))
+
+                (* For records and unions, we have to make sure we don't break the link
+                 * between bounds when we copy: *)
+                | `Record(_, row) ->
+                    let row' = go_row row in
+                    UnionFind.merge unify_bound
+                      new_bound
+                      (get_tyvar (UnionFind.get row')).ty_bound;
+                    `Record(new_tyvar, row')
+                | `Union(_, row) ->
+                    let row' = go_row row in
+                    UnionFind.merge unify_bound
+                      new_bound
+                      (get_tyvar (UnionFind.get row')).ty_bound;
+                    `Union(new_tyvar, row'))
               in
               UnionFind.merge unify map_copy ret;
               ret
