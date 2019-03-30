@@ -80,5 +80,6 @@ let end_graph () =
   );
   Out.fprintf dest "}\n";
   Out.close dest;
-  let _ = Caml.Sys.command ("xdot " ^ path) in
+  let _ = Caml.Sys.command ("dot -Tsvg " ^ path ^ " -o " ^ path ^ ".svg") in
+  let _ = Caml.Sys.command ("firefox " ^ path ^ ".svg") in
   ()
