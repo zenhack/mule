@@ -401,17 +401,33 @@ let rec walk cops env g = function
       ret_var
   | Expr.EmptyRecord ->
       UnionFind.make (`Record (gen_ty_var g, UnionFind.make (`Empty(gen_ty_var g))))
-  | Expr.GetField (e, lbl) ->
-      let tyvar = walk cops env g e in
-      let rowVar = UnionFind.make (`Free (gen_ty_var g)) in
-      let recVar = UnionFind.make (`Record (gen_ty_var g, rowVar)) in
-      cops.constrain_ty recVar tyvar;
-      let tailVar = UnionFind.make (`Free (gen_ty_var g)) in
-      let fieldVar = gen_u (`G g) in
-      cops.constrain_row
-        rowVar
-        (UnionFind.make (`Extend(gen_ty_var g, lbl, fieldVar, tailVar)));
-      fieldVar
+  | Expr.GetField lbl ->
+      (* Field accesses have the type:
+       *
+       * all a r. {lbl: a, ...r} -> a
+       *)
+      let fn_var = gen_u (`G g) in
+      let b_at = `Ty fn_var in
+      let head_var = gen_u b_at in
+
+      let ret =
+        UnionFind.make
+          (`Fn
+            ( gen_ty_var g
+            , UnionFind.make
+              (`Record
+                ( ty_var_at b_at
+                , UnionFind.make
+                  (`Extend
+                    ( ty_var_at b_at
+                    , lbl
+                    , head_var
+                    , gen_u b_at
+                    ))))
+            , head_var))
+      in
+      cops.constrain_ty fn_var ret;
+      ret
   | Expr.Update lbl ->
       (* Record updates have the type:
        *

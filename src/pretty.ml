@@ -70,8 +70,8 @@ let rec expr indent = function
       "{}"
   | Expr.Update lbl ->
       "(_ where { " ^ Label.to_string lbl ^ " = _ })"
-  | Expr.GetField (e, lbl) ->
-      "(" ^ expr indent e ^ ")." ^ Label.to_string lbl
+  | Expr.GetField lbl ->
+      "_." ^ Label.to_string lbl
   | Expr.WithType(v, ty) ->
       "(" ^ expr indent v ^ " : " ^ typ ty ^ ")"
   | Expr.Let (v, e, body) ->

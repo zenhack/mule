@@ -26,11 +26,7 @@ let rec free_vars: D.t -> VSet.t = function
       |> Set.union def_fvs
   | D.App(f, x) ->
       Set.union (free_vars f) (free_vars x)
-  | D.EmptyRecord ->
-      Set.empty (module Ast.Var)
-  | D.GetField(e, _) ->
-      free_vars e
-  | D.Update _ ->
+  | D.EmptyRecord | D.GetField _ | D.Update _ ->
       Set.empty (module Ast.Var)
   | D.Ctor(_l, e) ->
       free_vars e
@@ -119,7 +115,7 @@ let rec desugar = function
   | S.Update(e, ((l, v)::fs)) ->
       D.App(D.App(D.Update l, (desugar (S.Update(e, fs)))), desugar v)
   | S.GetField (e, l) ->
-      D.GetField (desugar e, l)
+      D.App(D.GetField l, desugar e)
   | S.Ctor label ->
       (* The choice of variable name here doesn't matter, since
        * there's nothing we need to worry about shadowing. *)
@@ -204,8 +200,8 @@ let rec simplify e = match e with
             D.Ctor(c, arg)
         | e' -> e'
       end
-  | D.GetField (e, f) ->
-      D.GetField(simplify e, f)
+  | D.GetField lbl ->
+      D.GetField lbl
   | D.EmptyRecord ->
       D.EmptyRecord
   | D.Update lbl ->

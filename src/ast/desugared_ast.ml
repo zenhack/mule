@@ -46,7 +46,7 @@ module Expr = struct
     | Lam of (Var.t * t)
     | App of (t * t)
     | EmptyRecord
-    | GetField of (t * Label.t)
+    | GetField of Label.t
     | Update of Label.t
     | Ctor of (Label.t * t)
     | Match of {

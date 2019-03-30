@@ -8,7 +8,7 @@ let rec translate: D.t -> R.t = function
   | D.Lam (param, body) -> R.Lam(param, translate body)
   | D.App(f, x) -> R.App(translate f, translate x)
   | D.EmptyRecord -> R.Record (Map.empty (module Label))
-  | D.GetField (record, lbl) -> R.App(R.GetField lbl, translate record)
+  | D.GetField lbl -> R.GetField lbl
   | D.Update label ->
       let old = Gensym.anon_var () in
       let field = Gensym.anon_var () in
