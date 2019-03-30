@@ -28,7 +28,7 @@ and 'a bound =
   }
 and tyvar =
   { ty_id: int
-  ; mutable ty_bound: bound_target bound
+  ; ty_bound: bound_target bound UnionFind.var
   }
 and g_node =
   { g_id: int
@@ -86,7 +86,7 @@ let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Union (v, _) -> v
   | `Extend(v, _, _, _) -> v
   | `Empty v -> v
-let get_u_bound x = (get_tyvar x).ty_bound
+let get_u_bound x = UnionFind.get (get_tyvar x).ty_bound
 
 let rec show_u_type_v s v =
   let t = UnionFind.get v in
@@ -126,7 +126,8 @@ let show_g {g_child; _} =
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
     | `Ty t ->
-        in_constraint_interior g ((get_tyvar (UnionFind.get t)).ty_bound)
+        let bound = UnionFind.get (get_tyvar (UnionFind.get t)).ty_bound in
+        in_constraint_interior g bound
     | `G g' ->
         if g.g_id = g'.g_id then
           true
@@ -138,7 +139,8 @@ let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   end
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
-  fun {ty_bound = {b_ty; b_at}; _} ->
+  fun {ty_bound; _} ->
+    let {b_ty; b_at} = UnionFind.get ty_bound in
     match b_at with
     | `G g -> b_ty :: gnode_bound_list g
     | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
@@ -161,7 +163,7 @@ type constraint_ops =
 
 let ty_var_at: bound_target -> tyvar = fun b_at ->
   { ty_id = gensym ()
-  ; ty_bound =
+  ; ty_bound = UnionFind.make
     { b_ty = `Flex
     ; b_at = b_at
     }
@@ -173,7 +175,7 @@ let gen_ty_var: g_node -> tyvar = fun g -> ty_var_at (`G g)
 let gen_u: bound_target -> [> `Free of tyvar ] UnionFind.var = fun targ ->
   UnionFind.make (`Free
     { ty_id = gensym ()
-    ; ty_bound = { b_ty = `Flex; b_at = targ }
+    ; ty_bound = UnionFind.make { b_ty = `Flex; b_at = targ }
     })
 
 let b_at_id = function
@@ -192,7 +194,7 @@ let bound_next {b_at; _} = match b_at with
             }
       end
   | `Ty u ->
-      Some ((get_tyvar (UnionFind.get u)).ty_bound)
+      Some (UnionFind.get (get_tyvar (UnionFind.get u)).ty_bound)
 
 (* Raise b one step, if it is legal to do so, otherwise throw an error. *)
 let raised_bound b = match b with
@@ -233,9 +235,7 @@ let unify_bound l r =
  * in-place. *)
 let unify_tyvar: tyvar -> tyvar -> tyvar =
   fun l r ->
-    let new_bound = unify_bound l.ty_bound r.ty_bound in
-    l.ty_bound <- new_bound;
-    r.ty_bound <- new_bound;
+    UnionFind.merge unify_bound l.ty_bound r.ty_bound;
     l
 
 let rec unify l r =
@@ -339,7 +339,7 @@ and unify_row l r =
         let new_with_bound v =
           UnionFind.make (`Free
             { ty_id = gensym ()
-            ; ty_bound = get_u_bound (UnionFind.get v)
+            ; ty_bound = UnionFind.make (get_u_bound (UnionFind.get v))
             })
         in
         let new_rest_r = new_with_bound r_rest in
@@ -668,7 +668,7 @@ type inst_edge =
 let inst_bound: inst_edge -> g_node =
   fun {ie_ty_node; _} ->
     let rec go u =
-      let bound = (get_tyvar (UnionFind.get u)).ty_bound in
+      let bound = UnionFind.get (get_tyvar (UnionFind.get u)).ty_bound in
       match bound.b_at with
       | `Ty u' -> go u'
       | `G g -> g
@@ -794,7 +794,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     (* XXX: go and go_row have too much redundancy *)
     let rec go = fun nv ->
       let n = UnionFind.get nv in
-      let {ty_id = old_id; ty_bound = old_bound} = get_tyvar n in
+      let {ty_id = old_id; ty_bound} = get_tyvar n in
+      let old_bound = UnionFind.get ty_bound in
       begin match Map.find !visited_types old_id with
         | Some new_node -> new_node
         | None ->
@@ -810,8 +811,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               (* First, generate the new bound. *)
               let new_tyvar =
                 { ty_id = gensym ()
-                ; ty_bound =
-                    if UnionFind.equal nv old_root then
+                ; ty_bound = UnionFind.make
+                  ( if UnionFind.equal nv old_root then
                       { b_ty = `Flex
                       ; b_at = `G new_g
                       }
@@ -819,6 +820,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                       { b_ty = old_bound.b_ty
                       ; b_at = `Ty new_root
                       }
+                  )
                 }
               in
               (* Add a copy to the map up front, in case we hit a recursive type.
@@ -847,7 +849,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
     and go_row row_var =
       let row = UnionFind.get row_var in
-      let {ty_id = old_id; ty_bound = old_bound} = get_tyvar row in
+      let {ty_id = old_id; ty_bound} = get_tyvar row in
+      let old_bound = UnionFind.get ty_bound in
       begin match Map.find !visited_rows old_id with
         | Some new_node -> new_node
         | None ->
@@ -861,7 +864,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
           else begin
             let new_tv =
               { ty_id = gensym ()
-              ; ty_bound =
+              ; ty_bound = UnionFind.make
                 { b_ty = old_bound.b_ty
                 ; b_at = `Ty new_root
                 }
@@ -963,7 +966,8 @@ and emit_all_nodes_g g dict =
         ()
     end
   end
-and emit_bind_edge n {b_at; b_ty} dict =
+and emit_bind_edge n bnd dict =
+    let {b_at; b_ty} = UnionFind.get bnd in
     match b_at with
     | `Ty parent ->
         emit_all_nodes_ty parent dict;
