@@ -43,6 +43,8 @@ let fmt_node: node_type -> int -> string =
     [ "  n"
     ; Int.to_string n
     ; " [label=\""
+    ; Int.to_string n
+    ; " : "
     ; begin match ty with
       | `TyVar -> "T"
       | `TyFn -> "->"
