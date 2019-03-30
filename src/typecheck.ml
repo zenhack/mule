@@ -22,17 +22,17 @@ and u_row =
   | `Empty of tyvar
   ]
 and bound_ty = [ `Rigid | `Flex ]
-and bound =
+and 'a bound =
   { b_ty: bound_ty
-  ; b_at: bound_target
+  ; b_at: 'a
   }
 and tyvar =
   { ty_id: int
-  ; mutable ty_bound: bound
+  ; mutable ty_bound: bound_target bound
   }
 and g_node =
   { g_id: int
-  ; g_bound: (bound_ty * g_node) option
+  ; g_bound: (g_node bound) option
   ; g_child: u_type UnionFind.var Lazy.t
   }
 and bound_target =
@@ -62,7 +62,7 @@ let child_g parent child =
   }
 
 let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
-  fun parent f -> fst (fix (child_g (Some(`Flex, parent))) f)
+  fun parent f -> fst (fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1
@@ -78,7 +78,7 @@ let rec get_permission: bound_ty list -> permission = function
 
 let rec gnode_bound_list {g_bound; _} = match g_bound with
   | None -> []
-  | Some (b_ty, g) -> b_ty :: gnode_bound_list g
+  | Some {b_ty; b_at} -> b_ty :: gnode_bound_list b_at
 let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Free v -> v
   | `Fn (v, _, _) -> v
@@ -123,7 +123,7 @@ let show_u_row_v  = show_u_row_v  (Set.empty (module Int))
 let show_g {g_child; _} =
   show_u_type_v (Lazy.force g_child)
 
-let rec in_constraint_interior: g_node -> bound -> bool =
+let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
     | `Ty t ->
         in_constraint_interior g ((get_tyvar (UnionFind.get t)).ty_bound)
@@ -132,7 +132,7 @@ let rec in_constraint_interior: g_node -> bound -> bool =
           true
         else begin match g'.g_bound with
           | None -> false
-          | Some (b_ty, next) ->
+          | Some {b_ty; b_at = next} ->
               in_constraint_interior g { b_ty; b_at = `G next }
         end
   end
@@ -186,8 +186,8 @@ let bound_next {b_at; _} = match b_at with
   | `G {g_bound; _} ->
       begin match g_bound with
         | None -> None
-        | Some (bty, g) -> Some
-            { b_ty = bty
+        | Some {b_ty; b_at = g} -> Some
+            { b_ty
             ; b_at = `G g
             }
       end
@@ -204,7 +204,7 @@ let raised_bound b = match b with
 (* Compute the least common ancestor of two bounds.
  * If that ancestor is not reachable without raising
  * past rigid edges, fail. *)
-let rec bound_lca: bound -> bound -> bound =
+let rec bound_lca: bound_target bound -> bound_target bound -> bound_target bound =
   fun l r ->
     let lid, rid = bound_id l, bound_id r in
     if lid = rid then
@@ -956,7 +956,7 @@ and emit_all_nodes_g g dict =
     emit_all_nodes_ty (Lazy.force g.g_child) dict;
     Debug.show_edge (`Structural "") g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
     begin match g.g_bound with
-    | Some (b_ty, g') ->
+    | Some {b_ty; b_at = g'} ->
         Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
         emit_all_nodes_g g' dict
     | None ->
