@@ -1,3 +1,4 @@
-Desugared: fn x. (x).y
-inferred type: ({y : t3, ...t9}) -> (t3)
-Evaluated: fn x. (x).y
+Desugared: _.y
+inferred type: ({y : t3, ...t4}) -> (t3)
+Runtime term: (_.y)
+Evaluated: (_.y)
