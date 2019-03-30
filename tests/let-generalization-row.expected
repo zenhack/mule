@@ -1,0 +1,4 @@
+Desugared: let f = _.y in (((_ where { a = _ })) ((((_ where { b = _ })) ({})) ((f) ((((_ where { y = _ })) ({})) ((((_ where { z = _ })) ({})) ({})))))) ((f) ((((_ where { y = _ })) ({})) ({})))
+inferred type: {a : {}, b : {z : {}}}
+Runtime term: (fn f. ((fn $393. fn $394. ($393) where { a = $394 }) (((fn $391. fn $392. ($391) where { b = $392 }) ({})) ((f) (((fn $389. fn $390. ($389) where { y = $390 }) ({})) (((fn $387. fn $388. ($387) where { z = $388 }) ({})) ({})))))) ((f) (((fn $385. fn $386. ($385) where { y = $386 }) ({})) ({})))) ((_.y))
+Evaluated: {a = {}, b = {z = {}}}

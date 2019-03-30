@@ -1,4 +1,4 @@
-Desugared: let f = fn x. x in (({} where { b = (f) ((Ok {})) }) where { a = (f) (fn y. y) })
-inferred type: {a : (t59) -> (t59), b : (Ok {}) | ...t45}
-Runtime term: (fn f. (({}) where { b = (f) ((Ok) ({})) }) where { a = (f) (fn y. y) }) (fn x. x)
+Desugared: let f = fn x. x in (((_ where { a = _ })) ((((_ where { b = _ })) ({})) ((f) ((Ok {}))))) ((f) (fn y. y))
+inferred type: {a : (t195) -> (t195), b : (Ok {}) | ...t175}
+Runtime term: (fn f. ((fn $199. fn $200. ($199) where { a = $200 }) (((fn $197. fn $198. ($197) where { b = $198 }) ({})) ((f) ((Ok) ({}))))) ((f) (fn y. y))) (fn x. x)
 Evaluated: {a = fn y. y, b = (Ok) ({})}

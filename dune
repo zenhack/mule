@@ -3,4 +3,4 @@
 (executable
   (name main)
   (flags (:standard -open Base))
-  (libraries base stdio mparser))
+  (libraries base stdio mparser topological_sort))

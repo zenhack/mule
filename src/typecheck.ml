@@ -691,44 +691,36 @@ let inst_bound: inst_edge -> g_node =
     in
     go ie_ty_node
 
-
-let top_sort_inst: (g_node * (u_type UnionFind.var list)) IntMap.t -> (g_node * u_type UnionFind.var list) list
+let top_sort_inst
+  : (g_node * (u_type UnionFind.var list)) IntMap.t
+  -> (g_node * u_type UnionFind.var list) list
   = fun d ->
-      let visited = ref (Set.empty (module Int)) in
-      let accum = ref [] in
-      let rec go (g, ts) =
-        if Set.mem !visited g.g_id then
-          ()
-        else begin
-          List.iter ts ~f:(fun t ->
-            let g' = inst_bound
-              { ie_ty_node = t
-              ; ie_g_node = g
+      let nodes = Map.keys d in
+
+      let values = Map.to_alist d |> List.map ~f:snd in
+      let edges =
+        values
+        |> List.map ~f:(fun (g, ts) ->
+            List.map ts ~f:(fun t ->
+              let g_to = inst_bound
+                { ie_g_node = g
+                ; ie_ty_node = t
+                }
+              in
+              Topological_sort.Edge.{
+                from = g.g_id;
+                to_ = g_to.g_id;
               }
-            in
-            if Set.mem !visited g'.g_id then
-              ()
-            else
-              begin match Map.find d g'.g_id with
-                | Some v ->
-                    visited := Set.add !visited g'.g_id;
-                    go v;
-                    accum := v :: !accum
-                | None -> ()
-              end
+            )
           )
-        end
+        |> List.concat
       in
-      Map.iter d ~f:go;
-      Map.iteri d ~f:(fun ~key ~data ->
-          if not (Set.mem !visited key) then
-            (* This will happen for our top-level nodes, which don't
-             * have any edges pointing into them. *)
-            accum := data :: !accum
-          else
-            ()
-      );
-      !accum
+      begin match Topological_sort.sort (module Int) nodes edges with
+      | Error _ ->
+          failwith "Topological sort failed"
+      | Ok nodes_sorted ->
+          List.filter_map nodes_sorted ~f:(Map.find d)
+      end
 
 type built_constraints =
   { unification: unify_edge list
