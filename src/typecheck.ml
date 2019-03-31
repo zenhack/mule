@@ -538,8 +538,8 @@ and walk_match cops env g final = function
 and make_coercion_type cops env g ty =
   (* We construct the type of a coercion as follows:
    *
-   * 1. Alpha-rename the variables bound within the type. This way
-   *    we don't have to worry about shadowing in later steps.
+   * 1. Alpha-rename the existentially-bound variables within the type.
+   *    This way we don't have to worry about shadowing in later steps.
    * 2. Collect the names of existentially-bound variables.
    * 3. Generate a unification variable for each existential, and store
    *    them in a map.
@@ -551,7 +551,33 @@ and make_coercion_type cops env g ty =
    *    be bound rigidly, and the result flexibly.
    * 7. Bind the existentials to the new function node.
    *)
-  let ty = Type.alpha_rename (Map.empty (module Ast.Var)) ty in
+  let rec rename_ex env = function
+      | Type.Fn(i, l, r) ->
+          Type.Fn(i, rename_ex env l, rename_ex env r)
+      | Type.Recur(i, v, body) ->
+          Type.Recur(i, v, rename_ex (Map.remove env v) body)
+      | Type.Var (i, v) ->
+          begin match Map.find env v with
+            | Some v' -> Type.Var (i, v')
+            | None -> Type.Var (i, v)
+          end
+      | Type.Record row -> Type.Record (rename_ex_row env row)
+      | Type.Union row -> Type.Union (rename_ex_row env row)
+      | Type.Quant(i, `All, v, body) ->
+          Type.Quant(i, `All, v, rename_ex (Map.remove env v) body)
+      | Type.Quant(i, `Exist, v, body) ->
+          let v' = Gensym.anon_var () in
+          Type.Quant(i, `Exist, v', rename_ex (Map.set ~key:v ~data:v' env) body)
+    and rename_ex_row env (i, fields, rest) =
+      ( i
+      , List.map fields ~f:(fun (l, v) -> (l, rename_ex env v))
+      , Option.map rest ~f:(fun r -> match Map.find env r with
+            | None -> r
+            | Some v -> v
+        )
+      )
+  in
+  let ty = rename_ex (Map.empty (module Ast.Var)) ty in
   let rec collect_exist_vars = function
     | Type.Fn (_, l, r) ->
         Set.union (collect_exist_vars l) (collect_exist_vars r)
