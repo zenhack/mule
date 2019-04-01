@@ -1,11 +1,3 @@
-module MkMap(Key:Comparator.S) = struct
-  type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
-end
-
-module Env = MkMap(Ast.Var)
-
-module IntMap = MkMap(Int)
-
 open Ast.Desugared
 open Gensym
 
