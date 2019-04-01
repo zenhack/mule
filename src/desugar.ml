@@ -3,14 +3,8 @@ module S = Ast.Surface.Expr
 module ST = Ast.Surface.Type
 module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
-module RowMap = Ast.Desugared.RowMap
 
-module MkSet(M:Comparator.S) = struct
-  type t = (M.t, M.comparator_witness) Set.t
-end
-module VSet = MkSet(Ast.Var)
-
-let rec free_vars: D.t -> VSet.t = function
+let rec free_vars: D.t -> VarSet.t = function
   | D.Lam(param, body) ->
       Set.remove (free_vars body) param
   | D.Match {cases; default} ->

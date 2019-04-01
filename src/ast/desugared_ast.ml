@@ -1,8 +1,5 @@
 open Common_ast
 
-module RowMap = struct
-  type 'v t = (Label.t, 'v, Label.comparator_witness) Map.t
-end
 
 module Type = struct
   type quantifier = [ `All | `Exist ]
@@ -11,9 +8,11 @@ module Type = struct
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
-    | Record of ('i * (Label.t * 'i t) list * Var.t option)
-    | Union of ('i * (Label.t * 'i t) list * Var.t option)
+    | Record of 'i row
+    | Union of 'i row
     | Quant of ('i * quantifier * Var.t * 'i t)
+  and 'i row =
+    ('i * (Label.t * 'i t) list * Var.t option)
 end
 
 module Expr = struct
@@ -26,7 +25,7 @@ module Expr = struct
     | Update of Label.t
     | Ctor of (Label.t * t)
     | Match of {
-        cases: (Var.t * t) RowMap.t;
+        cases: (Var.t * t) LabelMap.t;
         default: (Var.t option * t) option;
       }
     | WithType of (t * unit Type.t)
