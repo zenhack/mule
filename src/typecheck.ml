@@ -563,11 +563,11 @@ and make_coercion_type cops env g ty =
           end
       | Type.Record row -> Type.Record (rename_ex_row env row)
       | Type.Union row -> Type.Union (rename_ex_row env row)
-      | Type.Quant(i, `All, v, body) ->
-          Type.Quant(i, `All, v, rename_ex (Map.remove env v) body)
-      | Type.Quant(i, `Exist, v, body) ->
+      | Type.Quant(i, `All, v, kind, body) ->
+          Type.Quant(i, `All, v, kind, rename_ex (Map.remove env v) body)
+      | Type.Quant(i, `Exist, v, kind, body) ->
           let v' = Gensym.anon_var () in
-          Type.Quant(i, `Exist, v', rename_ex (Map.set ~key:v ~data:v' env) body)
+          Type.Quant(i, `Exist, v', kind, rename_ex (Map.set ~key:v ~data:v' env) body)
     and rename_ex_row env (i, fields, rest) =
       ( i
       , List.map fields ~f:(fun (l, v) -> (l, rename_ex env v))
@@ -587,9 +587,9 @@ and make_coercion_type cops env g ty =
         Set.empty (module Ast.Var)
     | Type.Record row -> collect_exist_row row
     | Type.Union row -> collect_exist_row row
-    | Type.Quant (_, `Exist, v, body) ->
+    | Type.Quant (_, `Exist, v, _, body) ->
         Set.add (collect_exist_vars body) v
-    | Type.Quant (_, `All, _, body) ->
+    | Type.Quant (_, `All, _, _, body) ->
         collect_exist_vars body
   and collect_exist_row (_, fields, rest) =
     List.fold
@@ -638,9 +638,9 @@ let rec add_rec_binders ty =
   | Type.Union(i, ctors, rest) ->
       let (vars, ret) = row_add_rec_binders i ctors rest in
       maybe_add_rec i vars (Type.Union ret)
-  | Type.Quant(i, q, bound, body) ->
+  | Type.Quant(i, q, bound, kind, body) ->
       let (vars, body') = add_rec_binders body in
-      maybe_add_rec i vars (Type.Quant(i, q, bound, body'))
+      maybe_add_rec i vars (Type.Quant(i, q, bound, kind, body'))
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
     | Some v -> Set.singleton (module Ast.Var) v

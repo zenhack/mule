@@ -3,6 +3,7 @@ module S = Ast.Surface.Expr
 module ST = Ast.Surface.Type
 module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
+module DK = Ast.Desugared.Kind
 
 let rec free_vars: D.t -> VarSet.t = function
   | D.Lam(param, body) ->
@@ -55,7 +56,7 @@ let rec desugar_type = function
 and desugar_q_type q vars body =
   let rec go = function
     | [] -> desugar_type body
-    | (x :: xs) -> DT.Quant((), q, x, go xs)
+    | (x :: xs) -> DT.Quant((), q, x, DK.Unknown, go xs)
   in
   go vars
 and desugar_union_type tail (l, r) =

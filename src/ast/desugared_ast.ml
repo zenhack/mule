@@ -1,5 +1,11 @@
 open Common_ast
 
+module Kind = struct
+  type t =
+    | Unknown
+    | Type
+    | Row
+end
 
 module Type = struct
   type quantifier = [ `All | `Exist ]
@@ -10,7 +16,7 @@ module Type = struct
     | Var of ('i * Var.t)
     | Record of 'i row
     | Union of 'i row
-    | Quant of ('i * quantifier * Var.t * 'i t)
+    | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
 end

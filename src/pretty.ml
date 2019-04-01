@@ -38,7 +38,7 @@ let rec typ = Type.(
         | Some v -> " | ..." ^ Ast.Var.to_string v
         | None -> ""
   )
-  | Quant(_, q, var, body) ->
+  | Quant(_, q, var, _, body) ->
       let qstr = match q with
         | `All -> "all "
         | `Exist -> "exist "
