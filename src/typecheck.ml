@@ -544,6 +544,7 @@ and make_coercion_type cops env g ty =
    * 7. Bind the existentials to the new function node.
    *)
   let rec rename_ex env = function
+      (* Alpha-rename existentially bound vars. *)
       | Type.Fn(i, l, r) ->
           Type.Fn(i, rename_ex env l, rename_ex env r)
       | Type.Recur(i, v, body) ->
@@ -571,6 +572,7 @@ and make_coercion_type cops env g ty =
   in
   let ty = rename_ex (Map.empty (module Ast.Var)) ty in
   let rec collect_exist_vars = function
+    (* Collect a list of the existentially bound variables. *)
     | Type.Fn (_, l, r) ->
         Set.union (collect_exist_vars l) (collect_exist_vars r)
     | Type.Recur (_, _, body) ->
