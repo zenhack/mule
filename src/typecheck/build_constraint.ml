@@ -287,3 +287,53 @@ and make_coercion_type cops env g ty =
   let exist_vars = collect_exist_vars renamed_ty in
   let _ = (cops, env, g, exist_vars) in
   failwith "TODO"
+
+let make_cops: unit ->
+  ( constraint_ops
+  * (unify_edge list) ref
+  * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
+  ) = fun () ->
+  let report = Debug.report Config.dump_constraints in
+  let ucs = ref [] in (* unification constraints *)
+  let ics = ref (Map.empty (module Int)) in (* instantiation constraints *)
+  let cops =
+    { constrain_ty   =
+      (fun l r ->
+        report (fun () -> "constrain types: "
+          ^ show_u_type_v l
+          ^ " = "
+          ^ show_u_type_v r);
+        ucs := UnifyTypes(l, r) :: !ucs)
+    ; constrain_row  = (fun l r ->
+        report (fun () -> "constrain rows: "
+            ^ show_u_row_v l
+            ^ " = "
+            ^ show_u_row_v r);
+          ucs := UnifyRows(l, r) :: !ucs)
+    ; constrain_inst =
+        begin fun g t ->
+          report
+            (fun () -> "constrain_inst: "
+              ^ show_u_type_v t
+              ^ " <: "
+              ^ show_g g);
+          ics := Map.update !ics g.g_id ~f:(function
+              | None -> (g, [t])
+              | Some (_, ts) -> (g, (t :: ts))
+            )
+        end
+    }
+  in (cops, ucs, ics)
+
+let build_constraints: Expr.t -> built_constraints = fun expr ->
+  let cops, ucs, ics = make_cops () in
+  let (_, ty) = Util.fix
+      (child_g None)
+      (fun g ->
+        walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
+      )
+  in
+  { unification = !ucs
+  ; instantiation = !ics
+  ; ty = ty
+  }
