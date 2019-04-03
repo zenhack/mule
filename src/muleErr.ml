@@ -1,3 +1,4 @@
+open Ast.Desugared
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor =
@@ -6,6 +7,7 @@ type ctor =
   ]
 type type_error
   = MismatchedCtors of (ctor * ctor)
+  | MismatchedKinds of (Kind.t * Kind.t)
   | PermissionErr of op
 
 type t =
@@ -31,9 +33,16 @@ let show_op = function
   | `Raise -> "raise"
   | `Weaken -> "weaken"
 
+let show_kind = function
+  | Kind.Unknown -> "unknown"
+  | Kind.Type -> "type"
+  | Kind.Row -> "row"
+
 let show_type_error = function
   | MismatchedCtors (l, r) ->
       "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
+  | MismatchedKinds (l, r) ->
+      "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | PermissionErr op ->
       "permission error during " ^ show_op op
 
