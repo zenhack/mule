@@ -1,3 +1,4 @@
+open Ast
 open Ast.Desugared
 open Typecheck_types
 open Gensym
@@ -260,8 +261,32 @@ and make_coercion_type cops env g ty =
   in
   let renamed_ty = rename_ex (Map.empty (module Ast.Var)) ty in
   let exist_vars = collect_exist_vars renamed_ty in
-  let _ = (cops, env, g, exist_vars) in
-  failwith "TODO"
+  fst (Util.fix
+    (fun vars ->
+      let (param_var, ret_var) = Lazy.force vars in
+      UnionFind.make
+        (`Fn
+          ( gen_ty_var g
+          , param_var
+          , ret_var
+          )
+        )
+    )
+    (fun root ->
+      (* [root] is the final root of the type; its argument and return values
+       * will be the two copies of the type in the annotation, and it will
+       * be the bound of the existentials.
+       *)
+      let exist_map =
+        exist_vars
+          |> Set.to_list
+          |> List.map ~f:(fun v -> (v, gen_u (`Ty root)))
+          |> Map.of_alist_exn (module Var)
+      in
+      let _ = (cops, env, exist_map) in
+      failwith "TODO"
+    )
+  )
 
 let make_cops: unit ->
   ( constraint_ops
