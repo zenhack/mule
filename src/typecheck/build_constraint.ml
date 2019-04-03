@@ -2,6 +2,27 @@ open Ast.Desugared
 open Typecheck_types
 open Gensym
 
+type unify_edge =
+  | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
+  | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
+
+type inst_edge =
+  { ie_g_node: g_node
+  ; ie_ty_node: u_type UnionFind.var
+  }
+
+type built_constraints =
+  { unification: unify_edge list
+  ; instantiation: (g_node * (u_type UnionFind.var) list) IntMap.t
+  ; ty: u_type UnionFind.var
+  }
+
+type constraint_ops =
+  { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
+  ; constrain_row  : u_row UnionFind.var  -> u_row UnionFind.var  -> unit
+  ; constrain_inst : g_node -> u_type UnionFind.var -> unit
+  }
+
 let child_g parent child =
   { g_id = gensym ()
   ; g_bound = parent
@@ -10,12 +31,6 @@ let child_g parent child =
 
 let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
   fun parent f -> fst (Util.fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
-
-type constraint_ops =
-  { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
-  ; constrain_row  : u_row UnionFind.var  -> u_row UnionFind.var  -> unit
-  ; constrain_inst : g_node -> u_type UnionFind.var -> unit
-  }
 
 let ty_var_at: bound_target -> tyvar = fun b_at ->
   { ty_id = gensym ()
