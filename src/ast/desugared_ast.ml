@@ -34,6 +34,6 @@ module Expr = struct
         cases: (Var.t * t) LabelMap.t;
         default: (Var.t option * t) option;
       }
-    | WithType of (t * unit Type.t)
+    | WithType of unit Type.t
     | Let of (Var.t * t * t)
 end

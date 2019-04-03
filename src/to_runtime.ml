@@ -6,7 +6,11 @@ module R = Runtime.Expr
 let rec translate: D.t -> R.t = function
   | D.Var v -> R.Var v
   | D.Lam (param, body) -> R.Lam(param, translate body)
+  | D.App(D.WithType _, e) -> translate e
   | D.App(f, x) -> R.App(translate f, translate x)
+  | D.WithType _ ->
+      let v = Gensym.anon_var () in
+      R.Lam(v, R.Var v)
   | D.EmptyRecord -> R.Record (Map.empty (module Label))
   | D.GetField lbl -> R.GetField lbl
   | D.Update label ->
@@ -25,5 +29,4 @@ let rec translate: D.t -> R.t = function
                 Some(R.Lam(param, translate body))
           end
         }
-  | D.WithType(e, _) -> translate e
   | D.Let (v, e, body) -> R.App (R.Lam (v, translate body), translate e)

@@ -27,8 +27,8 @@ let rec free_vars: D.t -> VarSet.t = function
       free_vars e
   | D.Var v ->
       Set.singleton (module Ast.Var) v
-  | D.WithType(e, _ty) ->
-      free_vars e
+  | D.WithType _ ->
+      Set.empty (module Ast.Var)
   | D.Let(v, e, body) ->
       Set.union
         (free_vars e)
@@ -144,7 +144,7 @@ and desugar_match dict = function
       let v' = Gensym.anon_var () in
       let let_ = D.Let
         ( v
-        , D.WithType(D.Var v', desugar_type ty)
+        , D.App(D.WithType(desugar_type ty), D.Var v')
         , desugar body
         )
       in
@@ -205,8 +205,8 @@ let rec simplify e = match e with
       D.Ctor(l, simplify e')
   | D.Var _ | D.Match _ ->
       e (* TODO: don't be lazy about match. *)
-  | D.WithType (e', ty) ->
-      D.WithType(simplify e', ty)
+  | D.WithType ty ->
+      D.WithType ty
   | D.Let(v, e', body) ->
       D.Let (v, simplify e', simplify body)
 

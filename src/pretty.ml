@@ -72,8 +72,8 @@ let rec expr indent = function
       "(_ where { " ^ Label.to_string lbl ^ " = _ })"
   | Expr.GetField lbl ->
       "_." ^ Label.to_string lbl
-  | Expr.WithType(v, ty) ->
-      "(" ^ expr indent v ^ " : " ^ typ ty ^ ")"
+  | Expr.WithType ty ->
+      "(_ : " ^ typ ty ^ ")"
   | Expr.Let (v, e, body) ->
       "let " ^ Var.to_string v ^ " = " ^ expr indent e ^ " in " ^ expr indent body
   | Expr.Match {cases; default} ->

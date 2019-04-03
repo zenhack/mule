@@ -177,15 +177,9 @@ let rec walk cops env g = function
             , bodyVar
             )
         )
-  | Expr.WithType(v, ty) ->
+  | Expr.WithType ty ->
       (* See {MLF-Graph-Infer} section 6. *)
-      let g_cty = make_coercion_type cops env g ty in
-      let cvar = Gensym.anon_var () in
-      walk
-        cops
-        (Map.add_exn env ~key:cvar ~data:(`G g_cty))
-        g
-        (Expr.App(Expr.Var(cvar), v))
+      make_coercion_type cops env g ty
 and walk_match cops env g final = function
   | [] -> (final, gen_u (`G g))
   | ((lbl, (var, body)) :: rest) ->
