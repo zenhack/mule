@@ -1,4 +1,4 @@
 Desugared: _.y
-inferred type: ({y : t3, ...t6}) -> (t3)
+inferred type: ({y : t2, ...t5}) -> (t2)
 Runtime term: (_.y)
 Evaluated: (_.y)

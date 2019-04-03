@@ -408,13 +408,10 @@ let rec walk cops env g = function
        *
        * all a r. {lbl: a, ...r} -> a
        *)
-      let fn_var = gen_u (`G g) in
-      let b_at = `Ty (lazy fn_var) in
-      let head_var = gen_u b_at in
-
-      let tv_rec, tv_row = tv_pair_at b_at in
-
-      let ret =
+      let rec ret = lazy (
+        let b_at = `Ty ret in
+        let head_var = gen_u b_at in
+        let tv_rec, tv_row = tv_pair_at b_at in
         UnionFind.make
           (`Fn
             ( gen_ty_var g
@@ -429,9 +426,9 @@ let rec walk cops env g = function
                     , gen_u b_at
                     ))))
             , head_var))
+      )
       in
-      cops.constrain_ty fn_var ret;
-      ret
+      Lazy.force ret
   | Expr.Update lbl ->
       (* Record updates have the type:
        *
