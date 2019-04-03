@@ -1,3 +1,4 @@
+open Ast
 open Ast.Desugared
 open Gen_t
 
@@ -45,7 +46,7 @@ let rec collect_exist_vars = function
   | Type.Recur (_, _, _) ->
       failwith "TODO"
   | Type.Var _ ->
-      Map.empty (module Ast.Var)
+      Map.empty (module Var)
   | Type.Record row -> collect_exist_row row
   | Type.Union row -> collect_exist_row row
   | Type.Quant (k_var, `Exist, v, _, body) ->
@@ -55,39 +56,66 @@ let rec collect_exist_vars = function
 and collect_exist_row (_, fields, _) =
   List.fold
     fields
-    ~init:(Map.empty (module Ast.Var))
+    ~init:(Map.empty (module Var))
     ~f:(fun accum (_, v) ->
         merge_disjoint_exn accum (collect_exist_vars v)
     )
 
-let rec graph_friendly acc = function
+type graph_monotype =
+  [ `Var of Var.t
+  | `Fn of graph_polytype * graph_polytype
+  | `Record of graph_row
+  | `Union of graph_row
+  ]
+and graph_polytype =
+  { gp_vars: [ `Type | `Row ] VarMap.t
+  ; gp_type: graph_monotype
+  }
+and graph_row =
+  ( (Label.t * graph_polytype) list
+  * Var.t option
+  )
+
+let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype =
   (* This function addresses a mismatch between syntactic and graphic types:
     * graphic types don't have separate quantifier nodes, nor are quantifiers
     * ordered. Instead, binding edges point at the type node above which the
     * variables would be bound.
     *
-    * This function transforms the type ast into a form where there are no
-    * Quant nodes, and all variables are collected on type nodes. From there,
+    * This function transforms the type ast into a form where quant nodes cannot
+    * appear freely, and several variables are collected together. From there,
     * the graph will be easier to generate.
     *)
+  fun acc -> function
   | Type.Quant(_, _, _, Kind.Unknown, _) ->
       failwith "BUG: should have been removed by Kind_infer.infer"
   | Type.Quant(_, _, v, Kind.Type, body) ->
-      graph_friendly (`Type v :: acc) body
+      graph_friendly (Map.set ~key:v ~data:`Type acc) body
   | Type.Quant(_, _, v, Kind.Row, body) ->
-      graph_friendly (`Row v :: acc) body
+      graph_friendly (Map.set ~key:v ~data:`Row acc) body
   | Type.Fn(_, param, ret) ->
-      `Fn(List.rev acc, graph_friendly [] param, graph_friendly [] ret)
+      { gp_vars = acc
+      ; gp_type = `Fn
+          ( graph_friendly (Map.empty (module Var)) param
+          , graph_friendly (Map.empty (module Var)) ret
+          )
+      }
   | Type.Recur _ ->
       failwith "TODO"
   | Type.Var (_, v) ->
-      `Var (List.rev acc, v)
+      { gp_vars = acc
+      ; gp_type = `Var v
+      }
   | Record row ->
-      `Record (List.rev acc, graph_friendly_row row)
+      { gp_vars = acc
+      ; gp_type = `Record (graph_friendly_row row)
+      }
   | Union row ->
-      `Union (List.rev acc, graph_friendly_row row)
+      { gp_vars = acc
+      ; gp_type = `Union(graph_friendly_row row)
+      }
 and graph_friendly_row (_, fields, rest) =
-  ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly [] t))
+  ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly (Map.empty (module Var)) t))
   , rest
   )
 
@@ -107,8 +135,8 @@ let make_coercion_type env g ty =
    *    be bound rigidly, and the result flexibly.
    * 7. Bind the existentials to the new function node.
    *)
-  let kinded_ty = Infer_kind.infer (Map.empty (module Ast.Var)) ty in
-  let renamed_ty = rename_ex (Map.empty (module Ast.Var)) kinded_ty in
+  let kinded_ty = Infer_kind.infer (Map.empty (module Var)) ty in
+  let renamed_ty = rename_ex (Map.empty (module Var)) kinded_ty in
   let exist_vars = collect_exist_vars renamed_ty in
   fst (Util.fix
     (fun vars ->
