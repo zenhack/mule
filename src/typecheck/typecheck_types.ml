@@ -59,3 +59,38 @@ let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Extend(v, _, _, _) -> v
   | `Empty v -> v
 let get_u_bound x = UnionFind.get (get_tyvar x).ty_bound
+
+let rec show_u_type_v s v =
+  let t = UnionFind.get v in
+  let n = (get_tyvar t).ty_id in
+  if Set.mem s n then
+    "t" ^ Int.to_string n
+  else
+    let s = Set.add s n in
+    match t with
+    | `Free _ -> "t" ^ Int.to_string n
+    | `Fn (_, l, r) ->
+        "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
+    | `Record(_, row) ->
+        "Record{" ^ show_u_row_v s row ^ "}"
+    | `Union(_, row) ->
+        "Union(" ^ show_u_row_v s row ^ ")"
+and show_u_row_v s v =
+  let r = UnionFind.get v in
+  let n = (get_tyvar r).ty_id in
+  if Set.mem s n then
+    "r" ^ Int.to_string n
+  else
+    let s = Set.add s n in
+    match r with
+    | `Free {ty_id; _} ->
+        "r" ^ Int.to_string ty_id
+    | `Empty _ ->
+        "<empty>"
+    | `Extend (_, lbl, ty, rest) ->
+        "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
+let show_u_type_v: u_type UnionFind.var -> string = show_u_type_v (Set.empty (module Int))
+let show_u_row_v: u_row UnionFind.var -> string = show_u_row_v  (Set.empty (module Int))
+
+let show_g {g_child; _} =
+  show_u_type_v (Lazy.force g_child)

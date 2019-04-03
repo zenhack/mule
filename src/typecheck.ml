@@ -4,41 +4,6 @@ open Typecheck_types
 open Build_constraint
 open Unify
 
-let rec show_u_type_v s v =
-  let t = UnionFind.get v in
-  let n = (get_tyvar t).ty_id in
-  if Set.mem s n then
-    "t" ^ Int.to_string n
-  else
-    let s = Set.add s n in
-    match t with
-    | `Free _ -> "t" ^ Int.to_string n
-    | `Fn (_, l, r) ->
-        "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
-    | `Record(_, row) ->
-        "Record{" ^ show_u_row_v s row ^ "}"
-    | `Union(_, row) ->
-        "Union(" ^ show_u_row_v s row ^ ")"
-and show_u_row_v s v =
-  let r = UnionFind.get v in
-  let n = (get_tyvar r).ty_id in
-  if Set.mem s n then
-    "r" ^ Int.to_string n
-  else
-    let s = Set.add s n in
-    match r with
-    | `Free {ty_id; _} ->
-        "r" ^ Int.to_string ty_id
-    | `Empty _ ->
-        "<empty>"
-    | `Extend (_, lbl, ty, rest) ->
-        "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
-let show_u_type_v = show_u_type_v (Set.empty (module Int))
-let show_u_row_v  = show_u_row_v  (Set.empty (module Int))
-
-let show_g {g_child; _} =
-  show_u_type_v (Lazy.force g_child)
-
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
     | `Ty t ->
