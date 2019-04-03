@@ -243,7 +243,6 @@ and make_coercion_type cops env g ty =
         )
       )
   in
-  let ty = rename_ex (Map.empty (module Ast.Var)) ty in
   let rec collect_exist_vars = function
     (* Collect a list of the existentially bound variables. *)
     | Type.Fn (_, l, r) ->
@@ -269,6 +268,7 @@ and make_coercion_type cops env g ty =
           Set.union accum (collect_exist_vars v)
       )
   in
-  let exist_vars = collect_exist_vars ty in
+  let renamed_ty = rename_ex (Map.empty (module Ast.Var)) ty in
+  let exist_vars = collect_exist_vars renamed_ty in
   let _ = (cops, env, g, exist_vars) in
   failwith "TODO"
