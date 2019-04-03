@@ -1,7 +1,7 @@
 open Ast.Desugared
 open Gen_t
 
-let make_coercion_type cops env g ty =
+let make_coercion_type env g ty =
   (* We construct the type of a coercion as follows:
    *
    * 1. Alpha-rename the existentially-bound variables within the type.
@@ -131,7 +131,7 @@ let make_coercion_type cops env g ty =
         | `Type -> `Type (gen_u (`Ty root))
         | `Row -> `Row (gen_u (`Ty root))
       ) in
-      let _ = (cops, env, exist_map) in
+      let _ = (env, exist_map) in
       failwith "TODO"
     )
   )

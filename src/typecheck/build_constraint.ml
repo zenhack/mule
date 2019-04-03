@@ -154,7 +154,7 @@ let rec walk cops env g = function
         )
   | Expr.WithType ty ->
       (* See {MLF-Graph-Infer} section 6. *)
-      Coercions.make_coercion_type cops env g ty
+      Coercions.make_coercion_type env g ty
 and walk_match cops env g final = function
   | [] -> (final, gen_u (`G g))
   | ((lbl, (var, body)) :: rest) ->
