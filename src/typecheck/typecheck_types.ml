@@ -34,6 +34,15 @@ and bound_target =
 
 type permission = F | R | L
 
+type unify_edge =
+  | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
+  | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
+
+type inst_edge =
+  { ie_g_node: g_node
+  ; ie_ty_node: u_type UnionFind.var
+  }
+
 let perm_eq: permission -> permission -> bool = Poly.equal
 
 (* Get the "permission" of a node, based on the node's binding path

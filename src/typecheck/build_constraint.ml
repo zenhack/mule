@@ -2,15 +2,6 @@ open Ast.Desugared
 open Typecheck_types
 open Gensym
 
-type unify_edge =
-  | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
-  | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
-
-type inst_edge =
-  { ie_g_node: g_node
-  ; ie_ty_node: u_type UnionFind.var
-  }
-
 type built_constraints =
   { unification: unify_edge list
   ; instantiation: (g_node * (u_type UnionFind.var) list) IntMap.t
