@@ -234,6 +234,8 @@ and make_coercion_type cops env g ty =
       )
   in
   let merge_disjoint ~key:_ = function
+    (* Function to pass to Map.merge, which assumes that the maps are disjoint
+     * and just combines the results naively. *)
     | `Left x -> Some x
     | `Right x -> Some x
     | `Both _ -> failwith "impossible"
@@ -259,6 +261,37 @@ and make_coercion_type cops env g ty =
       ~f:(fun accum (_, v) ->
           Map.merge ~f:merge_disjoint accum (collect_exist_vars v)
       )
+  in
+  let rec graph_friendly acc = function
+    (* This function addresses a mismatch between syntactic and graphic types:
+      * graphic types don't have separate quantifier nodes, nor are quantifiers
+      * ordered. Instead, binding edges point at the type node above which the
+      * variables would be bound.
+      *
+      * This function transforms the type ast into a form where there are no
+      * Quant nodes, and all variables are collected on type nodes. From there,
+      * the graph will be easier to generate.
+      *)
+    | Type.Quant(_, _, _, Kind.Unknown, _) ->
+        failwith "BUG: should have been removed by Kind_infer.infer"
+    | Type.Quant(_, _, v, Kind.Type, body) ->
+        graph_friendly (`Type v :: acc) body
+    | Type.Quant(_, _, v, Kind.Row, body) ->
+        graph_friendly (`Row v :: acc) body
+    | Type.Fn(_, param, ret) ->
+        `Fn(List.rev acc, graph_friendly [] param, graph_friendly [] ret)
+    | Type.Recur _ ->
+        failwith "TODO"
+    | Type.Var (_, v) ->
+        `Var (List.rev acc, v)
+    | Record row ->
+        `Record (List.rev acc, graph_friendly_row row)
+    | Union row ->
+        `Union (List.rev acc, graph_friendly_row row)
+  and graph_friendly_row (_, fields, rest) =
+    ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly [] t))
+    , rest
+    )
   in
   let kinded_ty = Infer_kind.infer (Map.empty (module Ast.Var)) ty in
   let renamed_ty = rename_ex (Map.empty (module Ast.Var)) kinded_ty in
