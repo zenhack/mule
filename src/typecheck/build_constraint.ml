@@ -2,12 +2,6 @@ open Ast.Desugared
 open Typecheck_types
 open Gensym
 
-let fix : ('a Lazy.t -> 'b) -> ('b Lazy.t -> 'a) -> ('b * 'a) =
-  fun f g ->
-    let rec a = lazy (g b)
-    and b = lazy (f a)
-    in (Lazy.force b, Lazy.force a)
-
 let child_g parent child =
   { g_id = gensym ()
   ; g_bound = parent
@@ -15,7 +9,7 @@ let child_g parent child =
   }
 
 let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
-  fun parent f -> fst (fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
+  fun parent f -> fst (Util.fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
 
 type constraint_ops =
   { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit

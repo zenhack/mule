@@ -243,7 +243,7 @@ let make_cops: unit ->
 
 let build_constraints: Expr.t -> built_constraints = fun expr ->
   let cops, ucs, ics = make_cops () in
-  let (_, ty) = fix
+  let (_, ty) = Util.fix
       (child_g None)
       (fun g ->
         walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
