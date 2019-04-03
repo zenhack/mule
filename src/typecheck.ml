@@ -434,17 +434,14 @@ let rec walk cops env g = function
        *
        * all a r. {...r} -> a -> {lbl: a, ...r}
        *)
-      let fn_var = gen_u (`G g) in
-      let b_at = `Ty (lazy fn_var) in
+      let rec ret = lazy (
+        let b_at = `Ty ret in
+        let head_var = gen_u b_at in
 
-      let head_var = gen_u b_at in
+        let tv_tail_rec, tv_tail_row = tv_pair_at b_at in
+        let tail_var = UnionFind.make (`Free(tv_tail_row)) in
 
-      let tv_tail_rec, tv_tail_row = tv_pair_at b_at in
-      let tail_var = UnionFind.make (`Free(tv_tail_row)) in
-
-      let tv_rec, tv_row = tv_pair_at b_at in
-
-      let ret =
+        let tv_rec, tv_row = tv_pair_at b_at in
         UnionFind.make
           (`Fn
             ( gen_ty_var g
@@ -464,9 +461,8 @@ let rec walk cops env g = function
                         , head_var
                         , tail_var
                         ))))))))
-      in
-      cops.constrain_ty fn_var ret;
-      ret
+      ) in
+      Lazy.force ret
   | Expr.Ctor (lbl, param) ->
       let tv_union, tv_row = tv_pair_at (`G g) in
       let param_var = walk cops env g param in

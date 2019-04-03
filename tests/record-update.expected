@@ -1,4 +1,4 @@
 Desugared: (((_ where { y = _ })) ((((_ where { x = _ })) ({})) ({}))) ((((_ where { z = _ })) ({})) ({}))
 inferred type: {y : {z : {}}, x : {}}
-Runtime term: ((fn $181. fn $182. ($181) where { y = $182 }) (((fn $179. fn $180. ($179) where { x = $180 }) ({})) ({}))) (((fn $177. fn $178. ($177) where { z = $178 }) ({})) ({}))
+Runtime term: ((fn $178. fn $179. ($178) where { y = $179 }) (((fn $176. fn $177. ($176) where { x = $177 }) ({})) ({}))) (((fn $174. fn $175. ($174) where { z = $175 }) ({})) ({}))
 Evaluated: {x = {}, y = {z = {}}}
