@@ -98,8 +98,8 @@ and show_u_row_v s v =
         "<empty>"
     | `Extend (_, lbl, ty, rest) ->
         "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
-let show_u_type_v: u_type UnionFind.var -> string = show_u_type_v (Set.empty (module Int))
-let show_u_row_v: u_row UnionFind.var -> string = show_u_row_v  (Set.empty (module Int))
+let show_u_type_v: u_type UnionFind.var -> string = show_u_type_v IntSet.empty
+let show_u_row_v: u_row UnionFind.var -> string = show_u_row_v  IntSet.empty
 
 let show_g {g_child; _} =
   show_u_type_v (Lazy.force g_child)

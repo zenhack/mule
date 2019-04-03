@@ -172,7 +172,7 @@ let make_cops: unit ->
   ) = fun () ->
   let report = Debug.report Config.dump_constraints in
   let ucs = ref [] in (* unification constraints *)
-  let ics = ref (Map.empty (module Int)) in (* instantiation constraints *)
+  let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
     { constrain_ty   =
       (fun l r ->
@@ -207,7 +207,7 @@ let build_constraints: Expr.t -> built_constraints = fun expr ->
   let (_, ty) = Util.fix
       (child_g None)
       (fun g ->
-        walk cops (Map.empty (module Ast.Var)) (Lazy.force g) expr
+        walk cops VarMap.empty (Lazy.force g) expr
       )
   in
   { unification = !ucs

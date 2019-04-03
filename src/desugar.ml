@@ -10,25 +10,25 @@ let rec free_vars: D.t -> VarSet.t = function
       Set.remove (free_vars body) param
   | D.Match {cases; default} ->
       let def_fvs = match default with
-        | None -> Set.empty (module Ast.Var)
+        | None -> VarSet.empty
         | Some (None, e) -> free_vars e
         | Some (Some v, e) -> free_vars (D.Lam(v, e))
       in
       Map.map cases ~f:(fun (param, body) -> free_vars (D.Lam (param, body)))
       |> Map.fold
-          ~init:(Set.empty (module Ast.Var))
+          ~init:VarSet.empty
           ~f:(fun ~key:_ ~data -> Set.union data)
       |> Set.union def_fvs
   | D.App(f, x) ->
       Set.union (free_vars f) (free_vars x)
   | D.EmptyRecord | D.GetField _ | D.Update _ ->
-      Set.empty (module Ast.Var)
+      VarSet.empty
   | D.Ctor(_l, e) ->
       free_vars e
   | D.Var v ->
-      Set.singleton (module Ast.Var) v
+      VarSet.singleton v
   | D.WithType _ ->
-      Set.empty (module Ast.Var)
+      VarSet.empty
   | D.Let(v, e, body) ->
       Set.union
         (free_vars e)
@@ -118,7 +118,7 @@ let rec desugar = function
       D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
       D.App
-        ( desugar_match (Map.empty (module Ast.Label)) cases
+        ( desugar_match LabelMap.empty cases
         , desugar e
         )
   | S.Let(SP.Var v, e, body) ->
@@ -171,7 +171,7 @@ and finalize_dict dict =
       let v = Gensym.anon_var () in
       ( v
       , D.App
-          ( desugar_match (Map.empty (module Ast.Label)) (List.rev cases)
+          ( desugar_match LabelMap.empty (List.rev cases)
           , D.Var v
           )
       )

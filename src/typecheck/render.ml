@@ -83,7 +83,7 @@ and emit_bind_edge n bnd dict =
 
 let render_graph cs =
   if Config.render_constraints then
-    let visited = ref (Map.empty (module Int)) in
+    let visited = ref IntMap.empty in
     Debug.start_graph ();
     emit_all_nodes_ty cs.ty visited;
     List.iter cs.unification ~f:(function

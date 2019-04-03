@@ -74,8 +74,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
      * new one to the appropriate map. Before copying a node, we first
      * check to see if it's already in the map, and if so just return the
      * existing copy. *)
-    let visited_types = ref (Map.empty (module Int)) in
-    let visited_rows = ref (Map.empty (module Int)) in
+    let visited_types = ref IntMap.empty in
+    let visited_rows = ref IntMap.empty in
 
     (* Generate the unification variable for the root up front, so it's
      * visible everywhere. *)

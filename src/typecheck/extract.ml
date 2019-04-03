@@ -15,7 +15,7 @@ let maybe_add_rec i vars ty =
 let rec add_rec_binders ty =
   match ty with
   | Type.Var (_, v) ->
-      ( Set.singleton (module Ast.Var) v
+      ( VarSet.singleton v
       , ty
       )
   | Type.Recur(i, v, t) ->
@@ -38,8 +38,8 @@ let rec add_rec_binders ty =
       maybe_add_rec i vars (Type.Quant(i, q, bound, kind, body'))
 and row_add_rec_binders i fields rest =
   let row_var = match rest with
-    | Some v -> Set.singleton (module Ast.Var) v
-    | None -> Set.empty (module Ast.Var)
+    | Some v -> VarSet.singleton v
+    | None -> VarSet.empty
   in
   let fields_vars =
     List.map fields ~f:(fun (lbl, ty) -> (lbl, add_rec_binders ty))
@@ -89,7 +89,7 @@ and get_var_row env = function
       )
 let get_var_type uvar =
   UnionFind.get uvar
-    |> get_var_type (Set.empty (module Ast.Var))
+    |> get_var_type VarSet.empty
     |> add_rec_binders
 
 

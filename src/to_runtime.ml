@@ -11,7 +11,7 @@ let rec translate: D.t -> R.t = function
   | D.WithType _ ->
       let v = Gensym.anon_var () in
       R.Lam(v, R.Var v)
-  | D.EmptyRecord -> R.Record (Map.empty (module Label))
+  | D.EmptyRecord -> R.Record LabelMap.empty
   | D.GetField lbl -> R.GetField lbl
   | D.Update label ->
       let old = Gensym.anon_var () in

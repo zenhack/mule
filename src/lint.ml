@@ -82,12 +82,10 @@ let check_duplicate_record_fields =
     in
     function
     | Record fields ->
-        let empty = Set.empty (module Label) in
-        check_fields empty empty fields
+        check_fields LabelSet.empty LabelSet.empty fields
     | Update(e, fields) ->
-        let empty = Set.empty (module Label) in
         go e
-        >> check_fields empty empty fields
+        >> check_fields LabelSet.empty LabelSet.empty fields
 
     (* The rest of this is just walking down the tree *)
     | Lam (_, body) -> go body

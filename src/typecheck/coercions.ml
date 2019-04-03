@@ -46,7 +46,7 @@ let rec collect_exist_vars = function
   | Type.Recur (_, _, _) ->
       failwith "TODO"
   | Type.Var _ ->
-      Map.empty (module Var)
+      VarMap.empty
   | Type.Record row -> collect_exist_row row
   | Type.Union row -> collect_exist_row row
   | Type.Quant (k_var, `Exist, v, _, body) ->
@@ -56,7 +56,7 @@ let rec collect_exist_vars = function
 and collect_exist_row (_, fields, _) =
   List.fold
     fields
-    ~init:(Map.empty (module Var))
+    ~init:VarMap.empty
     ~f:(fun accum (_, v) ->
         merge_disjoint_exn accum (collect_exist_vars v)
     )
@@ -96,8 +96,8 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
   | Type.Fn(_, param, ret) ->
       { gp_vars = acc
       ; gp_type = `Fn
-          ( graph_friendly (Map.empty (module Var)) param
-          , graph_friendly (Map.empty (module Var)) ret
+          ( graph_friendly VarMap.empty param
+          , graph_friendly VarMap.empty ret
           )
       }
   | Type.Recur _ ->
@@ -115,7 +115,7 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
       ; gp_type = `Union(graph_friendly_row row)
       }
 and graph_friendly_row (_, fields, rest) =
-  ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly (Map.empty (module Var)) t))
+  ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly VarMap.empty t))
   , rest
   )
 
@@ -135,8 +135,8 @@ let make_coercion_type env g ty =
    *    be bound rigidly, and the result flexibly.
    * 7. Bind the existentials to the new function node.
    *)
-  let kinded_ty = Infer_kind.infer (Map.empty (module Var)) ty in
-  let renamed_ty = rename_ex (Map.empty (module Var)) kinded_ty in
+  let kinded_ty = Infer_kind.infer VarMap.empty ty in
+  let renamed_ty = rename_ex VarMap.empty kinded_ty in
   let exist_vars = collect_exist_vars renamed_ty in
   fst (Util.fix
     (fun vars ->
