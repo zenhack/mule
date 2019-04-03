@@ -1,3 +1,4 @@
+open Ast.Desugared
 
 let unify_kind l r = match l, r with
   | Kind.Unknown, _ -> r
@@ -7,23 +8,26 @@ let unify_kind l r = match l, r with
 
   | Kind.Type, Kind.Row
   | Kind.Row, Kind.Type ->
-      raise (MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type)))
+      raise (MuleErr.MuleExn(MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type))))
 
 
 let rec walk_type env = function
-  | Fn(_, l, r) ->
-      Fn(UnionFind.make Kind.Type, walk_type env l, walk_type env r)
-  | Recur(_, var, body) ->
+  | Type.Var(_, v) ->
+      (* TODO: proper exception *)
+      Type.Var(Map.find_exn env v, v)
+  | Type.Fn(_, l, r) ->
+      Type.Fn(UnionFind.make Kind.Type, walk_type env l, walk_type env r)
+  | Type.Recur(_, var, body) ->
       let u_var = UnionFind.make Kind.Type in
-      Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
-  | Record row ->
-      Record(walk_row row)
-  | Union row ->
-      Union(walk_row row)
-  | Quant(_, q, v, k, body) ->
+      Type.Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
+  | Type.Record row ->
+      Type.Record(walk_row env row)
+  | Type.Union row ->
+      Type.Union(walk_row env row)
+  | Type.Quant(_, q, v, k, body) ->
       let u_var = UnionFind.make k in
       let body' = walk_type (Map.set env ~key:v ~data:u_var) body in
-      Quant
+      Type.Quant
         ( UnionFind.make Kind.Type
         , q
         , v

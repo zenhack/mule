@@ -259,7 +259,8 @@ and make_coercion_type cops env g ty =
           Set.union accum (collect_exist_vars v)
       )
   in
-  let renamed_ty = rename_ex (Map.empty (module Ast.Var)) ty in
+  let kinded_ty = Infer_kind.infer (Map.empty (module Ast.Var)) ty in
+  let renamed_ty = rename_ex (Map.empty (module Ast.Var)) kinded_ty in
   let exist_vars = collect_exist_vars renamed_ty in
   fst (Util.fix
     (fun vars ->
