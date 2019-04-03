@@ -1,4 +1,3 @@
-open Ast
 open Ast.Desugared
 open Typecheck_types
 open Gensym
@@ -234,29 +233,31 @@ and make_coercion_type cops env g ty =
         )
       )
   in
+  let merge_disjoint ~key:_ = function
+    | `Left x -> Some x
+    | `Right x -> Some x
+    | `Both _ -> failwith "impossible"
+  in
   let rec collect_exist_vars = function
     (* Collect a list of the existentially bound variables. *)
     | Type.Fn (_, l, r) ->
-        Set.union (collect_exist_vars l) (collect_exist_vars r)
-    | Type.Recur (_, _, body) ->
-        collect_exist_vars body
+        Map.merge ~f:merge_disjoint (collect_exist_vars l) (collect_exist_vars r)
+    | Type.Recur (_, _, _) ->
+        failwith "TODO"
     | Type.Var _ ->
-        Set.empty (module Ast.Var)
+        Map.empty (module Ast.Var)
     | Type.Record row -> collect_exist_row row
     | Type.Union row -> collect_exist_row row
-    | Type.Quant (_, `Exist, v, _, body) ->
-        Set.add (collect_exist_vars body) v
+    | Type.Quant (k_var, `Exist, v, _, body) ->
+        Map.set ~key:v ~data:k_var (collect_exist_vars body)
     | Type.Quant (_, `All, _, _, body) ->
         collect_exist_vars body
-  and collect_exist_row (_, fields, rest) =
+  and collect_exist_row (_, fields, _) =
     List.fold
       fields
-      ~init:(match rest with
-        | None -> Set.empty (module Ast.Var)
-        | Some v -> Set.singleton (module Ast.Var) v
-      )
+      ~init:(Map.empty (module Ast.Var))
       ~f:(fun accum (_, v) ->
-          Set.union accum (collect_exist_vars v)
+          Map.merge ~f:merge_disjoint accum (collect_exist_vars v)
       )
   in
   let kinded_ty = Infer_kind.infer (Map.empty (module Ast.Var)) ty in
@@ -278,12 +279,14 @@ and make_coercion_type cops env g ty =
        * will be the two copies of the type in the annotation, and it will
        * be the bound of the existentials.
        *)
-      let exist_map =
-        exist_vars
-          |> Set.to_list
-          |> List.map ~f:(fun v -> (v, gen_u (`Ty root)))
-          |> Map.of_alist_exn (module Var)
-      in
+      (* TODO(FIXME?): we have a weird hack in place elsewhere where we bind the
+       * scope of record and union types to the root of their row -- do
+       * we need to do the same here?
+       *)
+      let exist_map = Map.map exist_vars ~f:(function
+        | `Type -> `Type (gen_u (`Ty root))
+        | `Row -> `Row (gen_u (`Ty root))
+      ) in
       let _ = (cops, env, exist_map) in
       failwith "TODO"
     )
