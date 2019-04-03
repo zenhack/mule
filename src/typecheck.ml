@@ -28,7 +28,7 @@ and g_node =
   ; g_child: u_type UnionFind.var Lazy.t
   }
 and bound_target =
-  [ `Ty of u_type UnionFind.var
+  [ `Ty of u_type UnionFind.var Lazy.t
   | `G of g_node
   ]
 
@@ -118,6 +118,7 @@ let show_g {g_child; _} =
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
     | `Ty t ->
+        let t = Lazy.force t in
         let bound = UnionFind.get (get_tyvar (UnionFind.get t)).ty_bound in
         in_constraint_interior g bound
     | `G g' ->
@@ -135,7 +136,7 @@ let rec tyvar_bound_list: tyvar -> bound_ty list =
     let {b_ty; b_at} = UnionFind.get ty_bound in
     match b_at with
     | `G g -> b_ty :: gnode_bound_list g
-    | `Ty t -> b_ty :: ty_bound_list (UnionFind.get t)
+    | `Ty t -> b_ty :: ty_bound_list (UnionFind.get (Lazy.force t))
 and ty_bound_list ty =
   tyvar_bound_list (get_tyvar ty)
 
@@ -180,7 +181,7 @@ let gen_u: bound_target -> [> `Free of tyvar ] UnionFind.var = fun targ ->
 
 let b_at_id = function
   | `G {g_id; _} -> g_id
-  | `Ty u -> (get_tyvar (UnionFind.get u)).ty_id
+  | `Ty u -> (get_tyvar (UnionFind.get (Lazy.force u))).ty_id
 
 let bound_id {b_at; _} = b_at_id b_at
 
@@ -194,7 +195,7 @@ let bound_next {b_at; _} = match b_at with
             }
       end
   | `Ty u ->
-      Some (UnionFind.get (get_tyvar (UnionFind.get u)).ty_bound)
+      Some (UnionFind.get (get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
 
 (* Raise b one step, if it is legal to do so, otherwise throw an error. *)
 let raised_bound b = match b with
@@ -408,7 +409,7 @@ let rec walk cops env g = function
        * all a r. {lbl: a, ...r} -> a
        *)
       let fn_var = gen_u (`G g) in
-      let b_at = `Ty fn_var in
+      let b_at = `Ty (lazy fn_var) in
       let head_var = gen_u b_at in
 
       let tv_rec, tv_row = tv_pair_at b_at in
@@ -437,7 +438,7 @@ let rec walk cops env g = function
        * all a r. {...r} -> a -> {lbl: a, ...r}
        *)
       let fn_var = gen_u (`G g) in
-      let b_at = `Ty fn_var in
+      let b_at = `Ty (lazy fn_var) in
 
       let head_var = gen_u b_at in
 
@@ -706,7 +707,7 @@ let inst_bound: inst_edge -> g_node =
     let rec go u =
       let bound = UnionFind.get (get_tyvar (UnionFind.get u)).ty_bound in
       match bound.b_at with
-      | `Ty u' -> go u'
+      | `Ty u' -> go (Lazy.force u')
       | `G g -> g
     in
     go ie_ty_node
@@ -844,7 +845,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                       }
                     else
                       { b_ty = old_bound.b_ty
-                      ; b_at = `Ty new_root
+                      ; b_at = `Ty (lazy new_root)
                       }
                   )
               in
@@ -909,7 +910,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               { ty_id = gensym ()
               ; ty_bound = UnionFind.make
                 { b_ty = old_bound.b_ty
-                ; b_at = `Ty new_root
+                ; b_at = `Ty (lazy new_root)
                 }
               }
             in
@@ -1013,6 +1014,7 @@ and emit_bind_edge n bnd dict =
     let {b_at; b_ty} = UnionFind.get bnd in
     match b_at with
     | `Ty parent ->
+        let parent = Lazy.force parent in
         emit_all_nodes_ty parent dict;
         let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
         Debug.show_edge (`Binding b_ty) p_id n
