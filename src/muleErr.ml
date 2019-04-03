@@ -1,13 +1,13 @@
-open Ast.Desugared
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor =
   [ `Fn | `Record | `Union (* types *)
   | `Empty | `Extend of Ast.Label.t (* rows *)
   ]
+type kind = [ `Row | `Type ]
 type type_error
   = MismatchedCtors of (ctor * ctor)
-  | MismatchedKinds of (Kind.t * Kind.t)
+  | MismatchedKinds of (kind * kind)
   | PermissionErr of op
 
 type t =
@@ -34,9 +34,8 @@ let show_op = function
   | `Weaken -> "weaken"
 
 let show_kind = function
-  | Kind.Unknown -> "unknown"
-  | Kind.Type -> "type"
-  | Kind.Row -> "row"
+  | `Type -> "type"
+  | `Row -> "row"
 
 let show_type_error = function
   | MismatchedCtors (l, r) ->

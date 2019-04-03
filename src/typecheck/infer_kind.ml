@@ -7,7 +7,7 @@ let unify_kind l r = match l, r with
 
   | Kind.Type, Kind.Row
   | Kind.Row, Kind.Type ->
-      raise (MuleErr.TypeError(MuleErr.MismatchedKinds(l, r)))
+      raise (MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type)))
 
 
 let rec walk_type env = function
@@ -45,6 +45,7 @@ let infer env ty =
   let ty' = walk_type env ty in
   Type.map ty' ~f:(fun x ->
     match UnionFind.get x with
-    | Kind.Unknown -> Kind.Type
-    | k -> k
+    | Kind.Unknown -> `Type
+    | Kind.Type -> `Type
+    | Kind.Row -> `Row
   )
