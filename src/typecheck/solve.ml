@@ -1,6 +1,7 @@
 open Typecheck_types
 open Build_constraint
 open Gensym
+open Gen_t
 open Unify
 
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
