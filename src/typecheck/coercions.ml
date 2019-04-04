@@ -135,7 +135,7 @@ and graph_friendly_row (_, fields, rest) =
   , rest
   )
 
-let make_coercion_type env g ty =
+let make_coercion_type g ty =
   let kinded_ty = Infer_kind.infer VarMap.empty ty in
   let renamed_ty = rename_ex VarMap.empty kinded_ty in
   let exist_vars = collect_exist_vars renamed_ty in
@@ -163,7 +163,7 @@ let make_coercion_type env g ty =
         | `Type -> `Type (gen_u (`Ty root))
         | `Row -> `Row (gen_u (`Ty root))
       ) in
-      let _ = (env, exist_map) in
+      let _ = exist_map in
       failwith "TODO"
     )
   )
