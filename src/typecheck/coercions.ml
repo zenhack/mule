@@ -193,8 +193,8 @@ let rec make_mono: bound_target -> env_t -> graph_monotype -> u_type UnionFind.v
       UnionFind.make(`Union(make_row' b_at env row))
 and make_poly: bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
   fun b_at env {gp_vars; gp_type} ->
-    let _ =
-      Util.fix
+    snd
+      ( Util.fix
         (fun parent ->
           let env' = Map.map gp_vars ~f:(function
             | `Type -> `Type (gen_u (`Ty parent))
@@ -209,8 +209,7 @@ and make_poly: bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
         (fun env ->
           make_mono b_at (Lazy.force env) gp_type
         )
-    in
-    failwith "TODO"
+      )
 and make_row: bound_target -> env_t -> graph_row -> u_row UnionFind.var =
   fun b_at env -> function
     | ([], None) ->
