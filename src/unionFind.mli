@@ -15,6 +15,12 @@ val make : 'a -> 'a var
 (* Get the value of the set. *)
 val get : 'a var -> 'a
 
+(* Set the value of the set. *)
+val set : 'a -> 'a var -> unit
+
+(* Update the value of the set. *)
+val modify : ('a -> 'a) -> 'a var -> unit
+
 (* Compare two variables for equality *)
 val equal : 'a var -> 'a var -> bool
 

@@ -38,3 +38,10 @@ let merge f l r =
     let value = f lval rval in
     lrep := Repr value
   end
+
+let set value var =
+  let new_var = make value in
+  merge (fun n _o -> n) new_var var
+
+let modify f var =
+  set (f (get var)) var

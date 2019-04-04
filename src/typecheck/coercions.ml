@@ -136,35 +136,6 @@ and graph_friendly_row (_, fields, rest) =
   , rest
   )
 
-let make_coercion_type g ty =
-  let kinded_ty = Infer_kind.infer VarMap.empty ty in
-  let renamed_ty = rename_ex VarMap.empty kinded_ty in
-  let exist_vars = collect_exist_vars renamed_ty in
-  fst (Util.fix
-    (fun vars ->
-      let (param_var, ret_var) = Lazy.force vars in
-      UnionFind.make
-        (`Fn
-          ( gen_ty_var g
-          , param_var
-          , ret_var
-          )
-        )
-    )
-    (fun root ->
-      (* [root] is the final root of the type; its argument and return values
-       * will be the two copies of the type in the annotation, and it will
-       * be the bound of the existentials.
-       *)
-      let exist_map = Map.map exist_vars ~f:(function
-        | `Type -> `Type (gen_u (`Ty root))
-        | `Row -> `Row (gen_u (`Ty root))
-      ) in
-      let _ = exist_map in
-      failwith "TODO"
-    )
-  )
-
 let require_type: [> `Type of 'a ] -> 'a = function
   | `Type x -> x
   | _ -> failwith "expected type"
@@ -231,4 +202,39 @@ and make_row' b_at env row =
     ; ty_bound = bound
     }
   , row'
+  )
+
+let make_coercion_type g ty =
+  let kinded_ty = Infer_kind.infer VarMap.empty ty in
+  let renamed_ty = rename_ex VarMap.empty kinded_ty in
+  let exist_vars = collect_exist_vars renamed_ty in
+  let graph_ty = graph_friendly VarMap.empty renamed_ty in
+  fst (Util.fix
+    (fun vars ->
+      let (param_var, ret_var) = Lazy.force vars in
+      UnionFind.make
+        (`Fn
+          ( gen_ty_var g
+          , param_var
+          , ret_var
+          )
+        )
+    )
+    (fun root ->
+      (* [root] is the final root of the type; its argument and return values
+       * will be the two copies of the type in the annotation, and it will
+       * be the bound of the existentials.
+       *)
+      let exist_map = Map.map exist_vars ~f:(function
+        | `Type -> `Type (gen_u (`Ty root))
+        | `Row -> `Row (gen_u (`Ty root))
+      ) in
+      let param = make_poly (`Ty root) exist_map graph_ty in
+      let ret = make_poly (`Ty root) exist_map graph_ty in
+      let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
+      UnionFind.modify
+        (fun {b_at; b_ty = _} -> {b_at; b_ty = `Rigid})
+        param_bound;
+      (param, ret)
+    )
   )
