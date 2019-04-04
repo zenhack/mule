@@ -3,7 +3,23 @@ open Ast.Desugared
 open Gen_t
 
 (* Generate coercion types from type annotations.
- * See {MLF-Graph-Infer} section 6. *)
+ * See {MLF-Graph-Infer} section 6.
+ *
+ * The general process of constructing a coercion type is as follows:
+ *
+ * 1. Alpha-rename the existentially-bound variables within the type.
+ *    This way we don't have to worry about shadowing in later steps.
+ * 2. Collect the names of existentially-bound variables.
+ * 3. Generate a unification variable for each existential, and store
+ *    them in a map.
+ * 4. Walk over the type twice, generating two constraint graphs for it
+ *    which share only the nodes for existential variables (looked up
+ *    in the map we generated.
+ * 5. Make a function node.
+ * 6. Bind each of the copies to the function node. The parameter will
+ *    be bound rigidly, and the result flexibly.
+ * 7. Bind the existentials to the new function node.
+ *)
 
 (* Alpha-rename existentially bound vars. *)
 let rec rename_ex env = function
@@ -120,21 +136,6 @@ and graph_friendly_row (_, fields, rest) =
   )
 
 let make_coercion_type env g ty =
-  (* We construct the type of a coercion as follows:
-   *
-   * 1. Alpha-rename the existentially-bound variables within the type.
-   *    This way we don't have to worry about shadowing in later steps.
-   * 2. Collect the names of existentially-bound variables.
-   * 3. Generate a unification variable for each existential, and store
-   *    them in a map.
-   * 4. Walk over the type twice, generating two constraint graphs for it
-   *    which share only the nodes for existential variables (looked up
-   *    in the map we generated.
-   * 5. Make a function node.
-   * 6. Bind each of the copies to the function node. The parameter will
-   *    be bound rigidly, and the result flexibly.
-   * 7. Bind the existentials to the new function node.
-   *)
   let kinded_ty = Infer_kind.infer VarMap.empty ty in
   let renamed_ty = rename_ex VarMap.empty kinded_ty in
   let exist_vars = collect_exist_vars renamed_ty in
