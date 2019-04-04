@@ -1,6 +1,7 @@
 open Ast
 open Ast.Desugared
 open Gen_t
+open Typecheck_types
 
 (* Generate coercion types from type annotations.
  * See {MLF-Graph-Infer} section 6.
@@ -155,10 +156,6 @@ let make_coercion_type g ty =
        * will be the two copies of the type in the annotation, and it will
        * be the bound of the existentials.
        *)
-      (* TODO(FIXME?): we have a weird hack in place elsewhere where we bind the
-       * scope of record and union types to the root of their row -- do
-       * we need to do the same here?
-       *)
       let exist_map = Map.map exist_vars ~f:(function
         | `Type -> `Type (gen_u (`Ty root))
         | `Row -> `Row (gen_u (`Ty root))
@@ -166,4 +163,73 @@ let make_coercion_type g ty =
       let _ = exist_map in
       failwith "TODO"
     )
+  )
+
+let require_type: [> `Type of 'a ] -> 'a = function
+  | `Type x -> x
+  | _ -> failwith "expected type"
+
+let require_row: [> `Row of 'a ] -> 'a = function
+  | `Row x -> x
+  | _ -> failwith "expected row"
+
+type env_t = [ `Type of u_type UnionFind.var | `Row of u_row UnionFind.var ] VarMap.t
+
+let rec make_mono: bound_target -> env_t -> graph_monotype -> u_type UnionFind.var =
+  fun b_at env -> function
+  | `Var v ->
+      require_type (Map.find_exn env v)
+  | `Fn(param, ret) ->
+      UnionFind.make
+        (`Fn
+          ( ty_var_at b_at
+          , make_poly b_at env param
+          , make_poly b_at env ret
+          )
+        )
+  | `Record row ->
+      UnionFind.make(`Record(make_row' b_at env row))
+  | `Union row ->
+      UnionFind.make(`Union(make_row' b_at env row))
+and make_poly: bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
+  fun b_at env {gp_vars; gp_type} ->
+    let _ =
+      Util.fix
+        (fun parent ->
+          let env' = Map.map gp_vars ~f:(function
+            | `Type -> `Type (gen_u (`Ty parent))
+            | `Row -> `Row (gen_u (`Ty parent))
+          ) in
+          Map.merge env env' ~f:(fun ~key:_ -> function
+            | `Left x -> Some x
+            | `Right x -> Some x
+            | `Both (x, _) -> Some x
+          )
+        )
+        (fun env ->
+          make_mono b_at (Lazy.force env) gp_type
+        )
+    in
+    failwith "TODO"
+and make_row: bound_target -> env_t -> graph_row -> u_row UnionFind.var =
+  fun b_at env -> function
+    | ([], None) ->
+        UnionFind.make (`Empty (ty_var_at b_at))
+    | ([], Some v) ->
+        require_row (Map.find_exn env v)
+    | ((lbl, t) :: fields, tail) ->
+        UnionFind.make (`Extend
+          ( ty_var_at b_at
+          , lbl
+          , make_poly b_at env t
+          , make_row b_at env (fields, tail)
+          )
+        )
+and make_row' b_at env row =
+  let row' = make_row b_at env row in
+  let bound = (get_tyvar (UnionFind.get row')).ty_bound in
+  ( { ty_id = Gensym.gensym ()
+    ; ty_bound = bound
+    }
+  , row'
   )
