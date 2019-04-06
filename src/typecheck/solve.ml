@@ -239,6 +239,7 @@ let solve_constraints cs =
         );
         solve_unify !ucs;
       );
+      render_ics := Map.remove !render_ics g.g_id
     );
   cs.ty
 
