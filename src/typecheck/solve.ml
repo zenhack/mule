@@ -77,12 +77,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
     let visited_types = ref IntMap.empty in
     let visited_rows = ref IntMap.empty in
 
-    (* Generate the unification variable for the root up front, so it's
-     * visible everywhere. *)
-    let new_root = gen_u (`G new_g) in
-
     (* XXX: go and go_row have too much redundancy *)
-    let rec go = fun nv ->
+    let rec go = fun nv new_root ->
       let n = UnionFind.get nv in
       let {ty_id = old_id; ty_bound} = get_tyvar n in
       let old_bound = UnionFind.get ty_bound in
@@ -106,7 +102,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                       }
                     else
                       { b_ty = old_bound.b_ty
-                      ; b_at = `Ty (lazy new_root)
+                      ; b_at = `Ty new_root
                       }
                   )
               in
@@ -121,18 +117,18 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 (* Now do a deep copy, subbing in the new bound. *)
                 UnionFind.make (match n with
                   | `Free _ -> `Free new_tyvar
-                  | `Fn (_, param, ret) -> `Fn(new_tyvar, go param, go ret)
+                  | `Fn (_, param, ret) -> `Fn(new_tyvar, go param new_root, go ret new_root)
 
                   (* For records and unions, we have to make sure we don't break the link
                    * between bounds when we copy: *)
                   | `Record(_, row) ->
-                      let row' = go_row row in
+                      let row' = go_row row new_root in
                       UnionFind.merge unify_bound
                         new_bound
                         (get_tyvar (UnionFind.get row')).ty_bound;
                       `Record(new_tyvar, row')
                   | `Union(_, row) ->
-                      let row' = go_row row in
+                      let row' = go_row row new_root in
                       UnionFind.merge unify_bound
                         new_bound
                         (get_tyvar (UnionFind.get row')).ty_bound;
@@ -141,7 +137,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               Lazy.force (Map.find_exn !visited_types old_id)
       end
 
-    and go_row row_var =
+    and go_row row_var new_root =
       let row = UnionFind.get row_var in
       let {ty_id = old_id; ty_bound} = get_tyvar row in
       let old_bound = UnionFind.get ty_bound in
@@ -160,7 +156,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               { ty_id = gensym ()
               ; ty_bound = UnionFind.make
                 { b_ty = old_bound.b_ty
-                ; b_at = `Ty (lazy new_root)
+                ; b_at = `Ty new_root
                 }
               }
             in
@@ -173,7 +169,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             in
             visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
             let ret = UnionFind.make (match row with
-              | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty, go_row rest)
+              | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty new_root, go_row rest new_root)
               | `Empty _ -> `Empty new_tv
               | `Free _ -> `Free new_tv)
             in
@@ -181,7 +177,9 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             ret
           end
       end
-    in go old_root
+    in
+    let rec new_root = lazy (go old_root new_root) in
+    Lazy.force new_root
 
 let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
