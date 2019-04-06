@@ -7,11 +7,12 @@ let permErr op = typeErr (MuleErr.PermissionErr op)
 let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 
 let rec tyvar_bound_list: tyvar -> bound_ty list =
-  fun {ty_bound; _} ->
-    let {b_ty; b_at} = UnionFind.get ty_bound in
-    match b_at with
-    | `G g -> b_ty :: gnode_bound_list g
-    | `Ty t -> b_ty :: ty_bound_list (UnionFind.get (Lazy.force t))
+  fun {ty_bound; _} -> bound_list (UnionFind.get ty_bound)
+and tgt_bound_list = function
+  | `G g -> gnode_bound_list g
+  | `Ty t -> ty_bound_list (UnionFind.get (Lazy.force t))
+and bound_list {b_ty; b_at} =
+  b_ty :: tgt_bound_list b_at
 and ty_bound_list ty =
   tyvar_bound_list (get_tyvar ty)
 
@@ -22,6 +23,9 @@ let tyvar_permission: tyvar -> permission =
 let ty_permission: u_type -> permission =
   fun ty ->
     get_permission (ty_bound_list ty)
+
+let bound_permission: bound_target bound -> permission =
+  fun b -> get_permission (bound_list b)
 
 let b_at_id = function
   | `G {g_id; _} -> g_id
@@ -42,15 +46,14 @@ let bound_next {b_at; _} = match b_at with
       Some (UnionFind.get (get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
 
 (* Raise b one step, if it is legal to do so, otherwise throw an error. *)
-let raised_bound b = match b with
-  | {b_ty = `Rigid; _} ->
-      permErr `Raise
-  | _ ->
-      bound_next b
+let raised_bound b =
+  match bound_permission b with
+    | L -> permErr `Raise
+    | _ -> bound_next b
 
 (* Compute the least common ancestor of two bounds.
- * If that ancestor is not reachable without raising
- * past rigid edges, fail. *)
+ * If that ancestor is not reachable without performing
+ * illegal raisings, fail. *)
 let rec bound_lca: bound_target bound -> bound_target bound -> bound_target bound =
   fun l r ->
     let lid, rid = bound_id l, bound_id r in
