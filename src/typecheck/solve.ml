@@ -142,7 +142,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       let {ty_id = old_id; ty_bound} = get_tyvar row in
       let old_bound = UnionFind.get ty_bound in
       begin match Map.find !visited_rows old_id with
-        | Some new_node -> new_node
+        | Some new_node -> Lazy.force new_node
         | None ->
           if not (in_constraint_interior old_g old_bound) then
             begin
@@ -160,21 +160,13 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 }
               }
             in
-            let map_copy = UnionFind.make
-              (`Free
-                { ty_id = gensym ()
-                ; ty_bound = new_tv.ty_bound
-                }
-              )
-            in
-            visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
-            let ret = UnionFind.make (match row with
-              | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty new_root, go_row rest new_root)
-              | `Empty _ -> `Empty new_tv
-              | `Free _ -> `Free new_tv)
-            in
-            UnionFind.merge unify_row map_copy ret;
-            ret
+            visited_rows := Map.set !visited_rows ~key:old_id ~data:(lazy(
+              UnionFind.make (match row with
+                | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty new_root, go_row rest new_root)
+                | `Empty _ -> `Empty new_tv
+                | `Free _ -> `Free new_tv)
+            ));
+            Lazy.force (Map.find_exn !visited_rows old_id)
           end
       end
     in
