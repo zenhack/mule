@@ -6,6 +6,9 @@ let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
 let permErr op = typeErr (MuleErr.PermissionErr op)
 let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 
+let rec gnode_bound_list {g_bound; _} = match g_bound with
+  | None -> []
+  | Some {b_ty; b_at} -> b_ty :: gnode_bound_list b_at
 let rec tyvar_bound_list: tyvar -> bound_ty list =
   fun {ty_bound; _} -> bound_list (UnionFind.get ty_bound)
 and tgt_bound_list = function

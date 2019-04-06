@@ -57,9 +57,6 @@ let rec get_permission: bound_ty list -> permission = function
         | R | L -> L
       end
 
-let rec gnode_bound_list {g_bound; _} = match g_bound with
-  | None -> []
-  | Some {b_ty; b_at} -> b_ty :: gnode_bound_list b_at
 let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Free v -> v
   | `Fn (v, _, _) -> v
