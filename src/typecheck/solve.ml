@@ -87,7 +87,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       let {ty_id = old_id; ty_bound} = get_tyvar n in
       let old_bound = UnionFind.get ty_bound in
       begin match Map.find !visited_types old_id with
-        | Some new_node -> new_node
+        | Some new_node -> Lazy.force new_node
         | None ->
             if not (in_constraint_interior old_g old_bound) then
               begin
@@ -117,39 +117,28 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               in
               (* Add a copy to the map up front, in case we hit a recursive type.
                * We'll have to unify it with the final result below. *)
-              let map_copy =
-                if UnionFind.equal nv old_root then
-                  new_root
-                else
-                  UnionFind.make (`Free
-                    { ty_id = gensym ()
-                    ; ty_bound = new_tyvar.ty_bound
-                    })
-              in
-              visited_types := Map.set !visited_types ~key:old_id ~data:map_copy;
+              visited_types := Map.set !visited_types ~key:old_id ~data:(lazy(
+                (* Now do a deep copy, subbing in the new bound. *)
+                UnionFind.make (match n with
+                  | `Free _ -> `Free new_tyvar
+                  | `Fn (_, param, ret) -> `Fn(new_tyvar, go param, go ret)
 
-              (* Now do a deep copy, subbing in the new bound. *)
-              let ret = UnionFind.make (match n with
-                | `Free _ -> `Free new_tyvar
-                | `Fn (_, param, ret) -> `Fn(new_tyvar, go param, go ret)
-
-                (* For records and unions, we have to make sure we don't break the link
-                 * between bounds when we copy: *)
-                | `Record(_, row) ->
-                    let row' = go_row row in
-                    UnionFind.merge unify_bound
-                      new_bound
-                      (get_tyvar (UnionFind.get row')).ty_bound;
-                    `Record(new_tyvar, row')
-                | `Union(_, row) ->
-                    let row' = go_row row in
-                    UnionFind.merge unify_bound
-                      new_bound
-                      (get_tyvar (UnionFind.get row')).ty_bound;
-                    `Union(new_tyvar, row'))
-              in
-              UnionFind.merge unify map_copy ret;
-              ret
+                  (* For records and unions, we have to make sure we don't break the link
+                   * between bounds when we copy: *)
+                  | `Record(_, row) ->
+                      let row' = go_row row in
+                      UnionFind.merge unify_bound
+                        new_bound
+                        (get_tyvar (UnionFind.get row')).ty_bound;
+                      `Record(new_tyvar, row')
+                  | `Union(_, row) ->
+                      let row' = go_row row in
+                      UnionFind.merge unify_bound
+                        new_bound
+                        (get_tyvar (UnionFind.get row')).ty_bound;
+                      `Union(new_tyvar, row'))
+              ));
+              Lazy.force (Map.find_exn !visited_types old_id)
       end
 
     and go_row row_var =
