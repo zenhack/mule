@@ -6,16 +6,37 @@ let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
 let permErr op = typeErr (MuleErr.PermissionErr op)
 let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 
-let rec gnode_bound_list {g_bound; _} = match g_bound with
-  | None -> []
-  | Some {b_ty; b_at} -> b_ty :: gnode_bound_list b_at
-let rec tyvar_bound_list: tyvar -> bound_ty list =
+(* Get the "permission" of a node, based on the node's binding path
+ * (starting from the node and working up the tree). See section 3.1
+ * in {MLF-Graph-Unify}. *)
+let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
+  fun p ->
+    let rec go p = match Sequence.next p with
+    | None -> F
+    | Some (`Rigid, _) -> R
+    | Some (`Flex, bs) ->
+        begin match go bs with
+          | F -> F
+          | R | L -> L
+        end
+    in go (Sequence.Generator.run p)
+
+let rec gnode_bound_list: g_node -> (unit, bound_ty) Sequence.Generator.t =
+  fun {g_bound; _} -> Sequence.Generator.(
+    match g_bound with
+    | None -> return ()
+    | Some {b_ty; b_at} ->
+        yield b_ty >>= fun () -> gnode_bound_list b_at
+)
+let rec tyvar_bound_list: tyvar -> (unit, bound_ty) Sequence.Generator.t =
   fun {ty_bound; _} -> bound_list (UnionFind.get ty_bound)
 and tgt_bound_list = function
   | `G g -> gnode_bound_list g
   | `Ty t -> ty_bound_list (UnionFind.get (Lazy.force t))
 and bound_list {b_ty; b_at} =
-  b_ty :: tgt_bound_list b_at
+  Sequence.Generator.(
+    yield b_ty >>= fun () -> tgt_bound_list b_at
+  )
 and ty_bound_list ty =
   tyvar_bound_list (get_tyvar ty)
 
