@@ -213,17 +213,17 @@ let solve_constraints cs =
     ; ty = cs.ty
     }
   in
-  render ();
   let solve_unify vars =
     render_ucs := vars;
     List.iter vars ~f:(fun c ->
+      render ();
       begin match c with
       | UnifyTypes(l, r) -> UnionFind.merge unify l r
       | UnifyRows(l, r) -> UnionFind.merge unify_row l r
       end;
       render_ucs := List.tl_exn !render_ucs;
-      render ();
-    )
+    );
+    render ()
   in
   solve_unify cs.unification;
   top_sort_inst cs.instantiation
@@ -231,10 +231,14 @@ let solve_constraints cs =
       List.iter ts ~f:(fun t ->
         let cops, ucs, _ = make_cops () in
         propagate cops g t;
+        render_ucs := !ucs;
+        render ();
+        render_ics := Map.update !render_ics g.g_id ~f:(function
+          | None -> failwith "impossible"
+          | Some (g, xs) -> (g, List.tl_exn xs)
+        );
         solve_unify !ucs;
-        render ()
       );
-      render_ics := Map.remove !render_ics g.g_id;
     );
   cs.ty
 
