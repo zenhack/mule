@@ -1,4 +1,4 @@
 Desugared: fn x. (((_ where { y = _ })) (x)) ({})
-inferred type: ({, ...t59}) -> ({y : {}, ...t59})
-Runtime term: fn x. ((fn $64. fn $65. ($64) where { y = $65 }) (x)) ({})
-Evaluated: fn x. ((fn $64. fn $65. ($64) where { y = $65 }) (x)) ({})
+inferred type: ({, ...t53}) -> ({y : {}, ...t53})
+Runtime term: fn x. ((fn $57. fn $58. ($57) where { y = $58 }) (x)) ({})
+Evaluated: fn x. ((fn $57. fn $58. ($57) where { y = $58 }) (x)) ({})
