@@ -1,4 +1,4 @@
 Desugared: (Ok {})
-inferred type: (Ok {}) | ...t5
+inferred type: (Ok {}) | ...t3
 Runtime term: (Ok) ({})
 Evaluated: (Ok) ({})

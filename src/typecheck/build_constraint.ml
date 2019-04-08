@@ -51,8 +51,11 @@ let rec walk cops env g = function
       cops.constrain_inst g_arg param_var;
       ret_var
   | Expr.EmptyRecord ->
-      let tv_rec, tv_row = tv_pair_at (`G g) in
-      UnionFind.make (`Record (tv_rec, UnionFind.make (`Empty tv_row)))
+      UnionFind.make
+        (`Record
+          ( ty_var_at (`G g)
+          , UnionFind.make (`Empty (ty_var_at (`G g)))
+          ))
   | Expr.GetField lbl ->
       (* Field accesses have the type:
        *
@@ -61,16 +64,15 @@ let rec walk cops env g = function
       let rec ret = lazy (
         let b_at = `Ty ret in
         let head_var = gen_u b_at in
-        let tv_rec, tv_row = tv_pair_at b_at in
         UnionFind.make
           (`Fn
             ( gen_ty_var g
             , UnionFind.make
               (`Record
-                ( tv_rec
+                ( ty_var_at b_at
                 , UnionFind.make
                   (`Extend
-                    ( tv_row
+                    ( ty_var_at b_at
                     , lbl
                     , head_var
                     , gen_u b_at
@@ -87,26 +89,22 @@ let rec walk cops env g = function
       let rec ret = lazy (
         let b_at = `Ty ret in
         let head_var = gen_u b_at in
-
-        let tv_tail_rec, tv_tail_row = tv_pair_at b_at in
-        let tail_var = UnionFind.make (`Free(tv_tail_row)) in
-
-        let tv_rec, tv_row = tv_pair_at b_at in
+        let tail_var = gen_u b_at in
         UnionFind.make
           (`Fn
             ( gen_ty_var g
             , UnionFind.make
-              (`Record (tv_tail_rec, tail_var))
+              (`Record (ty_var_at b_at, tail_var))
             , UnionFind.make
               (`Fn
                 ( ty_var_at b_at
                 , head_var
                 , UnionFind.make
                   (`Record
-                    ( tv_rec
+                    ( ty_var_at b_at
                     , UnionFind.make
                       (`Extend
-                        ( tv_row
+                        ( ty_var_at b_at
                         , lbl
                         , head_var
                         , tail_var
@@ -114,14 +112,13 @@ let rec walk cops env g = function
       ) in
       Lazy.force ret
   | Expr.Ctor (lbl, param) ->
-      let tv_union, tv_row = tv_pair_at (`G g) in
       let param_var = walk cops env g param in
       UnionFind.make
         ( `Union
-          ( tv_union
+          ( ty_var_at (`G g)
           , UnionFind.make
             ( `Extend
-                ( tv_row
+                ( ty_var_at (`G g)
                 , lbl
                 , param_var
                 , UnionFind.make (`Free (gen_ty_var g))

@@ -118,21 +118,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 UnionFind.make (match n with
                   | `Free _ -> `Free new_tyvar
                   | `Fn (_, param, ret) -> `Fn(new_tyvar, go param new_root, go ret new_root)
-
-                  (* For records and unions, we have to make sure we don't break the link
-                   * between bounds when we copy: *)
-                  | `Record(_, row) ->
-                      let row' = go_row row new_root in
-                      UnionFind.merge unify_bound
-                        new_bound
-                        (get_tyvar (UnionFind.get row')).ty_bound;
-                      `Record(new_tyvar, row')
-                  | `Union(_, row) ->
-                      let row' = go_row row new_root in
-                      UnionFind.merge unify_bound
-                        new_bound
-                        (get_tyvar (UnionFind.get row')).ty_bound;
-                      `Union(new_tyvar, row'))
+                  | `Record(_, row) -> `Record(new_tyvar, go_row row new_root)
+                  | `Union(_, row) -> `Union(new_tyvar, go_row row new_root))
               ));
               Lazy.force (Map.find_exn !visited_types old_id)
       end
