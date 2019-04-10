@@ -83,7 +83,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       let {ty_id = old_id; ty_bound} = get_tyvar n in
       let old_bound = !ty_bound in
       begin match Map.find !visited_types old_id with
-        | Some new_node -> Lazy.force new_node
+        | Some new_node -> new_node
         | None ->
             if not (in_constraint_interior old_g old_bound) then
               begin
@@ -111,16 +111,29 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 ; ty_bound = ref new_bound
                 }
               in
-              (* Add a copy to the map up front, in case we hit a recursive type. *)
-              visited_types := Map.set !visited_types ~key:old_id ~data:(lazy(
-                (* Now do a deep copy, subbing in the new bound. *)
-                UnionFind.make (match n with
-                  | `Free _ -> `Free new_tyvar
-                  | `Fn (_, param, ret) -> `Fn(new_tyvar, go param new_root, go ret new_root)
-                  | `Record(_, row) -> `Record(new_tyvar, go_row row new_root)
-                  | `Union(_, row) -> `Union(new_tyvar, go_row row new_root))
-              ));
-              Lazy.force (Map.find_exn !visited_types old_id)
+
+              (* Add a fresh unification variable to the map up front, in case we
+               * hit a recursive type. We'll merge it with the final result below. *)
+              let map_copy = UnionFind.make (`Free new_tyvar) in
+              visited_types := Map.set !visited_types ~key:old_id ~data:map_copy;
+
+              (* Now do a deep copy, subbing in the new bound. *)
+              let ret = UnionFind.make (match n with
+                | `Free _ -> `Free new_tyvar
+                | `Fn (_, param, ret) -> `Fn(new_tyvar, go param new_root, go ret new_root)
+                | `Record(_, row) -> `Record(new_tyvar, go_row row new_root)
+                | `Union(_, row) -> `Union(new_tyvar, go_row row new_root))
+              in
+
+              (* ...and do the merge. Rather than call unify, we just overwrite with
+               * the final value; there's no real unification going on here, we just
+               * need to avoid cycles. *)
+              UnionFind.merge
+                (fun _ r -> r)
+                map_copy
+                ret;
+
+              ret
       end
 
     and go_row row_var new_root =
@@ -128,7 +141,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       let {ty_id = old_id; ty_bound} = get_tyvar row in
       let old_bound = !ty_bound in
       begin match Map.find !visited_rows old_id with
-        | Some new_node -> Lazy.force new_node
+        | Some new_node -> new_node
         | None ->
           if not (in_constraint_interior old_g old_bound) then
             begin
@@ -146,13 +159,18 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 }
               }
             in
-            visited_rows := Map.set !visited_rows ~key:old_id ~data:(lazy(
-              UnionFind.make (match row with
-                | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty new_root, go_row rest new_root)
-                | `Empty _ -> `Empty new_tv
-                | `Free _ -> `Free new_tv)
-            ));
-            Lazy.force (Map.find_exn !visited_rows old_id)
+            let map_copy = UnionFind.make (`Free new_tv) in
+            visited_rows := Map.set !visited_rows ~key:old_id ~data:map_copy;
+            let ret = UnionFind.make (match row with
+              | `Extend(_, l, ty, rest) -> `Extend(new_tv, l, go ty new_root, go_row rest new_root)
+              | `Empty _ -> `Empty new_tv
+              | `Free _ -> `Free new_tv)
+            in
+            UnionFind.merge
+              (fun _ r -> r)
+              map_copy
+              ret;
+            ret
           end
       end
     in
