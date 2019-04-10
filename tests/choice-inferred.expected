@@ -1,0 +1,2 @@
+Desugared: fn choice. (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn x. x)) (fn x. x)))) (((choice) ({})) ({}))
+Type error: mismatched type constructors: record and function

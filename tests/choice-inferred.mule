@@ -1,0 +1,8 @@
+# This is the classic example of something that hindley-milner can't give a
+# type to, since choice is used at two different types in the body of the
+# function. Mule should throw a type error here as well, but see
+# choice-annotated.mule for a version that type checks.
+fn choice.
+  { x = choice {} {}
+  , y = choice (fn x. x) (fn x. x)
+  }

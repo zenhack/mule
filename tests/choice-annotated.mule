@@ -1,0 +1,6 @@
+# The classic example of something hindley-milner can't type check. In mule
+# we can, but the annotation is necessary.
+fn (choice : all a. a -> a -> a).
+  { x = choice {} {}
+  , y = choice (fn x. x) (fn x. x)
+  }

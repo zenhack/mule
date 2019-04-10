@@ -1,0 +1,4 @@
+Desugared: fn $1. let choice = ((_ : all a. (a) -> ((a) -> (a)))) ($1) in (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn x. x)) (fn x. x)))) (((choice) ({})) ({}))
+inferred type: ((t101) -> ((t101) -> (t101))) -> ({x : {}, y : (t174) -> (t174)})
+Runtime term: fn $1. (fn choice. ((fn $179. fn $180. ($179) where { x = $180 }) (((fn $177. fn $178. ($177) where { y = $178 }) ({})) (((choice) (fn x. x)) (fn x. x)))) (((choice) ({})) ({}))) ($1)
+Evaluated: fn $1. (fn choice. ((fn $179. fn $180. ($179) where { x = $180 }) (((fn $177. fn $178. ($177) where { y = $178 }) ({})) (((choice) (fn x. x)) (fn x. x)))) (((choice) ({})) ({}))) ($1)
