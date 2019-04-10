@@ -111,8 +111,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                 ; ty_bound = ref new_bound
                 }
               in
-              (* Add a copy to the map up front, in case we hit a recursive type.
-               * We'll have to unify it with the final result below. *)
+              (* Add a copy to the map up front, in case we hit a recursive type. *)
               visited_types := Map.set !visited_types ~key:old_id ~data:(lazy(
                 (* Now do a deep copy, subbing in the new bound. *)
                 UnionFind.make (match n with
