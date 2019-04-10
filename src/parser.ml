@@ -19,8 +19,12 @@ let keywords = Set.of_list (module String)
   ; "in"
   ]
 
-(* [token p] is [p] followed by optional whitespace. *)
-let token p = attempt p << spaces
+let comment = char '#' >> many_chars (satisfy (function '\n' -> false | _ -> true))
+
+let ignorable = skip_many (skip space <|> skip comment)
+
+(* [token p] is [p] followed by optional whitespace & comments. *)
+let token p = attempt p << ignorable
 
 let kwd name =
   token (string name)
@@ -198,4 +202,4 @@ and field_def = lazy (
 
 let expr = Lazy.force expr
 
-let repl_line = spaces >> option expr << eof
+let repl_line = ignorable >> option expr << eof
