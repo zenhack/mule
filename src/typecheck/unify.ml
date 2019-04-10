@@ -44,10 +44,6 @@ let tyvar_permission: tyvar -> permission =
   fun tv ->
     get_permission (tyvar_bound_list tv)
 
-let ty_permission: u_type -> permission =
-  fun ty ->
-    get_permission (ty_bound_list ty)
-
 let bound_permission: bound_target bound -> permission =
   fun b -> get_permission (bound_list b)
 
@@ -110,7 +106,7 @@ let unify_tyvar: tyvar -> tyvar -> tyvar =
     UnionFind.merge unify_bound l.ty_bound r.ty_bound;
     l
 
-let graft l r =
+let graft: u_type -> tyvar -> u_type = fun t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a
    * flexible bottom node with another type. However, we only call this
    * in places where we're actually looking to merge the two graphs, so
@@ -120,11 +116,50 @@ let graft l r =
    * to the point where they would have to be to be merged with a hypothetical
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
-   *
-   * TODO FIXME: we need to actually do the raising bit for the subtree.
    *)
-  let _ = unify_tyvar (get_tyvar l) (get_tyvar r) in
-  l
+
+  (* In case we hit shared (or more importantly, recursive) nodes: *)
+  let visited = ref IntSet.empty in
+
+  let raise_tv {ty_bound; _} =
+    UnionFind.merge unify_bound ty_bound v.ty_bound
+  in
+  let rec raise_bounds: u_type -> unit = fun t ->
+    let tv = get_tyvar t in
+    if Set.mem !visited tv.ty_id then
+      ()
+    else
+      begin
+        visited := Set.add !visited tv.ty_id;
+        raise_tv tv;
+        match t with
+        | `Free _ ->
+            ()
+        | `Fn(_, param, ret) ->
+            raise_bounds (UnionFind.get param);
+            raise_bounds (UnionFind.get ret);
+        | `Record(_, r) -> raise_bounds_row (UnionFind.get r)
+        | `Union(_, r) -> raise_bounds_row (UnionFind.get r)
+      end
+  and raise_bounds_row: u_row -> unit = fun r ->
+    let tv = get_tyvar r in
+    if Set.mem !visited tv.ty_id then
+      ()
+    else
+      begin
+        visited := Set.add !visited tv.ty_id;
+        raise_tv tv;
+        match r with
+        | `Free _ -> ()
+        | `Empty _ -> ()
+        | `Extend(_, _, t, r) ->
+            raise_bounds (UnionFind.get t);
+            raise_bounds_row (UnionFind.get r)
+      end
+  in
+  raise_bounds t;
+  let _ = unify_tyvar (get_tyvar t) v in
+  t
 
 let rec unify l r =
   match l, r with
@@ -135,8 +170,8 @@ let rec unify l r =
   (* It is important that we do the graft permission checks *before*
    * any raisings/weakenings to get the bounds to match -- otherwise we
    * could get spurrious permission errors. *)
-  | ((`Free _) as v), t when perm_eq (ty_permission v) F -> graft t v
-  | t, ((`Free _) as v) when perm_eq (ty_permission v) F -> graft t v
+  | (`Free v), t when perm_eq (tyvar_permission v) F -> graft t v
+  | t, (`Free v) when perm_eq (tyvar_permission v) F -> graft t v
   | (`Free _), _ | _, (`Free _) -> permErr `Graft
 
   | _ ->
