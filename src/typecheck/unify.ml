@@ -111,6 +111,18 @@ let unify_tyvar: tyvar -> tyvar -> tyvar =
     l
 
 let graft l r =
+  (* {MLF-Graph} describes grafting as the process of replacing a
+   * flexible bottom node with another type. However, we only call this
+   * in places where we're actually looking to merge the two graphs, so
+   * it seems wasteful to actually do a copy first, since we're just
+   * going to end up unifying them. Instead, we raise the binding edges
+   * as needed until they meet those of the bottom node; this brings them
+   * to the point where they would have to be to be merged with a hypothetical
+   * mirror in the grafted tree. From here, the result of grafting and then
+   * merging is the same as just unifying.
+   *
+   * TODO FIXME: we need to actually do the raising bit for the subtree.
+   *)
   let _ = unify_tyvar (get_tyvar l) (get_tyvar r) in
   l
 
