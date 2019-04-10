@@ -20,7 +20,7 @@ and 'a bound =
   }
 and tyvar =
   { ty_id: int
-  ; ty_bound: bound_target bound UnionFind.var
+  ; ty_bound: bound_target bound ref
   }
 and g_node =
   { g_id: int
@@ -52,7 +52,7 @@ let get_tyvar: [< u_type | u_row ] -> tyvar = function
   | `Union (v, _) -> v
   | `Extend(v, _, _, _) -> v
   | `Empty v -> v
-let get_u_bound x = UnionFind.get (get_tyvar x).ty_bound
+let get_u_bound x = !((get_tyvar x).ty_bound)
 
 let rec show_u_type_v s v =
   let t = UnionFind.get v in

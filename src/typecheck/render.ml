@@ -10,7 +10,7 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
       ()
     else begin
       dict := Map.set !dict ~key:n ~data:();
-      emit_bind_edge n ty_bound dict;
+      emit_bind_edge n !ty_bound dict;
       begin match t with
         | `Free _ ->
             Debug.show_node `TyVar n
@@ -38,7 +38,7 @@ and emit_all_nodes_row v dict =
       ()
     else begin
       dict := Map.set !dict ~key:n ~data:();
-      emit_bind_edge n ty_bound dict;
+      emit_bind_edge n !ty_bound dict;
       begin match r with
       | `Empty _ ->
           Debug.show_node `RowEmpty n
@@ -68,8 +68,7 @@ and emit_all_nodes_g g dict =
         ()
     end
   end
-and emit_bind_edge n bnd dict =
-    let {b_at; b_ty} = UnionFind.get bnd in
+and emit_bind_edge n {b_at; b_ty} dict =
     match b_at with
     | `Ty parent ->
         let parent = Lazy.force parent in

@@ -29,7 +29,7 @@ let rec gnode_bound_list: g_node -> (unit, bound_ty) Sequence.Generator.t =
         yield b_ty >>= fun () -> gnode_bound_list b_at
 )
 let rec tyvar_bound_list: tyvar -> (unit, bound_ty) Sequence.Generator.t =
-  fun {ty_bound; _} -> bound_list (UnionFind.get ty_bound)
+  fun {ty_bound; _} -> bound_list !ty_bound
 and tgt_bound_list = function
   | `G g -> gnode_bound_list g
   | `Ty t -> ty_bound_list (UnionFind.get (Lazy.force t))
@@ -63,7 +63,7 @@ let bound_next {b_at; _} = match b_at with
             }
       end
   | `Ty u ->
-      Some (UnionFind.get (get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
+      Some !((get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
 
 (* Raise b one step, if it is legal to do so, otherwise throw an error. *)
 let raised_bound b =
@@ -100,10 +100,14 @@ let unify_bound l r =
   | _ -> {b_at; b_ty = `Rigid}
 
 (* Thin wrapper around [unify_bound], which updates the [tyvar]s' bounds
- * in-place. *)
+ * in-place. It does *not* permanantly link them, in the way that
+ * UnionFind.merge does.
+ *)
 let unify_tyvar: tyvar -> tyvar -> tyvar =
   fun l r ->
-    UnionFind.merge unify_bound l.ty_bound r.ty_bound;
+    let new_bound = unify_bound !(l.ty_bound) !(r.ty_bound) in
+    l.ty_bound := new_bound;
+    r.ty_bound := new_bound;
     l
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
@@ -121,8 +125,9 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   (* In case we hit shared (or more importantly, recursive) nodes: *)
   let visited = ref IntSet.empty in
 
-  let raise_tv {ty_bound; _} =
-    UnionFind.merge unify_bound ty_bound v.ty_bound
+  let raise_tv tv =
+    let _ = unify_tyvar tv v in
+    ()
   in
   let rec raise_bounds: u_type -> unit = fun t ->
     let tv = get_tyvar t in
@@ -264,7 +269,7 @@ and unify_row l r =
         let new_with_bound v =
           UnionFind.make (`Free
             { ty_id = gensym ()
-            ; ty_bound = UnionFind.make (get_u_bound (UnionFind.get v))
+            ; ty_bound = ref (get_u_bound (UnionFind.get v))
             })
         in
         let new_rest_r = new_with_bound r_rest in

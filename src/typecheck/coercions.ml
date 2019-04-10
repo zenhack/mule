@@ -232,9 +232,7 @@ let make_coercion_type g ty =
       let param = make_poly (`Ty root) exist_map graph_ty in
       let ret = make_poly (`Ty root) exist_map graph_ty in
       let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
-      UnionFind.modify
-        (fun {b_at; b_ty = _} -> {b_at; b_ty = `Rigid})
-        param_bound;
+      param_bound := { !param_bound with b_ty = `Rigid };
       (param, ret)
     )
   )
