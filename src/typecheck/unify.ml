@@ -168,8 +168,8 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
 
 let rec unify l r =
   match l, r with
-  | `Free {ty_id = lv; _}, `Free {ty_id = rv; _} when lv = rv ->
-      (* same type variable; just return it *)
+  | _ when (get_tyvar l).ty_id = (get_tyvar r).ty_id ->
+      (* These are already the same node; just return one. *)
       l
 
   (* It is important that we do the graft permission checks *before*
