@@ -166,12 +166,11 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   let _ = unify_tyvar (get_tyvar t) v in
   t
 
-let rec unify l r =
-  match l, r with
-  | _ when (get_tyvar l).ty_id = (get_tyvar r).ty_id ->
-      (* These are already the same node; just return one. *)
-      l
-
+let rec unify already_merged l r =
+  let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
+  if lid = rid || Set.mem already_merged (lid, rid) then l else
+  let already_merged = Set.add already_merged (lid, rid) in
+  begin match l, r with
   (* It is important that we do the graft permission checks *before*
    * any raisings/weakenings to get the bounds to match -- otherwise we
    * could get spurrious permission errors. *)
@@ -220,14 +219,14 @@ let rec unify l r =
      * steps, not part of the merge.
      *)
     | (`Fn (_, ll, lr), `Fn (_, rl, rr)) ->
-        UnionFind.merge unify ll rl;
-        UnionFind.merge unify lr rr;
+        UnionFind.merge (unify already_merged) ll rl;
+        UnionFind.merge (unify already_merged) lr rr;
         `Fn (tv, ll, lr)
     | (`Record (_, row_l), `Record(_, row_r)) ->
-        UnionFind.merge unify_row row_l row_r;
+        UnionFind.merge (unify_row already_merged) row_l row_r;
         `Record (tv, row_l)
     | (`Union (_, row_l), `Union(_, row_r)) ->
-        UnionFind.merge unify_row row_l row_r;
+        UnionFind.merge (unify_row already_merged) row_l row_r;
         `Union(tv, row_l)
 
 
@@ -247,15 +246,19 @@ let rec unify l r =
     | `Union  _, `Fn     _ -> ctorErr `Union  `Fn
     | `Union  _, `Record _ -> ctorErr `Union  `Record
     end
-and unify_row l r =
+  end
+and unify_row already_merged l r =
+  let (lid, rid) = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
+  if lid = rid || Set.mem already_merged (lid, rid) then l else
+  let already_merged = Set.add already_merged (lid, rid) in
   let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   match l, r with
   | (`Empty _, `Empty _) -> `Empty tv
   | (`Extend (_, l_lbl, l_ty, l_rest), `Extend (_, r_lbl, r_ty, r_rest)) ->
       let ret = `Extend (tv, l_lbl, l_ty, l_rest) in
       if Ast.Label.equal l_lbl r_lbl then begin
-        UnionFind.merge unify l_ty r_ty;
-        UnionFind.merge unify_row l_rest r_rest;
+        UnionFind.merge (unify already_merged) l_ty r_ty;
+        UnionFind.merge (unify_row already_merged) l_rest r_rest;
         ret
       end else begin
         (* XXX: I(@zenhack) am not sure what the bounds should be here;
@@ -279,16 +282,18 @@ and unify_row l r =
           ; ty_bound = tv.ty_bound
           }
         in
-        UnionFind.merge unify_row
+        UnionFind.merge (unify_row already_merged)
           r_rest
           (UnionFind.make (`Extend(new_tv (), l_lbl, l_ty, new_rest_r)));
-        UnionFind.merge unify_row
+        UnionFind.merge (unify_row already_merged)
           l_rest
           (UnionFind.make (`Extend(new_tv (), r_lbl, r_ty, new_rest_l)));
         ret
       end
-
   | (`Free _, r) -> r
   | (l, `Free _) -> l
   | (`Extend (_, lbl, _, _), `Empty _) -> ctorErr (`Extend lbl) `Empty
   | (`Empty _, `Extend (_, lbl, _, _)) -> ctorErr `Empty (`Extend lbl)
+
+let unify = unify IntPairSet.empty
+let unify_row = unify_row IntPairSet.empty

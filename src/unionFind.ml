@@ -22,8 +22,10 @@ let rec get_rep_val: 'a var -> ('a var * 'a) =
         (rep, value)
 
 let get var =
-  let (_, value) = get_rep_val var in
-  value
+  snd (get_rep_val var)
+
+let get_rep var =
+  fst (get_rep_val var)
 
 let equal l r =
   let (l', _), (r', _) = get_rep_val l, get_rep_val r in
@@ -34,8 +36,11 @@ let merge f l r =
   if phys_equal lrep rrep then
     ()
   else begin
-    rrep := Ptr lrep;
     let value = f lval rval in
+    (* We need to fetch these again, in case they were modified by
+     * [f]: *)
+    let lrep, rrep = get_rep l, get_rep r in
+    rrep := Ptr lrep;
     lrep := Repr value
   end
 

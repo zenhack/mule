@@ -24,9 +24,13 @@ val modify : ('a -> 'a) -> 'a var -> unit
 (* Compare two variables for equality *)
 val equal : 'a var -> 'a var -> bool
 
-(* Unify two variables, given a function to merge their values. As soon as this
- * function is called, the variables are considred unified; if examined during
- * the merging function's execution they will appear to be already merged.
+(* Unify two variables, given a function to merge their values. The variables
+ * will not appear merged until the function returns.
+ *
+ * merge is reentrancy-safe, in that no invariants are broken by passing a
+ * variable to merge that is in use by an existing call to merge (higher up
+ * in the stack), but note that the final value will follow a "last update
+ * wins" rule. It is *not* concurrency safe.
  *)
 val merge
   : ('a -> 'a -> 'a)
