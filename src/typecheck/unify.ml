@@ -189,7 +189,7 @@ let rec unify l r =
    * are the same. The remaining part of requirement 3 is that the permissions
    * are not locked, so check for that, and fail if they are locked:
    *)
-  let tv= unify_tyvar (get_tyvar l) (get_tyvar r) in
+  let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
   if perm_eq (tyvar_permission tv) L then
     permErr `Merge
   else
