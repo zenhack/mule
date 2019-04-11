@@ -61,7 +61,7 @@ let rec collect_exist_vars = function
   | Type.Fn (_, l, r) ->
       merge_disjoint_exn (collect_exist_vars l) (collect_exist_vars r)
   | Type.Recur (_, _, _) ->
-      failwith "TODO"
+      VarMap.empty
   | Type.Var _ ->
       VarMap.empty
   | Type.Record row -> collect_exist_row row
@@ -83,6 +83,7 @@ type graph_monotype =
   | `Fn of graph_polytype * graph_polytype
   | `Record of graph_row
   | `Union of graph_row
+  | `Recur of (Var.t * graph_polytype)
   ]
 and graph_polytype =
   { gp_vars: [ `Type | `Row ] VarMap.t
@@ -117,8 +118,15 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
           , graph_friendly VarMap.empty ret
           )
       }
-  | Type.Recur _ ->
-      failwith "TODO"
+  | Type.Recur (_, var, body) ->
+      { gp_vars = acc
+      ; gp_type = `Recur
+        ( var
+        (* TODO: we don't allow recursive rows, but we should be consistent
+         * about checking/enforcing this elsewhere: *)
+        , graph_friendly (Map.set ~key:var ~data:`Type acc) body
+        )
+      }
   | Type.Var (_, v) ->
       { gp_vars = acc
       ; gp_type = `Var v
@@ -150,6 +158,16 @@ let rec make_mono: bound_target -> env_t -> graph_monotype -> u_type UnionFind.v
   fun b_at env -> function
   | `Var v ->
       require_type (Map.find_exn env v)
+  | `Recur(v, body) ->
+      let ret = gen_u b_at in
+      let ret' =
+        make_poly
+          b_at
+          (Map.set env ~key:v ~data:(`Type ret))
+          body
+      in
+      UnionFind.merge (fun _ r -> r) ret ret';
+      ret
   | `Fn(param, ret) ->
       UnionFind.make
         (`Fn
