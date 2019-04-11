@@ -1,0 +1,4 @@
+Desugared: (fn x. (x) (x)) (fn x. x)
+inferred type: rec t31. (t31) -> (t31)
+Runtime term: (fn x. (x) (x)) (fn x. x)
+Evaluated: fn x. x
