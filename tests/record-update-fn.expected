@@ -1,4 +1,6 @@
-Desugared: fn x. (((_ where { y = _ })) (x)) ({})
-inferred type: ({, ...t43}) -> ({y : {}, ...t43})
-Runtime term: fn x. ((fn $46. fn $47. ($46) where { y = $47 }) (x)) ({})
-Evaluated: fn x. ((fn $46. fn $47. ($46) where { y = $47 }) (x)) ({})
+Desugared: fn $0. (match-lam
+| x -> (((_ where { y = _ })) (x)) ({})
+end) ($0)
+inferred type: ({, ...t66}) -> ({y : {}, ...t66})
+Runtime term: fn $0. (match _ with  | _ -> fn x. ((fn $69. fn $70. ($69) where { y = $70 }) (x)) ({}) end) ($0)
+Evaluated: fn $0. (match _ with  | _ -> fn x. ((fn $69. fn $70. ($69) where { y = $70 }) (x)) ({}) end) ($0)

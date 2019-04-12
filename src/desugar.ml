@@ -5,35 +5,6 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
-let rec free_vars: D.t -> VarSet.t = function
-  | D.Lam(param, body) ->
-      Set.remove (free_vars body) param
-  | D.Match {cases; default} ->
-      let def_fvs = match default with
-        | None -> VarSet.empty
-        | Some (None, e) -> free_vars e
-        | Some (Some v, e) -> free_vars (D.Lam(v, e))
-      in
-      Map.map cases ~f:(fun (param, body) -> free_vars (D.Lam (param, body)))
-      |> Map.fold
-          ~init:VarSet.empty
-          ~f:(fun ~key:_ ~data -> Set.union data)
-      |> Set.union def_fvs
-  | D.App(f, x) ->
-      Set.union (free_vars f) (free_vars x)
-  | D.EmptyRecord | D.GetField _ | D.Update _ ->
-      VarSet.empty
-  | D.Ctor(_l, e) ->
-      free_vars e
-  | D.Var v ->
-      VarSet.singleton v
-  | D.WithType _ ->
-      VarSet.empty
-  | D.Let(v, e, body) ->
-      Set.union
-        (free_vars e)
-        (Set.remove (free_vars body) v)
-
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
       DT.Fn((), desugar_type param, desugar_type ret)
@@ -177,39 +148,6 @@ and finalize_dict dict =
       )
     )
 
-let rec simplify e = match e with
-  | D.Lam (param, body) ->
-      begin match simplify body with
-        | D.App(f, D.Var v) when
-            Ast.Var.equal v param
-            && not (Set.mem (free_vars f) param) ->
-              f
-        | b -> D.Lam(param, b)
-      end
-  | D.Match {cases; default = Some (Some param, body)}
-      when Map.is_empty cases ->
-        simplify (D.Lam(param, body))
-  | D.App(f, x) ->
-      begin match D.App(simplify f, simplify x) with
-        | D.App (D.Lam(p, D.Ctor(c, D.Var v)), arg) when Ast.Var.equal v p ->
-            D.Ctor(c, arg)
-        | e' -> e'
-      end
-  | D.GetField lbl ->
-      D.GetField lbl
-  | D.EmptyRecord ->
-      D.EmptyRecord
-  | D.Update lbl ->
-      D.Update lbl
-  | D.Ctor (l, e') ->
-      D.Ctor(l, simplify e')
-  | D.Var _ | D.Match _ ->
-      e (* TODO: don't be lazy about match. *)
-  | D.WithType ty ->
-      D.WithType ty
-  | D.Let(v, e', body) ->
-      D.Let (v, simplify e', simplify body)
-
 let desugar e =
-  try Ok (simplify (desugar e))
+  try Ok (desugar e)
   with MuleErr.MuleExn err -> Error err

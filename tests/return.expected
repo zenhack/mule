@@ -1,4 +1,6 @@
-Desugared: fn x. (x) ({})
+Desugared: fn $0. (match-lam
+| x -> (x) ({})
+end) ($0)
 inferred type: (({}) -> (t3)) -> (t3)
-Runtime term: fn x. (x) ({})
-Evaluated: fn x. (x) ({})
+Runtime term: fn $0. (match _ with  | _ -> fn x. (x) ({}) end) ($0)
+Evaluated: fn $0. (match _ with  | _ -> fn x. (x) ({}) end) ($0)

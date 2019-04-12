@@ -1,2 +1,8 @@
-Desugared: fn choice. (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn x. x)) (fn x. x)))) (((choice) ({})) ({}))
+Desugared: fn $0. (match-lam
+| choice -> (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn $2. (match-lam
+  | x -> x
+  end) ($2))) (fn $1. (match-lam
+  | x -> x
+  end) ($1))))) (((choice) ({})) ({}))
+end) ($0)
 Type error: mismatched type constructors: record and function
