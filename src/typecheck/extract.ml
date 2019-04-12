@@ -54,18 +54,18 @@ let add_rec_binders ty =
   snd (add_rec_binders ty)
 
 (* Extract a type from a (solved) unification variable. *)
-let rec get_var_type env = function
+let rec get_var_type env t =
+  let i = (get_tyvar t).ty_id in
+  match t with
+  | _ when Set.mem env (ivar i) -> Type.Var (i, (ivar i))
   | `Free {ty_id = i; _} -> Type.Var (i, (ivar i))
-  | `Fn ({ty_id = i; ty_bound = b}, f, x) ->
-      if Set.mem env (ivar i) then
-        get_var_type env (`Free {ty_id = i; ty_bound = b})
-      else
-        let env' = Set.add env (ivar i) in
-        Type.Fn
-          ( i
-          , get_var_type env' (UnionFind.get f)
-          , get_var_type env' (UnionFind.get x)
-          )
+  | `Fn ({ty_id = i; _}, f, x) ->
+      let env' = Set.add env (ivar i) in
+      Type.Fn
+        ( i
+        , get_var_type env' (UnionFind.get f)
+        , get_var_type env' (UnionFind.get x)
+        )
   | `Record ({ty_id = i; _}, fields) ->
       let (fields, rest) =
         get_var_row (Set.add env (ivar i)) (UnionFind.get fields)
@@ -76,13 +76,17 @@ let rec get_var_type env = function
         get_var_row (Set.add env (ivar i)) (UnionFind.get ctors)
       in
       Type.Union (i, ctors, rest)
-and get_var_row env = function
+and get_var_row env r =
+  let i = (get_tyvar r).ty_id in
+  match r with
+  | _ when Set.mem env (ivar i) -> ([], Some (ivar i))
   | `Free {ty_id = i; _} -> ([], Some (ivar i))
   | `Empty _ -> ([], None)
-  | `Extend (_, lbl, ty, rest) ->
-      let (fields, rest) = get_var_row env (UnionFind.get rest) in
+  | `Extend ({ty_id = i; _}, lbl, ty, rest) ->
+      let env' = Set.add env (ivar i) in
+      let (fields, rest) = get_var_row env' (UnionFind.get rest) in
       ( ( lbl
-        , get_var_type env (UnionFind.get ty)
+        , get_var_type env' (UnionFind.get ty)
         )
         :: fields
       , rest
