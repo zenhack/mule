@@ -1,0 +1,22 @@
+let fix = fn f.
+  let g = fn x. f (fn v. x x v) in
+  g g
+in
+let map =
+  fix fn map f list. match list with
+    | Cons parts -> Cons { hd = f parts.hd, tl = map f parts.tl }
+    | Nil _ -> Nil {}
+  end
+in
+map (fn r. r.y)
+  (Cons
+    { hd = { y = Bob {} }
+    , tl = Cons
+      { hd = { y = Alice {} }
+      , tl = Cons
+        { hd = { y = Charlie {} }
+        , tl = Nil {}
+        }
+      }
+    }
+  )
