@@ -1,4 +1,16 @@
-Desugared: _.x (_ where { x = _ } {} {})
-inferred type: {}
-Runtime term: _.x ((fn $58. fn $59. $58 where { x = $59 }) {} {})
-Evaluated: {}
+
+Desugared:
+
+	_.x (_ where { x = _ } {} {})
+
+inferred type:
+
+	{}
+
+Runtime term:
+
+	_.x ((fn $58. fn $59. $58 where { x = $59 }) {} {})
+
+Evaluated:
+
+	{}

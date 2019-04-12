@@ -1,4 +1,16 @@
-Desugared: (fn x. Ok x) {}
-inferred type: Ok {} | ...a
-Runtime term: (fn x. Ok x) {}
-Evaluated: Ok {}
+
+Desugared:
+
+	(fn x. Ok x) {}
+
+inferred type:
+
+	Ok {} | ...a
+
+Runtime term:
+
+	(fn x. Ok x) {}
+
+Evaluated:
+
+	Ok {}

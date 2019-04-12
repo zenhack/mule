@@ -1,4 +1,7 @@
-Desugared: fn $0. match-lam
+
+Desugared:
+
+	fn $0. match-lam
 | choice -> _ where { x = _ } (_ where { y = _ } {} (choice fn $2. match-lam
   | x -> x
   end $2 fn $1. match-lam

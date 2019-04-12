@@ -1,13 +1,16 @@
 open Result.Monad_infix
 
+let display label text =
+  Stdio.print_endline ("\n" ^ label ^ ":\n\n\t" ^ text)
+
 let desugar_typecheck expr =
   Lint.check expr
   >>= fun _ -> Desugar.desugar expr
   >>= fun dexp ->
-    Stdio.print_endline ("Desugared: " ^ Pretty.expr dexp);
+    display "Desugared" (Pretty.expr dexp);
     Typecheck.typecheck dexp
   >>| fun ty ->
-    Stdio.print_endline ("inferred type: " ^ Pretty.typ ty);
+    display "inferred type"  (Pretty.typ ty);
     dexp
 
 let run input =
@@ -15,8 +18,7 @@ let run input =
    * regardless of whether we're at the repl: *)
   match MParser.parse_string Parser.repl_line input () with
   | MParser.Failed (msg, _) ->
-      Stdio.print_endline "Parse Error:";
-      Stdio.print_endline msg;
+      display "Parse Error" msg;
       Error ()
   | MParser.Success None ->
       (* empty input *)
@@ -28,8 +30,8 @@ let run input =
           Error ()
       | Ok dexp ->
           let rexp = To_runtime.translate dexp in
-          Stdio.print_endline ("Runtime term: " ^ Pretty.runtime_expr rexp);
+          display "Runtime term" (Pretty.runtime_expr rexp);
           let ret = Eval.eval rexp in
-          Stdio.print_endline ("Evaluated: " ^ Pretty.runtime_expr ret);
+          display "Evaluated" (Pretty.runtime_expr ret);
           Ok ()
       end

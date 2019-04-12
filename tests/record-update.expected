@@ -1,4 +1,16 @@
-Desugared: _ where { y = _ } (_ where { x = _ } {} {}) (_ where { z = _ } {} {})
-inferred type: {x : {}, y : {z : {}}}
-Runtime term: (fn $121. fn $122. $121 where { y = $122 }) ((fn $119. fn $120. $119 where { x = $120 }) {} {}) ((fn $117. fn $118. $117 where { z = $118 }) {} {})
-Evaluated: {x = {}, y = {z = {}}}
+
+Desugared:
+
+	_ where { y = _ } (_ where { x = _ } {} {}) (_ where { z = _ } {} {})
+
+inferred type:
+
+	{x : {}, y : {z : {}}}
+
+Runtime term:
+
+	(fn $121. fn $122. $121 where { y = $122 }) ((fn $119. fn $120. $119 where { x = $120 }) {} {}) ((fn $117. fn $118. $117 where { z = $118 }) {} {})
+
+Evaluated:
+
+	{x = {}, y = {z = {}}}

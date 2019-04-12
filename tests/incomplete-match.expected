@@ -1,4 +1,7 @@
-Desugared: match-lam
+
+Desugared:
+
+	match-lam
 | Err $0 -> match-lam
   | x -> x
   end $0
