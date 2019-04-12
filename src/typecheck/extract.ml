@@ -95,5 +95,4 @@ let get_var_type uvar =
   UnionFind.get uvar
     |> get_var_type VarSet.empty
     |> add_rec_binders
-
-
+    |> Relabel.relabel_type ()

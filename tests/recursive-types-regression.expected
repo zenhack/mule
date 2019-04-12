@@ -3,6 +3,6 @@ Desugared: (fn $1. match-lam
 end $1) fn $0. match-lam
 | x -> x
 end $0
-inferred type: rec t60. t60 -> t60
+inferred type: rec a. a -> a
 Runtime term: (fn $1. match _ with  | _ -> fn x. x x end $1) fn $0. match _ with  | _ -> fn x. x end $0
 Evaluated: fn $0. match _ with  | _ -> fn x. x end $0

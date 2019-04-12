@@ -1,6 +1,6 @@
 Desugared: fn $0. match-lam
 | x -> _ where { y = _ } x {}
 end $0
-inferred type: {, ...t66} -> {y : {}, ...t66}
+inferred type: {, ...a} -> {y : {}, ...a}
 Runtime term: fn $0. match _ with  | _ -> fn x. (fn $69. fn $70. $69 where { y = $70 }) x {} end $0
 Evaluated: fn $0. match _ with  | _ -> fn x. (fn $69. fn $70. $69 where { y = $70 }) x {} end $0
