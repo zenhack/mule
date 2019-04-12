@@ -1,4 +1,5 @@
 open Typecheck_types
+open Ast
 open Ast.Desugared
 
 let ivar i = Ast.Var.of_string ("t" ^ Int.to_string i)
@@ -78,19 +79,36 @@ let rec get_var_type env t =
       Type.Union (i, ctors, rest)
 and get_var_row env r =
   let i = (get_tyvar r).ty_id in
-  match r with
-  | _ when Set.mem env (ivar i) -> ([], Some (ivar i))
-  | `Free {ty_id = i; _} -> ([], Some (ivar i))
-  | `Empty _ -> ([], None)
-  | `Extend ({ty_id = i; _}, lbl, ty, rest) ->
-      let env' = Set.add env (ivar i) in
-      let (fields, rest) = get_var_row env' (UnionFind.get rest) in
-      ( ( lbl
-        , get_var_type env' (UnionFind.get ty)
+  let (fields, rest) =
+    match r with
+    | _ when Set.mem env (ivar i) -> ([], Some (ivar i))
+    | `Free {ty_id = i; _} -> ([], Some (ivar i))
+    | `Empty _ -> ([], None)
+    | `Extend ({ty_id = i; _}, lbl, ty, rest) ->
+        let env' = Set.add env (ivar i) in
+        let (fields, rest) = get_var_row env' (UnionFind.get rest) in
+        ( ( lbl
+          , get_var_type env' (UnionFind.get ty)
+          )
+          :: fields
+        , rest
         )
-        :: fields
-      , rest
-      )
+  in
+
+  (* Filter out duplicate field names: *)
+  let seen = ref LabelSet.empty in
+  let fields = List.filter fields ~f:(fun (l, _) ->
+    if Set.mem !seen l then
+      false
+    else
+      (seen := Set.add !seen l; true)
+  )
+  in
+
+  (* Ensure a consistent ordering: *)
+  ( List.sort fields ~compare:(fun (ll, _) (lr, _) -> Label.compare ll lr)
+  , rest
+  )
 let get_var_type uvar =
   UnionFind.get uvar
     |> get_var_type VarSet.empty
