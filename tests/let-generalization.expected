@@ -1,8 +1,8 @@
-Desugared: let f = fn $1. (match-lam
+Desugared: let f = fn $1. match-lam
 | x -> x
-end) ($1) in (((_ where { a = _ })) ((((_ where { b = _ })) ({})) ((f) ((fn x. (Ok x)) ({}))))) ((f) (fn $0. (match-lam
+end $1 in _ where { a = _ } (_ where { b = _ } {} (f ((fn x. Ok x) {}))) (f fn $0. match-lam
 | y -> y
-end) ($0)))
+end $0)
 inferred type: {a : t179 -> t179, b : Ok {} | ...t165}
-Runtime term: (fn f. ((fn $182. fn $183. ($182) where { a = $183 }) (((fn $180. fn $181. ($180) where { b = $181 }) ({})) ((f) ((fn x. (Ok) (x)) ({}))))) ((f) (fn $0. (match _ with  | _ -> fn y. y end) ($0)))) (fn $1. (match _ with  | _ -> fn x. x end) ($1))
-Evaluated: {a = fn $0. (match _ with  | _ -> fn y. y end) ($0), b = (Ok) ({})}
+Runtime term: (fn f. (fn $182. fn $183. $182 where { a = $183 }) ((fn $180. fn $181. $180 where { b = $181 }) {} (f ((fn x. Ok x) {}))) (f fn $0. match _ with  | _ -> fn y. y end $0)) fn $1. match _ with  | _ -> fn x. x end $1
+Evaluated: {a = fn $0. match _ with  | _ -> fn y. y end $0, b = Ok {}}

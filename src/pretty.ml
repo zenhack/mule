@@ -3,14 +3,17 @@ open Ast.Desugared
 
 let prec = function
   | `Top -> -1000
-  | `App -> 0
-  | `FnR | `Fn -> 1
-  | `FnL -> 2
-  | `Alt -> 3
-
+  | `Type -> -50
+  | `App | `AppL -> 0
+  | `AppR -> 1
+  | `FnR | `Fn -> 10
+  | `FnL -> 20
+  | `Alt -> 30
+  | `WhereL -> 39
+  | `Where -> 40
 
 let is_left = function
-  | `FnL -> true
+  | `FnL | `AppL | `WhereL -> true
   | _ -> false
 
 let op_parens parent child txt =
@@ -58,7 +61,7 @@ let rec typ p = Type.(
   | Union (_, ctors, rest) -> (
       op_parens p `Alt
         (String.concat ~sep:" | "
-            (List.map ctors ~f: (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " " ^ typ `App ty)))
+            (List.map ctors ~f: (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " " ^ typ `AppR ty)))
           ^ match rest with
             | Some v -> " | ..." ^ Ast.Var.to_string v
             | None -> ""
@@ -71,38 +74,41 @@ let rec typ p = Type.(
       binder_parens p
         (qstr ^ Var.to_string var ^ ". " ^ typ `Top body)
 )
-let typ t = typ `Top t
 
-let rec expr indent = function
+let rec expr p indent = function
   | Expr.Var var ->
       Var.to_string var
   | Expr.Ctor (name, e) ->
-      "(" ^ Label.to_string name ^ " " ^ expr indent e ^ ")"
+      op_parens p `App
+        (Label.to_string name ^ " " ^ expr `AppR indent e)
   | Expr.Lam (var, body) ->
-      String.concat
-        [ "fn "
-        ; Var.to_string var
-        ; ". "
-        ; expr indent body
-        ]
+      binder_parens p
+        (String.concat
+          [ "fn "
+          ; Var.to_string var
+          ; ". "
+          ; expr `Top indent body
+          ])
   | Expr.App (f, x) ->
-      String.concat
-        [ "("
-        ; expr indent f
-        ; ") ("
-        ; expr indent x
-        ; ")"
-        ]
+      op_parens p `App
+        (String.concat
+          [ expr `AppL indent f
+          ; " "
+          ; expr `AppR indent x
+          ])
   | Expr.EmptyRecord ->
       "{}"
   | Expr.Update lbl ->
-      "(_ where { " ^ Label.to_string lbl ^ " = _ })"
+      op_parens p `Where
+        ("_ where { " ^ Label.to_string lbl ^ " = _ }")
   | Expr.GetField lbl ->
       "_." ^ Label.to_string lbl
   | Expr.WithType ty ->
-      "(_ : " ^ typ ty ^ ")"
+      op_parens p `Type
+        ("_ : " ^ typ `Type ty)
   | Expr.Let (v, e, body) ->
-      "let " ^ Var.to_string v ^ " = " ^ expr indent e ^ " in " ^ expr indent body
+      binder_parens p
+        ("let " ^ Var.to_string v ^ " = " ^ expr `Top indent e ^ " in " ^ expr `Top indent body)
   | Expr.Match {cases; default} ->
       let new_indent = indent ^ "  " in
       String.concat
@@ -116,7 +122,7 @@ let rec expr indent = function
                 ; " "
                 ; Var.to_string v
                 ; " -> "
-                ; expr new_indent e
+                ; expr `Top new_indent e
                 ]
             )
             |> String.concat
@@ -126,7 +132,7 @@ let rec expr indent = function
                 [ "\n"
                 ; indent
                 ; "| _ -> "
-                ; expr new_indent e
+                ; expr `Top new_indent e
                 ]
             | Some (Some v, e) -> String.concat
                 [ "\n"
@@ -134,11 +140,64 @@ let rec expr indent = function
                 ; "| "
                 ; Var.to_string v
                 ; " -> "
-                ; expr new_indent e
+                ; expr `Top new_indent e
                 ]
           end
         ; "\n"
         ; indent
         ; "end"
         ]
-let expr e = expr "" e
+let typ t = typ `Top t
+let expr e = expr `Top "" e
+
+let rec runtime_expr p =
+  let open Ast.Runtime.Expr in
+  function
+  | Var v -> Var.to_string v
+  | Lam(param, body) ->
+      binder_parens p
+        ("fn " ^ Var.to_string param ^ ". " ^ runtime_expr `Top body)
+  | App(f, x) ->
+      op_parens p `App
+        (runtime_expr `AppL f ^ " " ^ runtime_expr `AppR x)
+  | Record r -> String.concat
+      [ "{"
+      ; Map.to_alist r
+          |> List.map ~f:(fun (k, v) -> Label.to_string k ^ " = " ^ runtime_expr `Top v)
+          |> String.concat ~sep:", "
+      ; "}"
+      ]
+  | GetField label ->
+      "_." ^ Label.to_string label
+  | Update {old; label; field} ->
+      op_parens p `Where
+        (String.concat
+          [ runtime_expr `WhereL old
+          ; " where { "
+          ; Label.to_string label
+          ; " = "
+          ; runtime_expr `Top field
+          ; " }"
+          ])
+  | Ctor (label, arg) ->
+      runtime_expr p
+        (App
+          ( Var(Var.of_string(Label.to_string label))
+          , arg
+          )
+        )
+  | Match {cases; default} ->
+      String.concat
+        [ "match _ with "
+        ; String.concat ~sep:" | "
+            (cases
+              |> Map.to_alist
+              |> List.map
+                  ~f:(fun (lbl, f) -> Label.to_string lbl ^ " -> " ^ runtime_expr `Top f))
+        ; begin match default with
+            | None -> ""
+            | Some f -> " | _ -> " ^ runtime_expr `Top f
+          end
+        ; " end"
+        ]
+let runtime_expr e = runtime_expr `Top e

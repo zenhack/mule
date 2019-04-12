@@ -28,8 +28,8 @@ let run input =
           Error ()
       | Ok dexp ->
           let rexp = To_runtime.translate dexp in
-          Stdio.print_endline ("Runtime term: " ^ Ast.Runtime.Expr.pretty rexp);
+          Stdio.print_endline ("Runtime term: " ^ Pretty.runtime_expr rexp);
           let ret = Eval.eval rexp in
-          Stdio.print_endline ("Evaluated: " ^ Ast.Runtime.Expr.pretty ret);
+          Stdio.print_endline ("Evaluated: " ^ Pretty.runtime_expr ret);
           Ok ()
       end

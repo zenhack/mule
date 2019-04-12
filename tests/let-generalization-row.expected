@@ -1,6 +1,6 @@
-Desugared: let f = fn $0. (match-lam
-| x -> (_.y) (x)
-end) ($0) in (((_ where { a = _ })) ((((_ where { b = _ })) ({})) ((f) ((((_ where { y = _ })) ({})) ((((_ where { z = _ })) ({})) ({})))))) ((f) ((((_ where { y = _ })) ({})) ({})))
+Desugared: let f = fn $0. match-lam
+| x -> _.y x
+end $0 in _ where { a = _ } (_ where { b = _ } {} (f (_ where { y = _ } {} (_ where { z = _ } {} {})))) (f (_ where { y = _ } {} {}))
 inferred type: {a : {}, b : {z : {}}}
-Runtime term: (fn f. ((fn $290. fn $291. ($290) where { a = $291 }) (((fn $288. fn $289. ($288) where { b = $289 }) ({})) ((f) (((fn $286. fn $287. ($286) where { y = $287 }) ({})) (((fn $284. fn $285. ($284) where { z = $285 }) ({})) ({})))))) ((f) (((fn $282. fn $283. ($282) where { y = $283 }) ({})) ({})))) (fn $0. (match _ with  | _ -> fn x. ((_.y)) (x) end) ($0))
+Runtime term: (fn f. (fn $290. fn $291. $290 where { a = $291 }) ((fn $288. fn $289. $288 where { b = $289 }) {} (f ((fn $286. fn $287. $286 where { y = $287 }) {} ((fn $284. fn $285. $284 where { z = $285 }) {} {})))) (f ((fn $282. fn $283. $282 where { y = $283 }) {} {}))) fn $0. match _ with  | _ -> fn x. _.y x end $0
 Evaluated: {a = {}, b = {z = {}}}
