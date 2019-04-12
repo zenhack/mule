@@ -1,10 +1,10 @@
 Desugared: fn $0. (match-lam
-| $1 -> let choice = ((_ : all a. (a) -> ((a) -> (a)))) ($1) in (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn $3. (match-lam
+| $1 -> let choice = ((_ : all a. a -> a -> a)) ($1) in (((_ where { x = _ })) ((((_ where { y = _ })) ({})) (((choice) (fn $3. (match-lam
   | x -> x
   end) ($3))) (fn $2. (match-lam
   | x -> x
   end) ($2))))) (((choice) ({})) ({}))
 end) ($0)
-inferred type: ((t226) -> ((t226) -> (t226))) -> ({x : {}, y : (t233) -> (t233)})
+inferred type: (t226 -> t226 -> t226) -> {x : {}, y : t233 -> t233}
 Runtime term: fn $0. (match _ with  | _ -> fn $1. (fn choice. ((fn $238. fn $239. ($238) where { x = $239 }) (((fn $236. fn $237. ($236) where { y = $237 }) ({})) (((choice) (fn $3. (match _ with  | _ -> fn x. x end) ($3))) (fn $2. (match _ with  | _ -> fn x. x end) ($2))))) (((choice) ({})) ({}))) ($1) end) ($0)
 Evaluated: fn $0. (match _ with  | _ -> fn $1. (fn choice. ((fn $238. fn $239. ($238) where { x = $239 }) (((fn $236. fn $237. ($236) where { y = $237 }) ({})) (((choice) (fn $3. (match _ with  | _ -> fn x. x end) ($3))) (fn $2. (match _ with  | _ -> fn x. x end) ($2))))) (((choice) ({})) ({}))) ($1) end) ($0)

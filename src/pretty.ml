@@ -1,30 +1,54 @@
 open Ast
 open Ast.Desugared
 
-let rec typ = Type.(
+let prec = function
+  | `Top -> -1000
+  | `App -> 0
+  | `FnR | `Fn -> 1
+  | `FnL -> 2
+  | `Alt -> 3
+
+
+let is_left = function
+  | `FnL -> true
+  | _ -> false
+
+let op_parens parent child txt =
+  if prec child < prec parent then
+    "(" ^ txt ^ ")"
+  else
+    txt
+
+let binder_parens parent txt =
+  if is_left parent then
+    "(" ^ txt ^ ")"
+  else
+    txt
+
+let rec typ p = Type.(
   function
   | Var (_, v) -> Ast.Var.to_string v
   | Fn (_, f, x) ->
-      String.concat
-        [ "("
-        ; typ f
-        ; ") -> ("
-        ; typ x
-        ; ")"
-        ]
+      op_parens p `Fn
+        (String.concat
+          [ typ `FnL f
+          ; " -> "
+          ; typ `FnR x
+          ])
   | Recur (_, v, body) ->
-      String.concat
-        [ "rec "
-        ; Ast.Var.to_string v
-        ; ". "
-        ; typ body
-        ]
+      binder_parens p
+        (String.concat
+          [ "rec "
+          ; Ast.Var.to_string v
+          ; ". "
+          ; typ `Top body
+          ])
   | Record (_, fields, rest) ->
       String.concat
         [ "{"
         ; String.concat ~sep:", "
             (List.map fields
-              ~f:(fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ ty)
+              ~f:(fun (lbl, ty) -> Ast.Label.to_string lbl ^ " : " ^ typ `Top ty)
             )
         ; (match rest with
             | Some v -> ", ..." ^ Ast.Var.to_string v
@@ -32,19 +56,22 @@ let rec typ = Type.(
         ; "}"
         ]
   | Union (_, ctors, rest) -> (
-      (String.concat ~sep:" | "
-        (List.map ctors ~f: (fun (lbl, ty) -> "(" ^ Ast.Label.to_string lbl ^ " " ^ typ ty ^ ")")))
-      ^ match rest with
-        | Some v -> " | ..." ^ Ast.Var.to_string v
-        | None -> ""
-  )
+      op_parens p `Alt
+        (String.concat ~sep:" | "
+            (List.map ctors ~f: (fun (lbl, ty) -> Ast.Label.to_string lbl ^ " " ^ typ `App ty)))
+          ^ match rest with
+            | Some v -> " | ..." ^ Ast.Var.to_string v
+            | None -> ""
+        )
   | Quant(_, q, var, _, body) ->
       let qstr = match q with
         | `All -> "all "
         | `Exist -> "exist "
       in
-      qstr ^ Var.to_string var ^ ". " ^ typ body
+      binder_parens p
+        (qstr ^ Var.to_string var ^ ". " ^ typ `Top body)
 )
+let typ t = typ `Top t
 
 let rec expr indent = function
   | Expr.Var var ->
