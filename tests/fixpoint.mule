@@ -1,0 +1,4 @@
+# A fixpoint combinator.
+fn f.
+  let g = fn x. f (fn v. x x v) in
+  g g
