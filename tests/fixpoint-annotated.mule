@@ -1,0 +1,6 @@
+let fix : all a b. ((a -> b) -> a -> b) -> a -> b =
+  fn f.
+    let g = fn x. f (fn v. x x v) in
+    g g
+in
+fix

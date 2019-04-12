@@ -116,7 +116,7 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
    * in places where we're actually looking to merge the two graphs, so
    * it seems wasteful to actually do a copy first, since we're just
    * going to end up unifying them. Instead, we raise the binding edges
-   * as needed until they meet those of the bottom node; this brings them
+   * as needed until they meet that of the bottom node; this brings them
    * to the point where they would have to be to be merged with a hypothetical
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
@@ -126,8 +126,8 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   let visited = ref IntSet.empty in
 
   let raise_tv tv =
-    let _ = unify_tyvar tv v in
-    ()
+    let new_bound = unify_bound !(tv.ty_bound) !(v.ty_bound) in
+    tv.ty_bound := new_bound
   in
   let rec raise_bounds: u_type -> unit = fun t ->
     let tv = get_tyvar t in
@@ -170,6 +170,14 @@ let rec unify already_merged l r =
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
   if lid = rid || Set.mem already_merged (lid, rid) then l else
   let already_merged = Set.add already_merged (lid, rid) in
+
+  let merge_tv () =
+    let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
+    if perm_eq (tyvar_permission tv) L then
+      permErr `Merge
+    else
+      tv
+  in
   begin match l, r with
   (* It is important that we do the graft permission checks *before*
    * any raisings/weakenings to get the bounds to match -- otherwise we
@@ -178,74 +186,53 @@ let rec unify already_merged l r =
   | t, (`Free v) when perm_eq (tyvar_permission v) F -> graft t v
   | (`Free _), _ | _, (`Free _) -> permErr `Graft
 
-  | _ ->
   (* Neither side of these is a type variable, so we need to do a merge.
-   * See the definition in section 3.2.2 of {MLF-Graph-Unify}. Before moving
-   * forward, We need to make sure the merge is legal. We deal explicitly
-   * with requirement 3 here; the other parts are sidestepped (see below).
+   * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
+
+  (* Top level type constructors that match. We recursively
+   * merge the types in a bottom-up fashion. Doing this makes it
+   * easy to see that the conditions for being a valid merge
+   * are satisfied (See {MLF-Graph-Unify} section 3.2.2 for the
+   * definition):
    *
-   * The call to unify_tyvar above ensures that the nodes' bounds and flags
-   * are the same. The remaining part of requirement 3 is that the permissions
-   * are not locked, so check for that, and fail if they are locked:
+   * - 1 & 2 are trivial, since the subgraphs are always identical.
+   * - 3 is enforced/checked by merge_tv ().
+   * - 4 follows vaccuously from the fact that merging the roots
+   *   will not cause any other nodes to be merged (since they already
+   *   have been).
+   *
+   * For this argument to work it is important that we can consider
+   * the merge of the roots not to have "started" until the subgraphs
+   * are fully merged -- so we must be careful not to violate this
+   * invariant.
    *)
-  let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
-  if perm_eq (tyvar_permission tv) L then
-    permErr `Merge
-  else
-    begin match l, r with
-    | (`Free _), _ | _, (`Free _) ->
-        (* This should have been ruled out above. TODO: refactor so this
-         * fits more nicely with the exhaustiveness checker. *)
-        failwith "Impossible"
-
-    (* Top level type constructors that match. We recursively
-     * merge the types in a bottom-up fashion. Doing this makes it
-     * easy to see that the conditions for being a valid merge
-     * are satisfied (See {MLF-Graph-Unify} section 3.2.2 for the
-     * definition):
-     *
-     * - 1 & 2 are trivial, since the subgraphs are always identical.
-     * - 3 is checked separately, above.
-     * - 4 follows vaccuously from the fact that merging the roots
-     *   will not cause any other nodes to be merged (since they already
-     *   have been).
-     *
-     * For this argument to work it is important that we can consider
-     * the merge of the roots not to have "started" until the subgraphs
-     * are fully merged. The only threat to this is the fact that we
-     * have modified the two roots above, in the call to [unify_tyvar].
-     * However, the modifications that [unify_tyvar] makes are all legal
-     * raisings and weakenings, so can be thought of as their own atomic
-     * steps, not part of the merge.
-     *)
-    | (`Fn (_, ll, lr), `Fn (_, rl, rr)) ->
-        UnionFind.merge (unify already_merged) ll rl;
-        UnionFind.merge (unify already_merged) lr rr;
-        `Fn (tv, ll, lr)
-    | (`Record (_, row_l), `Record(_, row_r)) ->
-        UnionFind.merge (unify_row already_merged) row_l row_r;
-        `Record (tv, row_l)
-    | (`Union (_, row_l), `Union(_, row_r)) ->
-        UnionFind.merge (unify_row already_merged) row_l row_r;
-        `Union(tv, row_l)
+  | (`Fn (_, ll, lr), `Fn (_, rl, rr)) ->
+      UnionFind.merge (unify already_merged) ll rl;
+      UnionFind.merge (unify already_merged) lr rr;
+      `Fn (merge_tv (), ll, lr)
+  | (`Record (_, row_l), `Record(_, row_r)) ->
+      UnionFind.merge (unify_row already_merged) row_l row_r;
+      `Record (merge_tv (), row_l)
+  | (`Union (_, row_l), `Union(_, row_r)) ->
+      UnionFind.merge (unify_row already_merged) row_l row_r;
+      `Union(merge_tv (), row_l)
 
 
-    (* Top level type constructors that _do not_ match. In this case
-     * unfication fails.
-     *
-     * we could have a catchall, but this way we can give the user
-     * a little more information, and even while it's a bit verbose
-     * it also means that the compiler will catch if we miss a case
-     * that should be handled differently. it would be nice to
-     * refactor so we don't have to list every combination though.
-     *)
-    | `Fn     _, `Record _ -> ctorErr `Fn     `Record
-    | `Fn     _, `Union  _ -> ctorErr `Fn     `Union
-    | `Record _, `Fn     _ -> ctorErr `Record `Fn
-    | `Record _, `Union  _ -> ctorErr `Record `Union
-    | `Union  _, `Fn     _ -> ctorErr `Union  `Fn
-    | `Union  _, `Record _ -> ctorErr `Union  `Record
-    end
+  (* Top level type constructors that _do not_ match. In this case
+   * unfication fails.
+   *
+   * we could have a catchall, but this way we can give the user
+   * a little more information, and even while it's a bit verbose
+   * it also means that the compiler will catch if we miss a case
+   * that should be handled differently. it would be nice to
+   * refactor so we don't have to list every combination though.
+   *)
+  | `Fn     _, `Record _ -> ctorErr `Fn     `Record
+  | `Fn     _, `Union  _ -> ctorErr `Fn     `Union
+  | `Record _, `Fn     _ -> ctorErr `Record `Fn
+  | `Record _, `Union  _ -> ctorErr `Record `Union
+  | `Union  _, `Fn     _ -> ctorErr `Union  `Fn
+  | `Union  _, `Record _ -> ctorErr `Union  `Record
   end
 and unify_row already_merged l r =
   let (lid, rid) = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
