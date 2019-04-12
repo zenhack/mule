@@ -1,4 +1,6 @@
-Desugared: _.y
-inferred type: ({y : t2, ...t3}) -> (t2)
-Runtime term: (_.y)
-Evaluated: (_.y)
+Desugared: fn $0. (match-lam
+| x -> (_.y) (x)
+end) ($0)
+inferred type: ({y : t3, ...t38}) -> (t3)
+Runtime term: fn $0. (match _ with  | _ -> fn x. ((_.y)) (x) end) ($0)
+Evaluated: fn $0. (match _ with  | _ -> fn x. ((_.y)) (x) end) ($0)
