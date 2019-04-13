@@ -1,34 +1,78 @@
-{ type cmd a
-, type var
-, type label = string.t
-, type exp =
-    | Var var
-    | App exp exp
-    | Dot exp label
-    | Fn pat exp
-    | Match exp (vec (Case pat exp))
-    | Record (vec (Field label exp))
-    | Vec (vec exp)
-    | Tag label
-    | QQ exp
-    | UnQ exp
-, type ty =
-    | Var var
-    | App ty ty
-    | Fn ty ty
-    | All var ty
-    | Record row
-    | Union row
-    | QQ ty
-    | UnQ ty
-, type pat =
-    | Or pat pat
-    | Var var
-    | App pat (vec pat)
-    | Tag label
-    | QQ pat
-    | UnQ pat
-, reify : var -> cmd (Exp exp | Type ty | Free)
-, newTyVar : cmd var
-, newExpVar : cmd var
+# This is a sketch of what the API for our macro system might look like.
+#
+# The semantics of some of this, e.g. reification, are a bit unclear in
+# terms of the operational behavior during expansion; where do we get the
+# information from?
+{ ast =
+  { type var
+    #^ Type of variables. Kept abstract, can be examined with provided
+    # functions, like `reify`.
+
+  , type label =
+    #^ A label, as used by unions and records.
+    string.t
+
+  , type exp =
+    #^ Expressions.
+      | Var var                        #^ term variable
+      | App exp exp                    #^ function application
+      | GetField exp label             #^ field access
+      | Fn pat exp                     #^ lambda
+      | Match exp (vec (Case pat exp)) #^ match expression
+      | Record (vec (Field label exp)) #^ record literal
+      | Vec (vec exp)                  #^ vector literal
+      | Tag label                      #^ a tag for a sum type
+      | QQ exp                         #^ quasi-quoted expression
+      | UnQ exp                        #^ unquoted expression
+      | WithType exp typ               #^ type annotated expression
+
+  , type typ =
+    #^ Types
+      | Var var
+      | App typ typ
+      | Fn typ typ
+      | All var typ
+      | Record row
+      | Union row
+      | QQ typ
+      | UnQ typ
+
+  , type pat =
+    #^ Patterns
+      | Or pat pat
+      | Var var
+      | App pat (vec pat)
+      | Tag label
+      | QQ pat
+      | UnQ pat
+      | WithType pat typ
+  }
+
+, type cmd a
+  #^ An operation that executes during macro expansion.
+
+, type var_info =
+  #^ Information about a variable.
+    { target
+      # `target` describes the thing to which the variable refers.
+        : Exp (maybe ast.exp)
+        # The variable is a term-level variable. If the variable
+        # is let-bound and the expression to which the variable
+        # is bound is known this carries the expression.
+        | Type (maybe ast.ty)
+        # The variable is a type alias. If the type that the alias
+        # refers to is known, it is described by the argument.
+        | Free
+        # The variable is not already in scope.
+    }
+
+
+, reify : ast.var var_info
+  #^ Get information about a variable.
+
+, new_type_var : cmd ast.var
+  # Generate a fresh (unique) type variable.
+
+, new_exp_var : cmd ast.var
+  # Generate a fresh (unique) term variable.
 }
