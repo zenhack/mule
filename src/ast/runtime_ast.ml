@@ -1,13 +1,11 @@
 open Common_ast
 
-type 'a rowmap = (Label.t, 'a, Label.comparator_witness) Map.t
-
 module Expr = struct
   type t =
     | Var of Var.t
     | Lam of (Var.t * t)
     | App of (t * t)
-    | Record of t rowmap
+    | Record of t LabelMap.t
     | GetField of Label.t
     | Update of
         { old: t
@@ -16,7 +14,7 @@ module Expr = struct
         }
     | Ctor of (Label.t * t)
     | Match of {
-        cases: t rowmap;
+        cases: t LabelMap.t;
         default: t option;
       }
 end
