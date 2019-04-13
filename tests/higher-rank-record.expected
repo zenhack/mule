@@ -1,0 +1,22 @@
+
+Desugared:
+
+	let r = _ where { y = _ } {} fn $2. match-lam
+| x -> x
+end $2 in match-lam
+| $0 -> let f = (_ : all a. a -> a) $0 in _ where { l = _ } (_ where { k = _ } {} (f fn $1. match-lam
+  | z -> z
+  end $1)) (f {})
+end (_.y r)
+
+inferred type:
+
+	{k : a -> a, l : {}}
+
+Runtime term:
+
+	(fn r. match _ with  | _ -> fn $0. (fn f. (fn $258. fn $259. $258 where { l = $259 }) ((fn $256. fn $257. $256 where { k = $257 }) {} (f fn $1. match _ with  | _ -> fn z. z end $1)) (f {})) $0 end (_.y r)) ((fn $254. fn $255. $254 where { y = $255 }) {} fn $2. match _ with  | _ -> fn x. x end $2)
+
+Evaluated:
+
+	{k = fn $1. match _ with  | _ -> fn z. z end $1, l = {}}

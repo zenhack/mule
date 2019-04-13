@@ -1,0 +1,7 @@
+# This tests that type annotations allow higher-rank types even when extracted
+# from a record.
+let r = {y = fn x. x} in
+let f : all a. a -> a = r.y in
+{ l = f {}
+, k = f (fn z. z)
+}
