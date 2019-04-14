@@ -166,6 +166,11 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   ignore (unify_tyvar (get_tyvar t) v);
   t
 
+let graft_row: u_row -> tyvar -> u_row = fun r v ->
+  raise_bounds_row !(v.ty_bound) (ref IntSet.empty) r;
+  ignore (unify_tyvar (get_tyvar r) v);
+  r
+
 let rec unify already_merged l r =
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
   if lid = rid || Set.mem already_merged (lid, rid) then l else
@@ -238,15 +243,23 @@ and unify_row already_merged l r =
   let (lid, rid) = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
   if lid = rid || Set.mem already_merged (lid, rid) then l else
   let already_merged = Set.add already_merged (lid, rid) in
-  let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
+
+  let merge_tv () =
+    let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
+    if perm_eq (tyvar_permission tv) L then
+      permErr `Merge
+    else
+      tv
+  in
   match l, r with
-  | (`Empty _, `Empty _) -> `Empty tv
+  | (`Free v, t) when perm_eq (tyvar_permission v) F -> graft_row t v
+  | (t, `Free v) when perm_eq (tyvar_permission v) F -> graft_row t v
+  | (`Free _), _ | _, (`Free _) -> permErr `Graft
+  | (`Empty _, `Empty _) -> `Empty (merge_tv ())
   | (`Extend (_, l_lbl, l_ty, l_rest), `Extend (_, r_lbl, r_ty, r_rest)) ->
-      let ret = `Extend (tv, l_lbl, l_ty, l_rest) in
       if Ast.Label.equal l_lbl r_lbl then begin
         UnionFind.merge (unify already_merged) l_ty r_ty;
-        UnionFind.merge (unify_row already_merged) l_rest r_rest;
-        ret
+        UnionFind.merge (unify_row already_merged) l_rest r_rest
       end else begin
         (* XXX: I(@zenhack) am not sure what the bounds should be here;
          * my rough intuition is that they should be the same as the
@@ -266,7 +279,7 @@ and unify_row already_merged l r =
         let new_rest_l = new_with_bound l_rest in
         let new_tv () =
           { ty_id = gensym ()
-          ; ty_bound = tv.ty_bound
+          ; ty_bound = (get_tyvar l).ty_bound
           }
         in
         UnionFind.merge (unify_row already_merged)
@@ -274,11 +287,9 @@ and unify_row already_merged l r =
           (UnionFind.make (`Extend(new_tv (), l_lbl, l_ty, new_rest_r)));
         UnionFind.merge (unify_row already_merged)
           l_rest
-          (UnionFind.make (`Extend(new_tv (), r_lbl, r_ty, new_rest_l)));
-        ret
-      end
-  | (`Free _, r) -> r
-  | (l, `Free _) -> l
+          (UnionFind.make (`Extend(new_tv (), r_lbl, r_ty, new_rest_l)))
+      end;
+      `Extend (merge_tv (), l_lbl, l_ty, l_rest)
   | (`Extend (_, lbl, _, _), `Empty _) -> ctorErr (`Extend lbl) `Empty
   | (`Empty _, `Extend (_, lbl, _, _)) -> ctorErr `Empty (`Extend lbl)
 
