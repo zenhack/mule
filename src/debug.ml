@@ -66,8 +66,8 @@ let fmt_node: node_type -> int -> string =
 
 let fmt_edge_ty = function
   | `Structural s -> "[label=\"" ^ s ^ "\"]"
-  | `Unify -> "[color=green, dir=none]"
-  | `Instance -> "[color=red]"
+  | `Unify -> "[color=green, dir=none, constraint=false]"
+  | `Instance -> "[color=red, constraint=false]"
   | `Binding `Flex -> "[style=dotted, dir=back]"
   | `Binding `Rigid -> "[style=dashed, dir=back]"
 
