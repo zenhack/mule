@@ -2,8 +2,8 @@ open Common_ast
 
 module Expr = struct
   type t =
-    | Var of Var.t
-    | Lam of (Var.t * t)
+    | Var of int
+    | Lam of (int * t list * t)
     | App of (t * t)
     | Record of t LabelMap.t
     | GetField of Label.t

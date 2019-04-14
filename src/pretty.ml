@@ -153,10 +153,10 @@ let expr e = expr `Top "" e
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
-  | Var v -> Var.to_string v
-  | Lam(param, body) ->
+  | Var v -> "v" ^ Int.to_string v
+  | Lam(_, _, body) ->
       binder_parens p
-        ("fn " ^ Var.to_string param ^ ". " ^ runtime_expr `Top body)
+        ("fn. " ^ runtime_expr `Top body)
   | App(f, x) ->
       op_parens p `App
         (runtime_expr `AppL f ^ " " ^ runtime_expr `AppR x)
@@ -180,12 +180,8 @@ let rec runtime_expr p =
           ; " }"
           ])
   | Ctor (label, arg) ->
-      runtime_expr p
-        (App
-          ( Var(Var.of_string(Label.to_string label))
-          , arg
-          )
-        )
+      op_parens p `App
+        (Label.to_string label ^ " " ^ runtime_expr `AppR arg)
   | Match {cases; default} ->
       String.concat
         [ "match _ with "
