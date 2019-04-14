@@ -50,8 +50,6 @@ let fmt_node: node_type -> int -> string =
     [ "  n"
     ; Int.to_string n
     ; " [label=\""
-    ; Int.to_string n
-    ; " : "
     ; begin match ty with
       | `TyVar -> "T"
       | `TyFn -> "->"
@@ -62,6 +60,8 @@ let fmt_node: node_type -> int -> string =
       | `RowExtend lbl -> Ast.Label.to_string lbl ^ " ::"
       | `G -> "G"
       end
+    ; " : "
+    ; Int.to_string n
     ; "\"];\n"
     ]
 
