@@ -5,6 +5,7 @@ type edge_type =
   [ `Structural of string
   | `Unify
   | `Instance
+  | `Sibling
   | `Binding of [ `Flex | `Rigid ]
   ]
 type node_type =

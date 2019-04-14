@@ -16,8 +16,11 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
             Debug.show_node `TyVar n
         | `Fn(_, param, ret) ->
             Debug.show_node `TyFn n;
-            Debug.show_edge (`Structural "p") n ((get_tyvar (UnionFind.get param)).ty_id);
-            Debug.show_edge (`Structural "r") n ((get_tyvar (UnionFind.get ret)).ty_id);
+            let p_id = (get_tyvar (UnionFind.get param)).ty_id in
+            let r_id = (get_tyvar (UnionFind.get ret )).ty_id in
+            Debug.show_edge (`Structural "p") n p_id;
+            Debug.show_edge (`Structural "r") n r_id;
+            Debug.show_edge `Sibling p_id r_id;
             emit_all_nodes_ty param dict;
             emit_all_nodes_ty ret dict
             (* TODO: bounding edges *)
@@ -46,8 +49,11 @@ and emit_all_nodes_row v dict =
           Debug.show_node `RowVar n
       | `Extend (_, lbl, h, t) ->
           Debug.show_node (`RowExtend lbl) n;
-          Debug.show_edge (`Structural "h") n ((get_tyvar (UnionFind.get h)).ty_id);
-          Debug.show_edge (`Structural "t") n ((get_tyvar (UnionFind.get t)).ty_id);
+          let h_id = (get_tyvar (UnionFind.get h)).ty_id in
+          let t_id = (get_tyvar (UnionFind.get t)).ty_id in
+          Debug.show_edge (`Structural "h") n h_id;
+          Debug.show_edge (`Structural "t") n t_id;
+          Debug.show_edge `Sibling h_id t_id;
           emit_all_nodes_ty h dict;
           emit_all_nodes_row t dict
       end
