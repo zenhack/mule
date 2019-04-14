@@ -65,11 +65,11 @@ let fmt_node: node_type -> int -> string =
     ]
 
 let fmt_edge_ty = function
-  | `Structural s -> "[label=\"" ^ s ^ "\"]"
-  | `Unify -> "[color=green, dir=none, constraint=false]"
-  | `Instance -> "[color=red, constraint=false]"
-  | `Binding `Flex -> "[style=dotted, dir=back]"
-  | `Binding `Rigid -> "[style=dashed, dir=back]"
+  | `Structural s -> "[label=\"" ^ s ^ "\", weight=7]"
+  | `Unify -> "[color=green, dir=none, constraint=false, weight=1]"
+  | `Instance -> "[color=red, constraint=false, weight=1]"
+  | `Binding `Flex -> "[style=dotted, dir=back, weight=1]"
+  | `Binding `Rigid -> "[style=dashed, dir=back, weight=1]"
 
 module Out = Stdio.Out_channel
 
