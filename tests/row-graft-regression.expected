@@ -1,0 +1,16 @@
+
+Desugared:
+
+	fn f. fn arg. _ where { y = _ } arg (f (_.z arg))
+
+inferred type:
+
+	(a -> b) -> {z : a, ...c} -> {y : b, z : a, ...c}
+
+Runtime term:
+
+	fn f. fn arg. (fn $78. fn $79. $78 where { y = $79 }) arg (f (_.z arg))
+
+Evaluated:
+
+	fn f. fn arg. (fn $78. fn $79. $78 where { y = $79 }) arg (f (_.z arg))

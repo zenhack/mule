@@ -1,0 +1,9 @@
+# This is a regression test for a bug where we weren't grafting correctly;
+# the type should be:
+#
+#   all a b r. (a -> b) -> {z: a, ...r} -> {y: b, z: a, ...r}
+#
+# but with the bug it was:
+#
+#   all a b c r. (a -> b) -> {z: c, ...r} -> {y: b, z: c, ...r}
+fn f arg. arg where { y = f arg.z }
