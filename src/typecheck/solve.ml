@@ -224,5 +224,6 @@ let solve_constraints cs =
       );
       render_ics := Map.remove !render_ics g.g_id
     );
+  render ();
   cs.ty
 
