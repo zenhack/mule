@@ -57,6 +57,8 @@ and desugar_record_type fields = function
 let rec desugar = function
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
+  | S.Lam (SP.Var v :: pats, body) ->
+      D.Lam(v, desugar (S.Lam (pats, body)))
   | S.Lam (pat :: pats, body) ->
       let var = Gensym.anon_var () in
       D.Lam
