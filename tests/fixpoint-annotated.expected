@@ -2,14 +2,8 @@
 Desugared:
 
 	match-lam
-| $3 -> let fix = (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) $3 in fix
-end fn $0. match-lam
-| f -> let g = fn $1. match-lam
-  | x -> f fn $2. match-lam
-    | v -> x x v
-    end $2
-  end $1 in g g
-end $0
+| $0 -> let fix = (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) $0 in fix
+end fn f. let g = fn x. f fn v. x x v in g g
 
 inferred type:
 
@@ -17,8 +11,8 @@ inferred type:
 
 Runtime term:
 
-	match _ with  | _ -> fn $3. (fn fix. fix) $3 end fn $0. match _ with  | _ -> fn f. (fn g. g g) fn $1. match _ with  | _ -> fn x. f fn $2. match _ with  | _ -> fn v. x x v end $2 end $1 end $0
+	match _ with  | _ -> fn $0. (fn fix. fix) $0 end fn f. (fn g. g g) fn x. f fn v. x x v
 
 Evaluated:
 
-	fn $0. match _ with  | _ -> fn f. (fn g. g g) fn $1. match _ with  | _ -> fn x. f fn $2. match _ with  | _ -> fn v. x x v end $2 end $1 end $0
+	fn f. (fn g. g g) fn x. f fn v. x x v

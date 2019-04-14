@@ -1,13 +1,7 @@
 
 Desugared:
 
-	fn $0. match-lam
-| $1 -> let choice = (_ : all a. a -> a -> a) $1 in _ where { x = _ } (_ where { y = _ } {} (choice fn $3. match-lam
-  | x -> x
-  end $3 fn $2. match-lam
-  | x -> x
-  end $2)) (choice {} {})
-end $0
+	fn $0. let choice = (_ : all a. a -> a -> a) $0 in _ where { x = _ } (_ where { y = _ } {} (choice fn x. x fn x. x)) (choice {} {})
 
 inferred type:
 
@@ -15,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn $0. match _ with  | _ -> fn $1. (fn choice. (fn $238. fn $239. $238 where { x = $239 }) ((fn $236. fn $237. $236 where { y = $237 }) {} (choice fn $3. match _ with  | _ -> fn x. x end $3 fn $2. match _ with  | _ -> fn x. x end $2)) (choice {} {})) $1 end $0
+	fn $0. (fn choice. (fn $176. fn $177. $176 where { x = $177 }) ((fn $174. fn $175. $174 where { y = $175 }) {} (choice fn x. x fn x. x)) (choice {} {})) $0
 
 Evaluated:
 
-	fn $0. match _ with  | _ -> fn $1. (fn choice. (fn $238. fn $239. $238 where { x = $239 }) ((fn $236. fn $237. $236 where { y = $237 }) {} (choice fn $3. match _ with  | _ -> fn x. x end $3 fn $2. match _ with  | _ -> fn x. x end $2)) (choice {} {})) $1 end $0
+	fn $0. (fn choice. (fn $176. fn $177. $176 where { x = $177 }) ((fn $174. fn $175. $174 where { y = $175 }) {} (choice fn x. x fn x. x)) (choice {} {})) $0

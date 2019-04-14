@@ -1,9 +1,7 @@
 
 Desugared:
 
-	fn $0. match-lam
-| x -> _.y x
-end $0
+	fn x. _.y x
 
 inferred type:
 
@@ -11,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn $0. match _ with  | _ -> fn x. _.y x end $0
+	fn x. _.y x
 
 Evaluated:
 
-	fn $0. match _ with  | _ -> fn x. _.y x end $0
+	fn x. _.y x

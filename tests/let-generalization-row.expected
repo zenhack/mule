@@ -1,9 +1,7 @@
 
 Desugared:
 
-	let f = fn $0. match-lam
-| x -> _.y x
-end $0 in _ where { a = _ } (_ where { b = _ } {} (f (_ where { y = _ } {} (_ where { z = _ } {} {})))) (f (_ where { y = _ } {} {}))
+	let f = fn x. _.y x in _ where { a = _ } (_ where { b = _ } {} (f (_ where { y = _ } {} (_ where { z = _ } {} {})))) (f (_ where { y = _ } {} {}))
 
 inferred type:
 
@@ -11,7 +9,7 @@ inferred type:
 
 Runtime term:
 
-	(fn f. (fn $290. fn $291. $290 where { a = $291 }) ((fn $288. fn $289. $288 where { b = $289 }) {} (f ((fn $286. fn $287. $286 where { y = $287 }) {} ((fn $284. fn $285. $284 where { z = $285 }) {} {})))) (f ((fn $282. fn $283. $282 where { y = $283 }) {} {}))) fn $0. match _ with  | _ -> fn x. _.y x end $0
+	(fn f. (fn $272. fn $273. $272 where { a = $273 }) ((fn $270. fn $271. $270 where { b = $271 }) {} (f ((fn $268. fn $269. $268 where { y = $269 }) {} ((fn $266. fn $267. $266 where { z = $267 }) {} {})))) (f ((fn $264. fn $265. $264 where { y = $265 }) {} {}))) fn x. _.y x
 
 Evaluated:
 

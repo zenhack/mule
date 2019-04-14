@@ -1,11 +1,7 @@
 
 Desugared:
 
-	let f = fn $1. match-lam
-| x -> x
-end $1 in _ where { a = _ } (_ where { b = _ } {} (f ((fn x. Ok x) {}))) (f fn $0. match-lam
-| y -> y
-end $0)
+	let f = fn x. x in _ where { a = _ } (_ where { b = _ } {} (f ((fn x. Ok x) {}))) (f fn y. y)
 
 inferred type:
 
@@ -13,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	(fn f. (fn $182. fn $183. $182 where { a = $183 }) ((fn $180. fn $181. $180 where { b = $181 }) {} (f ((fn x. Ok x) {}))) (f fn $0. match _ with  | _ -> fn y. y end $0)) fn $1. match _ with  | _ -> fn x. x end $1
+	(fn f. (fn $152. fn $153. $152 where { a = $153 }) ((fn $150. fn $151. $150 where { b = $151 }) {} (f ((fn x. Ok x) {}))) (f fn y. y)) fn x. x
 
 Evaluated:
 
-	{a = fn $0. match _ with  | _ -> fn y. y end $0, b = Ok {}}
+	{a = fn y. y, b = Ok {}}
