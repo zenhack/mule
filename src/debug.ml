@@ -37,6 +37,12 @@ let show_edge ty from to_ =
 let show_node ty n =
   nodes := (ty, n) :: !nodes
 
+let root_node: int option ref =
+  ref None
+
+let set_root: int -> unit = fun id ->
+  root_node := Some id
+
 let fmt_node: node_type -> int -> string =
   fun ty n ->
     String.concat
@@ -72,6 +78,10 @@ let end_graph () =
   frame_no := !frame_no + 1;
   let dest = Out.create path in
   Out.fprintf dest "digraph g {\n";
+  begin match !root_node with
+  | Some id -> Out.fprintf dest "  root=\"n%d\";\n" id
+  | None -> ()
+  end;
   List.iter !nodes ~f:(fun (ty, id) ->
     Out.fprintf dest "%s" (fmt_node ty id)
   );

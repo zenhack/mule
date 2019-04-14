@@ -65,7 +65,7 @@ and emit_all_nodes_g g dict =
         Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
         emit_all_nodes_g g' dict
     | None ->
-        ()
+        Debug.set_root g.g_id
     end
   end
 and emit_bind_edge n {b_at; b_ty} dict =
