@@ -110,6 +110,46 @@ let unify_tyvar: tyvar -> tyvar -> tyvar =
     r.ty_bound := new_bound;
     l
 
+let raise_tv: bound_target bound -> tyvar -> unit = fun b tv ->
+  let new_bound = unify_bound !(tv.ty_bound) b in
+  tv.ty_bound := new_bound
+
+(* Raise the bounds for an entire subtree. *)
+let rec raise_bounds: bound_target bound -> IntSet.t ref -> u_type -> unit =
+  fun bound visited t ->
+    let tv = get_tyvar t in
+    if Set.mem !visited tv.ty_id then
+      ()
+    else
+      begin
+        visited := Set.add !visited tv.ty_id;
+        raise_tv bound tv;
+        match t with
+        | `Free _ ->
+            ()
+        | `Fn(_, param, ret) ->
+            raise_bounds bound visited (UnionFind.get param);
+            raise_bounds bound visited (UnionFind.get ret);
+        | `Record(_, r) -> raise_bounds_row bound visited (UnionFind.get r)
+        | `Union(_, r) -> raise_bounds_row bound visited (UnionFind.get r)
+      end
+and raise_bounds_row: bound_target bound -> IntSet.t ref -> u_row -> unit =
+  fun bound visited r ->
+    let tv = get_tyvar r in
+    if Set.mem !visited tv.ty_id then
+      ()
+    else
+      begin
+        visited := Set.add !visited tv.ty_id;
+        raise_tv bound tv;
+        match r with
+        | `Free _ -> ()
+        | `Empty _ -> ()
+        | `Extend(_, _, t, r) ->
+            raise_bounds bound visited (UnionFind.get t);
+            raise_bounds_row bound visited (UnionFind.get r)
+      end
+
 let graft: u_type -> tyvar -> u_type = fun t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a
    * flexible bottom node with another type. However, we only call this
@@ -122,48 +162,8 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
    * merging is the same as just unifying.
    *)
 
-  (* In case we hit shared (or more importantly, recursive) nodes: *)
-  let visited = ref IntSet.empty in
-
-  let raise_tv tv =
-    let new_bound = unify_bound !(tv.ty_bound) !(v.ty_bound) in
-    tv.ty_bound := new_bound
-  in
-  let rec raise_bounds: u_type -> unit = fun t ->
-    let tv = get_tyvar t in
-    if Set.mem !visited tv.ty_id then
-      ()
-    else
-      begin
-        visited := Set.add !visited tv.ty_id;
-        raise_tv tv;
-        match t with
-        | `Free _ ->
-            ()
-        | `Fn(_, param, ret) ->
-            raise_bounds (UnionFind.get param);
-            raise_bounds (UnionFind.get ret);
-        | `Record(_, r) -> raise_bounds_row (UnionFind.get r)
-        | `Union(_, r) -> raise_bounds_row (UnionFind.get r)
-      end
-  and raise_bounds_row: u_row -> unit = fun r ->
-    let tv = get_tyvar r in
-    if Set.mem !visited tv.ty_id then
-      ()
-    else
-      begin
-        visited := Set.add !visited tv.ty_id;
-        raise_tv tv;
-        match r with
-        | `Free _ -> ()
-        | `Empty _ -> ()
-        | `Extend(_, _, t, r) ->
-            raise_bounds (UnionFind.get t);
-            raise_bounds_row (UnionFind.get r)
-      end
-  in
-  raise_bounds t;
-  let _ = unify_tyvar (get_tyvar t) v in
+  raise_bounds !(v.ty_bound) (ref IntSet.empty) t;
+  ignore (unify_tyvar (get_tyvar t) v);
   t
 
 let rec unify already_merged l r =
