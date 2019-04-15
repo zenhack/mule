@@ -11,8 +11,8 @@ inferred type:
 
 Runtime term:
 
-	(fn r. match _ with  | _ -> fn $0. (fn f. (fn $228. fn $229. $228 where { l = $229 }) ((fn $226. fn $227. $226 where { k = $227 }) {} (f fn z. z)) (f {})) $0 end (_.y r)) ((fn $224. fn $225. $224 where { y = $225 }) {} fn x. x)
+	(fn. match _ with  | _ -> fn. (fn. (fn. fn. v1 where { l = v0 }) ((fn. fn. v1 where { k = v0 }) {} (v0 fn. v0)) (v0 {})) v0 end (_.y v0)) ((fn. fn. v1 where { y = v0 }) {} fn. v0)
 
 Evaluated:
 
-	{k = fn z. z, l = {}}
+	{k = fn. v0, l = {}}

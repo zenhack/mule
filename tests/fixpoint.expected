@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn f. (fn g. g g) fn x. f fn v. x x v
+	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
 
 Evaluated:
 
-	fn f. (fn g. g g) fn x. f fn v. x x v
+	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0

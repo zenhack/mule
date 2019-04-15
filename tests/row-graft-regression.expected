@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn f. fn arg. (fn $78. fn $79. $78 where { y = $79 }) arg (f (_.z arg))
+	fn. fn. (fn. fn. v1 where { y = v0 }) v0 (v1 (_.z v0))
 
 Evaluated:
 
-	fn f. fn arg. (fn $78. fn $79. $78 where { y = $79 }) arg (f (_.z arg))
+	fn. fn. (fn. fn. v1 where { y = v0 }) v0 (v1 (_.z v0))

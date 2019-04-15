@@ -17,7 +17,7 @@ let rec eval stack = function
         ; default = Option.map default ~f:(eval stack)
         }
   | GetField l -> GetField l
-  | Ctor c -> Ctor c
+  | Ctor (c, arg) -> Ctor (c, eval stack arg)
   | App (f, arg) ->
       let f' = eval stack f in
       let arg' = eval stack arg in

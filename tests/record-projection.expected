@@ -9,7 +9,7 @@ inferred type:
 
 Runtime term:
 
-	_.x ((fn $58. fn $59. $58 where { x = $59 }) {} {})
+	_.x ((fn. fn. v1 where { x = v0 }) {} {})
 
 Evaluated:
 

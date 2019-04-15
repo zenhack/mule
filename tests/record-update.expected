@@ -9,7 +9,7 @@ inferred type:
 
 Runtime term:
 
-	(fn $121. fn $122. $121 where { y = $122 }) ((fn $119. fn $120. $119 where { x = $120 }) {} {}) ((fn $117. fn $118. $117 where { z = $118 }) {} {})
+	(fn. fn. v1 where { y = v0 }) ((fn. fn. v1 where { x = v0 }) {} {}) ((fn. fn. v1 where { z = v0 }) {} {})
 
 Evaluated:
 

@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn x. (fn $45. fn $46. $45 where { y = $46 }) x {}
+	fn. (fn. fn. v1 where { y = v0 }) v0 {}
 
 Evaluated:
 
-	fn x. (fn $45. fn $46. $45 where { y = $46 }) x {}
+	fn. (fn. fn. v1 where { y = v0 }) v0 {}

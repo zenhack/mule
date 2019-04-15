@@ -11,8 +11,8 @@ inferred type:
 
 Runtime term:
 
-	match _ with  | _ -> fn $0. (fn fix. fix) $0 end fn f. (fn g. g g) fn x. f fn v. x x v
+	match _ with  | _ -> fn. (fn. v0) v0 end fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
 
 Evaluated:
 
-	fn f. (fn g. g g) fn x. f fn v. x x v
+	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0

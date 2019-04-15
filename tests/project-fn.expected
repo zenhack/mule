@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn x. _.y x
+	fn. _.y v0
 
 Evaluated:
 
-	fn x. _.y x
+	fn. _.y v0

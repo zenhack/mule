@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn $0. (fn choice. (fn $176. fn $177. $176 where { x = $177 }) ((fn $174. fn $175. $174 where { y = $175 }) {} (choice fn x. x fn x. x)) (choice {} {})) $0
+	fn. (fn. (fn. fn. v1 where { x = v0 }) ((fn. fn. v1 where { y = v0 }) {} (v0 fn. v0 fn. v0)) (v0 {} {})) v0
 
 Evaluated:
 
-	fn $0. (fn choice. (fn $176. fn $177. $176 where { x = $177 }) ((fn $174. fn $175. $174 where { y = $175 }) {} (choice fn x. x fn x. x)) (choice {} {})) $0
+	fn. (fn. (fn. fn. v1 where { x = v0 }) ((fn. fn. v1 where { y = v0 }) {} (v0 fn. v0 fn. v0)) (v0 {} {})) v0

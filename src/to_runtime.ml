@@ -6,13 +6,12 @@ module R = Runtime.Expr
 let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
   fun depth env -> function
   | D.Var v ->
-      let n = Map.find_exn env v - depth in
+      let n = depth - Map.find_exn env v in
       (n, R.Var n)
   | D.Lam (param, body) ->
       let (ncap, body') =
         translate (depth + 1) (Map.set env ~key:param ~data:(depth + 1)) body
       in
-      let ncap = ncap - 1 in
       (ncap, R.Lam(ncap, [], body'))
   | D.App(D.WithType _, e) -> translate depth env e
   | D.App(f, x) ->

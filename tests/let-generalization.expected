@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	(fn f. (fn $152. fn $153. $152 where { a = $153 }) ((fn $150. fn $151. $150 where { b = $151 }) {} (f ((fn x. Ok x) {}))) (f fn y. y)) fn x. x
+	(fn. (fn. fn. v1 where { a = v0 }) ((fn. fn. v1 where { b = v0 }) {} (v0 ((fn. Ok v0) {}))) (v0 fn. v0)) fn. v0
 
 Evaluated:
 
-	{a = fn y. y, b = Ok {}}
+	{a = fn. v0, b = Ok {}}
