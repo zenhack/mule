@@ -195,7 +195,8 @@ and record = lazy (
 )
 and field_def = lazy (
   label
-  >>= fun l -> kwd "="
+  >>= fun l -> option (kwd ":" >> lazy_p typ_term)
+  >>= fun _ty -> kwd "="
   >> lazy_p expr
   |>> fun e -> (l, e)
 )
