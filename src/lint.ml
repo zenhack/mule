@@ -48,7 +48,7 @@ and case_free_vars env (p, body) =
         case_free_vars env (p', body)
 and fields_free_vars env fields =
   fields
-    |> List.map ~f:(fun (_, v) -> free_vars env v)
+    |> List.map ~f:(fun (_, _, v) -> free_vars env v)
     |> List.fold ~f:Set.union ~init:(Set.empty (module Var))
 
 (* Check for unbound variables. *)
@@ -62,7 +62,7 @@ let check_unbound_vars expr =
 let check_duplicate_record_fields =
   let rec go =
     let rec check_fields all dups = function
-      | (x, v) :: xs ->
+      | (x, _, v) :: xs ->
           go v >>
           if Set.mem all x then
             check_fields all (Set.add dups x) xs

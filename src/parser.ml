@@ -196,9 +196,9 @@ and record = lazy (
 and field_def = lazy (
   label
   >>= fun l -> option (kwd ":" >> lazy_p typ_term)
-  >>= fun _ty -> kwd "="
+  >>= fun ty -> kwd "="
   >> lazy_p expr
-  |>> fun e -> (l, e)
+  |>> fun e -> (l, ty, e)
 )
 
 let expr = Lazy.force expr
