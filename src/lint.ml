@@ -7,8 +7,12 @@ let rec collect_pat_vars = function
   | Pattern.Ctor(_, p) -> collect_pat_vars p
   | Pattern.Annotated(p, _) -> collect_pat_vars p
 
+let err e =
+  raise (MuleErr.MuleExn e)
 let unboundVar v =
-  raise (MuleErr.MuleExn (MuleErr.UnboundVar v))
+  err (MuleErr.UnboundVar v)
+let duplicate_fields dups =
+  err (MuleErr.DuplicateFields dups)
 
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
@@ -78,42 +82,71 @@ let check_unbound_vars expr =
   in
   go_expr VarSet.empty VarSet.empty expr
 
-(* Check for duplicate record fields *)
+(* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
-  let rec go =
-    let rec check_fields all dups = function
-      | (x, _, v) :: xs ->
-          go v;
-          if Set.mem all x then
-            check_fields all (Set.add dups x) xs
-          else
-            check_fields (Set.add all x) dups xs
-      | [] when Set.is_empty dups -> ()
-      | [] ->
-          raise (MuleErr.MuleExn (MuleErr.DuplicateFields (Set.to_list dups)))
-    in
-    let rec check_cases = function
-      | [] -> ()
-      | ((_, body) :: cs) -> go body; check_cases cs
-    in
-    function
+  let rec go_expr = function
     | Record fields ->
-        check_fields LabelSet.empty LabelSet.empty fields
+        go_fields fields
     | Update(e, fields) ->
-        go e;
-        check_fields LabelSet.empty LabelSet.empty fields
+        go_expr e; go_fields fields
 
-    (* The rest of this is just walking down the tree *)
-    | Lam (_, body) -> go body
+    | Lam (pats, body) ->
+        List.iter pats ~f:go_pat;
+        go_expr body
     | Match(e, cases) ->
-        go e; check_cases cases
-    | App (f, x) -> go f; go x
-    | GetField(e, _) -> go e
-    | Let (_, e, body) -> go e; go body
-
+        go_expr e;
+        List.iter cases ~f:go_case
+    | App (f, x) -> go_expr f; go_expr x
+    | GetField(e, _) -> go_expr e
+    | Let (pat, e, body) ->
+        go_pat pat;
+        go_expr e;
+        go_expr body
     | Var _ -> ()
     | Ctor _ -> ()
-  in go
+  and go_fields fields =
+    List.iter fields ~f:(fun (_, ty, e) ->
+      Option.iter ty ~f:go_type;
+      go_expr e
+    );
+    let labels = List.map fields ~f:(fun(lbl, _, _) -> lbl) in
+    go_labels labels
+  and go_pat = function
+    | Pattern.Annotated(pat, ty) -> go_pat pat; go_type ty
+    | Pattern.Ctor(_, pat) -> go_pat pat
+    | Pattern.Var _ | Pattern.Wild -> ()
+  and go_type = function
+    | Type.Var _
+    | Type.Ctor _
+    | Type.RowRest _ -> ()
+    | Type.Quant(_, _, ty) -> go_type ty
+    | Type.Recur(_, ty) -> go_type ty
+    | Type.Fn(param, ret) -> go_type param; go_type ret
+    | Type.Record fields ->
+        List.map fields ~f:(function
+          | Type.Rest _ -> []
+          | Type.Field(lbl, ty) ->
+              go_type ty;
+              [lbl]
+        )
+        |> List.concat
+        |> go_labels
+    | Type.Union(l, r) -> go_type l; go_type r
+    | Type.App(f, x) -> go_type f; go_type x
+  and go_labels =
+    let rec go all dups = function
+    | (l :: ls) when Set.mem all l ->
+        go all (Set.add dups l) ls
+    | (l :: ls) ->
+        go (Set.add all l) dups ls
+    | [] when Set.is_empty dups -> ()
+    | [] -> duplicate_fields (Set.to_list dups)
+    in go LabelSet.empty LabelSet.empty
+  and go_case (pat, body) =
+    go_pat pat;
+    go_expr body
+  in
+  go_expr
 
 let check expr =
   try
