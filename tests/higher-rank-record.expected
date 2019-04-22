@@ -1,9 +1,12 @@
 
 Desugared:
 
-	let r = _ where { y = _ } {} fn x. x in match-lam
-| $0 -> let f = (_ : all a. a -> a) $0 in _ where { l = _ } (_ where { k = _ } {} (f fn z. z)) (f {})
-end (_.y r)
+	let r = _.y:=_ {} fn x. x in
+	
+	  match-lam
+	  | $0 -> let f = (_ : all a. a -> a) $0 in
+	          _.l:=_ (_.k:=_ {} (f fn z. z)) (f {})
+	  end (_.y r)
 
 inferred type:
 
@@ -11,7 +14,11 @@ inferred type:
 
 Runtime term:
 
-	(fn. match _ with  | _ -> fn. (fn. (fn. fn. v1 where { l = v0 }) ((fn. fn. v1 where { k = v0 }) {} (v0 fn. v0)) (v0 {})) v0 end (_.y v0)) ((fn. fn. v1 where { y = v0 }) {} fn. v0)
+	(fn. 
+	       match _ with
+	       | _ ->
+	               fn. (fn. (fn. fn. v1 where { l = v0 }) ((fn. fn. v1 where { k = v0 }) {} (v0 fn. v0)) (v0 {})) v0
+	       end (_.y v0)) ((fn. fn. v1 where { y = v0 }) {} fn. v0)
 
 Evaluated:
 

@@ -1,7 +1,7 @@
 
 Desugared:
 
-	_ where { y = _ } (_ where { x = _ } {} {}) (_ where { z = _ } {} {})
+	_.y:=_ (_.x:=_ {} {}) (_.z:=_ {} {})
 
 inferred type:
 

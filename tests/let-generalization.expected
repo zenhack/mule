@@ -1,7 +1,8 @@
 
 Desugared:
 
-	let f = fn x. x in _ where { a = _ } (_ where { b = _ } {} (f ((fn x. Ok x) {}))) (f fn y. y)
+	let f = fn x. x in
+	_.a:=_ (_.b:=_ {} (f ((fn x. Ok x) {}))) (f fn y. y)
 
 inferred type:
 

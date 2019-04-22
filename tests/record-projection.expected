@@ -1,7 +1,7 @@
 
 Desugared:
 
-	_.x (_ where { x = _ } {} {})
+	_.x (_.x:=_ {} {})
 
 inferred type:
 

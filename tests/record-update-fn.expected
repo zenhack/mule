@@ -1,7 +1,7 @@
 
 Desugared:
 
-	fn x. _ where { y = _ } x {}
+	fn x. _.y:=_ x {}
 
 inferred type:
 

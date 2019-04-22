@@ -1,7 +1,8 @@
 
 Desugared:
 
-	let f = fn x. _.y x in _ where { a = _ } (_ where { b = _ } {} (f (_ where { y = _ } {} (_ where { z = _ } {} {})))) (f (_ where { y = _ } {} {}))
+	let f = fn x. _.y x in
+	_.a:=_ (_.b:=_ {} (f (_.y:=_ {} (_.z:=_ {} {})))) (f (_.y:=_ {} {}))
 
 inferred type:
 

@@ -1,7 +1,7 @@
 
 Desugared:
 
-	fn f. fn arg. _ where { y = _ } arg (f (_.z arg))
+	fn f. fn arg. _.y:=_ arg (f (_.z arg))
 
 inferred type:
 

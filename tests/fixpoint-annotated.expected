@@ -1,9 +1,12 @@
 
 Desugared:
 
-	match-lam
-| $0 -> let fix = (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) $0 in fix
-end fn f. let g = fn x. f fn v. x x v in g g
+	
+	  match-lam
+	  | $0 -> let fix = (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) $0 in
+	          fix
+	  end fn f. let g = fn x. f fn v. x x v in
+	            g g
 
 inferred type:
 
@@ -11,7 +14,10 @@ inferred type:
 
 Runtime term:
 
-	match _ with  | _ -> fn. (fn. v0) v0 end fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
+	
+	  match _ with
+	  | _ ->fn. (fn. v0) v0
+	  end fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
 
 Evaluated:
 

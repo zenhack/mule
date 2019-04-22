@@ -1,7 +1,12 @@
 open Result.Monad_infix
 
 let display label text =
-  Stdio.print_endline ("\n" ^ label ^ ":\n\n\t" ^ text)
+  let text =
+    String.split_lines text
+    |> List.map ~f:(fun line -> "\t" ^ line)
+    |> String.concat ~sep:"\n"
+  in
+  Stdio.print_endline ("\n" ^ label ^ ":\n\n" ^ text)
 
 let desugar_typecheck expr =
   Lint.check expr

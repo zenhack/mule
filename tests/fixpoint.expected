@@ -1,7 +1,8 @@
 
 Desugared:
 
-	fn f. let g = fn x. f fn v. x x v in g g
+	fn f. let g = fn x. f fn v. x x v in
+	      g g
 
 inferred type:
 

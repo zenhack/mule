@@ -1,7 +1,8 @@
 
 Desugared:
 
-	fn $0. let choice = (_ : all a. a -> a -> a) $0 in _ where { x = _ } (_ where { y = _ } {} (choice fn x. x fn x. x)) (choice {} {})
+	fn $0. let choice = (_ : all a. a -> a -> a) $0 in
+	       _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
 
 inferred type:
 
