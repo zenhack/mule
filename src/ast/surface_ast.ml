@@ -37,6 +37,7 @@ module Expr = struct
     | Update of (t * field list)
     | Match of (t * (Pattern.t * t) list)
     | Let of (Pattern.t * t * t)
+    | WithType of (t * Type.t)
   and field =
       ( Label.t
       * Type.t option

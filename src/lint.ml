@@ -41,6 +41,9 @@ let check_unbound_vars expr =
         go_expr typ term e;
         let e_new = collect_pat_vars pat in
         go_expr typ (Set.union term e_new) body
+    | WithType (e, ty) ->
+        go_expr typ term e;
+        go_type typ ty
   and go_field typ term (_, ty, e) =
     go_expr typ term e;
     Option.iter ty ~f:(go_type typ)
@@ -104,6 +107,9 @@ let check_duplicate_record_fields =
         go_expr body
     | Var _ -> ()
     | Ctor _ -> ()
+    | WithType(e, ty) ->
+        go_expr e;
+        go_type ty
   and go_fields fields =
     List.iter fields ~f:(fun (_, ty, e) ->
       Option.iter ty ~f:go_type;

@@ -110,6 +110,8 @@ let rec desugar = function
       (* TODO: rework with so it stays a let binding; otherwise it won't generalize inner
        * variables. *)
       desugar (S.Match(e, [(pat, body)]))
+  | S.WithType(e, ty) ->
+      D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_match dict = function
   | [] -> D.Match
       { default = None
