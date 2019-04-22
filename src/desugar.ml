@@ -149,7 +149,9 @@ and desugar_match dict = function
       in
       desugar_match dict' cases
   | (SP.Annotated (p, _), body) :: cases ->
-      (* TODO: we'll want to actually do something with these eventually *)
+      (* TODO: we'll want to actually do something with these eventually.
+       * Maybe the thing to do is just only allow annotations on pattern variables,
+       * rather than arbitrary patterns? *)
       desugar_match dict ((p, body) :: cases)
   | (_ :: _) ->
       raise MuleErr.(MuleExn UnreachableCases)
