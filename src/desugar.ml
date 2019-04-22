@@ -104,12 +104,15 @@ let rec desugar = function
         ( desugar_match LabelMap.empty cases
         , desugar e
         )
+  | S.Let(SP.Wild, e, body) ->
+      desugar (S.Let(SP.Var (Gensym.anon_var ()), e, body))
+  | S.Let(SP.Annotated(pat, ty), e, body) ->
+      desugar (S.Let(pat, S.WithType(e, ty), body))
+  | S.Let(SP.Ctor(lbl, pat), e, body) ->
+      let v = Gensym.anon_var () in
+      desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var v), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var v, e, body) ->
       D.Let (v, desugar e, desugar body)
-  | S.Let(pat, e, body) ->
-      (* TODO: rework with so it stays a let binding; otherwise it won't generalize inner
-       * variables. *)
-      desugar (S.Match(e, [(pat, body)]))
   | S.WithType(e, ty) ->
       D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_match dict = function
