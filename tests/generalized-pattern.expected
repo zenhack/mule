@@ -1,0 +1,33 @@
+
+Desugared:
+
+	
+	  match-lam
+	  | Ok $1 -> 
+	               match-lam
+	               | $0 -> let x = (_ : all a. a -> a) $0 in
+	                       _.k:=_ (_.v:=_ {} (x fn y. y)) (x {})
+	               end $1
+	  
+	  end ((fn x. Ok x) fn x. x)
+
+inferred type:
+
+	{k : {}, v : a -> a}
+
+Runtime term:
+
+	
+	  match _ with
+	  | Ok -> 
+	            fn. 
+	                  match _ with
+	                  | _ ->
+	                          fn. (fn. (fn. fn. v1 where { k = v0 }) ((fn. fn. v1 where { v = v0 }) {} (v0 fn. v0)) (v0 {})) v0
+	                  end v0
+	  
+	  end ((fn. Ok v0) fn. v0)
+
+Evaluated:
+
+	{k = {}, v = fn. v0}
