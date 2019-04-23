@@ -110,10 +110,18 @@ and record_type = lazy (
 )
 
 let rec expr = lazy ((
+  lazy_p ex0
+  >>= fun e -> option (kwd ":" >> lazy_p typ)
+  |>> (function
+    | Some ty -> Expr.WithType(e, ty)
+    | None -> e
+  )
+) <?> "expression")
+and ex0 = lazy (
   lazy_p ex1
   >>= fun t -> many (lazy_p ex1)
   |>> fun ts -> List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
-) <?> "expression")
+)
 and ex1 = lazy (
   lazy_p ex2
   >>= fun old -> choice
