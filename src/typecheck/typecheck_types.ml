@@ -1,17 +1,21 @@
 (* types used by the type checker *)
 
-(* Contents of unification variables for types: *)
-type u_type =
-  [ `Free of tyvar
-  | `Fn of (tyvar * u_type UnionFind.var * u_type UnionFind.var)
-  | `Record of (tyvar * u_row UnionFind.var)
-  | `Union of (tyvar * u_row UnionFind.var)
+type u_kind =
+  [ `Row
+  | `Type
   ]
-(* ...and rows: *)
-and u_row =
-  [ `Free of tyvar
-  | `Extend of (tyvar * Ast.Label.t * u_type UnionFind.var * u_row UnionFind.var)
-  | `Empty of tyvar
+
+type u_typeconst =
+  [ `Fn
+  | `Union
+  | `Record
+  | `Empty
+  | `Extend of Ast.Label.t
+  ]
+(* Contents of unification variables: *)
+and u_type =
+  [ `Free of (tyvar * u_kind)
+  | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * u_kind) list * u_kind)
   ]
 and bound_ty = [ `Rigid | `Flex ]
 and 'a bound =
@@ -32,26 +36,29 @@ and bound_target =
   | `G of g_node
   ]
 
+(* constructors for common type constants. *)
+let fn tv param ret = `Const(tv, `Fn, [param, `Type; ret, `Type], `Type)
+let union tv row = `Const(tv, `Union, [row, `Row], `Type)
+let record tv row = `Const(tv, `Record, [row, `Row], `Type)
+let empty tv = `Const(tv, `Empty, [], `Row)
+let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
+
 type permission = F | R | L
 
 type unify_edge =
-  | UnifyTypes of (u_type UnionFind.var * u_type UnionFind.var)
-  | UnifyRows of (u_row UnionFind.var * u_row UnionFind.var)
+  | Unify of (u_type UnionFind.var * u_type UnionFind.var)
 
 type inst_edge =
   { ie_g_node: g_node
   ; ie_ty_node: u_type UnionFind.var
   }
 
+let typeconst_eq: u_typeconst -> u_typeconst -> bool = Poly.equal
 let perm_eq: permission -> permission -> bool = Poly.equal
 
-let get_tyvar: [< u_type | u_row ] -> tyvar = function
-  | `Free v -> v
-  | `Fn (v, _, _) -> v
-  | `Record (v, _) -> v
-  | `Union (v, _) -> v
-  | `Extend(v, _, _, _) -> v
-  | `Empty v -> v
+let get_tyvar: u_type -> tyvar = function
+  | `Free (v, _) -> v
+  | `Const (v, _, _, _) -> v
 let get_u_bound x = !((get_tyvar x).ty_bound)
 
 let rec show_u_type_v s v =
@@ -63,28 +70,28 @@ let rec show_u_type_v s v =
     let s = Set.add s n in
     match t with
     | `Free _ -> "t" ^ Int.to_string n
-    | `Fn (_, l, r) ->
-        "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
-    | `Record(_, row) ->
-        "Record{" ^ show_u_row_v s row ^ "}"
-    | `Union(_, row) ->
-        "Union(" ^ show_u_row_v s row ^ ")"
-and show_u_row_v s v =
-  let r = UnionFind.get v in
-  let n = (get_tyvar r).ty_id in
-  if Set.mem s n then
-    "r" ^ Int.to_string n
-  else
-    let s = Set.add s n in
-    match r with
-    | `Free {ty_id; _} ->
-        "r" ^ Int.to_string ty_id
-    | `Empty _ ->
-        "<empty>"
-    | `Extend (_, lbl, ty, rest) ->
-        "(" ^ Ast.Label.to_string lbl ^ " => " ^ show_u_type_v s ty ^ ") :: " ^ show_u_row_v s rest
+    | `Const (_, c, args, _) ->
+        begin match c, args with
+        | `Fn, [l, _; r, _] ->
+            "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
+        | `Record, [row, _] ->
+            "Record{" ^ show_u_type_v s row ^ "}"
+        | `Union, [row, _] ->
+            "Union(" ^ show_u_type_v s row ^ ")"
+        | `Empty, [] -> "<empty>"
+        | `Extend lbl, [head, _; tail, _] ->
+            String.concat
+              [ "("
+              ; Ast.Label.to_string lbl
+              ; " => "
+              ; show_u_type_v s head
+              ; ") :: "
+              ; show_u_type_v s tail
+              ]
+        | `Fn, _ | `Record, _ | `Union, _ | `Empty, _ | `Extend _, _ ->
+            failwith "BUG: wrong number of args."
+        end
 let show_u_type_v: u_type UnionFind.var -> string = show_u_type_v IntSet.empty
-let show_u_row_v: u_row UnionFind.var -> string = show_u_row_v  IntSet.empty
 
 let show_g {g_child; _} =
   show_u_type_v (Lazy.force g_child)

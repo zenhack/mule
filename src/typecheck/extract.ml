@@ -59,40 +59,53 @@ let rec get_var_type env t =
   let i = (get_tyvar t).ty_id in
   match t with
   | _ when Set.mem env (ivar i) -> Type.Var (i, (ivar i))
-  | `Free {ty_id = i; _} -> Type.Var (i, (ivar i))
-  | `Fn ({ty_id = i; _}, f, x) ->
+  | `Free ({ty_id = i; _}, _) -> Type.Var (i, (ivar i))
+  | `Const({ty_id = i; _}, c, args, _) ->
       let env' = Set.add env (ivar i) in
-      Type.Fn
-        ( i
-        , get_var_type env' (UnionFind.get f)
-        , get_var_type env' (UnionFind.get x)
-        )
-  | `Record ({ty_id = i; _}, fields) ->
-      let (fields, rest) =
-        get_var_row (Set.add env (ivar i)) (UnionFind.get fields)
-      in
-      Type.Record (i, fields, rest)
-  | `Union ({ty_id = i; _}, ctors) ->
-      let (ctors, rest) =
-        get_var_row (Set.add env (ivar i)) (UnionFind.get ctors)
-      in
-      Type.Union (i, ctors, rest)
+      begin match c, args with
+      | `Fn, [param, _; ret, _] ->
+          Type.Fn
+            ( i
+            , get_var_type env' (UnionFind.get param)
+            , get_var_type env' (UnionFind.get ret)
+            )
+      | `Record, [row, _] | `Union, [row, _] ->
+          let (fields, rest) =
+            get_var_row env' (UnionFind.get row)
+          in
+          begin match c with
+          | `Record -> Type.Record(i, fields, rest)
+          | `Union -> Type.Union(i, fields, rest)
+          | _ -> failwith "impossible"
+          end
+      | `Fn, _ | `Record, _ | `Union, _ ->
+          failwith "BUG: wrong number of args"
+      | `Empty, _ | `Extend _, _ ->
+          failwith "BUG: Kind error"
+      end
 and get_var_row env r =
   let i = (get_tyvar r).ty_id in
   let (fields, rest) =
     match r with
     | _ when Set.mem env (ivar i) -> ([], Some (ivar i))
-    | `Free {ty_id = i; _} -> ([], Some (ivar i))
-    | `Empty _ -> ([], None)
-    | `Extend ({ty_id = i; _}, lbl, ty, rest) ->
-        let env' = Set.add env (ivar i) in
-        let (fields, rest) = get_var_row env' (UnionFind.get rest) in
-        ( ( lbl
-          , get_var_type env' (UnionFind.get ty)
-          )
-          :: fields
-        , rest
-        )
+    | `Free ({ty_id = i; _}, _) -> ([], Some (ivar i))
+    | `Const({ty_id = i; _}, c, args, _) ->
+        begin match c, args with
+        | `Empty, [] -> ([], None)
+        | `Extend lbl, [ty, _; rest, _] ->
+            let env' = Set.add env (ivar i) in
+            let (fields, rest) = get_var_row env' (UnionFind.get rest) in
+            ( ( lbl
+              , get_var_type env' (UnionFind.get ty)
+              )
+              :: fields
+            , rest
+            )
+        | `Empty, _ | `Extend _, _ ->
+            failwith "BUG: wrong number of args"
+        | `Fn, _ | `Union, _ | `Record, _ ->
+            failwith "BUG: not a row"
+        end
   in
 
   (* Filter out duplicate field names: *)

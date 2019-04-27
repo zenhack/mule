@@ -1,21 +1,4 @@
-type edge_type =
-  [ `Structural
-  | `Unify
-  | `Instance
-  | `Sibling
-  | `Binding of [ `Flex | `Rigid ]
-  ]
-type node_type =
-  [ `TyVar
-  | `TyFn
-  | `TyRecord
-  | `TyUnion
-  | `RowVar
-  | `RowEmpty
-  | `RowExtend of Ast.Label.t
-  | `G
-  ]
-
+include Debug_t
 
 let report enabled =
   if enabled then
@@ -51,13 +34,15 @@ let fmt_node: node_type -> int -> string =
     ; Int.to_string n
     ; " [label=\""
     ; begin match ty with
-      | `TyVar -> "T"
-      | `TyFn -> "->"
-      | `TyRecord -> "{}"
-      | `TyUnion -> "|"
-      | `RowVar -> "R"
-      | `RowEmpty -> "Nil"
-      | `RowExtend lbl -> Ast.Label.to_string lbl ^ " ::"
+      | `TyVar -> "V"
+      | `Const c ->
+          begin match c with
+          | `Fn -> "->"
+          | `Record -> "{}"
+          | `Union -> "|"
+          | `Empty -> "Nil"
+          | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
+          end
       | `G -> "G"
       end
     ; " : "

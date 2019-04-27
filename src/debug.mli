@@ -1,23 +1,6 @@
+include module type of Debug_t
 
 val report: bool -> (unit -> string) -> unit
-
-type edge_type =
-  [ `Structural
-  | `Unify
-  | `Instance
-  | `Sibling
-  | `Binding of [ `Flex | `Rigid ]
-  ]
-type node_type =
-  [ `TyVar
-  | `TyFn
-  | `TyRecord
-  | `TyUnion
-  | `RowVar
-  | `RowEmpty
-  | `RowExtend of Ast.Label.t
-  | `G
-  ]
 
 val start_graph: unit -> unit
 val show_node: node_type -> int -> unit

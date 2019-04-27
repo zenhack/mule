@@ -125,29 +125,12 @@ let rec raise_bounds: bound_target bound -> IntSet.t ref -> u_type -> unit =
         visited := Set.add !visited tv.ty_id;
         raise_tv bound tv;
         match t with
-        | `Free _ ->
-            ()
-        | `Fn(_, param, ret) ->
-            raise_bounds bound visited (UnionFind.get param);
-            raise_bounds bound visited (UnionFind.get ret);
-        | `Record(_, r) -> raise_bounds_row bound visited (UnionFind.get r)
-        | `Union(_, r) -> raise_bounds_row bound visited (UnionFind.get r)
-      end
-and raise_bounds_row: bound_target bound -> IntSet.t ref -> u_row -> unit =
-  fun bound visited r ->
-    let tv = get_tyvar r in
-    if Set.mem !visited tv.ty_id then
-      ()
-    else
-      begin
-        visited := Set.add !visited tv.ty_id;
-        raise_tv bound tv;
-        match r with
         | `Free _ -> ()
-        | `Empty _ -> ()
-        | `Extend(_, _, t, r) ->
-            raise_bounds bound visited (UnionFind.get t);
-            raise_bounds_row bound visited (UnionFind.get r)
+        | `Const(_, _, args, _) ->
+            List.iter
+              args
+              ~f:(fun (ty, _) ->
+                    raise_bounds bound visited (UnionFind.get ty))
       end
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
@@ -161,15 +144,9 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
    *)
-
   raise_bounds !(v.ty_bound) (ref IntSet.empty) t;
   ignore (unify_tyvar (get_tyvar t) v);
   t
-
-let graft_row: u_row -> tyvar -> u_row = fun r v ->
-  raise_bounds_row !(v.ty_bound) (ref IntSet.empty) r;
-  ignore (unify_tyvar (get_tyvar r) v);
-  r
 
 let rec unify already_merged l r =
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
@@ -183,115 +160,81 @@ let rec unify already_merged l r =
     else
       tv
   in
-  begin match l, r with
+  match l, r with
   (* It is important that we do the graft permission checks *before*
    * any raisings/weakenings to get the bounds to match -- otherwise we
    * could get spurrious permission errors. *)
-  | (`Free v), t when perm_eq (tyvar_permission v) F -> graft t v
-  | t, (`Free v) when perm_eq (tyvar_permission v) F -> graft t v
+  | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft t v
+  | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft t v
   | (`Free _), _ | _, (`Free _) -> permErr `Graft
 
   (* Neither side of these is a type variable, so we need to do a merge.
    * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
-
-  (* Top level type constructors that match. We recursively
-   * merge the types in a bottom-up fashion. Doing this makes it
-   * easy to see that the conditions for being a valid merge
-   * are satisfied (See {MLF-Graph-Unify} section 3.2.2 for the
-   * definition):
-   *
-   * - 1 & 2 are trivial, since the subgraphs are always identical.
-   * - 3 is enforced/checked by merge_tv ().
-   * - 4 follows vaccuously from the fact that merging the roots
-   *   will not cause any other nodes to be merged (since they already
-   *   have been).
-   *
-   * For this argument to work it is important that we can consider
-   * the merge of the roots not to have "started" until the subgraphs
-   * are fully merged -- so we must be careful not to violate this
-   * invariant.
-   *)
-  | (`Fn (_, ll, lr), `Fn (_, rl, rr)) ->
-      UnionFind.merge (unify already_merged) ll rl;
-      UnionFind.merge (unify already_merged) lr rr;
-      `Fn (merge_tv (), ll, lr)
-  | (`Record (_, row_l), `Record(_, row_r)) ->
-      UnionFind.merge (unify_row already_merged) row_l row_r;
-      `Record (merge_tv (), row_l)
-  | (`Union (_, row_l), `Union(_, row_r)) ->
-      UnionFind.merge (unify_row already_merged) row_l row_r;
-      `Union(merge_tv (), row_l)
-
-
-  (* Top level type constructors that _do not_ match. In this case
-   * unfication fails.
-   *
-   * we could have a catchall, but this way we can give the user
-   * a little more information, and even while it's a bit verbose
-   * it also means that the compiler will catch if we miss a case
-   * that should be handled differently. it would be nice to
-   * refactor so we don't have to list every combination though.
-   *)
-  | `Fn     _, `Record _ -> ctorErr `Fn     `Record
-  | `Fn     _, `Union  _ -> ctorErr `Fn     `Union
-  | `Record _, `Fn     _ -> ctorErr `Record `Fn
-  | `Record _, `Union  _ -> ctorErr `Record `Union
-  | `Union  _, `Fn     _ -> ctorErr `Union  `Fn
-  | `Union  _, `Record _ -> ctorErr `Union  `Record
-  end
-and unify_row already_merged l r =
-  let (lid, rid) = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
-  if lid = rid || Set.mem already_merged (lid, rid) then l else
-  let already_merged = Set.add already_merged (lid, rid) in
-
-  let merge_tv () =
-    let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
-    if perm_eq (tyvar_permission tv) L then
-      permErr `Merge
-    else
-      tv
-  in
-  match l, r with
-  | (`Free v, t) when perm_eq (tyvar_permission v) F -> graft_row t v
-  | (t, `Free v) when perm_eq (tyvar_permission v) F -> graft_row t v
-  | (`Free _), _ | _, (`Free _) -> permErr `Graft
-  | (`Empty _, `Empty _) -> `Empty (merge_tv ())
-  | (`Extend (_, l_lbl, l_ty, l_rest), `Extend (_, r_lbl, r_ty, r_rest)) ->
-      if Ast.Label.equal l_lbl r_lbl then begin
-        UnionFind.merge (unify already_merged) l_ty r_ty;
-        UnionFind.merge (unify_row already_merged) l_rest r_rest
-      end else begin
-        (* XXX: I(@zenhack) am not sure what the bounds should be here;
-         * my rough intuition is that they should be the same as the
-         * other row variable, but I need to think about the logic here
-         * more carefully. This is the only place in the unification
-         * algorithm where we actually generate new bottom nodes, and the
-         * MLF papers don't talk about this since the stuff from {Records}
-         * is an extension.
+  | `Const(_, cl, argsl, k), `Const(_, cr, argsr, _) ->
+      if typeconst_eq cl cr then
+        (* Top level type constructors that match. We recursively
+         * merge the types in a bottom-up fashion. Doing this makes it
+         * easy to see that the conditions for being a valid merge
+         * are satisfied:
+         *
+         * - 1 & 2 are trivial, since the subgraphs are always identical.
+         * - 3 is enforced/checked by merge_tv ().
+         * - 4 follows vaccuously from the fact that merging the roots
+         *   will not cause any other nodes to be merged (since they already
+         *   have been).
+         *
+         * For this argument to work it is important that we can consider
+         * the merge of the roots not to have "started" until the subgraphs
+         * are fully merged -- so we must be careful not to violate this
+         * invariant.
          *)
-        let new_with_bound v =
-          UnionFind.make (`Free
-            { ty_id = gensym ()
-            ; ty_bound = ref (get_u_bound (UnionFind.get v))
-            })
-        in
-        let new_rest_r = new_with_bound r_rest in
-        let new_rest_l = new_with_bound l_rest in
-        let new_tv () =
-          { ty_id = gensym ()
-          ; ty_bound = (get_tyvar l).ty_bound
-          }
-        in
-        UnionFind.merge (unify_row already_merged)
-          r_rest
-          (UnionFind.make (`Extend(new_tv (), l_lbl, l_ty, new_rest_r)));
-        UnionFind.merge (unify_row already_merged)
-          l_rest
-          (UnionFind.make (`Extend(new_tv (), r_lbl, r_ty, new_rest_l)))
-      end;
-      `Extend (merge_tv (), l_lbl, l_ty, l_rest)
-  | (`Extend (_, lbl, _, _), `Empty _) -> ctorErr (`Extend lbl) `Empty
-  | (`Empty _, `Extend (_, lbl, _, _)) -> ctorErr `Empty (`Extend lbl)
-
+        begin
+          List.iter2_exn argsl argsr
+            ~f:(fun (l, _) (r, _) -> UnionFind.merge (unify already_merged) l r);
+          `Const(merge_tv (), cl, argsl, k)
+        end
+      else
+        begin match cl, argsl, cr, argsr with
+        (* Mismatched extend constructors get treated specially, because of the
+         * equivalence relation on rows. *)
+        | `Extend l_lbl, [l_ty, _; l_rest, _], `Extend r_lbl, [r_ty, _; r_rest, _] ->
+            begin
+              (* XXX: I(@zenhack) am not sure what the bounds should be here;
+               * my rough intuition is that they should be the same as the
+               * other row variable, but I need to think about the logic here
+               * more carefully. This is the only place in the unification
+               * algorithm where we actually generate new bottom nodes, and the
+               * MLF papers don't talk about this since the stuff from {Records}
+               * is an extension.
+               *)
+              let new_with_bound v =
+                UnionFind.make
+                  (`Free
+                    ( { ty_id = gensym ()
+                      ; ty_bound = ref (get_u_bound (UnionFind.get v))
+                      }
+                    , `Row
+                    )
+                  )
+              in
+              let new_rest_r = new_with_bound r_rest in
+              let new_rest_l = new_with_bound l_rest in
+              let new_tv () =
+                { ty_id = gensym ()
+                ; ty_bound = (get_tyvar l).ty_bound
+                }
+              in
+              UnionFind.merge (unify already_merged)
+                r_rest
+                (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
+              UnionFind.merge (unify already_merged)
+                l_rest
+                (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
+            end;
+            extend (merge_tv ()) l_lbl l_ty l_rest
+        | _ ->
+          (* Top level type constructors that _do not_ match. In this case
+           * unfication fails. *)
+          ctorErr cl cr
+        end
 let unify = unify IntPairSet.empty
-let unify_row = unify_row IntPairSet.empty

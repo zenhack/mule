@@ -80,19 +80,20 @@ and collect_exist_row (_, fields, _) =
 
 type graph_monotype =
   [ `Var of Var.t
-  | `Fn of graph_polytype * graph_polytype
-  | `Record of graph_row
-  | `Union of graph_row
+  | `Const of (graph_const * graph_polytype list)
   | `Recur of (Var.t * graph_polytype)
+  ]
+and graph_const =
+  [ `Fn
+  | `Record
+  | `Union
+  | `Empty
+  | `Extend of Label.t
   ]
 and graph_polytype =
   { gp_vars: [ `Type | `Row ] VarMap.t
   ; gp_type: graph_monotype
   }
-and graph_row =
-  ( (Label.t * graph_polytype) list
-  * Var.t option
-  )
 
 let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype =
   (* This function addresses a mismatch between syntactic and graphic types:
@@ -113,9 +114,12 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
       graph_friendly (Map.set ~key:v ~data:`Row acc) body
   | Type.Fn(_, param, ret) ->
       { gp_vars = acc
-      ; gp_type = `Fn
-          ( graph_friendly VarMap.empty param
-          , graph_friendly VarMap.empty ret
+      ; gp_type =
+        `Const
+          ( `Fn
+          , [ graph_friendly VarMap.empty param
+            ; graph_friendly VarMap.empty ret
+            ]
           )
       }
   | Type.Recur (_, var, body) ->
@@ -133,62 +137,86 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
       }
   | Record row ->
       { gp_vars = acc
-      ; gp_type = `Record (graph_friendly_row row)
+      ; gp_type =
+          `Const
+            ( `Record
+            , [graph_friendly_row row]
+            )
       }
   | Union row ->
       { gp_vars = acc
-      ; gp_type = `Union(graph_friendly_row row)
+      ; gp_type =
+          `Const
+            ( `Union
+            , [graph_friendly_row row]
+            )
       }
-and graph_friendly_row (_, fields, rest) =
-  ( List.map fields ~f:(fun (l, t) -> (l, graph_friendly VarMap.empty t))
-  , rest
-  )
+and graph_friendly_row = function
+  | (r, (l, t) :: fs, rest) ->
+      let tail = graph_friendly_row (r, fs, rest) in
+      { gp_vars = VarMap.empty
+      ; gp_type =
+        `Const
+          ( `Extend l
+          , [ graph_friendly VarMap.empty t
+            ; tail
+            ]
+          )
+      }
+  | (_, [], None) ->
+      { gp_vars = VarMap.empty
+      ; gp_type = `Const (`Empty, [])
+      }
+  | (_, [], Some var) ->
+      { gp_vars = VarMap.empty
+      ; gp_type = `Var var
+      }
 
-let require_type: [> `Type of 'a ] -> 'a = function
-  | `Type x -> x
-  | _ -> failwith "expected type"
+type env_t = (u_type UnionFind.var) VarMap.t
 
-let require_row: [> `Row of 'a ] -> 'a = function
-  | `Row x -> x
-  | _ -> failwith "expected row"
-
-type env_t = [ `Type of u_type UnionFind.var | `Row of u_row UnionFind.var ] VarMap.t
-
-let rec make_mono: bound_target -> env_t -> graph_monotype -> u_type UnionFind.var =
-  fun b_at env -> function
+let rec make_mono: u_kind -> bound_target -> env_t -> graph_monotype -> u_type UnionFind.var =
+  fun kind b_at env -> function
   | `Var v ->
-      require_type (Map.find_exn env v)
+      Map.find_exn env v
   | `Recur(v, body) ->
-      let ret = gen_u b_at in
+      let ret = gen_u kind b_at in
       let ret' =
         make_poly
+          kind
           b_at
-          (Map.set env ~key:v ~data:(`Type ret))
+          (Map.set env ~key:v ~data:ret)
           body
       in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
-  | `Fn(param, ret) ->
-      UnionFind.make
-        (`Fn
-          ( ty_var_at b_at
-          , make_poly b_at env param
-          , make_poly b_at env ret
-          )
-        )
-  | `Record row ->
-      UnionFind.make(`Record(make_row' b_at env row))
-  | `Union row ->
-      UnionFind.make(`Union(make_row' b_at env row))
-and make_poly: bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
-  fun b_at env {gp_vars; gp_type} ->
+  | `Const(c, args) ->
+      let tv = ty_var_at b_at in
+      begin match c, args with
+      | `Fn, [param; ret] ->
+          UnionFind.make
+            (fn tv
+              (make_poly `Type b_at env param)
+              (make_poly `Type b_at env ret))
+      | `Record, [row] ->
+          UnionFind.make (record tv (make_poly `Row b_at env row))
+      | `Union, [row] ->
+          UnionFind.make (union tv (make_poly `Row b_at env row))
+      | `Empty, [] ->
+          UnionFind.make (empty tv)
+      | `Extend lbl, [ty; rest] ->
+          UnionFind.make
+            (extend tv lbl
+              (make_poly `Type b_at env ty)
+              (make_poly `Row b_at env rest))
+      | `Fn, _ | `Record, _ | `Union, _ | `Empty, _ | `Extend _, _ ->
+          failwith "BUG: wrong number of args"
+      end
+and make_poly: u_kind -> bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
+  fun kind b_at env {gp_vars; gp_type} ->
     snd
       ( Util.fix
         (fun parent ->
-          let env' = Map.map gp_vars ~f:(function
-            | `Type -> `Type (gen_u (`Ty parent))
-            | `Row -> `Row (gen_u (`Ty parent))
-          ) in
+          let env' = Map.map gp_vars ~f:(fun k -> gen_u k (`Ty parent)) in
           Map.merge env env' ~f:(fun ~key:_ -> function
             | `Left x -> Some x
             | `Right x -> Some x
@@ -196,31 +224,9 @@ and make_poly: bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
           )
         )
         (fun env ->
-          make_mono b_at (Lazy.force env) gp_type
+          make_mono kind b_at (Lazy.force env) gp_type
         )
       )
-and make_row: bound_target -> env_t -> graph_row -> u_row UnionFind.var =
-  fun b_at env -> function
-    | ([], None) ->
-        UnionFind.make (`Empty (ty_var_at b_at))
-    | ([], Some v) ->
-        require_row (Map.find_exn env v)
-    | ((lbl, t) :: fields, tail) ->
-        UnionFind.make (`Extend
-          ( ty_var_at b_at
-          , lbl
-          , make_poly b_at env t
-          , make_row b_at env (fields, tail)
-          )
-        )
-and make_row' b_at env row =
-  let row' = make_row b_at env row in
-  let bound = (get_tyvar (UnionFind.get row')).ty_bound in
-  ( { ty_id = Gensym.gensym ()
-    ; ty_bound = bound
-    }
-  , row'
-  )
 
 let make_coercion_type g ty =
   let kinded_ty = Infer_kind.infer VarMap.empty ty in
@@ -230,25 +236,16 @@ let make_coercion_type g ty =
   fst (Util.fix
     (fun vars ->
       let (param_var, ret_var) = Lazy.force vars in
-      UnionFind.make
-        (`Fn
-          ( gen_ty_var g
-          , param_var
-          , ret_var
-          )
-        )
+      UnionFind.make (fn (gen_ty_var g) param_var ret_var)
     )
     (fun root ->
       (* [root] is the final root of the type; its argument and return values
        * will be the two copies of the type in the annotation, and it will
        * be the bound of the existentials.
        *)
-      let exist_map = Map.map exist_vars ~f:(function
-        | `Type -> `Type (gen_u (`Ty root))
-        | `Row -> `Row (gen_u (`Ty root))
-      ) in
-      let param = make_poly (`Ty root) exist_map graph_ty in
-      let ret = make_poly (`Ty root) exist_map graph_ty in
+      let exist_map = Map.map exist_vars ~f:(fun k -> gen_u k (`Ty root)) in
+      let param = make_poly `Type (`Ty root) exist_map graph_ty in
+      let ret = make_poly `Type (`Ty root) exist_map graph_ty in
       let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
       param_bound := { !param_bound with b_ty = `Rigid };
       (param, ret)

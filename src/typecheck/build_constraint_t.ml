@@ -7,7 +7,6 @@ type built_constraints =
   }
 
 type constraint_ops =
-  { constrain_ty   : u_type UnionFind.var -> u_type UnionFind.var -> unit
-  ; constrain_row  : u_row UnionFind.var  -> u_row UnionFind.var  -> unit
-  ; constrain_inst : g_node -> u_type UnionFind.var -> unit
+  { constrain_unify : u_type UnionFind.var -> u_type UnionFind.var -> unit
+  ; constrain_inst  : g_node -> u_type UnionFind.var -> unit
   }

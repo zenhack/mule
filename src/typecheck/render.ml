@@ -14,48 +14,27 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
       begin match t with
         | `Free _ ->
             Debug.show_node `TyVar n
-        | `Fn(_, param, ret) ->
-            Debug.show_node `TyFn n;
-            let p_id = (get_tyvar (UnionFind.get param)).ty_id in
-            let r_id = (get_tyvar (UnionFind.get ret )).ty_id in
-            Debug.show_edge `Structural n p_id;
-            Debug.show_edge `Structural n r_id;
-            Debug.show_edge `Sibling p_id r_id;
-            emit_all_nodes_ty param dict;
-            emit_all_nodes_ty ret dict
-            (* TODO: bounding edges *)
-        | `Record (_, row) ->
-            Debug.show_node `TyRecord n;
-            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get row)).ty_id);
-            emit_all_nodes_row row dict
-        | `Union (_, row) ->
-            Debug.show_node `TyUnion n;
-            Debug.show_edge `Structural n ((get_tyvar (UnionFind.get row)).ty_id);
-            emit_all_nodes_row row dict
-      end
-    end
-and emit_all_nodes_row v dict =
-    let r = UnionFind.get v in
-    let {ty_id = n; ty_bound} = get_tyvar r in
-    if Map.mem !dict n then
-      ()
-    else begin
-      dict := Map.set !dict ~key:n ~data:();
-      emit_bind_edge n !ty_bound dict;
-      begin match r with
-      | `Empty _ ->
-          Debug.show_node `RowEmpty n
-      | `Free _ ->
-          Debug.show_node `RowVar n
-      | `Extend (_, lbl, h, t) ->
-          Debug.show_node (`RowExtend lbl) n;
-          let h_id = (get_tyvar (UnionFind.get h)).ty_id in
-          let t_id = (get_tyvar (UnionFind.get t)).ty_id in
-          Debug.show_edge `Structural n h_id;
-          Debug.show_edge `Structural n t_id;
-          Debug.show_edge `Sibling h_id t_id;
-          emit_all_nodes_ty h dict;
-          emit_all_nodes_row t dict
+        | `Const(_, c, args, _) ->
+            Debug.show_node (`Const c) n;
+            let n_ids = List.map args
+              ~f:(fun (uvar, _) ->
+                let v_id = (get_tyvar (UnionFind.get uvar)).ty_id in
+                Debug.show_edge `Structural n v_id;
+                emit_all_nodes_ty uvar dict;
+                v_id
+                )
+            in
+            begin match n_ids with
+            | [] -> ()
+            | (i :: is) ->
+                ignore (List.fold_left
+                  is
+                  ~init:i
+                  ~f:(fun l r ->
+                    Debug.show_edge `Sibling l r;
+                    r
+                  ))
+            end
       end
     end
 and emit_all_nodes_g g dict =
@@ -91,18 +70,13 @@ let render_graph cs =
     let visited = ref IntMap.empty in
     Debug.start_graph ();
     emit_all_nodes_ty cs.ty visited;
-    List.iter cs.unification ~f:(function
-      | UnifyTypes(l, r) ->
+    List.iter cs.unification
+      ~f:(fun (Unify(l, r)) ->
           let id n = (get_tyvar (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_ty l visited;
           emit_all_nodes_ty r visited
-      | UnifyRows(l, r) ->
-          let id n = (get_tyvar (UnionFind.get n)).ty_id in
-          Debug.show_edge `Unify (id l) (id r);
-          emit_all_nodes_row l visited;
-          emit_all_nodes_row r visited
-    );
+      );
     cs.instantiation
     |> Map.to_alist
     |> List.iter ~f:(fun (_, (g, ts)) ->
