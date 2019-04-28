@@ -36,12 +36,17 @@ and bound_target =
   | `G of g_node
   ]
 
-(* constructors for common type constants. *)
-let fn tv param ret = `Const(tv, `Fn, [param, `Type; ret, `Type], `Type)
-let union tv row = `Const(tv, `Union, [row, `Row], `Type)
-let record tv row = `Const(tv, `Record, [row, `Row], `Type)
-let empty tv = `Const(tv, `Empty, [], `Row)
-let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
+(* Smart constructors for common type constants. *)
+let fn: tyvar -> u_type UnionFind.var -> u_type UnionFind.var -> u_type =
+  fun tv param ret -> `Const(tv, `Fn, [param, `Type; ret, `Type], `Type)
+let union: tyvar -> u_type UnionFind.var -> u_type =
+  fun tv row -> `Const(tv, `Union, [row, `Row], `Type)
+let record: tyvar -> u_type UnionFind.var -> u_type =
+  fun tv row -> `Const(tv, `Record, [row, `Row], `Type)
+let empty: tyvar -> u_type =
+  fun tv -> `Const(tv, `Empty, [], `Row)
+let extend: tyvar -> Ast.Label.t -> u_type UnionFind.var -> u_type UnionFind.var -> u_type =
+  fun tv lbl head tail -> `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
 
 type permission = F | R | L
 

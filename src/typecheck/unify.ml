@@ -1,5 +1,4 @@
 open Typecheck_types
-open Gensym
 
 (* Helpers for signaling type errors *)
 let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
@@ -149,17 +148,15 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   t
 
 let rec unify already_merged l r =
+  (* First, check if we've already merged these two, and if so stop
+   * right now. *)
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
   if lid = rid || Set.mem already_merged (lid, rid) then l else
   let already_merged = Set.add already_merged (lid, rid) in
 
-  let merge_tv () =
-    let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
-    if perm_eq (tyvar_permission tv) L then
-      permErr `Merge
-    else
-      tv
-  in
+  (* Next, normalize the types to whnf. *)
+  let l, r = KindEval.whnf l, KindEval.whnf r in
+
   match l, r with
   (* It is important that we do the graft permission checks *before*
    * any raisings/weakenings to get the bounds to match -- otherwise we
@@ -178,7 +175,7 @@ let rec unify already_merged l r =
          * are satisfied:
          *
          * - 1 & 2 are trivial, since the subgraphs are always identical.
-         * - 3 is enforced/checked by merge_tv ().
+         * - We check 3 specifically.
          * - 4 follows vaccuously from the fact that merging the roots
          *   will not cause any other nodes to be merged (since they already
          *   have been).
@@ -191,50 +188,14 @@ let rec unify already_merged l r =
         begin
           List.iter2_exn argsl argsr
             ~f:(fun (l, _) (r, _) -> UnionFind.merge (unify already_merged) l r);
-          `Const(merge_tv (), cl, argsl, k)
+          let tv = unify_tyvar (get_tyvar l) (get_tyvar r) in
+          if perm_eq (tyvar_permission tv) L then
+            permErr `Merge
+          else
+            `Const(tv, cl, argsl, k)
         end
       else
-        begin match cl, argsl, cr, argsr with
-        (* Mismatched extend constructors get treated specially, because of the
-         * equivalence relation on rows. *)
-        | `Extend l_lbl, [l_ty, _; l_rest, _], `Extend r_lbl, [r_ty, _; r_rest, _] ->
-            begin
-              (* XXX: I(@zenhack) am not sure what the bounds should be here;
-               * my rough intuition is that they should be the same as the
-               * other row variable, but I need to think about the logic here
-               * more carefully. This is the only place in the unification
-               * algorithm where we actually generate new bottom nodes, and the
-               * MLF papers don't talk about this since the stuff from {Records}
-               * is an extension.
-               *)
-              let new_with_bound v =
-                UnionFind.make
-                  (`Free
-                    ( { ty_id = gensym ()
-                      ; ty_bound = ref (get_u_bound (UnionFind.get v))
-                      }
-                    , `Row
-                    )
-                  )
-              in
-              let new_rest_r = new_with_bound r_rest in
-              let new_rest_l = new_with_bound l_rest in
-              let new_tv () =
-                { ty_id = gensym ()
-                ; ty_bound = (get_tyvar l).ty_bound
-                }
-              in
-              UnionFind.merge (unify already_merged)
-                r_rest
-                (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
-              UnionFind.merge (unify already_merged)
-                l_rest
-                (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
-            end;
-            extend (merge_tv ()) l_lbl l_ty l_rest
-        | _ ->
-          (* Top level type constructors that _do not_ match. In this case
-           * unfication fails. *)
-          ctorErr cl cr
-        end
+        (* Top level type constructors that _do not_ match. In this case
+         * unfication fails. *)
+        ctorErr cl cr
 let unify = unify IntPairSet.empty
