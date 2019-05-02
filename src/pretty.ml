@@ -153,7 +153,7 @@ let rec typ p =
   | Quant(_, q, var, _, body) ->
       let qstr = match q with
         | `All -> "all"
-        | `Exist -> "exis "
+        | `Exist -> "exist"
       in
       binder_parens p
         (Doc.concat
