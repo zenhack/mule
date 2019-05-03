@@ -55,4 +55,5 @@ module Expr = struct
       }
     | WithType of unit Type.t
     | Let of (Var.t * t * t)
+    | LetRec of ((Var.t * t) list * t)
 end

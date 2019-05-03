@@ -41,6 +41,8 @@ let rec walk cops env g = function
   | Expr.Let(v, e, body) ->
       let g_e = with_g g (fun g -> walk cops env (Lazy.force g) e) in
       walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
+  | Expr.LetRec(bindings, body) ->
+      walk_letrec cops env g bindings body
   | Expr.App (f, arg) ->
       let param_var = gen_u `Type (`G g) in
       let ret_var = gen_u `Type (`G g) in
@@ -157,6 +159,29 @@ and walk_match cops env g final = function
       ( UnionFind.make (extend (gen_ty_var g) lbl ty row)
       , bodyVar
       )
+and walk_letrec cops env g bindings body =
+  let env' =
+    List.map bindings ~f:(fun (var, _) -> (var, gen_u `Type (`G g)))
+    |> List.fold
+        ~init:env
+        ~f:(fun old (var, u_var) ->
+              Map.set old ~key:var ~data:(`Ty u_var)
+        )
+  in
+  let gs =
+    List.map bindings ~f:(fun (var, t) ->
+      ( var
+      , with_g g (fun g -> walk cops env' (Lazy.force g) t)
+      )
+    )
+  in
+  let env_body =
+    List.fold
+      gs
+      ~init:env
+      ~f:(fun old (var, g) -> Map.set ~key:var ~data:(`G g) old)
+  in
+  walk cops env_body g body
 
 let make_cops: unit ->
   ( constraint_ops

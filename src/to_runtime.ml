@@ -56,6 +56,8 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
       )
   | D.Let (v, e, body) ->
       translate depth env (D.App (D.Lam (v, body), e))
+  | D.LetRec _ ->
+      failwith "TODO"
 
 let translate: D.t -> R.t =
   fun exp -> snd (translate 0 VarMap.empty exp)
