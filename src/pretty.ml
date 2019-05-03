@@ -271,6 +271,7 @@ let rec expr p = function
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
+  | Lazy _ -> Doc.s "<lazy>"
   | Var v -> Doc.s ("v" ^ Int.to_string v)
   | Lam(_, _, body) ->
       binder_parens p
