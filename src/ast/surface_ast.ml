@@ -39,8 +39,11 @@ module Expr = struct
     | Let of (Pattern.t * t * t)
     | WithType of (t * Type.t)
   and field =
-      ( Label.t
-      * Type.t option
-      * t
-      )
+    [ `Value of
+        ( Label.t
+        * Type.t option
+        * t
+        )
+    | `Type of (Label.t * Type.t)
+    ]
 end

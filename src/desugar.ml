@@ -86,12 +86,18 @@ let rec desugar = function
   | S.Lam ([], body) -> desugar body
   | S.Record [] ->
       D.EmptyRecord
-  | S.Record ((l, _, v)::fs) ->
+  | S.Record (`Value (l, _, v)::fs) ->
       D.App(D.App(D.Update l, desugar (S.Record fs)), desugar v)
+  | S.Record (`Type _ :: fs) ->
+      (* TODO: actually do something with this. *)
+      desugar (S.Record fs)
   | S.Update(e, []) ->
       desugar e
-  | S.Update(e, ((l, _, v)::fs)) ->
+  | S.Update(e, (`Value (l, _, v)::fs)) ->
       D.App(D.App(D.Update l, (desugar (S.Update(e, fs)))), desugar v)
+  | S.Update(e, (`Type _ :: fs)) ->
+      (* TODO: do something with this. *)
+      desugar (S.Update(e, fs))
   | S.GetField (e, l) ->
       D.App(D.GetField l, desugar e)
   | S.Ctor label ->

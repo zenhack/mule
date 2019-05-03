@@ -201,12 +201,20 @@ and record = lazy (
   lazy_p record_fields
   |>> fun fields -> Expr.Record fields
 )
-and field_def = lazy (
+and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
+and type_field_def = lazy (
+  kwd "type"
+  >> label
+  >>= fun l -> kwd "="
+  >> lazy_p typ_term
+  |>> fun ty -> `Type (l, ty)
+)
+and value_field_def = lazy (
   label
   >>= fun l -> option (kwd ":" >> lazy_p typ_term)
   >>= fun ty -> kwd "="
   >> lazy_p expr
-  |>> fun e -> (l, ty, e)
+  |>> fun e -> `Value (l, ty, e)
 )
 
 let expr = Lazy.force expr

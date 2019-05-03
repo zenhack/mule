@@ -44,9 +44,12 @@ let check_unbound_vars expr =
     | WithType (e, ty) ->
         go_expr typ term e;
         go_type typ ty
-  and go_field typ term (_, ty, e) =
-    go_expr typ term e;
-    Option.iter ty ~f:(go_type typ)
+  and go_field typ term = function
+    | `Value (_, ty, e) ->
+        go_expr typ term e;
+        Option.iter ty ~f:(go_type typ)
+    | `Type (_, ty) ->
+        go_type typ ty
   and go_case typ term (pat, e) =
     go_pat typ pat;
     let pat_new = collect_pat_vars pat in
@@ -111,11 +114,17 @@ let check_duplicate_record_fields =
         go_expr e;
         go_type ty
   and go_fields fields =
-    List.iter fields ~f:(fun (_, ty, e) ->
-      Option.iter ty ~f:go_type;
-      go_expr e
+    List.iter fields ~f:(function
+      | `Value (_, ty, e) ->
+          Option.iter ty ~f:go_type;
+          go_expr e
+      | `Type (_, ty) ->
+          go_type ty
     );
-    let labels = List.map fields ~f:(fun(lbl, _, _) -> lbl) in
+    let labels = List.map fields ~f:(function
+        | `Value (lbl, _, _) -> lbl
+        | `Type (lbl, _) -> lbl
+    ) in
     go_labels labels
   and go_pat = function
     | Pattern.Annotated(pat, ty) -> go_pat pat; go_type ty
