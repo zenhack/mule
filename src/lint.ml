@@ -69,6 +69,11 @@ let check_unbound_vars expr =
     | Type.Fn(param, ret) ->
         go_type typ param;
         go_type typ ret
+    | Type.Record (Type.Type(_, Some ty) :: rest) ->
+        go_type typ ty;
+        go_type typ (Type.Record rest)
+    | Type.Record (Type.Type(_, None) :: rest) ->
+        go_type typ (Type.Record rest)
     | Type.Record (Type.Field(_, ty) :: rest) ->
         go_type typ ty;
         go_type typ (Type.Record rest)
@@ -140,8 +145,11 @@ let check_duplicate_record_fields =
     | Type.Record fields ->
         List.map fields ~f:(function
           | Type.Rest _ -> []
-          | Type.Field(lbl, ty) ->
+          | Type.Field(lbl, ty)
+          | Type.Type(lbl, Some ty) ->
               go_type ty;
+              [lbl]
+          | Type.Type (lbl, None) ->
               [lbl]
         )
         |> List.concat

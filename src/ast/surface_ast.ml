@@ -15,6 +15,7 @@ module Type = struct
     | RowRest of Var.t
   and record_item =
     | Field of (Label.t * t)
+    | Type of (Label.t * t option)
     | Rest of Var.t
 end
 

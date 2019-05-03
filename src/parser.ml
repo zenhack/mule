@@ -93,9 +93,15 @@ and record_type = lazy (
   |>> fun items -> Type.Record items
 ) and record_item = lazy (
   choice
-    [ lazy_p field_decl
+    [ lazy_p type_decl
+    ; lazy_p field_decl
     ; kwd "..." >> (var |>> fun v -> Type.Rest v)
     ]
+) and type_decl = lazy (
+  kwd "type"
+  >> label
+  >>= fun l -> option (kwd "=" >> lazy_p typ_term)
+  |>> fun ty -> Type.Type(l, ty)
 ) and field_decl = lazy (
   label
   >>= fun l -> kwd ":"

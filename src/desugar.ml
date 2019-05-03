@@ -43,6 +43,9 @@ and desugar_union_type tail (l, r) =
       (MuleErr.MalformedType
         "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type fields = function
+  | (ST.Type _ :: fs) ->
+      (* TODO: do something with this. *)
+      desugar_record_type fields fs
   | [] ->
       DT.Record((), fields, None)
   | [ST.Rest v] ->
