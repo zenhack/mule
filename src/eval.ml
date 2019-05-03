@@ -4,7 +4,9 @@ module Var = Ast.Var
 module Label = Ast.Label
 
 let rec eval stack = function
-  | Lazy e -> eval stack (Lazy.force e)
+  | Lazy e ->
+      e := eval stack !e;
+      !e
   | Var v ->
       List.nth_exn stack v
   | Lam (n, env, lam) -> Lam

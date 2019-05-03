@@ -17,5 +17,5 @@ module Expr = struct
         cases: t LabelMap.t;
         default: t option;
       }
-    | Lazy of t Lazy.t
+    | Lazy of t ref
 end
