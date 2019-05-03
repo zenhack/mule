@@ -18,4 +18,5 @@ module Expr = struct
         default: t option;
       }
     | Lazy of t ref
+    | Vec of t array
 end

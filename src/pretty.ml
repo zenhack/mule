@@ -272,6 +272,15 @@ let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
   | Lazy _ -> Doc.s "<lazy>"
+  | Vec arr ->
+      Doc.concat
+        [ Doc.s "["
+        ; Doc.concat
+          ~sep:(Doc.s ", ")
+          (Array.to_list arr
+            |> List.map ~f:(runtime_expr `Top))
+        ; Doc.s "]"
+        ]
   | Var v -> Doc.s ("v" ^ Int.to_string v)
   | Lam(_, _, body) ->
       binder_parens p

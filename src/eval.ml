@@ -7,6 +7,11 @@ let rec eval stack = function
   | Lazy e ->
       e := eval stack !e;
       !e
+  | Vec arr ->
+      (* XXX: this is O(n) even for already-evaluated
+       * arrays; should avoid re-scanning.
+       *)
+      Vec (Array.map arr ~f:(eval stack))
   | Var v ->
       List.nth_exn stack v
   | Lam (n, env, lam) -> Lam
