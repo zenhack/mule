@@ -212,12 +212,12 @@ and type_field_def = lazy (
   kwd "type"
   >> label
   >>= fun l -> kwd "="
-  >> lazy_p typ_term
+  >> lazy_p typ
   |>> fun ty -> `Type (l, ty)
 )
 and value_field_def = lazy (
   label
-  >>= fun l -> option (kwd ":" >> lazy_p typ_term)
+  >>= fun l -> option (kwd ":" >> lazy_p typ)
   >>= fun ty -> kwd "="
   >> lazy_p expr
   |>> fun e -> `Value (l, ty, e)
