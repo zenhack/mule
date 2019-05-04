@@ -87,8 +87,8 @@ let rec desugar = function
             )
         )
   | S.Lam ([], body) -> desugar body
-  | S.Record fields ->
-      desugar_record fields
+  | S.Record [] -> D.EmptyRecord
+  | S.Record fields -> desugar_record fields
   | S.Update(e, []) ->
       desugar e
   | S.Update(e, (`Value (l, _, v)::fs)) ->
