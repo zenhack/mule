@@ -271,7 +271,7 @@ let rec expr p = function
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
-  | Lazy _ -> Doc.s "<lazy>"
+  | Lazy e -> runtime_expr p !e
   | Vec arr ->
       Doc.concat
         [ Doc.s "["
