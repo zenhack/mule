@@ -272,6 +272,18 @@ let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
   | Lazy e -> runtime_expr p !e
+  | LetRec (vars, body) ->
+      (Doc.vbox
+        (Doc.concat
+          [ Doc.s "letrec {"
+          ; Doc.concat
+              ~sep:(Doc.concat [Doc.cut; Doc.s ", "])
+              (List.map vars ~f:(runtime_expr `Top))
+          ; Doc.cut
+          ; Doc.s "} in "
+          ; Doc.cut
+          ; runtime_expr `Top body
+          ]))
   | Vec arr ->
       Doc.concat
         [ Doc.s "["

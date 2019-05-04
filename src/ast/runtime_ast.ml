@@ -18,5 +18,6 @@ module Expr = struct
         default: t option;
       }
     | Lazy of t ref
+    | LetRec of (t list * t)
     | Vec of t array
 end

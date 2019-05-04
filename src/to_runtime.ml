@@ -71,20 +71,20 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
           let (ncaps, e') = translate depth' env' e in
           (ncaps, R.Lazy (ref e')))
       in
+      let ncaps =
+        List.map binds ~f:fst
+        |> List.fold ~init:len ~f:max
+      in
       let binds =
         List.map binds ~f:snd
         |> List.rev
       in
-      let (ncaps, body') =
-        translate (depth' + 1) env' body
+      let (body_ncaps, body') =
+        translate depth' env' body
       in
-      let ncaps = max 0 (ncaps - len) in
+      let ncaps = (max ncaps body_ncaps) - len in
       ( ncaps
-      (* We pass the bound variables in as an unused parameter, which has
-       * the effect of forcing them before the body is evaluated. They are
-       * also embedded in the body's environment, for actual use sites
-       *)
-      , R.App(R.Lam(ncaps, binds, body'), Vec(Array.of_list binds))
+      , R.LetRec(binds, body')
       )
 
 let translate: D.t -> R.t =

@@ -7,6 +7,9 @@ let rec eval stack = function
   | Lazy e ->
       e := eval stack !e;
       !e
+  | LetRec(vars, body) ->
+      let vars' = List.map vars ~f:(eval stack) in
+      eval (vars' @ stack) body
   | Vec arr ->
       (* XXX: this is O(n) even for already-evaluated
        * arrays; should avoid re-scanning.
