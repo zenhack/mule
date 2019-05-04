@@ -121,7 +121,7 @@ let rec desugar = function
       let v = Gensym.anon_var () in
       desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var v), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var v, e, body) ->
-      D.Let (v, desugar e, desugar body)
+      D.LetRec ([v, desugar e], desugar body)
   | S.WithType(e, ty) ->
       D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_match dict = function

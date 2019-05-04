@@ -37,10 +37,10 @@ let check_unbound_vars expr =
         go_expr typ term e;
         List.iter cases ~f:(go_case typ term)
     | Let (pat, e, body) ->
+        let term_new = Set.union term (collect_pat_vars pat) in
         go_pat typ pat;
-        go_expr typ term e;
-        let e_new = collect_pat_vars pat in
-        go_expr typ (Set.union term e_new) body
+        go_expr typ term_new e;
+        go_expr typ term_new body
     | WithType (e, ty) ->
         go_expr typ term e;
         go_type typ ty
