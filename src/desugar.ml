@@ -89,8 +89,12 @@ let rec desugar = function
   | S.Lam ([], body) -> desugar body
   | S.Record [] ->
       D.EmptyRecord
-  | S.Record (`Value (l, _, v)::fs) ->
-      D.App(D.App(D.Update l, desugar (S.Record fs)), desugar v)
+  | S.Record (`Value (l, ty, v)::fs) ->
+      let v' = match ty with
+        | None -> v
+        | Some ty' -> (S.WithType(v, ty'))
+      in
+      D.App(D.App(D.Update l, desugar (S.Record fs)), desugar v')
   | S.Record (`Type _ :: fs) ->
       (* TODO: actually do something with this. *)
       desugar (S.Record fs)
