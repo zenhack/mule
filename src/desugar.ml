@@ -87,17 +87,8 @@ let rec desugar = function
             )
         )
   | S.Lam ([], body) -> desugar body
-  | S.Record [] ->
-      D.EmptyRecord
-  | S.Record (`Value (l, ty, v)::fs) ->
-      let v' = match ty with
-        | None -> v
-        | Some ty' -> (S.WithType(v, ty'))
-      in
-      D.App(D.App(D.Update l, desugar (S.Record fs)), desugar v')
-  | S.Record (`Type _ :: fs) ->
-      (* TODO: actually do something with this. *)
-      desugar (S.Record fs)
+  | S.Record fields ->
+      desugar_record fields
   | S.Update(e, []) ->
       desugar e
   | S.Update(e, (`Value (l, _, v)::fs)) ->
@@ -128,6 +119,31 @@ let rec desugar = function
       D.LetRec ([v, desugar e], desugar body)
   | S.WithType(e, ty) ->
       D.App(D.WithType(desugar_type ty), desugar e)
+and desugar_record fields =
+  let bindings = List.map fields ~f:(function
+    | `Value (l, ty, v) ->
+        let v' = match ty with
+          | None -> v
+          | Some ty' -> S.WithType(v, ty')
+        in
+        (Ast.Var.of_string (Ast.Label.to_string l), desugar v')
+    | `Type _ ->
+        (* TODO: do something with this. *)
+        (Gensym.anon_var (), D.EmptyRecord)
+  )
+  in
+  let rec build_record = function
+    | [] -> D.EmptyRecord
+    | `Value(l, _, _) :: fs ->
+        D.App
+          ( D.App(D.Update l, build_record fs)
+          , D.Var (Ast.Var.of_string (Ast.Label.to_string l))
+          )
+    | `Type _ :: fs ->
+        (* TODO: do something with this. *)
+        build_record fs
+  in
+  LetRec(bindings, build_record fields)
 and desugar_match dict = function
   | [] -> D.Match
       { default = None
