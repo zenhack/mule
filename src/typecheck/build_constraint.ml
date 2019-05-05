@@ -24,6 +24,19 @@ let rec walk cops env g = function
             cops.constrain_inst g' tv
       end;
       tv
+  | Expr.Fix ->
+      (* all a. (a -> a) -> a *)
+      let rec ret = lazy (
+        let b_at = `Ty ret in
+        let a = gen_u `Type b_at in
+        UnionFind.make
+          ( fn
+              (gen_ty_var g)
+              (UnionFind.make (fn (ty_var_at b_at) a a))
+              a
+          )
+      ) in
+      Lazy.force ret
   | Expr.Lam (param, body) ->
       let param_var = gen_u `Type (`G g) in
       let ret_var = gen_u `Type (`G g) in

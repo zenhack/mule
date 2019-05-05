@@ -167,6 +167,8 @@ let rec typ p =
 let rec expr p = function
   | Expr.Var var ->
       Doc.s (Var.to_string var)
+  | Expr.Fix ->
+      Doc.s "fix"
   | Expr.Ctor (name, e) ->
       op_parens p `App
         (Doc.concat

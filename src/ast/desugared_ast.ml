@@ -45,6 +45,7 @@ module Expr = struct
     | Var of Var.t
     | Lam of (Var.t * t)
     | App of (t * t)
+    | Fix
     | EmptyRecord
     | GetField of Label.t
     | Update of Label.t

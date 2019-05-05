@@ -8,6 +8,8 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
   | D.Var v ->
       let n = depth - Map.find_exn env v in
       (n, R.Var n)
+  | D.Fix ->
+      failwith "TODO"
   | D.Lam (param, body) ->
       let (ncap, body') =
         translate (depth + 1) (Map.set env ~key:param ~data:(depth + 1)) body
