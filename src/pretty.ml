@@ -213,25 +213,6 @@ let rec expr p = function
             ; Doc.hvbox (expr `Top body)
             ])
         )
-  | Expr.LetRec (bindings, body) ->
-      binder_parens p
-        (Doc.vbox ~indent:0
-          (Doc.concat
-            [ Doc.s "let "
-            ; Doc.vbox ~indent:1
-                (Doc.concat
-                  (List.map bindings ~f:(fun (var, e) ->
-                    (Doc.concat
-                      [ Doc.s (Var.to_string var)
-                      ; Doc.s " = "
-                      ; Doc.hvbox (expr `Top e)
-                      ; Doc.cut
-                      ]))))
-            ; Doc.s " in"
-            ; Doc.cut
-            ; Doc.hvbox (expr `Top body)
-            ])
-          )
   | Expr.Match {cases; default} ->
       let branches =
         List.append

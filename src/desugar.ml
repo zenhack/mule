@@ -5,6 +5,8 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
+let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
+
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
       DT.Fn((), desugar_type param, desugar_type ret)
@@ -120,30 +122,85 @@ let rec desugar = function
   | S.WithType(e, ty) ->
       D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_record fields =
-  let bindings = List.map fields ~f:(function
-    | `Value (l, ty, v) ->
-        let v' = match ty with
-          | None -> v
-          | Some ty' -> S.WithType(v, ty')
-        in
-        (Ast.Var.of_string (Ast.Label.to_string l), desugar v')
-    | `Type _ ->
-        (* TODO: do something with this. *)
-        (Gensym.anon_var (), D.EmptyRecord)
-  )
+  let record_var = Gensym.anon_var () in
+  let get_record_field lbl =
+    D.App(D.GetField lbl, D.Var record_var)
+  in
+  let label_map =
+    List.filter_map fields ~f:(function
+      | `Value (l, ty, _) ->
+          Some (l, ty)
+      | `Type _ -> None)
+    |> Map.of_alist_exn (module Ast.Label)
+  in
+  let rec subst env expr = match expr with
+    | D.Var v ->
+        let lbl = var_to_lbl v in
+        begin match Map.find env lbl with
+        | None -> D.Var v
+        | Some None -> get_record_field lbl
+        | Some (Some ty) ->
+            D.App(D.WithType(desugar_type ty), get_record_field lbl)
+        end
+    | D.Ctor(lbl, body) ->
+        D.Ctor(lbl, subst env body)
+    | D.Lam (v, body) ->
+        D.Lam
+          ( v
+          , subst
+              (Map.remove env (var_to_lbl v))
+              body
+          )
+    | D.App(f, x) ->
+        D.App(subst env f, subst env x)
+    | D.Match {cases; default} ->
+        D.Match
+          { cases =
+              Map.map cases ~f:(fun (var, body) ->
+                let env' = Map.remove env (var_to_lbl var) in
+                ( var
+                , subst env' body
+                )
+              )
+          ; default = Option.map default ~f:(function
+              | (None, body) -> (None, subst env body)
+              | (Some var, body) ->
+                  ( Some var
+                  , let env' = Map.remove env (var_to_lbl var) in
+                    subst env' body
+                  )
+            )
+          }
+    | D.Let(v, e, body) ->
+        D.Let
+          ( v
+          , subst env e
+          , subst (Map.remove env (var_to_lbl v)) body
+          )
+    | D.Fix | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ ->
+        expr
   in
   let rec build_record = function
     | [] -> D.EmptyRecord
-    | `Value(l, _, _) :: fs ->
+    | `Value(l, ty, v) :: fs ->
+        let v' =
+          begin match ty with
+          | None -> v
+          | Some ty' -> S.WithType(v, ty')
+          end
+        in
         D.App
-          ( D.App(D.Update l, build_record fs)
-          , D.Var (Ast.Var.of_string (Ast.Label.to_string l))
+          ( D.App
+            ( D.Update l
+            , build_record fs
+            )
+          , subst label_map (desugar v')
           )
     | `Type _ :: fs ->
         (* TODO: do something with this. *)
         build_record fs
   in
-  LetRec(bindings, build_record fields)
+  D.App(D.Fix, D.Lam(record_var, build_record fields))
 and desugar_match dict = function
   | [] -> D.Match
       { default = None

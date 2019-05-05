@@ -58,36 +58,6 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
       )
   | D.Let (v, e, body) ->
       translate depth env (D.App (D.Lam (v, body), e))
-  | D.LetRec (bindings, body) ->
-      let len = List.length bindings in
-      let env' = List.foldi bindings
-        ~init:env
-        ~f:(fun i env (var, _) ->
-          Map.set env ~key:var ~data:(depth + 1 + i)
-        )
-      in
-      let depth' = depth + len in
-      let binds = List.map
-        bindings
-        ~f:(fun (_, e) ->
-          let (ncaps, e') = translate depth' env' e in
-          (ncaps, R.Lazy (ref e')))
-      in
-      let ncaps =
-        List.map binds ~f:fst
-        |> List.fold ~init:len ~f:max
-      in
-      let binds =
-        List.map binds ~f:snd
-        |> List.rev
-      in
-      let (body_ncaps, body') =
-        translate depth' env' body
-      in
-      let ncaps = (max ncaps body_ncaps) - len in
-      ( ncaps
-      , R.LetRec(binds, body')
-      )
 
 let translate: D.t -> R.t =
   fun exp -> snd (translate 0 VarMap.empty exp)
