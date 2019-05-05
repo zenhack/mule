@@ -7,9 +7,7 @@ let rec eval stack = function
   | Lazy e ->
       e := eval stack !e;
       !e
-  | LetRec(vars, body) ->
-      let vars' = List.map vars ~f:(eval stack) in
-      eval (vars' @ stack) body
+  | Fix flag -> Fix flag
   | Vec arr ->
       (* XXX: this is O(n) even for already-evaluated
        * arrays; should avoid re-scanning.
@@ -44,6 +42,8 @@ let rec eval stack = function
             | _ ->
                 failwith "Tried to get field of non-record"
           end
+      | Fix flag ->
+          call_fix stack flag arg'
       | _ ->
         failwith "Tried to call non-function"
       end
@@ -75,5 +75,11 @@ and eval_match stack cases default =
        | None ->
            failwith "Match failed"
      end
+and call_fix stack flag arg = match flag, arg with
+  | `Let, Lam(_, env, body) ->
+      eval (Lazy(ref (App(Fix `Let, arg))) :: (env @ stack)) body
+  | _ ->
+      failwith "TODO"
+
 
 let eval e = eval [] e

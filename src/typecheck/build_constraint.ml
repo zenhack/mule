@@ -24,7 +24,7 @@ let rec walk cops env g = function
             cops.constrain_inst g' tv
       end;
       tv
-  | Expr.Fix ->
+  | Expr.Fix _ ->
       (* all a. (a -> a) -> a *)
       let rec ret = lazy (
         let b_at = `Ty ret in

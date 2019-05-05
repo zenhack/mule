@@ -167,8 +167,10 @@ let rec typ p =
 let rec expr p = function
   | Expr.Var var ->
       Doc.s (Var.to_string var)
-  | Expr.Fix ->
-      Doc.s "fix"
+  | Expr.Fix `Let ->
+      Doc.s "fix/let"
+  | Expr.Fix `Record ->
+      Doc.s "fix/record"
   | Expr.Ctor (name, e) ->
       op_parens p `App
         (Doc.concat
@@ -254,19 +256,9 @@ let rec expr p = function
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
+  | Fix `Let -> Doc.s "fix/let"
+  | Fix `Record -> Doc.s "fix/record"
   | Lazy e -> runtime_expr p !e
-  | LetRec (vars, body) ->
-      (Doc.vbox
-        (Doc.concat
-          [ Doc.s "letrec {"
-          ; Doc.concat
-              ~sep:(Doc.concat [Doc.cut; Doc.s ", "])
-              (List.map vars ~f:(runtime_expr `Top))
-          ; Doc.cut
-          ; Doc.s "} in "
-          ; Doc.cut
-          ; runtime_expr `Top body
-          ]))
   | Vec arr ->
       Doc.concat
         [ Doc.s "["

@@ -118,7 +118,7 @@ let rec desugar = function
       let v = Gensym.anon_var () in
       desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var v), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var v, e, body) ->
-      D.Let(v, D.App(D.Fix, D.Lam(v, desugar e)), desugar body)
+      D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
   | S.WithType(e, ty) ->
       D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_record fields =
@@ -177,7 +177,7 @@ and desugar_record fields =
           , subst env e
           , subst (Map.remove env (var_to_lbl v)) body
           )
-    | D.Fix | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ ->
+    | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ ->
         expr
   in
   let rec build_record = function
@@ -200,7 +200,7 @@ and desugar_record fields =
         (* TODO: do something with this. *)
         build_record fs
   in
-  D.App(D.Fix, D.Lam(record_var, build_record fields))
+  D.App(D.Fix `Record, D.Lam(record_var, build_record fields))
 and desugar_match dict = function
   | [] -> D.Match
       { default = None

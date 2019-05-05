@@ -3,6 +3,7 @@ open Common_ast
 module Expr = struct
   type t =
     | Var of int
+    | Fix of [ `Let | `Record ]
     | Lam of (int * t list * t)
     | App of (t * t)
     | Record of t LabelMap.t
@@ -18,6 +19,5 @@ module Expr = struct
         default: t option;
       }
     | Lazy of t ref
-    | LetRec of (t list * t)
     | Vec of t array
 end
