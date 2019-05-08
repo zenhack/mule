@@ -89,7 +89,7 @@ let rec typ_term = lazy (
 ) and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
-  braces (sep_end_by (lazy_p record_item) (kwd ","))
+  braces (optional (kwd ",") >> sep_end_by (lazy_p record_item) (kwd ","))
   |>> fun items -> Type.Record items
 ) and record_item = lazy (
   choice
@@ -201,7 +201,7 @@ and pattern = lazy ((
     end
 ) <?> "pattern")
 and record_fields = lazy ((
-  braces (sep_end_by (lazy_p field_def) (kwd ","))
+  braces (optional (kwd ",") >> sep_end_by (lazy_p field_def) (kwd ","))
 ) <?> "record")
 and record = lazy (
   lazy_p record_fields
