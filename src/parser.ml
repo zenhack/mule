@@ -35,7 +35,11 @@ let braces p = between (kwd "{") (kwd "}") p
 (* An identifier. Does not check if the identifier is a reserved word. *)
 let identifier : (string, unit) MParser.t = (
   let id_start = lowercase <|> char '_' in
-  let id_cont = letter <|> char '_' <|> digit in
+  let id_cont =
+    letter
+    <|> digit
+    <|> choice (List.map ~f:char ['_';'-';'!';'?'])
+  in
   id_start
   >>= fun c -> many_chars id_cont
   |>> fun cs -> String.make 1 c ^ cs
