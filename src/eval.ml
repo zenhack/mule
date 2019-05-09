@@ -74,7 +74,7 @@ and apply stack f arg =
               let new_stack = Lazy result :: (env @ stack) in
               let record = record_whnf new_stack body in
               result := record;
-              Lazy result
+              eval stack (Lazy result)
           | e ->
             bug "BUG: fix/record given a non-lambda." e
           end
