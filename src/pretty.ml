@@ -258,7 +258,11 @@ let rec runtime_expr p =
   function
   | Fix `Let -> Doc.s "fix/let"
   | Fix `Record -> Doc.s "fix/record"
-  | Lazy e -> runtime_expr p !e
+  | Lazy e -> Doc.concat
+      [ Doc.s "lazy("
+      ; runtime_expr `Top !e
+      ; Doc.s ")"
+      ]
   | Vec arr ->
       Doc.concat
         [ Doc.s "["
