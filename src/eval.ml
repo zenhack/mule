@@ -3,6 +3,9 @@ open Ast.Runtime.Expr
 module Var = Ast.Var
 module Label = Ast.Label
 
+let bug msg term =
+  failwith ("BUG: " ^ msg ^ ": " ^ Pretty.runtime_expr term)
+
 let rec whnf stack = function
   | Var v ->
       whnf stack (List.nth_exn stack v)
@@ -34,14 +37,14 @@ and eval stack expr = match whnf stack expr with
         }
   | GetField l -> GetField l
   | Ctor (c, arg) -> Ctor (c, eval stack arg)
-  | App _ ->
-      failwith "BUG: App should never appear after whnf."
+  | App (f, x) ->
+      bug" App should never appear after whnf." (App (f, x))
   | Record r ->
       Record (Map.map r ~f:(eval stack))
   | Update {old; label; field} ->
       begin match eval stack old with
         | Record r -> Record (Map.set ~key:label ~data:(eval stack field) r)
-        | _ -> failwith "Tried to set field on non-record"
+        | e -> bug "Tried to set field on non-record" e
       end
 and apply stack f arg =
       let f' = eval stack f in
@@ -54,15 +57,15 @@ and apply stack f arg =
           begin match eval stack arg with
             | Record r ->
                 Map.find_exn r label
-            | _ ->
-                failwith "Tried to get field of non-record"
+            | e ->
+                bug "Tried to get field of non-record" e
           end
       | Fix `Let ->
           begin match whnf stack arg with
           | Lam(_, env, body) ->
               eval (Lazy(ref (App(Fix `Let, arg))) :: (env @ stack)) body
-          | _ ->
-              failwith "BUG: fix/let given a non-lambda."
+          | e ->
+              bug "fix/let given a non-lambda." e
           end
       | Fix `Record ->
           begin match whnf stack arg with
@@ -72,11 +75,11 @@ and apply stack f arg =
               let record = record_whnf new_stack body in
               result := record;
               Lazy result
-          | _ ->
-            failwith "BUG: fix/record given a non-lambda."
+          | e ->
+            bug "BUG: fix/record given a non-lambda." e
           end
-      | _ ->
-        failwith "Tried to call non-function"
+      | e ->
+        bug "Tried to call non-function" e
       end
 and eval_match stack cases default =
   function
@@ -89,7 +92,7 @@ and eval_match stack cases default =
           | Some f ->
               eval stack (App(f, Ctor(lbl, value)))
           | None ->
-              failwith "Match failed"
+              bug "Match failed" (Match{cases; default})
         end
      end
   | value ->
@@ -97,7 +100,7 @@ and eval_match stack cases default =
        | Some f ->
            eval stack (App(f, value))
        | None ->
-           failwith "Match failed"
+           bug "Match failed" (Match{cases; default})
      end
 and record_whnf stack arg = match whnf stack arg with
   | Record r ->
@@ -106,10 +109,10 @@ and record_whnf stack arg = match whnf stack arg with
       begin match record_whnf stack old with
       | Record r ->
           Record (Map.set r ~key:label ~data:(Lazy (ref field)))
-      | _ ->
-          failwith "Impossible"
+      | e ->
+          bug "Non-record returned by record_whnf" e
       end
-  | _ ->
-      failwith "Impossible"
+  | e ->
+      bug "Non-record passed to record_whnf" e
 
 let eval e = eval [] e
