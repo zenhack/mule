@@ -77,11 +77,9 @@ let prec = function
   | `FnR | `Fn -> 10
   | `FnL -> 20
   | `Alt -> 30
-  | `WhereL -> 39
-  | `Where -> 40
 
 let is_left = function
-  | `FnL | `AppL | `WhereL -> true
+  | `FnL | `AppL -> true
   | _ -> false
 
 let maybe_parens cond doc =
@@ -298,15 +296,15 @@ let rec runtime_expr p =
   | GetField label ->
       Doc.s ("_." ^ Label.to_string label)
   | Update {old; label; field} ->
-      op_parens p `Where
-        (Doc.concat ~sep:(Doc.s " ")
-          [ runtime_expr `WhereL old
-          ; Doc.s "where {"
-          ; Doc.s (Label.to_string label)
-          ; Doc.s "="
-          ; runtime_expr `Top field
-          ; Doc.s "}"
-          ])
+      Doc.concat
+        [ Doc.s "{ "
+        ; runtime_expr `Top old
+        ; Doc.s " | "
+        ; Doc.s (Label.to_string label)
+        ; Doc.s " = "
+        ; runtime_expr `Top field
+        ; Doc.s " }"
+        ]
   | Ctor (label, arg) ->
       op_parens p `App
         (Doc.concat
