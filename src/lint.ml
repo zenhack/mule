@@ -101,7 +101,12 @@ let check_unbound_vars expr =
     | Type.RowRest v ->
         go_type typ (Type.Var v)
   in
-  go_expr VarSet.empty VarSet.empty expr
+  let term =
+    Intrinsics.intrinsics
+    |> Map.keys
+    |> Set.of_list (module Ast.Var)
+  in
+  go_expr VarSet.empty term expr
 
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =

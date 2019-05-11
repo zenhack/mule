@@ -226,13 +226,14 @@ let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints =
   let (_, ty) = Util.fix
       (child_g None)
       (fun g ->
+        let g = Lazy.force g in
         let env = Map.map env_exprs ~f:(fun e ->
-          `G (with_g (Lazy.force g) (fun g ->
+          `G (with_g g (fun g ->
             walk cops VarMap.empty (Lazy.force g) e
           ))
         )
         in
-        walk cops env (Lazy.force g) expr
+        walk cops env g expr
       )
   in
   { unification = !ucs
