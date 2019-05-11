@@ -63,24 +63,24 @@ let rec get_var_type env t =
   | `Const({ty_id = i; _}, c, args, _) ->
       let env' = Set.add env (ivar i) in
       begin match c, args with
-      | `Fn, [param, _; ret, _] ->
+      | `Named "->", [param, _; ret, _] ->
           Type.Fn
             ( i
             , get_var_type env' (UnionFind.get param)
             , get_var_type env' (UnionFind.get ret)
             )
-      | `Record, [row, _] | `Union, [row, _] ->
+      | `Named "{...}", [row, _] | `Named "|", [row, _] ->
           let (fields, rest) =
             get_var_row env' (UnionFind.get row)
           in
           begin match c with
-          | `Record -> Type.Record(i, fields, rest)
-          | `Union -> Type.Union(i, fields, rest)
+          | `Named "{...}"-> Type.Record(i, fields, rest)
+          | `Named "|" -> Type.Union(i, fields, rest)
           | _ -> failwith "impossible"
           end
-      | `Fn, _ | `Record, _ | `Union, _ ->
-          failwith "BUG: wrong number of args"
-      | `Empty, _ | `Extend _, _ ->
+      | `Named _, _ ->
+          failwith "TODO: handle other named constructors."
+      | `Extend _, _ ->
           failwith "BUG: Kind error"
       end
 and get_var_row env r =
@@ -91,7 +91,7 @@ and get_var_row env r =
     | `Free ({ty_id = i; _}, _) -> ([], Some (ivar i))
     | `Const({ty_id = i; _}, c, args, _) ->
         begin match c, args with
-        | `Empty, [] -> ([], None)
+        | `Named "<empty>", [] -> ([], None)
         | `Extend lbl, [ty, _; rest, _] ->
             let env' = Set.add env (ivar i) in
             let (fields, rest) = get_var_row env' (UnionFind.get rest) in
@@ -101,9 +101,9 @@ and get_var_row env r =
               :: fields
             , rest
             )
-        | `Empty, _ | `Extend _, _ ->
+        | `Named "<empty>", _ | `Extend _, _ ->
             failwith "BUG: wrong number of args"
-        | `Fn, _ | `Union, _ | `Record, _ ->
+        | `Named _, _ ->
             failwith "BUG: not a row"
         end
   in

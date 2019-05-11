@@ -6,10 +6,7 @@ type u_kind =
   ]
 
 type u_typeconst =
-  [ `Fn
-  | `Union
-  | `Record
-  | `Empty
+  [ `Named of string
   | `Extend of Ast.Label.t
   ]
 (* Contents of unification variables: *)
@@ -37,10 +34,10 @@ and bound_target =
   ]
 
 (* constructors for common type constants. *)
-let fn tv param ret = `Const(tv, `Fn, [param, `Type; ret, `Type], `Type)
-let union tv row = `Const(tv, `Union, [row, `Row], `Type)
-let record tv row = `Const(tv, `Record, [row, `Row], `Type)
-let empty tv = `Const(tv, `Empty, [], `Row)
+let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
+let union tv row = `Const(tv, `Named "|", [row, `Row], `Type)
+let record tv row = `Const(tv, `Named "{...}", [row, `Row], `Type)
+let empty tv = `Const(tv, `Named "<empty>", [], `Row)
 let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
 
 type permission = F | R | L
@@ -72,13 +69,20 @@ let rec show_u_type_v s v =
     | `Free _ -> "t" ^ Int.to_string n
     | `Const (_, c, args, _) ->
         begin match c, args with
-        | `Fn, [l, _; r, _] ->
+        | `Named "->", [l, _; r, _] ->
             "(" ^ show_u_type_v s l ^ " -> " ^ show_u_type_v s r ^ ")"
-        | `Record, [row, _] ->
+        | `Named "{...}", [row, _] ->
             "Record{" ^ show_u_type_v s row ^ "}"
-        | `Union, [row, _] ->
+        | `Named "|", [row, _] ->
             "Union(" ^ show_u_type_v s row ^ ")"
-        | `Empty, [] -> "<empty>"
+        | `Named name, [] -> name
+        | `Named name, _ -> String.concat
+            [ name
+            ; "("
+            ; List.map args ~f:(fun (ty, _kind) -> show_u_type_v s ty)
+              |> String.concat ~sep:", "
+            ; ")"
+            ]
         | `Extend lbl, [head, _; tail, _] ->
             String.concat
               [ "("
@@ -88,7 +92,7 @@ let rec show_u_type_v s v =
               ; ") :: "
               ; show_u_type_v s tail
               ]
-        | `Fn, _ | `Record, _ | `Union, _ | `Empty, _ | `Extend _, _ ->
+        | `Extend _, _ ->
             failwith "BUG: wrong number of args."
         end
 let show_u_type_v: u_type UnionFind.var -> string = show_u_type_v IntSet.empty

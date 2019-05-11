@@ -9,4 +9,4 @@ Desugared:
 	                end $0
 	  
 	  end ((fn x. Ok x) {})
-Type error: mismatched type constructors: empty row and row containing Ok
+Type error: mismatched type constructors: <empty> and row containing Ok

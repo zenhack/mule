@@ -37,10 +37,7 @@ let fmt_node: node_type -> int -> string =
       | `TyVar -> "V"
       | `Const c ->
           begin match c with
-          | `Fn -> "->"
-          | `Record -> "{}"
-          | `Union -> "|"
-          | `Empty -> "Nil"
+          | `Named name -> name
           | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
           end
       | `G -> "G"

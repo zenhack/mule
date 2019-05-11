@@ -1,8 +1,8 @@
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor =
-  [ `Fn | `Record | `Union (* types *)
-  | `Empty | `Extend of Ast.Label.t (* rows *)
+  [ `Named of string
+  | `Extend of Ast.Label.t
   ]
 type kind = [ `Row | `Type ]
 type type_error
@@ -21,10 +21,7 @@ type t =
 exception MuleExn of t
 
 let show_ctor = function
-  | `Fn -> "function"
-  | `Record -> "record"
-  | `Union -> "union"
-  | `Empty -> "empty row"
+  | `Named name -> name
   | `Extend lbl -> "row containing " ^ Ast.Label.to_string lbl
 
 let show_op = function
