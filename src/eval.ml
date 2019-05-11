@@ -68,12 +68,19 @@ and apply stack f arg =
           eval (eval stack arg :: (env @ stack)) body
       | Match {cases; default} ->
           eval_match stack cases default (eval stack arg)
-      | GetField label ->
+      | GetField (`Strict, label) ->
           begin match eval stack arg with
             | Record r ->
                 Map.find_exn r label
             | e ->
                 bug "Tried to get field of non-record" e
+          end
+      | GetField (`Lazy, label) ->
+          begin match whnf stack arg with
+          | Record r ->
+              Map.find_exn r label
+          | e ->
+              bug "Tried to (lazily) get field of non-record" e
           end
       | Fix `Let ->
           begin match whnf stack arg with
@@ -85,18 +92,10 @@ and apply stack f arg =
           end
       | Fix `Record ->
           begin match whnf stack arg with
-          | Lam(0, env, body) ->
-              begin
-              let result = ref (App(Fix `Record, Lam(0, env, body))) in
-              let new_stack_items = Lazy ([], result) :: env in
-              let record = record_whnf (new_stack_items @ stack) body in
-              result := Record (Map.map record ~f:(fun e -> Lazy(new_stack_items, ref e)));
-              let thunk = Lazy([], result) in
-              report "mid-fix/record" thunk;
-              eval stack thunk
-              end
+          | Lam(0, env, Record r) as arg' ->
+              Record (Map.map r ~f:(fun v -> Lazy(App(Fix `Record, arg') :: env, ref v)))
           | e ->
-            bug "BUG: fix/record given a non-lambda." e
+            bug "BUG: fix/record given something other than a lambda with a record body." e
           end
       | e ->
         bug "Tried to call non-function" e
@@ -122,14 +121,5 @@ and eval_match stack cases default =
        | None ->
            bug "Match failed" (Match{cases; default})
      end
-and record_whnf stack arg =
-  report "record_whnf" arg;
-  match whnf stack arg with
-  | Record r ->
-      r
-  | Update{old; label; field} ->
-      Map.set (record_whnf stack old) ~key:label ~data:field
-  | e ->
-      bug "Non-record passed to record_whnf" e
 
 let eval e = eval [] e

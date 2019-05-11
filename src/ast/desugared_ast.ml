@@ -47,7 +47,7 @@ module Expr = struct
     | App of (t * t)
     | Fix of [ `Let | `Record ]
     | EmptyRecord
-    | GetField of Label.t
+    | GetField of ([`Lazy|`Strict] * Label.t)
     | Update of Label.t
     | Ctor of (Label.t * t)
     | Match of {

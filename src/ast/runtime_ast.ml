@@ -7,7 +7,7 @@ module Expr = struct
     | Lam of (int * t list * t)
     | App of (t * t)
     | Record of t LabelMap.t
-    | GetField of Label.t
+    | GetField of ([`Lazy|`Strict] * Label.t)
     | Update of
         { old: t
         ; label: Label.t

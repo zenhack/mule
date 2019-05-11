@@ -99,7 +99,7 @@ let rec desugar = function
       (* TODO: do something with this. *)
       desugar (S.Update(e, fs))
   | S.GetField (e, l) ->
-      D.App(D.GetField l, desugar e)
+      D.App(D.GetField(`Strict, l), desugar e)
   | S.Ctor label ->
       (* The choice of variable name here doesn't matter, since
        * there's nothing we need to worry about shadowing. *)
@@ -124,7 +124,7 @@ let rec desugar = function
 and desugar_record fields =
   let record_var = Gensym.anon_var () in
   let get_record_field lbl =
-    D.App(D.GetField lbl, D.Var record_var)
+    D.App(D.GetField(`Lazy, lbl), D.Var record_var)
   in
   let label_map =
     List.filter_map fields ~f:(function

@@ -15,6 +15,8 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
         translate (depth + 1) (Map.set env ~key:param ~data:(depth + 1)) body
       in
       (ncap, R.Lam(ncap, [], body'))
+  | D.App(D.Fix `Record, f) ->
+      translate_fix_rec depth env f
   | D.App(D.WithType _, e) -> translate depth env e
   | D.App(f, x) ->
       let (fcap, f') = translate depth env f in
@@ -23,7 +25,7 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
   | D.WithType _ ->
       (0, R.Lam(0, [], R.Var 0))
   | D.EmptyRecord -> (0, R.Record LabelMap.empty)
-  | D.GetField lbl -> (0, R.GetField lbl)
+  | D.GetField (mode, lbl) -> (0, R.GetField (mode, lbl))
   | D.Update label ->
       ( 0
       , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))
@@ -58,6 +60,31 @@ let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
       )
   | D.Let (v, e, body) ->
       translate depth env (D.App (D.Lam (v, body), e))
+and translate_fix_rec depth env = function
+  | D.Lam(v, body) ->
+      let (n, lblmap) =
+        translate_record_body
+          (depth + 1)
+          (Map.set env ~key:v ~data:(depth + 1))
+          body
+      in
+      ( n - 1
+      , R.App
+        ( R.Fix `Record
+        , R.Lam(n, [], R.Record lblmap)
+        )
+      )
+  | _ ->
+      failwith "BUG"
+and translate_record_body depth env = function
+  | D.EmptyRecord ->
+      (0, LabelMap.empty)
+  | D.App(D.App(D.Update lbl, old), field) ->
+      let (n, head) = translate depth env field in
+      let (m, tail) = translate_record_body depth env old in
+      (max n m, Map.set tail ~key:lbl ~data:head)
+  | _ ->
+      failwith "BUG"
 
 let translate: D.t -> R.t =
   fun exp -> snd (translate 0 VarMap.empty exp)

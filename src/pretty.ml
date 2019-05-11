@@ -162,6 +162,16 @@ let rec typ p =
           ; typ `Top body
           ])
 
+let pretty_getfield mode lbl =
+  Doc.concat
+    [ Doc.s "_."
+    ; begin match mode with
+      | `Lazy -> Doc.s "<lazy>"
+      | `Strict -> Doc.empty
+      end
+    ; Doc.s (Label.to_string lbl)
+    ]
+
 let rec expr p = function
   | Expr.Var var ->
       Doc.s (Var.to_string var)
@@ -195,8 +205,8 @@ let rec expr p = function
       Doc.s "{}"
   | Expr.Update lbl ->
       Doc.s ("_." ^ Label.to_string lbl ^ ":=_")
-  | Expr.GetField lbl ->
-      Doc.s ("_." ^ Label.to_string lbl)
+  | Expr.GetField (mode, lbl) ->
+      pretty_getfield mode lbl
   | Expr.WithType ty ->
       op_parens p `Type
         (Doc.concat [Doc.s "_ : "; typ `Type ty])
@@ -297,8 +307,8 @@ let rec runtime_expr p =
           |> Doc.concat ~sep:(Doc.s ", ")
       ; Doc.s "}"
       ]
-  | GetField label ->
-      Doc.s ("_." ^ Label.to_string label)
+  | GetField (mode, label) ->
+      pretty_getfield mode label
   | Update {old; label; field} ->
       Doc.concat
         [ Doc.s "{ "

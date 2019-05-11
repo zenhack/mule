@@ -69,7 +69,7 @@ let rec walk cops env g = function
           (ty_var_at (`G g))
           (UnionFind.make (empty (ty_var_at (`G g))))
           )
-  | Expr.GetField lbl ->
+  | Expr.GetField (_, lbl) ->
       (* Field accesses have the type:
        *
        * all a r. {lbl: a, ...r} -> a
