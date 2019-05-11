@@ -11,6 +11,8 @@ let rec whnf stack = function
       whnf stack (List.nth_exn stack v)
   | App (f, x) ->
       apply stack (whnf stack f) x
+  | Lam (n, env, body) ->
+      Lam (0, List.take stack n @ env, body)
   | e ->
       e
 and eval stack expr = match whnf stack expr with
@@ -23,13 +25,7 @@ and eval stack expr = match whnf stack expr with
        * arrays; should avoid re-scanning.
        *)
       Vec (Array.map arr ~f:(eval stack))
-  | Var v ->
-      List.nth_exn stack v
-  | Lam (n, env, lam) -> Lam
-     ( 0
-     , List.take stack n @ env
-     , lam
-     )
+  | Lam lam -> Lam lam
   | Match {cases; default} ->
       Match
         { cases = Map.map cases ~f:(eval stack)
@@ -38,7 +34,9 @@ and eval stack expr = match whnf stack expr with
   | GetField l -> GetField l
   | Ctor (c, arg) -> Ctor (c, eval stack arg)
   | App (f, x) ->
-      bug" App should never appear after whnf." (App (f, x))
+      bug "App should never appear after whnf." (App (f, x))
+  | Var v ->
+      bug "Var should never appear after whnf." (Var v)
   | Record r ->
       Record (Map.map r ~f:(eval stack))
   | Update {old; label; field} ->
