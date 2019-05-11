@@ -204,7 +204,7 @@ let make_cops: unit ->
     }
   in (cops, ucs, ics)
 
-let build_constraints: Expr.t -> built_constraints = fun expr ->
+let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints = fun _env expr ->
   let cops, ucs, ics = make_cops () in
   let (_, ty) = Util.fix
       (child_g None)
