@@ -1,0 +1,48 @@
+# Sketch of inferring types for numeric literals might work *internally*.
+#
+# Note that right now mule only has arbitrary-precision numeric literals.
+# But concievably we might want to support various fixed-sized integers,
+# and floating point. It would be nice to support using the same numerals
+# for all of these. This file sketches how that could be modeled.
+
+# primitives:
+type x2 a
+type sz8
+type float sz
+type int s u
+type fs32
+type fs64
+type num i f
+type void
+
+# Shorthands:
+
+type i_ s = num (int s void) (float void)
+type u_ s = num (int void s) (float void)
+type float_ s = num (int void void) (float s)
+
+type sz16 = x2 sz8
+type sz32 = x2 sz16
+type sz64 = x2 sz32
+
+# Types likely to be actually exposed via an API:
+
+type i8  = i_ sz8
+type i16 = i_ sz16
+type i32 = i_ sz32
+type i64 = i_ sz64
+
+type u8  = u_ sz8
+type u16 = u_ sz16
+type u32 = u_ sz32
+type u64 = u_ sz64
+
+type f32 = float_ sz32
+type f64 = float_ sz64
+
+# Example types of numeric literals:
+
+-15  : all f i. num (int i void) (float f)
+-200 : all f i. num (int (x2 i) void) (float f)
+200  : all f i u. num (int i (x2 u)) (float f)
+1.0  : all f. float_ f
