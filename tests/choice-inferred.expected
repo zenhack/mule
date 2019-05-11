@@ -1,5 +1,5 @@
 
 Desugared:
 
-	fn choice. _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
+	fn choice. fix/record fn $0. _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
 Type error: mismatched type constructors: record and function

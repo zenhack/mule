@@ -1,8 +1,8 @@
 
 Desugared:
 
-	let f = fn x. _.y x in
-	_.a:=_ (_.b:=_ {} (f (_.y:=_ {} (_.z:=_ {} {})))) (f (_.y:=_ {} {}))
+	let f = fix/let fn f. fn x. _.y x in
+	fix/record fn $0. _.a:=_ (_.b:=_ {} (f (fix/record fn $2. _.y:=_ {} (fix/record fn $3. _.z:=_ {} {})))) (f (fix/record fn $1. _.y:=_ {} {}))
 
 inferred type:
 
@@ -10,7 +10,7 @@ inferred type:
 
 Runtime term:
 
-	(fn. (fn. fn. v1 where { a = v0 }) ((fn. fn. v1 where { b = v0 }) {} (v0 ((fn. fn. v1 where { y = v0 }) {} ((fn. fn. v1 where { z = v0 }) {} {})))) (v0 ((fn. fn. v1 where { y = v0 }) {} {}))) fn. _.y v0
+	(fn. fix/record fn. {a = v1 (fix/record fn. {y = {}}), b = v1 (fix/record fn. {y = fix/record fn. {z = {}}})}) (fix/let fn. fn. _.y v0)
 
 Evaluated:
 

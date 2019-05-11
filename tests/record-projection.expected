@@ -1,7 +1,7 @@
 
 Desugared:
 
-	_.x (_.x:=_ {} {})
+	_.x (fix/record fn $0. _.x:=_ {} {})
 
 inferred type:
 
@@ -9,7 +9,7 @@ inferred type:
 
 Runtime term:
 
-	_.x ((fn. fn. v1 where { x = v0 }) {} {})
+	_.x (fix/record fn. {x = {}})
 
 Evaluated:
 

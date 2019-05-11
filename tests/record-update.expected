@@ -1,7 +1,7 @@
 
 Desugared:
 
-	_.y:=_ (_.x:=_ {} {}) (_.z:=_ {} {})
+	_.y:=_ (fix/record fn $1. _.x:=_ {} {}) (fix/record fn $0. _.z:=_ {} {})
 
 inferred type:
 
@@ -9,7 +9,7 @@ inferred type:
 
 Runtime term:
 
-	(fn. fn. v1 where { y = v0 }) ((fn. fn. v1 where { x = v0 }) {} {}) ((fn. fn. v1 where { z = v0 }) {} {})
+	(fn. fn. { v1 | y = v0 }) (fix/record fn. {x = {}}) (fix/record fn. {z = {}})
 
 Evaluated:
 

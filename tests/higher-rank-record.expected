@@ -1,9 +1,9 @@
 
 Desugared:
 
-	let r = _.y:=_ {} fn x. x in
-	let f = (_ : all a. a -> a) (_.y r) in
-	_.l:=_ (_.k:=_ {} (f fn z. z)) (f {})
+	let r = fix/let fn r. fix/record fn $1. _.y:=_ {} fn x. x in
+	let f = fix/let fn f. (_ : all a. a -> a) (_.y r) in
+	fix/record fn $0. _.l:=_ (_.k:=_ {} (f fn z. z)) (f {})
 
 inferred type:
 
@@ -11,7 +11,7 @@ inferred type:
 
 Runtime term:
 
-	(fn. (fn. (fn. fn. v1 where { l = v0 }) ((fn. fn. v1 where { k = v0 }) {} (v0 fn. v0)) (v0 {})) (_.y v0)) ((fn. fn. v1 where { y = v0 }) {} fn. v0)
+	(fn. (fn. fix/record fn. {k = v1 fn. v0, l = v1 {}}) (fix/let fn. _.y v1)) (fix/let fn. fix/record fn. {y = fn. v0})
 
 Evaluated:
 

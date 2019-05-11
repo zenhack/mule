@@ -1,9 +1,9 @@
 
 Desugared:
 
-	let fix = (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) fn f. let g = 
-	                                                                   fn x. f fn v. x x v in
-	                                                                   g g in
+	let fix = fix/let fn fix. (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) fn f. 
+	            let g = fix/let fn g. fn x. f fn v. x x v in
+	            g g in
 	fix
 
 inferred type:
@@ -12,8 +12,8 @@ inferred type:
 
 Runtime term:
 
-	(fn. v0) fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
+	(fn. v0) (fix/let fn. fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0))
 
 Evaluated:
 
-	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
+	fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0)

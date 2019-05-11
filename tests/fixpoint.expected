@@ -1,7 +1,7 @@
 
 Desugared:
 
-	fn f. let g = fn x. f fn v. x x v in
+	fn f. let g = fix/let fn g. fn x. f fn v. x x v in
 	      g g
 
 inferred type:
@@ -10,8 +10,8 @@ inferred type:
 
 Runtime term:
 
-	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
+	fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0)
 
 Evaluated:
 
-	fn. (fn. v0 v0) fn. v1 fn. v1 v1 v0
+	fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0)

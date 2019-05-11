@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	fn. (fn. fn. v1 where { y = v0 }) v0 {}
+	fn. (fn. fn. { v1 | y = v0 }) v0 {}
 
 Evaluated:
 
-	fn. (fn. fn. v1 where { y = v0 }) v0 {}
+	fn. (fn. fn. { v1 | y = v0 }) v0 {}

@@ -2,7 +2,7 @@
 Desugared:
 
 	fn $0. let choice = (_ : all a. a -> a -> a) $0 in
-	       _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
+	       fix/record fn $1. _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
 
 inferred type:
 
@@ -10,8 +10,8 @@ inferred type:
 
 Runtime term:
 
-	fn. (fn. (fn. fn. v1 where { x = v0 }) ((fn. fn. v1 where { y = v0 }) {} (v0 fn. v0 fn. v0)) (v0 {} {})) v0
+	fn. (fn. fix/record fn. {x = v1 {} {}, y = v1 fn. v0 fn. v0}) v0
 
 Evaluated:
 
-	fn. (fn. (fn. fn. v1 where { x = v0 }) ((fn. fn. v1 where { y = v0 }) {} (v0 fn. v0 fn. v0)) (v0 {} {})) v0
+	fn. (fn. fix/record fn. {x = v1 {} {}, y = v1 fn. v0 fn. v0}) v0
