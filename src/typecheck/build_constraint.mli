@@ -2,7 +2,7 @@ include module type of Build_constraint_t
 open Typecheck_types
 open Ast.Desugared
 
-val build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints
+val build_constraints: unit Type.t VarMap.t -> Expr.t -> built_constraints
 
 val make_cops: unit ->
   ( constraint_ops

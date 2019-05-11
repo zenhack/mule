@@ -204,12 +204,35 @@ let make_cops: unit ->
     }
   in (cops, ucs, ics)
 
-let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints = fun _env expr ->
+let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints =
+  fun env_types expr ->
+
+  let env_exprs = Map.map env_types ~f:(fun ty ->
+    let arg = Gensym.anon_var () in
+    (* XXX: This is a bit of a hack; to build expressions with the appropriate
+     * type, we add a type annotation to (fix (fn x. x)), which has type (all a. a),
+     * since it is non-terminating -- and thus will always unify with the coercion.
+     *)
+    Expr.App
+      ( Expr.WithType ty
+      , Expr.App
+          ( Expr.Fix `Let
+          , Expr.Lam(arg, Expr.Var arg)
+          )
+      )
+  ) in
+
   let cops, ucs, ics = make_cops () in
   let (_, ty) = Util.fix
       (child_g None)
       (fun g ->
-        walk cops VarMap.empty (Lazy.force g) expr
+        let env = Map.map env_exprs ~f:(fun e ->
+          `G (with_g (Lazy.force g) (fun g ->
+            walk cops VarMap.empty (Lazy.force g) e
+          ))
+        )
+        in
+        walk cops env (Lazy.force g) expr
       )
   in
   { unification = !ucs
