@@ -30,6 +30,7 @@ let rec whnf stack expr =
 and eval stack expr =
   report "eval" expr;
   begin match whnf stack expr with
+  | Integer n -> Integer n
   | Lazy (env, e) ->
       e := eval (env @ stack) !e;
       !e

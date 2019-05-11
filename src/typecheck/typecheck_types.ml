@@ -34,6 +34,7 @@ and bound_target =
   ]
 
 (* constructors for common type constants. *)
+let int tv = `Const(tv, `Named "int", [], `Type)
 let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
 let union tv row = `Const(tv, `Named "|", [row, `Row], `Type)
 let record tv row = `Const(tv, `Named "{...}", [row, `Row], `Type)

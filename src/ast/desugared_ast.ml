@@ -56,4 +56,5 @@ module Expr = struct
       }
     | WithType of unit Type.t
     | Let of (Var.t * t * t)
+    | Integer of Z.t
 end

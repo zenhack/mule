@@ -39,6 +39,7 @@ module Expr = struct
     | Match of (t * (Pattern.t * t) list)
     | Let of (Pattern.t * t * t)
     | WithType of (t * Type.t)
+    | Integer of Z.t
   and field =
     [ `Value of
         ( Label.t

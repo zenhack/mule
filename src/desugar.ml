@@ -60,6 +60,7 @@ and desugar_record_type fields = function
 
 
 let rec desugar = function
+  | S.Integer n -> D.Integer n
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var v :: pats, body) ->
@@ -134,6 +135,7 @@ and desugar_record fields =
     |> Map.of_alist_exn (module Ast.Label)
   in
   let rec subst env expr = match expr with
+    | D.Integer n -> D.Integer n
     | D.Var v ->
         let lbl = var_to_lbl v in
         begin match Map.find env lbl with

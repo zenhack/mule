@@ -173,6 +173,8 @@ let pretty_getfield mode lbl =
     ]
 
 let rec expr p = function
+  | Expr.Integer n ->
+      Doc.s (Z.to_string n)
   | Expr.Var var ->
       Doc.s (Var.to_string var)
   | Expr.Fix `Let ->
@@ -264,6 +266,8 @@ let rec expr p = function
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
+  | Integer n ->
+      Doc.s (Z.to_string n)
   | Fix `Let -> Doc.s "fix/let"
   | Fix `Record -> Doc.s "fix/record"
   | Lazy (env, e) -> Doc.concat

@@ -15,6 +15,8 @@ let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
   fun parent f -> fst (Util.fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
 
 let rec walk cops env g = function
+  | Expr.Integer _ ->
+      UnionFind.make (int (gen_ty_var g))
   | Expr.Var v ->
       let tv = gen_u `Type (`G g) in
       begin match Map.find_exn env v with

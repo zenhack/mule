@@ -5,6 +5,7 @@ module R = Runtime.Expr
 
 let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
   fun depth env -> function
+  | D.Integer n -> (0, R.Integer n)
   | D.Var v ->
       let n = depth - Map.find_exn env v in
       (n, R.Var n)
