@@ -18,6 +18,6 @@ module Expr = struct
         cases: t LabelMap.t;
         default: t option;
       }
-    | Lazy of t ref
+    | Lazy of (t list * t ref)
     | Vec of t array
 end

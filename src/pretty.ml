@@ -256,8 +256,12 @@ let rec runtime_expr p =
   function
   | Fix `Let -> Doc.s "fix/let"
   | Fix `Record -> Doc.s "fix/record"
-  | Lazy e -> Doc.concat
-      [ Doc.s "lazy("
+  | Lazy (env, e) -> Doc.concat
+      [ Doc.s "lazy(env = ["
+      ; Doc.hvbox
+          (Doc.concat ~sep:(Doc.s ", ")
+            (List.map env ~f:(runtime_expr `Top)))
+      ; Doc.s "], value = "
       ; runtime_expr `Top !e
       ; Doc.s ")"
       ]

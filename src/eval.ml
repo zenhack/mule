@@ -21,15 +21,19 @@ let rec whnf stack expr =
       apply stack (whnf stack f) x
   | Lam (n, env, body) ->
       Lam (0, List.take stack n @ env, body)
+  | Lazy (env, e) ->
+      e := whnf (env @ stack) !e;
+      !e
   | e ->
       e
   end
 and eval stack expr =
   report "eval" expr;
   begin match whnf stack expr with
-  | Lazy e ->
-      e := eval stack !e;
+  | Lazy (env, e) ->
+      e := eval (env @ stack) !e;
       !e
+
   | Fix flag -> Fix flag
   | Vec arr ->
       (* XXX: this is O(n) even for already-evaluated
@@ -73,19 +77,24 @@ and apply stack f arg =
           end
       | Fix `Let ->
           begin match whnf stack arg with
-          | Lam(_, env, body) ->
-              eval (Lazy(ref (App(Fix `Let, arg))) :: (env @ stack)) body
+          | Lam(0, env, body) ->
+              let arg' = Lazy ([], ref (App(Fix `Let, Lam(0, env, body)))) in
+              eval (arg' :: (env @ stack)) body
           | e ->
               bug "fix/let given a non-lambda." e
           end
       | Fix `Record ->
           begin match whnf stack arg with
-          | Lam(_, env, body) ->
-              let result = ref arg in
-              let new_stack = Lazy result :: (env @ stack) in
-              let record = record_whnf new_stack body in
-              result := record;
-              eval stack (Lazy result)
+          | Lam(0, env, body) ->
+              begin
+              let result = ref (App(Fix `Record, Lam(0, env, body))) in
+              let new_stack_items = Lazy ([], result) :: env in
+              let record = record_whnf (new_stack_items @ stack) body in
+              result := Record (Map.map record ~f:(fun e -> Lazy(new_stack_items, ref e)));
+              let thunk = Lazy([], result) in
+              report "mid-fix/record" thunk;
+              eval stack thunk
+              end
           | e ->
             bug "BUG: fix/record given a non-lambda." e
           end
@@ -117,14 +126,9 @@ and record_whnf stack arg =
   report "record_whnf" arg;
   match whnf stack arg with
   | Record r ->
-      Record r
+      r
   | Update{old; label; field} ->
-      begin match record_whnf stack old with
-      | Record r ->
-          Record (Map.set r ~key:label ~data:(Lazy (ref field)))
-      | e ->
-          bug "Non-record returned by record_whnf" e
-      end
+      Map.set (record_whnf stack old) ~key:label ~data:field
   | e ->
       bug "Non-record passed to record_whnf" e
 
