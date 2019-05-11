@@ -6,7 +6,15 @@ module Label = Ast.Label
 let bug msg term =
   failwith ("BUG: " ^ msg ^ ": " ^ Pretty.runtime_expr term)
 
-let rec whnf stack = function
+let report step expr =
+  if Config.print_eval_steps then
+    Stdio.print_endline ("evaluation: " ^ step ^ ": " ^ Pretty.runtime_expr expr)
+  else
+    ()
+
+let rec whnf stack expr =
+  report "whnf" expr;
+  begin match expr with
   | Var v ->
       whnf stack (List.nth_exn stack v)
   | App (f, x) ->
@@ -15,7 +23,10 @@ let rec whnf stack = function
       Lam (0, List.take stack n @ env, body)
   | e ->
       e
-and eval stack expr = match whnf stack expr with
+  end
+and eval stack expr =
+  report "eval" expr;
+  begin match whnf stack expr with
   | Lazy e ->
       e := eval stack !e;
       !e
@@ -44,7 +55,9 @@ and eval stack expr = match whnf stack expr with
         | Record r -> Record (Map.set ~key:label ~data:(eval stack field) r)
         | e -> bug "Tried to set field on non-record" e
       end
+  end
 and apply stack f arg =
+      report "apply" (App(f, arg));
       let f' = eval stack f in
       begin match f' with
       | Lam (_, env, body) ->
@@ -100,7 +113,9 @@ and eval_match stack cases default =
        | None ->
            bug "Match failed" (Match{cases; default})
      end
-and record_whnf stack arg = match whnf stack arg with
+and record_whnf stack arg =
+  report "record_whnf" arg;
+  match whnf stack arg with
   | Record r ->
       Record r
   | Update{old; label; field} ->
