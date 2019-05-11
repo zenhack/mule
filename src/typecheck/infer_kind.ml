@@ -12,6 +12,8 @@ let unify_kind l r = match l, r with
 
 
 let rec walk_type env = function
+  | Type.Named (_, s) ->
+      Type.Named (UnionFind.make(Kind.Unknown), s)
   | Type.Var(_, v) ->
       (* TODO: proper exception *)
       let u_var = Map.find_exn env v in

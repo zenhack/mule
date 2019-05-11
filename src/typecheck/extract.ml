@@ -15,6 +15,10 @@ let maybe_add_rec i vars ty =
 
 let rec add_rec_binders ty =
   match ty with
+  | Type.Named _ ->
+      ( VarSet.empty
+      , ty
+      )
   | Type.Var (_, v) ->
       ( VarSet.singleton v
       , ty
@@ -78,8 +82,8 @@ let rec get_var_type env t =
           | `Named "|" -> Type.Union(i, fields, rest)
           | _ -> failwith "impossible"
           end
-      | `Named _, _ ->
-          failwith "TODO: handle other named constructors."
+      | `Named s, _ ->
+          Type.Named(i, s)
       | `Extend _, _ ->
           failwith "BUG: Kind error"
       end

@@ -55,6 +55,31 @@ let var = token (
       return (Ast.Var.of_string name)
 )
 
+let int: (Z.t, unit) MParser.t =
+  option (char '+' <|> char '-')
+  >>= fun sign ->
+    let sign =
+      begin match sign with
+      | Some c -> String.of_char c
+      | None -> ""
+      end
+    in
+    digit
+    >>= fun d ->
+      many_chars (digit <|> letter <|> char '_')
+    >>= fun ds ->
+      (* We accept the same integer formats as zarith, except that we also
+       * allow underscores as visual separators. Strip those out before passing
+       * them on to the library.
+       *)
+      let str = sign ^ String.of_char d ^ ds in
+      let z_str = String.filter str ~f:(fun c -> not (Char.equal c '_')) in
+      try
+        return (Z.of_string z_str)
+      with
+        Invalid_argument _ ->
+          fail ("Illegal integer literal: " ^ str)
+
 let label =
   var |>> fun v -> Ast.Var.to_string v |> Ast.Label.of_string
 
@@ -154,6 +179,7 @@ and ex3 = lazy (
     ; parens (lazy_p expr)
     ; lazy_p record
     ; (ctor |>> fun c -> Expr.Ctor c)
+    ; (int |>> fun n -> Expr.Integer n)
     ]
 )
 and lambda = lazy ((

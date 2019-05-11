@@ -24,6 +24,7 @@ open Typecheck_types
 
 (* Alpha-rename existentially bound vars. *)
 let rec rename_ex env = function
+    | Type.Named s -> Type.Named s
     | Type.Fn(i, l, r) ->
         Type.Fn(i, rename_ex env l, rename_ex env r)
     | Type.Recur(i, v, body) ->
@@ -58,6 +59,8 @@ let merge_disjoint_exn l r = Map.merge l r ~f:(fun ~key:_ -> function
 
 let rec collect_exist_vars = function
   (* Collect a list of the existentially bound variables. *)
+  | Type.Named _ ->
+      VarMap.empty
   | Type.Fn (_, l, r) ->
       merge_disjoint_exn (collect_exist_vars l) (collect_exist_vars r)
   | Type.Recur (_, _, _) ->
@@ -130,6 +133,10 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
          * about checking/enforcing this elsewhere: *)
         , graph_friendly (Map.set ~key:var ~data:`Type acc) body
         )
+      }
+  | Type.Named(_, s) ->
+      { gp_vars = acc
+      ; gp_type = `Var (Var.of_string s)
       }
   | Type.Var (_, v) ->
       { gp_vars = acc

@@ -101,6 +101,8 @@ let binder_parens parent doc =
 let rec typ p =
   let open Type in
   function
+  | Named(_, s) ->
+      Doc.s s
   | Var (_, v) ->
       Doc.s (Ast.Var.to_string v)
   | Fn (_, f, x) ->

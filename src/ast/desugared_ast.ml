@@ -17,10 +17,13 @@ module Type = struct
     | Record of 'i row
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
+    | Named of ('i * string)
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
 
   let rec map ty ~f = match ty with
+    | Named(x, s) ->
+        Named(f x, s)
     | Fn(x, l, r) ->
         Fn(f x, map l ~f, map r ~f)
     | Recur(x, v, body) ->
