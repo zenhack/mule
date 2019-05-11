@@ -20,6 +20,9 @@ let int_binop f =
 let intrinsics =
   [ "add", int_binop Z.add
   ; "sub", int_binop Z.sub
+  ; "mul", int_binop Z.mul
+  ; "div", int_binop Z.div
+  ; "rem", int_binop Z.rem
   ]
   |> List.map ~f:(fun (k, v) -> (Var.of_string k, v))
   |> Map.of_alist_exn (module Var)
