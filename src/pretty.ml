@@ -268,6 +268,8 @@ let rec expr p = function
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
   function
+  | Prim _ ->
+      Doc.s "<built-in function>"
   | Integer n ->
       Doc.s (Z.to_string n)
   | Fix `Let -> Doc.s "fix/let"

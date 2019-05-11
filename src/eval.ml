@@ -30,6 +30,7 @@ let rec whnf stack expr =
 and eval stack expr =
   report "eval" expr;
   begin match whnf stack expr with
+  | Prim p -> Prim p
   | Integer n -> Integer n
   | Lazy (env, e) ->
       e := eval (env @ stack) !e;
@@ -65,6 +66,8 @@ and apply stack f arg =
   report "apply" (App(f, arg));
   let f' = eval stack f in
   begin match f' with
+  | Prim prim ->
+      prim (eval stack arg)
   | Lam (_, env, body) ->
       eval (eval stack arg :: (env @ stack)) body
   | Match {cases; default} ->
