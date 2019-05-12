@@ -91,6 +91,7 @@ and graph_const =
   | `Record
   | `Union
   | `Empty
+  | `Named of string
   | `Extend of Label.t
   ]
 and graph_polytype =
@@ -136,7 +137,7 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
       }
   | Type.Named(_, s) ->
       { gp_vars = acc
-      ; gp_type = `Var (Var.of_string s)
+      ; gp_type = `Const(`Named s, [])
       }
   | Type.Var (_, v) ->
       { gp_vars = acc
@@ -208,6 +209,8 @@ let rec make_mono: u_kind -> bound_target -> env_t -> graph_monotype -> u_type U
           UnionFind.make (record tv (make_poly `Row b_at env row))
       | `Union, [row] ->
           UnionFind.make (union tv (make_poly `Row b_at env row))
+      | `Named s, [] ->
+          UnionFind.make (`Const(tv, `Named s, [], `Type))
       | `Empty, [] ->
           UnionFind.make (empty tv)
       | `Extend lbl, [ty; rest] ->
@@ -215,7 +218,7 @@ let rec make_mono: u_kind -> bound_target -> env_t -> graph_monotype -> u_type U
             (extend tv lbl
               (make_poly `Type b_at env ty)
               (make_poly `Row b_at env rest))
-      | `Fn, _ | `Record, _ | `Union, _ | `Empty, _ | `Extend _, _ ->
+      | `Fn, _ | `Record, _ | `Union, _ | `Empty, _ | `Extend _, _ | `Named _, _ ->
           failwith "BUG: wrong number of args"
       end
 and make_poly: u_kind -> bound_target -> env_t -> graph_polytype -> u_type UnionFind.var =
