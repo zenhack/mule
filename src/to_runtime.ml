@@ -3,17 +3,23 @@ open Ast
 module D = Desugared.Expr
 module R = Runtime.Expr
 
-let rec translate: int -> int VarMap.t -> D.t -> (int * R.t) =
+type binding = [ `Index of int | `Term of R.t ]
+
+let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
   fun depth env -> function
   | D.Integer n -> (0, R.Integer n)
   | D.Var v ->
-      let n = depth - Map.find_exn env v in
-      (n, R.Var n)
+      begin match Map.find_exn env v with
+      | `Index m ->
+          let n = depth - m in
+          (n, R.Var n)
+      | `Term t -> (0, t)
+      end
   | D.Fix flag ->
       (0, R.Fix flag)
   | D.Lam (param, body) ->
       let (ncap, body') =
-        translate (depth + 1) (Map.set env ~key:param ~data:(depth + 1)) body
+        translate (depth + 1) (Map.set env ~key:param ~data:(`Index (depth + 1))) body
       in
       (ncap, R.Lam(ncap, [], body'))
   | D.App(D.Fix `Record, f) ->
@@ -66,7 +72,7 @@ and translate_fix_rec depth env = function
       let (n, lblmap) =
         translate_record_body
           (depth + 1)
-          (Map.set env ~key:v ~data:(depth + 1))
+          (Map.set env ~key:v ~data:(`Index (depth + 1)))
           body
       in
       ( n - 1
@@ -88,4 +94,6 @@ and translate_record_body depth env = function
       failwith "BUG"
 
 let translate: D.t -> R.t =
-  fun exp -> snd (translate 0 VarMap.empty exp)
+  fun exp ->
+    let env = Map.map Intrinsics.intrinsics ~f:(fun x -> `Term (snd x)) in
+    snd (translate 0 env exp)
