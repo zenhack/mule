@@ -55,7 +55,7 @@ let var = token (
       return (Ast.Var.of_string name)
 )
 
-let int: (Z.t, unit) MParser.t =
+let int: (Z.t, unit) MParser.t = token (
   option (char '+' <|> char '-')
   >>= fun sign ->
     let sign =
@@ -79,6 +79,7 @@ let int: (Z.t, unit) MParser.t =
       with
         Invalid_argument _ ->
           fail ("Illegal integer literal: " ^ str)
+)
 
 let label =
   var |>> fun v -> Ast.Var.to_string v |> Ast.Label.of_string
