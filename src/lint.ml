@@ -2,6 +2,7 @@ open Ast.Surface
 open Ast.Surface.Expr
 
 let rec collect_pat_vars = function
+  | Pattern.Integer _ -> VarSet.empty
   | Pattern.Wild -> VarSet.empty
   | Pattern.Var v -> VarSet.singleton v
   | Pattern.Ctor(_, p) -> collect_pat_vars p
@@ -65,6 +66,7 @@ let check_unbound_vars expr =
     let pat_new = collect_pat_vars pat in
     go_expr typ (Set.union term pat_new) e
   and go_pat typ = function
+    | Pattern.Integer _ -> ()
     | Pattern.Wild -> ()
     | Pattern.Var _ -> ()
     | Pattern.Ctor(_, p) -> go_pat typ p
@@ -148,6 +150,7 @@ let check_duplicate_record_fields =
     ) in
     go_labels labels
   and go_pat = function
+    | Pattern.Integer _ -> ()
     | Pattern.Annotated(pat, ty) -> go_pat pat; go_type ty
     | Pattern.Ctor(_, pat) -> go_pat pat
     | Pattern.Var _ | Pattern.Wild -> ()

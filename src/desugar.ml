@@ -5,6 +5,9 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
+let incomplete_pattern p =
+  raise (MuleErr.MuleExn (MuleErr.IncompletePattern p))
+
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
 let rec desugar_type = function
@@ -75,6 +78,8 @@ let rec desugar = function
           , desugar (S.Lam (pats, body))
           )
         )
+  | S.Lam ((SP.Integer _) as p :: _, _) ->
+      incomplete_pattern p
   | S.Lam (pat :: pats, body) ->
       let var = Gensym.anon_var () in
       D.Lam
@@ -111,6 +116,8 @@ let rec desugar = function
         ( desugar_match LabelMap.empty cases
         , desugar e
         )
+  | S.Let((SP.Integer _) as p, _, _) ->
+      incomplete_pattern p
   | S.Let(SP.Wild, e, body) ->
       desugar (S.Let(SP.Var (Gensym.anon_var ()), e, body))
   | S.Let(SP.Annotated(pat, ty), e, body) ->

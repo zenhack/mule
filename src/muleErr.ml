@@ -17,6 +17,7 @@ type t =
   | UnreachableCases
   | EmptyMatch
   | MalformedType of string
+  | IncompletePattern of Ast.Surface.Pattern.t
 
 exception MuleExn of t
 
@@ -58,3 +59,5 @@ let show = function
           |> String.concat ~sep:",")
   | EmptyMatch ->
       "Empty match expression."
+  | IncompletePattern _ ->
+      "Incomplete pattern"

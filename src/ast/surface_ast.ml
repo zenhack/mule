@@ -25,6 +25,7 @@ module Pattern = struct
     | Var of Var.t
     | Wild
     | Annotated of (t * Type.t)
+    | Integer of Z.t
 end
 
 module Expr = struct

@@ -216,7 +216,8 @@ and case = lazy (
 )
 and pattern = lazy ((
   choice
-    [ parens (lazy_p pattern)
+    [ (int |>> fun n -> Pattern.Integer n)
+    ; parens (lazy_p pattern)
     ; (kwd "_" |>> fun _ -> Pattern.Wild)
     ; (var |>> fun v -> Pattern.Var v)
     ; (ctor
