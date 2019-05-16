@@ -113,7 +113,7 @@ let rec desugar = function
       D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
       D.App
-        ( desugar_match LabelMap.empty cases
+        ( desugar_lbl_match LabelMap.empty cases
         , desugar e
         )
   | S.Let((SP.Integer _) as p, _, _) ->
@@ -210,7 +210,7 @@ and desugar_record fields =
         build_record fs
   in
   D.App(D.Fix `Record, D.Lam(record_var, build_record fields))
-and desugar_match dict = function
+and desugar_lbl_match dict = function
   | [] -> D.Match
       { default = None
       ; cases = finalize_dict dict
@@ -242,12 +242,12 @@ and desugar_match dict = function
             | Some cases -> ((p, body) :: cases)
           )
       in
-      desugar_match dict' cases
+      desugar_lbl_match dict' cases
   | (SP.Annotated (p, _), body) :: cases ->
       (* TODO: we'll want to actually do something with these eventually.
        * Maybe the thing to do is just only allow annotations on pattern variables,
        * rather than arbitrary patterns? *)
-      desugar_match dict ((p, body) :: cases)
+      desugar_lbl_match dict ((p, body) :: cases)
   | (_ :: _) ->
       raise MuleErr.(MuleExn UnreachableCases)
 and finalize_dict dict =
@@ -256,7 +256,7 @@ and finalize_dict dict =
       let v = Gensym.anon_var () in
       ( v
       , D.App
-          ( desugar_match LabelMap.empty (List.rev cases)
+          ( desugar_lbl_match LabelMap.empty (List.rev cases)
           , D.Var v
           )
       )
