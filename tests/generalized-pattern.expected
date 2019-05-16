@@ -2,12 +2,14 @@
 Desugared:
 
 	
-	  match-lam
-	  | Ok $1 -> 
-	               match-lam
-	               | $0 -> let x = fix/let fn x. (_ : all a. a -> a) $0 in
-	                       fix/record fn $2. _.k:=_ (_.v:=_ {} (x fn y. y)) (x {})
-	               end $1
+	  match _ with
+	  | Ok -> 
+	            fn $1. 
+	                     match _ with
+	                     | 
+	                         fn $0. let x = fix/let fn x. (_ : all a. a -> a) $0 in
+	                                fix/record fn $2. _.k:=_ (_.v:=_ {} (x fn y. y)) (x {})
+	                     end $1
 	  
 	  end ((fn x. Ok x) fn x. x)
 
@@ -22,8 +24,8 @@ Runtime term:
 	  | Ok -> 
 	            fn. 
 	                  match _ with
-	                  | _ ->
-	                          fn. (fn. fix/record fn. {k = v1 {}, v = v1 fn. v0}) (fix/let fn. v1)
+	                  | 
+	                      fn. (fn. fix/record fn. {k = v1 {}, v = v1 fn. v0}) (fix/let fn. v1)
 	                  end v0
 	  
 	  end ((fn. Ok v0) fn. v0)

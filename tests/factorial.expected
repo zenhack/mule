@@ -1,0 +1,26 @@
+
+Desugared:
+
+	let factorial = fix/let fn factorial. fn n. 
+	                                              match-lam
+	                                              | 0 -> 1
+	                                              | fn n. mul n (factorial (sub n 1))
+	                                              end n in
+	factorial 5
+
+inferred type:
+
+	int
+
+Runtime term:
+
+	(fn. v0 5) (fix/let fn. fn. 
+	                              match _ with
+	                              | 0 -> 1
+	                              | 
+	                                  fn. <built-in function> v0 (v2 (<built-in function> v0 1))
+	                              end v0)
+
+Evaluated:
+
+	120

@@ -18,6 +18,10 @@ module Expr = struct
         cases: t LabelMap.t;
         default: t option;
       }
+    | IntMatch of
+      { im_cases: t ZMap.t
+      ; im_default: t
+      }
     | Lazy of (t list * t ref)
     | Vec of t array
     | Integer of Z.t

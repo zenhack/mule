@@ -3,25 +3,31 @@ Desugared:
 
 	_.odd (fix/record fn $0. _.even:=_ (_.odd:=_ {} ((_ : (rec n. Z {} | S n) -> True {} | False {}) fn x. 
 	
-	  match-lam
-	  | S $3 -> 
-	              match-lam
-	              | k -> (_ : (rec n. Z {} | S n) -> True {} | False {}) (_.<lazy>even $0) k
-	              end $3
-	  | Z $4 -> 
-	              match-lam
-	              | _ -> (fn x. False x) {}
-	              end $4
+	  match _ with
+	  | S -> 
+	           fn $3. 
+	                    match _ with
+	                    | 
+	                        fn k. (_ : (rec n. Z {} | S n) -> True {} | False {}) (_.<lazy>even $0) k
+	                    end $3
+	  | Z -> fn $4. 
+	                  match _ with
+	                  | fn _. (fn x. False x) {}
+	                  end $4
 	  
 	  end x)) ((_ : (rec n. Z {} | S n) -> True {} | False {}) fn x. 
-	                                                                   match-lam
-	                                                                   | S $1 -> 
-	                                                                    match-lam
-	                                                                    | k -> (_ : (rec n. Z {} | S n) -> True {} | False {}) (_.<lazy>odd $0) k
+	                                                                   match _ with
+	                                                                   | S -> 
+	                                                                    fn $1. 
+	                                                                    match _ with
+	                                                                    | 
+	                                                                    fn k. (_ : (rec n. Z {} | S n) -> True {} | False {}) (_.<lazy>odd $0) k
 	                                                                    end $1
-	                                                                   | Z $2 -> 
-	                                                                    match-lam
-	                                                                    | _ -> (fn x. True x) {}
+	                                                                   | Z -> 
+	                                                                    fn $2. 
+	                                                                    match _ with
+	                                                                    | 
+	                                                                    fn _. (fn x. True x) {}
 	                                                                    end $2
 	                                                                   
 	                                                                   end x)) ((fn x. S x) ((fn x. S x) ((fn x. S x) ((fn x. S x) ((fn x. Z x) {})))))
@@ -37,13 +43,12 @@ Runtime term:
 	                                    | S -> 
 	                                             fn. 
 	                                                   match _ with
-	                                                   | _ ->
-	                                                           fn. _.<lazy>odd v3 v0
+	                                                   | fn. _.<lazy>odd v3 v0
 	                                                   end v0
 	                                    | Z -> 
 	                                             fn. 
 	                                                   match _ with
-	                                                   | _ ->fn. (fn. True v0) {}
+	                                                   | fn. (fn. True v0) {}
 	                                                   end v0
 	                                    
 	                                    end v0, odd = fn. 
@@ -52,14 +57,14 @@ Runtime term:
 	                                                                 fn. 
 	                                                                 
 	                                                                   match _ with
-	                                                                   | _ ->
+	                                                                   | 
 	                                                                    fn. _.<lazy>even v3 v0
 	                                                                   end v0
 	                                                        | Z -> 
 	                                                                 fn. 
 	                                                                 
 	                                                                   match _ with
-	                                                                   | _ ->
+	                                                                   | 
 	                                                                    fn. (fn. False v0) {}
 	                                                                   end v0
 	                                                        

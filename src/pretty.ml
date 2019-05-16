@@ -98,6 +98,36 @@ let op_parens parent child doc =
 let binder_parens parent doc =
   maybe_parens (is_left parent) doc
 
+let pretty_match: (Doc.t * Doc.t) list -> Doc.t option -> Doc.t =
+  fun cases default ->
+    let branches =
+      List.append
+        (List.map cases ~f:(fun (k, v) -> Doc.concat
+                [ Doc.s "| "
+                ; k
+                ; Doc.s " -> "
+                ; Doc.hvbox (Doc.concat [ Doc.cut; v])
+                ]
+            )
+        )
+        [ match default with
+            | None -> Doc.empty
+            | Some f -> Doc.hbox (Doc.concat
+                [ Doc.s "| "
+                ; Doc.hvbox (Doc.concat [ Doc.cut; f ])
+                ])
+        ]
+    in
+    Doc.vbox
+     (Doc.concat
+        [ Doc.cut
+        ; Doc.s "match _ with"
+        ; List.map branches ~f:(fun b -> Doc.concat [Doc.cut; Doc.hbox b])
+          |> Doc.concat
+        ; Doc.cut
+        ; Doc.s "end"
+        ])
+
 let rec typ p =
   let open Type in
   function
@@ -227,43 +257,47 @@ let rec expr p = function
             ; Doc.hvbox (expr `Top body)
             ])
         )
-  | Expr.Match {cases; default} ->
+  | Expr.IntMatch{im_cases; im_default} ->
       let branches =
         List.append
-          (Map.to_alist cases
-            |> List.map ~f:(fun (lbl, (v, e)) ->
+          (Map.to_alist im_cases
+            |> List.map ~f:(fun (n, body) ->
                 (Doc.concat
                   [ Doc.s "| "
-                  ; Doc.s (Label.to_string lbl)
-                  ; Doc.s " "
-                  ; Doc.s (Var.to_string v)
+                  ; Doc.s (Z.to_string n)
                   ; Doc.s " -> "
-                  ; Doc.hvbox (expr `Top e)
+                  ; Doc.hvbox (expr `Top body)
                   ])
             ))
-            [ Doc.concat (match default with
-                | None -> [Doc.empty]
-                | Some (None, e) ->
-                    [ Doc.s "| _ -> "
-                    ; Doc.hvbox (expr `Top e)
-                    ]
-                | Some (Some v, e) ->
-                    [ Doc.s "| "
-                    ; Doc.s (Var.to_string v)
-                    ; Doc.s " -> "
-                    ; Doc.hvbox (expr `Top e)
-                    ])
+          [ Doc.concat
+            [ Doc.s "| "
+            ; expr `Top im_default
             ]
+          ]
       in
       Doc.vbox
         (Doc.concat
           [ Doc.cut
           ; Doc.s "match-lam"
-          ; List.map branches ~f:(fun b -> Doc.concat [Doc.cut; Doc.hbox b])
+          ; List.map branches ~f:(fun b -> Doc.concat[Doc.cut; Doc.hbox b])
             |> Doc.concat
           ; Doc.cut
           ; Doc.s "end"
           ])
+  | Expr.Match {cases; default} ->
+      pretty_match
+        (Map.to_alist cases
+          |> List.map ~f:(fun (lbl, (v, e)) ->
+              ( Doc.s (Label.to_string lbl)
+              , expr `Top (Expr.Lam(v, e))
+              )
+        ))
+        (Option.map default ~f:(fun (v, body) ->
+          let param = match v with
+            | Some var -> var
+            | None -> Var.of_string "_"
+          in
+          expr `Top (Expr.Lam(param, body))))
 
 let rec runtime_expr p =
   let open Ast.Runtime.Expr in
@@ -336,43 +370,23 @@ let rec runtime_expr p =
           ]
         )
   | Match {cases; default} ->
-    let branches =
-      List.append
-        (Map.to_alist cases
-          |> List.map
-              ~f:(fun (lbl, f) -> Doc.concat
-                  [ Doc.s "| "
-                  ; Doc.s (Label.to_string lbl)
-                  ; Doc.s " -> "
-                  ; Doc.hvbox
-                      (Doc.concat
-                        [ Doc.cut
-                        ; runtime_expr `Top f
-                        ])
-                  ]
+    pretty_match
+      (Map.to_alist cases
+        |> List.map ~f:(fun (lbl, f) ->
+          ( Doc.s (Label.to_string lbl)
+          , runtime_expr `Top f
+          )
+      ))
+      (Option.map default ~f:(runtime_expr `Top))
+  | IntMatch {im_cases; im_default} ->
+      pretty_match
+        (Map.to_alist im_cases
+          |> List.map ~f:(fun (n, body) ->
+              ( Doc.s (Z.to_string n)
+              , runtime_expr `Top body
               )
-        )
-        [ match default with
-            | None -> Doc.empty
-            | Some f -> Doc.hbox (Doc.concat
-                [ Doc.s "| _ ->"
-                ; Doc.hvbox
-                    (Doc.concat
-                      [ Doc.cut
-                      ; runtime_expr `Top f
-                      ])
-                ])
-        ]
-    in
-    Doc.vbox
-     (Doc.concat
-        [ Doc.cut
-        ; Doc.s "match _ with"
-        ; List.map branches ~f:(fun b -> Doc.concat [Doc.cut; Doc.hbox b])
-          |> Doc.concat
-        ; Doc.cut
-        ; Doc.s "end"
-        ])
+          ))
+        (Some (runtime_expr `Top im_default))
 
 let typ t = Doc.to_string (typ `Top t)
 let expr e = Doc.to_string (expr `Top e)

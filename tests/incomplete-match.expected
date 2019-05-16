@@ -2,11 +2,11 @@
 Desugared:
 
 	
-	  match-lam
-	  | Err $0 -> 
-	                match-lam
-	                | x -> x
-	                end $0
+	  match _ with
+	  | Err -> fn $0. 
+	                    match _ with
+	                    | fn x. x
+	                    end $0
 	  
 	  end ((fn x. Ok x) {})
 Type error: mismatched type constructors: <empty> and row containing Ok

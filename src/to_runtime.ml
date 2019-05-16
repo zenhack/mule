@@ -40,6 +40,20 @@ let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
   | D.Ctor (label, e) ->
       let (ncap, e') = translate depth env e in
       (ncap, R.Ctor(label, e'))
+  | D.IntMatch{im_cases; im_default} ->
+      let cases = Map.map im_cases ~f:(translate depth env) in
+      let (n, def) = translate depth env im_default in
+      let ncaps = Map.fold
+        cases
+        ~init:n
+        ~f:(fun ~key:_ ~data:(next, _) prev -> max next prev)
+      in
+      ( ncaps
+      , R.IntMatch
+        { im_cases = Map.map cases ~f:snd
+        ; im_default = def
+        }
+      )
   | D.Match{cases; default} ->
       let cases' = Map.map
           cases

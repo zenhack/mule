@@ -147,6 +147,21 @@ let rec walk cops env g = function
         | Some (None, body) ->
             walk cops env g (Expr.Lam (Ast.Var.of_string "_", body))
       end
+  | Expr.IntMatch {im_cases; im_default} ->
+      let body_ty = gen_u `Type (`G g) in
+      Map.iter im_cases ~f:(fun body ->
+        let ty = walk cops env g body in
+        cops.constrain_unify ty body_ty
+      );
+      let f_ty = UnionFind.make
+        (fn (gen_ty_var g)
+            (UnionFind.make (int (gen_ty_var g)))
+            body_ty
+        )
+      in
+      let default_ty = walk cops env g im_default in
+      cops.constrain_unify f_ty default_ty;
+      f_ty
   | Expr.Match {cases; default} ->
       let final = match default with
         | None -> UnionFind.make (empty (gen_ty_var g))

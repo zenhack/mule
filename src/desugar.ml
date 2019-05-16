@@ -5,8 +5,14 @@ module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
+let error e =
+  raise (MuleErr.MuleExn e)
+
 let incomplete_pattern p =
-  raise (MuleErr.MuleExn (MuleErr.IncompletePattern p))
+  error (MuleErr.IncompletePattern p)
+
+let unreachable_case (_p:SP.t) =
+  error MuleErr.UnreachableCases
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
@@ -112,10 +118,7 @@ let rec desugar = function
       let param = Ast.Var.of_string "x" in
       D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
-      D.App
-        ( desugar_lbl_match LabelMap.empty cases
-        , desugar e
-        )
+      D.App (desugar_match cases, desugar e)
   | S.Let((SP.Integer _) as p, _, _) ->
       incomplete_pattern p
   | S.Let(SP.Wild, e, body) ->
@@ -180,6 +183,11 @@ and desugar_record fields =
                   )
             )
           }
+    | D.IntMatch {im_cases; im_default} ->
+        D.IntMatch
+          { im_cases = Map.map im_cases ~f:(subst env)
+          ; im_default = subst env im_default
+          }
     | D.Let(v, e, body) ->
         D.Let
           ( v
@@ -210,6 +218,54 @@ and desugar_record fields =
         build_record fs
   in
   D.App(D.Fix `Record, D.Lam(record_var, build_record fields))
+and desugar_match cases =
+  begin match cases with
+  | ((SP.Ctor _, _) :: _) ->
+      desugar_lbl_match LabelMap.empty cases
+  | ((SP.Integer _, _) :: _) ->
+     desugar_int_match ZMap.empty cases
+  | [(pat, body)] ->
+      desugar (S.Lam([pat], body))
+  | [] -> D.Match
+      { cases = LabelMap.empty
+      ; default = None
+      }
+  | ((SP.Annotated (pat, _ty), body) :: rest) ->
+      (* TODO: do something with the type. *)
+      desugar_match ((pat, body) :: rest)
+  | ((SP.Wild, _) :: _) | ((SP.Var _, _) :: _) ->
+      unreachable_case SP.Wild
+  end
+and desugar_int_match dict = function
+  | [(SP.Wild, body)] -> D.IntMatch
+      { im_default = D.Lam(Gensym.anon_var (), desugar body)
+      ; im_cases = dict
+      }
+  | ((SP.Wild, _) :: _) ->
+      unreachable_case SP.Wild
+  | [(SP.Var v, body)] -> D.IntMatch
+      { im_default = D.Lam(v, desugar body)
+      ; im_cases = dict
+      }
+  | ((SP.Var _, _) :: _) ->
+      unreachable_case SP.Wild
+  | ((SP.Annotated(pat, _ty), body) :: rest) ->
+      desugar_int_match dict ((pat, body) :: rest)
+  | ((SP.Integer n, body) :: rest) ->
+      begin match Map.find dict n with
+      | Some _ -> unreachable_case (SP.Integer n)
+      | None ->
+          desugar_int_match
+            (Map.set dict ~key:n ~data:(desugar body))
+            rest
+      end
+  | [] ->
+      (* TODO: what should the argument actually be here? *)
+      incomplete_pattern SP.Wild
+  | ((SP.Ctor _, _) :: _) ->
+      error
+        (MuleErr.TypeError
+          (MuleErr.MismatchedCtors (`Named "union", `Named "int")))
 and desugar_lbl_match dict = function
   | [] -> D.Match
       { default = None

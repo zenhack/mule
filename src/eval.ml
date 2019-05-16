@@ -48,6 +48,14 @@ and eval stack expr =
         { cases = Map.map cases ~f:(eval stack)
         ; default = Option.map default ~f:(eval stack)
         }
+  | IntMatch {im_cases; im_default} ->
+      (* TODO/XXX: we definitely don't want to evaluate im_cases here,
+       * but we probably still need to do something about embedded free
+       * variables. *)
+      IntMatch
+        { im_cases
+        ; im_default = eval stack im_default
+        }
   | GetField l -> GetField l
   | Ctor (c, arg) -> Ctor (c, eval stack arg)
   | App (f, x) ->
@@ -72,6 +80,8 @@ and apply stack f arg =
       eval (eval stack arg :: (env @ stack)) body
   | Match {cases; default} ->
       eval_match stack cases default (eval stack arg)
+  | IntMatch {im_cases; im_default} ->
+      eval_int_match stack im_cases im_default (eval stack arg)
   | GetField (`Strict, label) ->
       begin match eval stack arg with
         | Record r ->
@@ -125,5 +135,12 @@ and eval_match stack cases default =
        | None ->
            bug "Match failed" (Match{cases; default})
      end
-
+and eval_int_match stack cases default = function
+  | Integer n ->
+      begin match Map.find cases n with
+      | Some v -> eval stack v
+      | None -> eval stack (App(default, Integer n))
+      end
+  | e ->
+      bug "Tried to intmatch on non-integer" e
 let eval e = eval [] e

@@ -57,6 +57,10 @@ module Expr = struct
         cases: (Var.t * t) LabelMap.t;
         default: (Var.t option * t) option;
       }
+    | IntMatch of
+      { im_cases : t ZMap.t
+      ; im_default: t
+      }
     | WithType of unit Type.t
     | Let of (Var.t * t * t)
     | Integer of Z.t
