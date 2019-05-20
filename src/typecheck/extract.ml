@@ -32,16 +32,21 @@ let rec add_rec_binders ty =
       let (fv, ft) = add_rec_binders f in
       let (xv, xt) = add_rec_binders x in
       maybe_add_rec i (Set.union fv xv) (Type.Fn(i, ft, xt))
-  | Type.Record(i, fields, rest) ->
-      let (vars, ret) = row_add_rec_binders i fields rest in
-      maybe_add_rec i vars (Type.Record ret)
+  | Type.Record { r_info; r_types; r_values } ->
+      let (ty_vars, ty_ret) = row_add_rec_binders r_types in
+      let (val_vars, val_ret) = row_add_rec_binders r_values in
+      maybe_add_rec r_info (Set.union ty_vars val_vars) (Type.Record
+        { r_info
+        ; r_types = ty_ret
+        ; r_values = val_ret
+        })
   | Type.Union(i, ctors, rest) ->
-      let (vars, ret) = row_add_rec_binders i ctors rest in
+      let (vars, ret) = row_add_rec_binders (i, ctors, rest) in
       maybe_add_rec i vars (Type.Union ret)
   | Type.Quant(i, q, bound, kind, body) ->
       let (vars, body') = add_rec_binders body in
       maybe_add_rec i vars (Type.Quant(i, q, bound, kind, body'))
-and row_add_rec_binders i fields rest =
+and row_add_rec_binders (i, fields, rest) =
   let row_var = match rest with
     | Some v -> VarSet.singleton v
     | None -> VarSet.empty
@@ -73,15 +78,23 @@ let rec get_var_type env t =
             , get_var_type env' (UnionFind.get param)
             , get_var_type env' (UnionFind.get ret)
             )
-      | `Named "{...}", [row, _] | `Named "|", [row, _] ->
+      | `Named "{...}", [r_types, _; r_values, _] ->
+          let (types_fields, types_rest) =
+            get_var_row env' (UnionFind.get r_types)
+          in
+          let (values_fields, values_rest) =
+            get_var_row env' (UnionFind.get r_values)
+          in
+          Type.Record
+            { r_info = i
+            ; r_types = (Gensym.gensym (), types_fields, types_rest)
+            ; r_values = (Gensym.gensym (), values_fields, values_rest)
+            }
+      | `Named "|", [row, _] ->
           let (fields, rest) =
             get_var_row env' (UnionFind.get row)
           in
-          begin match c with
-          | `Named "{...}"-> Type.Record(i, fields, rest)
-          | `Named "|" -> Type.Union(i, fields, rest)
-          | _ -> failwith "impossible"
-          end
+          Type.Union(i, fields, rest)
       | `Named s, _ ->
           Type.Named(i, s)
       | `Extend _, _ ->

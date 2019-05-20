@@ -24,8 +24,14 @@ let rec walk_type env = function
   | Type.Recur(_, var, body) ->
       let u_var = UnionFind.make Kind.Type in
       Type.Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
-  | Type.Record row ->
-      Type.Record(walk_row env row)
+  | Type.Record {r_info = _; r_types = _; r_values} ->
+      let u_var = UnionFind.make Kind.Type in
+      Type.Record
+        { r_info = u_var
+        (* TODO: make use of the type row. *)
+        ; r_types = (UnionFind.make Kind.Row, [], None)
+        ; r_values = walk_row env r_values
+        }
   | Type.Union row ->
       Type.Union(walk_row env row)
   | Type.Quant(_, q, v, k, body) ->

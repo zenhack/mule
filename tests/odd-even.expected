@@ -20,10 +20,20 @@ Desugared:
 	                   (Recur
 	                    (() n
 	                     (Union
-	                      (() ((Z (Record (() () ()))) (S (Var (() n)))) ()))))
+	                      (()
+	                       ((Z
+	                         (Record (r_info ()) (r_types (() () ()))
+	                          (r_values (() () ()))))
+	                        (S (Var (() n))))
+	                       ()))))
 	                   (Union
 	                    (()
-	                     ((True (Record (() () ()))) (False (Record (() () ()))))
+	                     ((True
+	                       (Record (r_info ()) (r_types (() () ()))
+	                        (r_values (() () ()))))
+	                      (False
+	                       (Record (r_info ()) (r_types (() () ()))
+	                        (r_values (() () ())))))
 	                     ())))))
 	                (Lam
 	                 (x
@@ -45,13 +55,22 @@ Desugared:
 	                                       (() n
 	                                        (Union
 	                                         (()
-	                                          ((Z (Record (() () ())))
+	                                          ((Z
+	                                            (Record (r_info ())
+	                                             (r_types (() () ()))
+	                                             (r_values (() () ()))))
 	                                           (S (Var (() n))))
 	                                          ()))))
 	                                      (Union
 	                                       (()
-	                                        ((True (Record (() () ())))
-	                                         (False (Record (() () ()))))
+	                                        ((True
+	                                          (Record (r_info ())
+	                                           (r_types (() () ()))
+	                                           (r_values (() () ()))))
+	                                         (False
+	                                          (Record (r_info ())
+	                                           (r_types (() () ()))
+	                                           (r_values (() () ())))))
 	                                        ())))))
 	                                   (App ((GetField (Lazy even)) (Var $0)))))
 	                                 (Var k)))))))
@@ -74,9 +93,21 @@ Desugared:
 	              (()
 	               (Recur
 	                (() n
-	                 (Union (() ((Z (Record (() () ()))) (S (Var (() n)))) ()))))
+	                 (Union
+	                  (()
+	                   ((Z
+	                     (Record (r_info ()) (r_types (() () ()))
+	                      (r_values (() () ()))))
+	                    (S (Var (() n))))
+	                   ()))))
 	               (Union
-	                (() ((True (Record (() () ()))) (False (Record (() () ()))))
+	                (()
+	                 ((True
+	                   (Record (r_info ()) (r_types (() () ()))
+	                    (r_values (() () ()))))
+	                  (False
+	                   (Record (r_info ()) (r_types (() () ()))
+	                    (r_values (() () ())))))
 	                 ())))))
 	            (Lam
 	             (x
@@ -98,13 +129,22 @@ Desugared:
 	                                   (() n
 	                                    (Union
 	                                     (()
-	                                      ((Z (Record (() () ())))
+	                                      ((Z
+	                                        (Record (r_info ())
+	                                         (r_types (() () ()))
+	                                         (r_values (() () ()))))
 	                                       (S (Var (() n))))
 	                                      ()))))
 	                                  (Union
 	                                   (()
-	                                    ((True (Record (() () ())))
-	                                     (False (Record (() () ()))))
+	                                    ((True
+	                                      (Record (r_info ())
+	                                       (r_types (() () ()))
+	                                       (r_values (() () ()))))
+	                                     (False
+	                                      (Record (r_info ())
+	                                       (r_types (() () ()))
+	                                       (r_values (() () ())))))
 	                                    ())))))
 	                               (App ((GetField (Lazy odd)) (Var $0)))))
 	                             (Var k)))))))
@@ -132,7 +172,11 @@ Desugared:
 
 inferred type:
 
-	(Union (() ((False (Record (() () ()))) (True (Record (() () ())))) ()))
+	(Union
+	 (()
+	  ((False (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))
+	   (True (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	  ()))
 
 Runtime term:
 

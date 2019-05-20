@@ -69,6 +69,7 @@ let rec walk cops env g = function
       UnionFind.make
         (record
           (ty_var_at (`G g))
+          (gen_u `Row (`G g))
           (UnionFind.make (empty (ty_var_at (`G g))))
           )
   | Expr.GetField (_, lbl) ->
@@ -85,6 +86,7 @@ let rec walk cops env g = function
             (UnionFind.make
               (record
                 (ty_var_at b_at)
+                (gen_u `Row b_at)
                 (UnionFind.make
                   (extend
                     (ty_var_at b_at)
@@ -105,11 +107,15 @@ let rec walk cops env g = function
         let b_at = `Ty ret in
         let head_var = gen_u `Type b_at in
         let tail_var = gen_u `Row b_at in
+        let types_row_var = gen_u `Row b_at in
         UnionFind.make
           (fn
             (gen_ty_var g)
             (UnionFind.make
-              (record (ty_var_at b_at) tail_var))
+              (record
+                (ty_var_at b_at)
+                types_row_var
+                tail_var))
             (UnionFind.make
               (fn
                 (ty_var_at b_at)
@@ -117,6 +123,7 @@ let rec walk cops env g = function
                 (UnionFind.make
                   (record
                     (ty_var_at b_at)
+                    types_row_var
                     (UnionFind.make
                       (extend
                         (ty_var_at b_at)

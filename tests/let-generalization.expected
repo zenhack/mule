@@ -17,11 +17,16 @@ Desugared:
 
 inferred type:
 
-	(Record
-	 (()
-	  ((a (Fn (() (Var (() a)) (Var (() a)))))
-	   (b (Union (() ((Ok (Record (() () ())))) (b)))))
-	  ()))
+	(Record (r_info ()) (r_types (() () (a)))
+	 (r_values
+	  (()
+	   ((a (Fn (() (Var (() b)) (Var (() b)))))
+	    (b
+	     (Union
+	      (()
+	       ((Ok (Record (r_info ()) (r_types (() () (c))) (r_values (() () ())))))
+	       (d)))))
+	   ())))
 
 Runtime term:
 

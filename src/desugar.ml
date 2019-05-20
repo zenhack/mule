@@ -58,9 +58,17 @@ and desugar_record_type fields = function
       (* TODO: do something with this. *)
       desugar_record_type fields fs
   | [] ->
-      DT.Record((), fields, None)
+      DT.Record
+        { r_info = ()
+        ; r_types = ((), [], None)
+        ; r_values = ((), fields, None)
+        }
   | [ST.Rest v] ->
-      DT.Record((), fields, Some v)
+      DT.Record
+        { r_info = ()
+        ; r_types = ((), [], None)
+        ; r_values = ((), fields, Some v)
+        }
   | (ST.Field (l, t) :: rest) ->
       desugar_record_type ((l, desugar_type t)::fields) rest
   | (ST.Rest _ :: _) -> raise

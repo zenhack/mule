@@ -34,7 +34,12 @@ let rec rename_ex env = function
           | Some v' -> Type.Var (i, v')
           | None -> Type.Var (i, v)
         end
-    | Type.Record row -> Type.Record (rename_ex_row env row)
+    | Type.Record {r_info; r_types; r_values} ->
+        Type.Record
+          { r_info
+          ; r_types = rename_ex_row env r_types
+          ; r_values = rename_ex_row env r_values
+          }
     | Type.Union row -> Type.Union (rename_ex_row env row)
     | Type.Quant(i, `All, v, kind, body) ->
         Type.Quant(i, `All, v, kind, rename_ex (Map.remove env v) body)
@@ -67,7 +72,10 @@ let rec collect_exist_vars = function
       VarMap.empty
   | Type.Var _ ->
       VarMap.empty
-  | Type.Record row -> collect_exist_row row
+  | Type.Record {r_info = _; r_types; r_values} ->
+      merge_disjoint_exn
+        (collect_exist_row r_types)
+        (collect_exist_row r_values)
   | Type.Union row -> collect_exist_row row
   | Type.Quant (k_var, `Exist, v, _, body) ->
       Map.set ~key:v ~data:k_var (collect_exist_vars body)
@@ -143,12 +151,14 @@ let rec graph_friendly: [ `Type | `Row ] VarMap.t -> 'a Type.t -> graph_polytype
       { gp_vars = acc
       ; gp_type = `Var v
       }
-  | Record row ->
+  | Record {r_info = _; r_types; r_values} ->
       { gp_vars = acc
       ; gp_type =
           `Const
             ( `Record
-            , [graph_friendly_row row]
+            , [ graph_friendly_row r_types
+              ; graph_friendly_row r_values
+              ]
             )
       }
   | Union row ->
@@ -205,8 +215,12 @@ let rec make_mono: u_kind -> bound_target -> env_t -> graph_monotype -> u_type U
             (fn tv
               (make_poly `Type b_at env param)
               (make_poly `Type b_at env ret))
-      | `Record, [row] ->
-          UnionFind.make (record tv (make_poly `Row b_at env row))
+      | `Record, [r_types; r_values] ->
+          UnionFind.make
+            (record tv
+              (make_poly `Row b_at env r_types)
+              (make_poly `Row b_at env r_values)
+              )
       | `Union, [row] ->
           UnionFind.make (union tv (make_poly `Row b_at env row))
       | `Named s, [] ->

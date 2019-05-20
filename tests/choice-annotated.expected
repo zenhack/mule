@@ -28,8 +28,12 @@ inferred type:
 
 	(Fn
 	 (() (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a))))))
-	  (Record
-	   (() ((x (Record (() () ()))) (y (Fn (() (Var (() b)) (Var (() b)))))) ()))))
+	  (Record (r_info ()) (r_types (() () (b)))
+	   (r_values
+	    (()
+	     ((x (Record (r_info ()) (r_types (() () (c))) (r_values (() () ()))))
+	      (y (Fn (() (Var (() d)) (Var (() d))))))
+	     ())))))
 
 Runtime term:
 

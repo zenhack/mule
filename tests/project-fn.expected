@@ -5,7 +5,11 @@ Desugared:
 
 inferred type:
 
-	(Fn (() (Record (() ((y (Var (() a)))) (b))) (Var (() a))))
+	(Fn
+	 (()
+	  (Record (r_info ()) (r_types (() () (a)))
+	   (r_values (() ((y (Var (() b)))) (c))))
+	  (Var (() b))))
 
 Runtime term:
 

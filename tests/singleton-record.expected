@@ -6,7 +6,10 @@ Desugared:
 
 inferred type:
 
-	(Record (() ((x (Record (() () ())))) ()))
+	(Record (r_info ()) (r_types (() () (a)))
+	 (r_values
+	  (() ((x (Record (r_info ()) (r_types (() () (b))) (r_values (() () ())))))
+	   ())))
 
 Runtime term:
 

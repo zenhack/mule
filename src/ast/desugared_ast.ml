@@ -16,7 +16,11 @@ module Type = struct
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
-    | Record of 'i row
+    | Record of
+        { r_info : 'i
+        ; r_types : 'i row
+        ; r_values : 'i row
+        }
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
     | Named of ('i * string)
@@ -34,8 +38,12 @@ module Type = struct
         Recur(f x, v, map body ~f)
     | Var (x, v) ->
         Var(f x, v)
-    | Record row ->
-        Record(map_row row ~f)
+    | Record {r_info; r_types; r_values} ->
+        Record
+          { r_info = f r_info
+          ; r_types = map_row r_types ~f
+          ; r_values = map_row r_values ~f
+          }
     | Union row ->
         Union(map_row row ~f)
     | Quant(x, q, v, k, body) ->
