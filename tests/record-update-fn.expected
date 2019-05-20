@@ -1,16 +1,30 @@
 
 Desugared:
 
-	fn x. _.y:=_ x {}
+	(Lam (x (App ((App ((Update y) (Var x))) EmptyRecord))))
 
 inferred type:
 
-	{, ...a} -> {y : {}, ...a}
+	(Fn (() (Record (() () (a))) (Record (() ((y (Record (() () ())))) (a)))))
 
 Runtime term:
 
-	fn. (fn. fn. { v1 | y = v0 }) v0 {}
+	(Lam
+	 (0 ()
+	  (App
+	   ((App
+	     ((Lam
+	       (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	      (Var 0)))
+	    (Record ())))))
 
 Evaluated:
 
-	fn. (fn. fn. { v1 | y = v0 }) v0 {}
+	(Lam
+	 (0 ()
+	  (App
+	   ((App
+	     ((Lam
+	       (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	      (Var 0)))
+	    (Record ())))))

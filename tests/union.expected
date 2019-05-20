@@ -1,16 +1,16 @@
 
 Desugared:
 
-	(fn x. Ok x) {}
+	(App ((Lam (x (Ctor (Ok (Var x))))) EmptyRecord))
 
 inferred type:
 
-	Ok {} | ...a
+	(Union (() ((Ok (Record (() () ())))) (a)))
 
 Runtime term:
 
-	(fn. Ok v0) {}
+	(App ((Lam (0 () (Ctor (Ok (Var 0))))) (Record ())))
 
 Evaluated:
 
-	Ok {}
+	(Ctor (Ok (Record ())))

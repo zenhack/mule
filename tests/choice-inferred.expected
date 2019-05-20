@@ -1,5 +1,17 @@
 
 Desugared:
 
-	fn choice. fix/record fn $0. _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
+	(Lam
+	 (choice
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     ($0
+	      (App
+	       ((App
+	         ((Update x)
+	          (App
+	           ((App ((Update y) EmptyRecord))
+	            (App ((App ((Var choice) (Lam (x (Var x))))) (Lam (x (Var x)))))))))
+	        (App ((App ((Var choice) EmptyRecord)) EmptyRecord))))))))))
 Type error: mismatched type constructors: {...} and ->

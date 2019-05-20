@@ -1,35 +1,74 @@
 
 Desugared:
 
-	
-	  match _ with
-	  | Ok -> 
-	            fn $1. 
-	                     match _ with
-	                     | 
-	                         fn $0. let x = fix/let fn x. (_ : all a. a -> a) $0 in
-	                                fix/record fn $2. _.k:=_ (_.v:=_ {} (x fn y. y)) (x {})
-	                     end $1
-	  
-	  end ((fn x. Ok x) fn x. x)
+	(App
+	 ((Match
+	   (cases
+	    ((Ok
+	      ($1
+	       (App
+	        ((Match (cases ())
+	          (default
+	           ((($0)
+	             (Let
+	              (x
+	               (App
+	                ((Fix Let)
+	                 (Lam
+	                  (x
+	                   (App
+	                    ((WithType
+	                      (Quant
+	                       (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
+	                     (Var $0)))))))
+	               (App
+	                ((Fix Record)
+	                 (Lam
+	                  ($2
+	                   (App
+	                    ((App
+	                      ((Update k)
+	                       (App
+	                        ((App ((Update v) EmptyRecord))
+	                         (App ((Var x) (Lam (y (Var y)))))))))
+	                     (App ((Var x) EmptyRecord))))))))))))))
+	         (Var $1)))))))
+	   (default ()))
+	  (App ((Lam (x (Ctor (Ok (Var x))))) (Lam (x (Var x)))))))
 
 inferred type:
 
-	{k : {}, v : a -> a}
+	(Record
+	 (() ((k (Record (() () ()))) (v (Fn (() (Var (() a)) (Var (() a)))))) ()))
 
 Runtime term:
 
-	
-	  match _ with
-	  | Ok -> 
-	            fn. 
-	                  match _ with
-	                  | 
-	                      fn. (fn. fix/record fn. {k = v1 {}, v = v1 fn. v0}) (fix/let fn. v1)
-	                  end v0
-	  
-	  end ((fn. Ok v0) fn. v0)
+	(App
+	 ((Match
+	   (cases
+	    ((Ok
+	      (Lam
+	       (1 ()
+	        (App
+	         ((Match (cases ())
+	           (default
+	            ((Lam
+	              (1 ()
+	               (App
+	                ((Lam
+	                  (0 ()
+	                   (App
+	                    ((Fix Record)
+	                     (Lam
+	                      (1 ()
+	                       (Record
+	                        ((k (App ((Var 1) (Record ()))))
+	                         (v (App ((Var 1) (Lam (0 () (Var 0))))))))))))))
+	                 (App ((Fix Let) (Lam (1 () (Var 1))))))))))))
+	          (Var 0))))))))
+	   (default ()))
+	  (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0)))))))
 
 Evaluated:
 
-	{k = {}, v = fn. v0}
+	(Record ((k (Record ())) (v (Lam (0 () (Var 0))))))

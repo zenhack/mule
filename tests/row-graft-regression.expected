@@ -1,16 +1,44 @@
 
 Desugared:
 
-	fn f. fn arg. _.y:=_ arg (f (_.z arg))
+	(Lam
+	 (f
+	  (Lam
+	   (arg
+	    (App
+	     ((App ((Update y) (Var arg)))
+	      (App ((Var f) (App ((GetField (Strict z)) (Var arg)))))))))))
 
 inferred type:
 
-	(a -> b) -> {z : a, ...c} -> {y : b, z : a, ...c}
+	(Fn
+	 (() (Fn (() (Var (() a)) (Var (() b))))
+	  (Fn
+	   (() (Record (() ((z (Var (() a)))) (c)))
+	    (Record (() ((y (Var (() b))) (z (Var (() a)))) (c)))))))
 
 Runtime term:
 
-	fn. fn. (fn. fn. { v1 | y = v0 }) v0 (v1 (_.z v0))
+	(Lam
+	 (1 ()
+	  (Lam
+	   (1 ()
+	    (App
+	     ((App
+	       ((Lam
+	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	        (Var 0)))
+	      (App ((Var 1) (App ((GetField (Strict z)) (Var 0)))))))))))
 
 Evaluated:
 
-	fn. fn. (fn. fn. { v1 | y = v0 }) v0 (v1 (_.z v0))
+	(Lam
+	 (0 ()
+	  (Lam
+	   (1 ()
+	    (App
+	     ((App
+	       ((Lam
+	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	        (Var 0)))
+	      (App ((Var 1) (App ((GetField (Strict z)) (Var 0)))))))))))

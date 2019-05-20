@@ -1,1 +1,1 @@
-include MapSet.MkMap(ZComparable)
+include MapSet.MkMap(Bigint)

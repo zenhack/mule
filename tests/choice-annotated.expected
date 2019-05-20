@@ -1,17 +1,68 @@
 
 Desugared:
 
-	fn $0. let choice = (_ : all a. a -> a -> a) $0 in
-	       fix/record fn $1. _.x:=_ (_.y:=_ {} (choice fn x. x fn x. x)) (choice {} {})
+	(Lam
+	 ($0
+	  (Let
+	   (choice
+	    (App
+	     ((WithType
+	       (Quant
+	        (() All a Unknown
+	         (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a)))))))))
+	      (Var $0)))
+	    (App
+	     ((Fix Record)
+	      (Lam
+	       ($1
+	        (App
+	         ((App
+	           ((Update x)
+	            (App
+	             ((App ((Update y) EmptyRecord))
+	              (App
+	               ((App ((Var choice) (Lam (x (Var x))))) (Lam (x (Var x)))))))))
+	          (App ((App ((Var choice) EmptyRecord)) EmptyRecord))))))))))))
 
 inferred type:
 
-	(a -> a -> a) -> {x : {}, y : b -> b}
+	(Fn
+	 (() (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a))))))
+	  (Record
+	   (() ((x (Record (() () ()))) (y (Fn (() (Var (() b)) (Var (() b)))))) ()))))
 
 Runtime term:
 
-	fn. (fn. fix/record fn. {x = v1 {} {}, y = v1 fn. v0 fn. v0}) v0
+	(Lam
+	 (0 ()
+	  (App
+	   ((Lam
+	     (0 ()
+	      (App
+	       ((Fix Record)
+	        (Lam
+	         (1 ()
+	          (Record
+	           ((x (App ((App ((Var 1) (Record ()))) (Record ()))))
+	            (y
+	             (App
+	              ((App ((Var 1) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0))))))))))))))
+	    (Var 0)))))
 
 Evaluated:
 
-	fn. (fn. fix/record fn. {x = v1 {} {}, y = v1 fn. v0 fn. v0}) v0
+	(Lam
+	 (0 ()
+	  (App
+	   ((Lam
+	     (0 ()
+	      (App
+	       ((Fix Record)
+	        (Lam
+	         (1 ()
+	          (Record
+	           ((x (App ((App ((Var 1) (Record ()))) (Record ()))))
+	            (y
+	             (App
+	              ((App ((Var 1) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0))))))))))))))
+	    (Var 0)))))

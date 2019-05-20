@@ -1,19 +1,101 @@
 
 Desugared:
 
-	let fix = fix/let fn fix. (_ : all a. all b. ((a -> b) -> a -> b) -> a -> b) fn f. 
-	            let g = fix/let fn g. fn x. f fn v. x x v in
-	            g g in
-	fix
+	(Let
+	 (fix
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (fix
+	      (App
+	       ((WithType
+	         (Quant
+	          (() All a Unknown
+	           (Quant
+	            (() All b Unknown
+	             (Fn
+	              (()
+	               (Fn
+	                (() (Fn (() (Var (() a)) (Var (() b))))
+	                 (Fn (() (Var (() a)) (Var (() b))))))
+	               (Fn (() (Var (() a)) (Var (() b)))))))))))
+	        (Lam
+	         (f
+	          (Let
+	           (g
+	            (App
+	             ((Fix Let)
+	              (Lam
+	               (g
+	                (Lam
+	                 (x
+	                  (App
+	                   ((Var f)
+	                    (Lam (v (App ((App ((Var x) (Var x))) (Var v)))))))))))))
+	            (App ((Var g) (Var g)))))))))))))
+	  (Var fix)))
 
 inferred type:
 
-	((a -> b) -> a -> b) -> a -> b
+	(Fn
+	 (()
+	  (Fn
+	   (() (Fn (() (Var (() a)) (Var (() b))))
+	    (Fn (() (Var (() a)) (Var (() b))))))
+	  (Fn (() (Var (() a)) (Var (() b))))))
 
 Runtime term:
 
-	(fn. v0) (fix/let fn. fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0))
+	(App
+	 ((Lam (0 () (Var 0)))
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (2 ()
+	      (Lam
+	       (2 ()
+	        (App
+	         ((Lam (0 () (App ((Var 0) (Var 0)))))
+	          (App
+	           ((Fix Let)
+	            (Lam
+	             (2 ()
+	              (Lam
+	               (2 ()
+	                (App
+	                 ((Var 2)
+	                  (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))))))))))))))
 
 Evaluated:
 
-	fn. (fn. v0 v0) (fix/let fn. fn. v2 fn. v1 v1 v0)
+	(Lam
+	 (0
+	  ((Lazy
+	    (()
+	     (App
+	      ((Fix Let)
+	       (Lam
+	        (0 ()
+	         (Lam
+	          (2 ()
+	           (App
+	            ((Lam (0 () (App ((Var 0) (Var 0)))))
+	             (App
+	              ((Fix Let)
+	               (Lam
+	                (2 ()
+	                 (Lam
+	                  (2 ()
+	                   (App
+	                    ((Var 2)
+	                     (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0))))))))))))))))))))))))
+	  (App
+	   ((Lam (0 () (App ((Var 0) (Var 0)))))
+	    (App
+	     ((Fix Let)
+	      (Lam
+	       (2 ()
+	        (Lam
+	         (2 ()
+	          (App
+	           ((Var 2) (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))))))))

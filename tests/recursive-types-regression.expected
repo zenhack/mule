@@ -1,16 +1,16 @@
 
 Desugared:
 
-	(fn x. x x) fn x. x
+	(App ((Lam (x (App ((Var x) (Var x))))) (Lam (x (Var x)))))
 
 inferred type:
 
-	rec a. a -> a
+	(Recur (() a (Fn (() (Var (() a)) (Var (() a))))))
 
 Runtime term:
 
-	(fn. v0 v0) fn. v0
+	(App ((Lam (0 () (App ((Var 0) (Var 0))))) (Lam (0 () (Var 0)))))
 
 Evaluated:
 
-	fn. v0
+	(Lam (0 () (Var 0)))

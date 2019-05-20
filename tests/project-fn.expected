@@ -1,16 +1,16 @@
 
 Desugared:
 
-	fn x. _.y x
+	(Lam (x (App ((GetField (Strict y)) (Var x)))))
 
 inferred type:
 
-	{y : a, ...b} -> a
+	(Fn (() (Record (() ((y (Var (() a)))) (b))) (Var (() a))))
 
 Runtime term:
 
-	fn. _.y v0
+	(Lam (0 () (App ((GetField (Strict y)) (Var 0)))))
 
 Evaluated:
 
-	fn. _.y v0
+	(Lam (0 () (App ((GetField (Strict y)) (Var 0)))))

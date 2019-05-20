@@ -5,10 +5,12 @@ module Kind = struct
     | Unknown
     | Type
     | Row
+    [@@deriving sexp]
 end
 
 module Type = struct
   type quantifier = [ `All | `Exist ]
+    [@@deriving sexp]
 
   type 'i t =
     | Fn of ('i * 'i t * 'i t)
@@ -18,8 +20,10 @@ module Type = struct
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
     | Named of ('i * string)
+    [@@deriving sexp]
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
+    [@@deriving sexp]
 
   let rec map ty ~f = match ty with
     | Named(x, s) ->
@@ -63,5 +67,6 @@ module Expr = struct
       }
     | WithType of unit Type.t
     | Let of (Var.t * t * t)
-    | Integer of Z.t
+    | Integer of Bigint.t
+    [@@deriving sexp]
 end

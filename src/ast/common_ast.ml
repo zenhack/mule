@@ -4,6 +4,7 @@ module Name = struct
 
     val compare : t -> t -> int
     val sexp_of_t : t -> Sexp.t
+    val t_of_sexp : Sexp.t -> t
 
     val of_string : string -> t
     val to_string : t -> string
@@ -15,6 +16,7 @@ module Name = struct
     module T = struct
       type t = string
       let sexp_of_t = sexp_of_string
+      let t_of_sexp = string_of_sexp
       let compare = String.compare
     end
 

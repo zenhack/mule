@@ -1,16 +1,16 @@
 
 Desugared:
 
-	{}
+	EmptyRecord
 
 inferred type:
 
-	{}
+	(Record (() () ()))
 
 Runtime term:
 
-	{}
+	(Record ())
 
 Evaluated:
 
-	{}
+	(Record ())

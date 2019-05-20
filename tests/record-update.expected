@@ -1,16 +1,31 @@
 
 Desugared:
 
-	_.y:=_ (fix/record fn $1. _.x:=_ {} {}) (fix/record fn $0. _.z:=_ {} {})
+	(App
+	 ((App
+	   ((Update y)
+	    (App
+	     ((Fix Record)
+	      (Lam ($1 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))))
+	  (App
+	   ((Fix Record)
+	    (Lam ($0 (App ((App ((Update z) EmptyRecord)) EmptyRecord))))))))
 
 inferred type:
 
-	{x : {}, y : {z : {}}}
+	(Record
+	 (() ((x (Record (() () ()))) (y (Record (() ((z (Record (() () ())))) ()))))
+	  ()))
 
 Runtime term:
 
-	(fn. fn. { v1 | y = v0 }) (fix/record fn. {x = {}}) (fix/record fn. {z = {}})
+	(App
+	 ((App
+	   ((Lam
+	     (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	    (App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))))
+	  (App ((Fix Record) (Lam (0 () (Record ((z (Record ()))))))))))
 
 Evaluated:
 
-	{x = {}, y = {z = {}}}
+	(Record ((x (Record ())) (y (Record ((z (Record ())))))))

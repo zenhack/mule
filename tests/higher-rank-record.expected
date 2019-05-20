@@ -1,18 +1,64 @@
 
 Desugared:
 
-	let r = fix/let fn r. fix/record fn $1. _.y:=_ {} fn x. x in
-	let f = fix/let fn f. (_ : all a. a -> a) (_.y r) in
-	fix/record fn $0. _.l:=_ (_.k:=_ {} (f fn z. z)) (f {})
+	(Let
+	 (r
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (r
+	      (App
+	       ((Fix Record)
+	        (Lam ($1 (App ((App ((Update y) EmptyRecord)) (Lam (x (Var x)))))))))))))
+	  (Let
+	   (f
+	    (App
+	     ((Fix Let)
+	      (Lam
+	       (f
+	        (App
+	         ((WithType
+	           (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
+	          (App ((GetField (Strict y)) (Var r)))))))))
+	    (App
+	     ((Fix Record)
+	      (Lam
+	       ($0
+	        (App
+	         ((App
+	           ((Update l)
+	            (App
+	             ((App ((Update k) EmptyRecord))
+	              (App ((Var f) (Lam (z (Var z)))))))))
+	          (App ((Var f) EmptyRecord))))))))))))
 
 inferred type:
 
-	{k : a -> a, l : {}}
+	(Record
+	 (() ((k (Fn (() (Var (() a)) (Var (() a))))) (l (Record (() () ())))) ()))
 
 Runtime term:
 
-	(fn. (fn. fix/record fn. {k = v1 fn. v0, l = v1 {}}) (fix/let fn. _.y v1)) (fix/let fn. fix/record fn. {y = fn. v0})
+	(App
+	 ((Lam
+	   (1 ()
+	    (App
+	     ((Lam
+	       (0 ()
+	        (App
+	         ((Fix Record)
+	          (Lam
+	           (1 ()
+	            (Record
+	             ((k (App ((Var 1) (Lam (0 () (Var 0))))))
+	              (l (App ((Var 1) (Record ()))))))))))))
+	      (App ((Fix Let) (Lam (1 () (App ((GetField (Strict y)) (Var 1)))))))))))
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (-1 ()
+	      (App ((Fix Record) (Lam (0 () (Record ((y (Lam (0 () (Var 0))))))))))))))))
 
 Evaluated:
 
-	{k = fn. v0, l = {}}
+	(Record ((k (Lam (0 () (Var 0)))) (l (Record ()))))

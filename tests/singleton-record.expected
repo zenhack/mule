@@ -1,16 +1,17 @@
 
 Desugared:
 
-	fix/record fn $0. _.x:=_ {} {}
+	(App
+	 ((Fix Record) (Lam ($0 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))
 
 inferred type:
 
-	{x : {}}
+	(Record (() ((x (Record (() () ())))) ()))
 
 Runtime term:
 
-	fix/record fn. {x = {}}
+	(App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))
 
 Evaluated:
 
-	{x = {}}
+	(Record ((x (Record ()))))

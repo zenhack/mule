@@ -1,16 +1,22 @@
 
 Desugared:
 
-	_.x (fix/record fn $0. _.x:=_ {} {})
+	(App
+	 ((GetField (Strict x))
+	  (App
+	   ((Fix Record)
+	    (Lam ($0 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))))
 
 inferred type:
 
-	{}
+	(Record (() () ()))
 
 Runtime term:
 
-	_.x (fix/record fn. {x = {}})
+	(App
+	 ((GetField (Strict x))
+	  (App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))))
 
 Evaluated:
 
-	{}
+	(Record ())

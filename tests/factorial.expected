@@ -1,26 +1,52 @@
 
 Desugared:
 
-	let factorial = fix/let fn factorial. fn n. 
-	                                              match-lam
-	                                              | 0 -> 1
-	                                              | fn n. mul n (factorial (sub n 1))
-	                                              end n in
-	factorial 5
+	(Let
+	 (factorial
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (factorial
+	      (Lam
+	       (n
+	        (App
+	         ((IntMatch (im_cases ((0 (Integer 1))))
+	           (im_default
+	            (Lam
+	             (n
+	              (App
+	               ((App ((Var mul) (Var n)))
+	                (App
+	                 ((Var factorial)
+	                  (App ((App ((Var sub) (Var n))) (Integer 1)))))))))))
+	          (Var n)))))))))
+	  (App ((Var factorial) (Integer 5)))))
 
 inferred type:
 
-	int
+	(Named (() int))
 
 Runtime term:
 
-	(fn. v0 5) (fix/let fn. fn. 
-	                              match _ with
-	                              | 0 -> 1
-	                              | 
-	                                  fn. <built-in function> v0 (v2 (<built-in function> v0 1))
-	                              end v0)
+	(App
+	 ((Lam (0 () (App ((Var 0) (Integer 5)))))
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (2 ()
+	      (Lam
+	       (2 ()
+	        (App
+	         ((IntMatch (im_cases ((0 (Integer 1))))
+	           (im_default
+	            (Lam
+	             (2 ()
+	              (App
+	               ((App ((Prim <fun>) (Var 0)))
+	                (App
+	                 ((Var 2) (App ((App ((Prim <fun>) (Var 0))) (Integer 1)))))))))))
+	          (Var 0)))))))))))
 
 Evaluated:
 
-	120
+	(Integer 120)

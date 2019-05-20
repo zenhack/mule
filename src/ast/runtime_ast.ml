@@ -24,6 +24,7 @@ module Expr = struct
       }
     | Lazy of (t list * t ref)
     | Vec of t array
-    | Integer of Z.t
+    | Integer of Bigint.t
     | Prim of (t -> t)
+  [@@deriving sexp]
 end
