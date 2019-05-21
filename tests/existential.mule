@@ -1,0 +1,1 @@
+(fn x. 4) : exist t. t -> t

@@ -4,22 +4,47 @@ open Gen_t
 open Typecheck_types
 
 (* Generate coercion types from type annotations.
- * See {MLF-Graph-Infer} section 6.
+ *
+ * This is based on {MLF-Graph-Infer} section 6, but we do one important
+ * thing differently: Instead of *sharing* existential types between the
+ * coercion's parameter and result, we map them to flexibly bound bottom
+ * nodes in the parameter (as in the paper), but in the result we generate
+ * fresh "constant" constructors.
+ *
+ * The idea is that when we supply a type annotation with an existential
+ * in it, we want to *hide* the type from the outside -- this maps closely
+ * to sealing in ML module systems. By contrast, the treatment of
+ * existentials in the paper is more like "type holes" in some systems --
+ * they allow you to specify some of a type annotation, but let the compiler
+ * work out the rest. As a concrete example:
+ *
+ * (fn x. 4) : exist t. t -> t
+ *
+ * The algorithm int he paper will infer (int -> int), but this code
+ * will invent a new constant type t and infer (t -> t).
  *
  * The general process of constructing a coercion type is as follows:
  *
  * 1. Alpha-rename the existentially-bound variables within the type.
  *    This way we don't have to worry about shadowing in later steps.
  * 2. Collect the names of existentially-bound variables.
- * 3. Generate a unification variable for each existential, and store
- *    them in a map.
- * 4. Walk over the type twice, generating two constraint graphs for it
- *    which share only the nodes for existential variables (looked up
- *    in the map we generated.
+ * 3. Generate two maps with the existential variable names as keys:
+ *    - One whose values are each fresh unfication variables.
+ *    - One whose values are each fresh *constant* type constructors --
+ *    see the above discussion.
+ * 4. Walk over the type twice, generating two constraint graphs for it,
+ *    with no shared structure, each using one of the maps for the
+ *    existentials. The first map is used for the graph to be used as
+ *    the parameter, the second for the result.
  * 5. Make a function node.
- * 6. Bind each of the copies to the function node. The parameter will
+ * 6. Bind each of the graphs to the function node. The parameter will
  *    be bound rigidly, and the result flexibly.
  * 7. Bind the existentials to the new function node.
+ *
+ * TODO: This can probably be simplified; it was written when we were
+ * doing exactly what was in the paper, so the two subgraphs had to share
+ * existential nodes. Now that we don't have this constraint, there
+ * may be a more straightforward way to build this.
  *)
 
 (* Alpha-rename existentially bound vars. *)
@@ -267,9 +292,14 @@ let make_coercion_type g ty =
        * will be the two copies of the type in the annotation, and it will
        * be the bound of the existentials.
        *)
-      let exist_map = Map.map exist_vars ~f:(fun k -> gen_u k (`Ty root)) in
-      let param = make_poly `Type (`Ty root) exist_map graph_ty in
-      let ret = make_poly `Type (`Ty root) exist_map graph_ty in
+      let exist_map_param = Map.map exist_vars ~f:(fun k -> gen_u k (`Ty root)) in
+      let exist_map_result = Map.map exist_vars ~f:(fun k ->
+        let name = Var.to_string (Gensym.anon_var ()) in
+        UnionFind.make (`Const(ty_var_at (`Ty root), `Named name, [], k))
+      )
+      in
+      let param = make_poly `Type (`Ty root) exist_map_param graph_ty in
+      let ret = make_poly `Type (`Ty root) exist_map_result graph_ty in
       let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
       param_bound := { !param_bound with b_ty = `Rigid };
       (param, ret)
