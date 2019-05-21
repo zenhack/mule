@@ -1,11 +1,5 @@
 include Debug_t
 
-let report enabled =
-  if enabled then
-    fun f -> Stdio.print_endline (f ())
-  else
-    fun _ -> ()
-
 let frame_no: int ref = ref 0
 
 let edges: (edge_type * int * int) list ref = ref []

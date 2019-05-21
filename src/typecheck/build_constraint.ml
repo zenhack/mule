@@ -200,24 +200,14 @@ let make_cops: unit ->
   * (unify_edge list) ref
   * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
   ) = fun () ->
-  let report = Debug.report Config.dump_constraints in
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
   let cops =
     { constrain_unify   =
       (fun l r ->
-        report (fun () -> "constrain unify: "
-          ^ show_u_type_v l
-          ^ " = "
-          ^ show_u_type_v r);
         ucs := Unify(l, r) :: !ucs)
     ; constrain_inst =
         begin fun g t ->
-          report
-            (fun () -> "constrain_inst: "
-              ^ show_u_type_v t
-              ^ " <: "
-              ^ show_g g);
           ics := Map.update !ics g.g_id ~f:(function
               | None -> (g, [t])
               | Some (_, ts) -> (g, (t :: ts))
