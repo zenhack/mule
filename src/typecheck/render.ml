@@ -14,6 +14,11 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
       begin match t with
         | `Free _ ->
             Debug.show_node `TyVar n
+        | `Quant (_, arg) ->
+            Debug.show_node (`Const (`Named "Q")) n;
+            let v_id = (get_tyvar (UnionFind.get arg)).ty_id in
+            Debug.show_edge `Structural n v_id;
+            emit_all_nodes_ty arg dict
         | `Const(_, c, args, _) ->
             Debug.show_node (`Const c) n;
             let n_ids = List.map args

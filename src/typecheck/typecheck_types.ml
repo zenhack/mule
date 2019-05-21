@@ -12,6 +12,7 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * u_kind)
+  | `Quant of (tyvar * u_type UnionFind.var)
   | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * u_kind) list * u_kind)
   ]
 and bound_ty = [ `Rigid | `Flex ]
@@ -57,4 +58,5 @@ let perm_eq: permission -> permission -> bool = Poly.equal
 let get_tyvar: u_type -> tyvar = function
   | `Free (v, _) -> v
   | `Const (v, _, _, _) -> v
+  | `Quant (v, _) -> v
 let get_u_bound x = !((get_tyvar x).ty_bound)

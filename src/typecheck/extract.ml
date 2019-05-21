@@ -67,7 +67,11 @@ let add_rec_binders ty =
 let rec get_var_type env t =
   let i = (get_tyvar t).ty_id in
   match t with
-  | _ when Set.mem env (ivar i) -> Type.Var (i, (ivar i))
+  | _ when Set.mem env (ivar i) ->
+      Type.Var (i, (ivar i))
+  | `Quant (_, arg) ->
+      (* TODO: it would be good to actually show the quantifiers. *)
+      get_var_type env (UnionFind.get arg)
   | `Free ({ty_id = i; _}, _) -> Type.Var (i, (ivar i))
   | `Const({ty_id = i; _}, c, args, _) ->
       let env' = Set.add env (ivar i) in
@@ -105,6 +109,8 @@ and get_var_row env r =
   let (fields, rest) =
     match r with
     | _ when Set.mem env (ivar i) -> ([], Some (ivar i))
+    | `Quant(_, arg) ->
+        get_var_row env (UnionFind.get arg)
     | `Free ({ty_id = i; _}, _) -> ([], Some (ivar i))
     | `Const({ty_id = i; _}, c, args, _) ->
         begin match c, args with

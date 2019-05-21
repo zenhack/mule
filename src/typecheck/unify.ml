@@ -126,6 +126,8 @@ let rec raise_bounds: bound_target bound -> IntSet.t ref -> u_type -> unit =
         raise_tv bound tv;
         match t with
         | `Free _ -> ()
+        | `Quant(_, arg) ->
+            raise_bounds bound visited (UnionFind.get arg)
         | `Const(_, _, args, _) ->
             List.iter
               args
@@ -170,6 +172,15 @@ let rec unify already_merged l r =
 
   (* Neither side of these is a type variable, so we need to do a merge.
    * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
+  | `Quant(_, argl), `Quant(_, argr) ->
+      whnf_unify already_merged argl argr;
+      `Quant(merge_tv (), argl)
+
+  | `Quant _, `Const _ | `Const _, `Quant _ ->
+      (* quantifiers and constructors should interleave, so we should never have
+       * them paired. *)
+      failwith "Impossible"
+
   | `Const(_, cl, argsl, k), `Const(_, cr, argsr, _) ->
       if typeconst_eq cl cr then
         (* Top level type constructors that match. We recursively

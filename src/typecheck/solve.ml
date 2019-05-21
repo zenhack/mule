@@ -118,6 +118,8 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
               (* Now do a deep copy, subbing in the new bound. *)
               let ret = UnionFind.make (match n with
                 | `Free _ -> `Free (new_tyvar, kind)
+                | `Quant (_, arg) ->
+                    `Quant(new_tyvar, go kind arg new_root)
                 | `Const(_, c, args, _) ->
                     `Const
                       ( new_tyvar
