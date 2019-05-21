@@ -190,7 +190,7 @@ let rec unify already_merged l r =
          *)
         begin
           List.iter2_exn argsl argsr
-            ~f:(fun (l, _) (r, _) -> UnionFind.merge (unify already_merged) l r);
+            ~f:(fun (l, _) (r, _) -> whnf_unify already_merged l r);
           `Const(merge_tv (), cl, argsl, k)
         end
       else
@@ -224,10 +224,10 @@ let rec unify already_merged l r =
                 ; ty_bound = (get_tyvar l).ty_bound
                 }
               in
-              UnionFind.merge (unify already_merged)
+              whnf_unify already_merged
                 r_rest
                 (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
-              UnionFind.merge (unify already_merged)
+              whnf_unify already_merged
                 l_rest
                 (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
             end;
@@ -237,4 +237,7 @@ let rec unify already_merged l r =
            * unfication fails. *)
           ctorErr cl cr
         end
+(* Wrapper around UnionFind.merge/unify that first reduces the arguments to whnf. *)
+and whnf_unify already_merged l r =
+  UnionFind.merge (unify already_merged) (Normalize.whnf l) (Normalize.whnf r)
 let unify = unify IntPairSet.empty
