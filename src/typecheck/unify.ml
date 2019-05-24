@@ -176,11 +176,18 @@ let rec unify already_merged l r =
       whnf_unify already_merged argl argr;
       `Quant(merge_tv (), argl)
 
-  | `Quant _, `Const _ | `Const _, `Quant _ ->
-      (* quantifiers and constructors should interleave, so we should never have
-       * them paired. *)
-      failwith "Impossible"
-
+  | `Quant(_, arg), `Const(tv, c, args, k)
+  | `Const (tv, c, args, k), `Quant(_, arg) ->
+      (* Merge the const with the arg, and then wrap it up in a quant. *)
+      let tv' =
+        { ty_id = gensym ()
+        ; ty_bound = ref (!(tv.ty_bound))
+        }
+      in
+      whnf_unify already_merged
+        (UnionFind.make (`Const(tv', c, args, k)))
+        arg;
+      `Quant(merge_tv (), arg)
   | `Const(_, cl, argsl, k), `Const(_, cr, argsr, _) ->
       if typeconst_eq cl cr then
         (* Top level type constructors that match. We recursively
