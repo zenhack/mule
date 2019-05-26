@@ -20,7 +20,7 @@ open Typecheck_types
  *
  * (fn x. 4) : exist t. t -> t
  *
- * The algorithm int he paper will infer (int -> int), but this code
+ * The algorithm in the paper will infer (int -> int), but this code
  * will invent a new constant type t and infer (t -> t).
  *
  * The general process of constructing a coercion type is as follows:
