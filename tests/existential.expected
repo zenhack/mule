@@ -7,7 +7,7 @@ Desugared:
 
 inferred type:
 
-	(Fn (() (Named (() $166)) (Named (() $166))))
+	(Fn (() (Named (() $11)) (Named (() $11))))
 
 Runtime term:
 
