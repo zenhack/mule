@@ -115,24 +115,41 @@ let raise_tv: bound_target bound -> tyvar -> unit = fun b tv ->
   tv.ty_bound := new_bound
 
 (* Raise the bounds for an entire subtree. *)
-let rec raise_bounds: bound_target bound -> IntSet.t ref -> u_type -> unit =
-  fun bound visited t ->
+let rec raise_bounds: bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -> unit =
+  fun bound above visited t ->
     let tv = get_tyvar t in
+    let bound_tgt_id =
+      match (!(tv.ty_bound)).b_at with
+      | `G {g_id; _} -> g_id
+      | `Ty at ->
+          let {ty_id; _} =
+            Lazy.force at
+            |> UnionFind.get
+            |> get_tyvar
+          in
+          ty_id
+    in
     if Set.mem !visited tv.ty_id then
       ()
     else
       begin
         visited := Set.add !visited tv.ty_id;
-        raise_tv bound tv;
+        begin
+          if Set.mem above bound_tgt_id then
+            ()
+          else
+            raise_tv bound tv
+        end;
+        let new_above = Set.add above tv.ty_id in
         match t with
         | `Free _ -> ()
         | `Quant(_, arg) ->
-            raise_bounds bound visited (UnionFind.get arg)
+            raise_bounds bound new_above visited (UnionFind.get arg)
         | `Const(_, _, args, _) ->
             List.iter
               args
               ~f:(fun (ty, _) ->
-                    raise_bounds bound visited (UnionFind.get ty))
+                    raise_bounds bound new_above visited (UnionFind.get ty))
       end
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
@@ -146,7 +163,7 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
    *)
-  raise_bounds !(v.ty_bound) (ref IntSet.empty) t;
+  raise_bounds !(v.ty_bound) IntSet.empty (ref IntSet.empty) t;
   ignore (unify_tyvar (get_tyvar t) v);
   t
 
