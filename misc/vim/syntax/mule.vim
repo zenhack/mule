@@ -17,7 +17,9 @@ syntax keyword muleImport
 	\ import
 	\ embed
 
-syntax match muleComment "\v#.*$"
+syntax keyword muleTodo contained TODO FIXME XXX BUG
+
+syntax match muleComment "\v#.*$" contains=muleTodo
 
 syntax match muleOperator "\v\.\.\."
 syntax match muleOperator "\v\{"
@@ -36,6 +38,7 @@ syntax region muleString start=/\v"/ skip=/v\\./ end=/\v"/
 syntax region muleDocString start=/\v"""/ end=/\v"""/
 
 
+highlight default link muleTodo Todo
 highlight default link muleComment Comment
 highlight default link muleKeywords Keyword
 highlight default link muleOperator Operator
