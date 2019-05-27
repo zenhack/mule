@@ -129,28 +129,22 @@ let rec raise_bounds: bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -
           in
           ty_id
     in
-    if Set.mem !visited tv.ty_id then
-      ()
-    else
-      begin
-        visited := Set.add !visited tv.ty_id;
-        begin
-          if Set.mem above bound_tgt_id then
-            ()
-          else
-            raise_tv bound tv
-        end;
-        let new_above = Set.add above tv.ty_id in
-        match t with
-        | `Free _ -> ()
-        | `Quant(_, arg) ->
-            raise_bounds bound new_above visited (UnionFind.get arg)
-        | `Const(_, _, args, _) ->
-            List.iter
-              args
-              ~f:(fun (ty, _) ->
-                    raise_bounds bound new_above visited (UnionFind.get ty))
-      end
+    if not (Set.mem !visited tv.ty_id) then begin
+      visited := Set.add !visited tv.ty_id;
+      if not (Set.mem above bound_tgt_id) then begin
+        raise_tv bound tv
+      end;
+      let new_above = Set.add above tv.ty_id in
+      match t with
+      | `Free _ -> ()
+      | `Quant(_, arg) ->
+          raise_bounds bound new_above visited (UnionFind.get arg)
+      | `Const(_, _, args, _) ->
+          List.iter
+            args
+            ~f:(fun (ty, _) ->
+                  raise_bounds bound new_above visited (UnionFind.get ty))
+    end
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a
