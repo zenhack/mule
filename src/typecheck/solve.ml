@@ -99,9 +99,32 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                       ; b_at = `G new_g
                       }
                     else
-                      { b_ty = old_bound.b_ty
-                      ; b_at = `Ty new_root
-                      }
+                      (* point the new bound at the node that corresponds to the node
+                       * that the original was bound on.
+                       *
+                       * Note that this differs from {MLF-Graph-Infer}, which always
+                       * binds such nodes on new_root. I think the latter may not
+                       * actually be correct; with type annotations it can result
+                       * in things being raised above the rigid edge, allowing them
+                       * to be instatiated when they should not be.
+                       *
+                       * TODO: understand the descrepency more clearly.
+                       *)
+                      begin match old_bound.b_at with
+                      | `Ty at ->
+                          let {ty_id = old_bound_id; _} =
+                            get_tyvar (UnionFind.get (Lazy.force at))
+                          in
+                          let new_at = Map.find_exn !visited old_bound_id in
+                          { b_ty = old_bound.b_ty
+                          ; b_at = `Ty (lazy new_at)
+                          }
+                       | `G _ ->
+                          (* I don't think this is actually possible. *)
+                          { b_ty = old_bound.b_ty
+                          ; b_at = `Ty new_root
+                          }
+                      end
                   )
               in
               let new_tyvar =
