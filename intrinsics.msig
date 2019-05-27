@@ -1,0 +1,13 @@
+# This is the type signature for a module exposing the things that are
+# built-in to the interpreter.
+#
+# TODO: actually use this during the build, rather than duplicating this
+# in ./src/intrinsics.ml
+{
+  , type int
+  , add : int -> int -> int
+  , sub : int -> int -> int
+  , mul : int -> int -> int
+  , div : int -> int -> int
+  , rem : int -> int -> int
+}
