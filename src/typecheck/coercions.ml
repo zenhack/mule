@@ -50,54 +50,53 @@ let rec gen_type
   -> 'i Type.t
   -> u_type UnionFind.var
   =
-    fun b_at env ~new_exist ty ->
-
-  let tv = ty_var_at b_at in
-  match ty with
-  | Type.Named (_, s) ->
-      UnionFind.make (`Const(tv, `Named s, [], `Type))
-  | Type.Fn (_, param, ret) ->
-      UnionFind.make
-        (fn tv
-          (gen_type b_at env ~new_exist param)
-          (gen_type b_at env ~new_exist ret))
-  | Type.Recur(_, v, body) ->
-      let ret = gen_u `Type b_at in
-      let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) ~new_exist body in
-      UnionFind.merge (fun _ r -> r) ret ret';
-      ret
-  | Type.Var (_, v) ->
-      Map.find_exn env v
-  | Type.Record {r_info = _; r_types; r_values} ->
-      UnionFind.make (
-        record tv
-          (gen_row b_at env ~new_exist r_types)
-          (gen_row b_at env ~new_exist r_values)
-      )
-  | Type.Union row ->
-      UnionFind.make (union tv (gen_row b_at env ~new_exist row))
-  | Type.Quant(_, `All, v, k, body) ->
-      let ret = gen_u `Type b_at in
-      let bound_v = gen_u (gen_kind k) (`Ty (lazy ret)) in
-      let ret' =
-        UnionFind.make (`Quant
-          ( tv
-          , gen_type
-              b_at
-              (Map.set env ~key:v ~data:bound_v)
-              ~new_exist
-              body
-          )
+  fun b_at env ~new_exist ty ->
+    let tv = ty_var_at b_at in
+    match ty with
+    | Type.Named (_, s) ->
+        UnionFind.make (`Const(tv, `Named s, [], `Type))
+    | Type.Fn (_, param, ret) ->
+        UnionFind.make
+          (fn tv
+            (gen_type b_at env ~new_exist param)
+            (gen_type b_at env ~new_exist ret))
+    | Type.Recur(_, v, body) ->
+        let ret = gen_u `Type b_at in
+        let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) ~new_exist body in
+        UnionFind.merge (fun _ r -> r) ret ret';
+        ret
+    | Type.Var (_, v) ->
+        Map.find_exn env v
+    | Type.Record {r_info = _; r_types; r_values} ->
+        UnionFind.make (
+          record tv
+            (gen_row b_at env ~new_exist r_types)
+            (gen_row b_at env ~new_exist r_values)
         )
-      in
-      UnionFind.merge (fun _ r -> r) ret ret';
-      ret
-  | Type.Quant(_, `Exist, v, k, body) ->
-      gen_type
-        b_at
-        (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
-        ~new_exist
-        body
+    | Type.Union row ->
+        UnionFind.make (union tv (gen_row b_at env ~new_exist row))
+    | Type.Quant(_, `All, v, k, body) ->
+        let ret = gen_u `Type b_at in
+        let bound_v = gen_u (gen_kind k) (`Ty (lazy ret)) in
+        let ret' =
+          UnionFind.make (`Quant
+            ( tv
+            , gen_type
+                b_at
+                (Map.set env ~key:v ~data:bound_v)
+                ~new_exist
+                body
+            )
+          )
+        in
+        UnionFind.merge (fun _ r -> r) ret ret';
+        ret
+    | Type.Quant(_, `Exist, v, k, body) ->
+        gen_type
+          b_at
+          (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
+          ~new_exist
+          body
 (* [gen_row] is like [gen_type], but for row variables. *)
 and gen_row b_at env ~new_exist (_, fields, rest) =
   let rest' =
