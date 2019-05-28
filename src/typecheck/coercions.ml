@@ -22,29 +22,6 @@ open Typecheck_types
  *
  * The algorithm in the paper will infer (int -> int), but this code
  * will invent a new constant type t and infer (t -> t).
- *
- * The general process of constructing a coercion type is as follows:
- *
- * 1. Alpha-rename the existentially-bound variables within the type.
- *    This way we don't have to worry about shadowing in later steps.
- * 2. Collect the names of existentially-bound variables.
- * 3. Generate two maps with the existential variable names as keys:
- *    - One whose values are each fresh unfication variables.
- *    - One whose values are each fresh *constant* type constructors --
- *    see the above discussion.
- * 4. Walk over the type twice, generating two constraint graphs for it,
- *    with no shared structure, each using one of the maps for the
- *    existentials. The first map is used for the graph to be used as
- *    the parameter, the second for the result.
- * 5. Make a function node.
- * 6. Bind each of the graphs to the function node. The parameter will
- *    be bound rigidly, and the result flexibly.
- * 7. Bind the existentials to the new function node.
- *
- * TODO: This can probably be simplified; it was written when we were
- * doing exactly what was in the paper, so the two subgraphs had to share
- * existential nodes. Now that we don't have this constraint, there
- * may be a more straightforward way to build this.
  *)
 
 type env_t = (u_type UnionFind.var) VarMap.t
@@ -55,6 +32,17 @@ let gen_kind = function
   | Kind.Unknown ->
       failwith "BUG: Infer_kind should already have been called"
 
+(* [gen_type b_at env ~new_exist ty] generates a graphic type based on [ty].
+ *
+ * - monomorphic nodes are bound on [b_at].
+ * - [new_exist] is used to generate nodes for existentially bound variables;
+ *   it is called once per type variable, and passed the kind of that variable.
+ * - [env] is a mapping from type variable names to unification variables; free
+ *   variables will be replaced with their values in the map. All free variables
+ *   _must_ be contained within the map.
+ *
+ * The return value is a unification variable for the root of the type.
+ *)
 let rec gen_type
   : bound_target
   -> env_t
@@ -110,6 +98,7 @@ let rec gen_type
         (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
         ~new_exist
         body
+(* [gen_row] is like [gen_type], but for row variables. *)
 and gen_row b_at env ~new_exist (_, fields, rest) =
   let rest' =
     match rest with
@@ -130,6 +119,16 @@ and gen_row b_at env ~new_exist (_, fields, rest) =
     )
 
 let make_coercion_type g ty =
+  (* Actually make the coercion.
+   *
+   * General procedure:
+   *
+   * 1. Infer the kinds within the type.
+   * 2. Call [gen_type] twice on ty, with different values for [new_exist];
+   *    see the discussion at the top of the file.
+   * 3. Generate a function node, and bound the two copies of the type to
+   *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
+   *)
   let kinded_ty = Infer_kind.infer VarMap.empty ty in
   fst (Util.fix
     (fun vars ->
