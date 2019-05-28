@@ -19,9 +19,9 @@ module Expr = struct
         default: t option;
       }
     | IntMatch of
-      { im_cases: t ZMap.t
-      ; im_default: t
-      }
+        { im_cases: t ZMap.t
+        ; im_default: t
+        }
     | Lazy of (t list * t ref)
     | Vec of t array
     | Integer of Bigint.t

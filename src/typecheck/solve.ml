@@ -6,19 +6,19 @@ open Unify
 
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
-    | `Ty t ->
+      | `Ty t ->
         let t = Lazy.force t in
         let bound = (get_tyvar (UnionFind.get t)).ty_bound in
         in_constraint_interior g !bound
-    | `G g' ->
+      | `G g' ->
         if g.g_id = g'.g_id then
           true
         else begin match g'.g_bound with
           | None -> false
           | Some {b_ty; b_at = next} ->
-              in_constraint_interior g { b_ty; b_at = `G next }
+            in_constraint_interior g { b_ty; b_at = `G next }
         end
-  end
+    end
 
 let inst_bound: inst_edge -> g_node =
   fun {ie_ty_node; _} ->
@@ -32,38 +32,38 @@ let inst_bound: inst_edge -> g_node =
 
 let top_sort_inst
   : (g_node * (u_type UnionFind.var list)) IntMap.t
-  -> (g_node * u_type UnionFind.var list) list
+    -> (g_node * u_type UnionFind.var list) list
   = fun d ->
-      let nodes = Map.keys d in
+    let nodes = Map.keys d in
 
-      let values = Map.to_alist d |> List.map ~f:snd in
-      let edges =
-        values
-        |> List.map ~f:(fun (g, ts) ->
-            List.map ts ~f:(fun t ->
+    let values = Map.to_alist d |> List.map ~f:snd in
+    let edges =
+      values
+      |> List.map ~f:(fun (g, ts) ->
+          List.map ts ~f:(fun t ->
               let g_to = inst_bound
-                { ie_g_node = g
-                ; ie_ty_node = t
-                }
+                  { ie_g_node = g
+                  ; ie_ty_node = t
+                  }
               in
               Topological_sort.Edge.{
                 from = g.g_id;
                 to_ = g_to.g_id;
               }
             )
-          )
-        |> List.concat
-      in
-      begin match Topological_sort.sort (module Int) nodes edges with
+        )
+      |> List.concat
+    in
+    begin match Topological_sort.sort (module Int) nodes edges with
       | Error _ ->
-          failwith "Topological sort failed"
+        failwith "Topological sort failed"
       | Ok nodes_sorted ->
-          List.filter_map nodes_sorted ~f:(Map.find d)
-      end
+        List.filter_map nodes_sorted ~f:(Map.find d)
+    end
 
 (* Expand an instantiation constraint rooted at a g_node. See
  * section 3.1 of {MLF-Graph-Infer}.
- *)
+*)
 let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
   fun cops old_g new_g ->
     let old_root = Lazy.force old_g.g_child in
@@ -73,7 +73,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
      * nodes; when we copy a node, we add a mapping from its old id to its
      * new one to the map. Before copying a node, we first check to see if
      * it's already in the map, and if so just return the existing copy.
-     *)
+    *)
     let visited = ref IntMap.empty in
 
     let rec go = fun kind nv new_root ->
@@ -83,83 +83,83 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
       begin match Map.find !visited old_id with
         | Some new_node -> new_node
         | None ->
-            if not (in_constraint_interior old_g old_bound) then
-              begin
-                (* We've hit the frontier; replace it with a bottom node and
-                 * constrain it to be equal to the old thing. *)
-                let new_var = gen_u kind (`G new_g) in
-                cops.constrain_unify nv new_var;
-                new_var
-              end
-            else
-              (* First, generate the new bound. *)
-              let new_bound =
-                  ( if UnionFind.equal nv old_root then
-                      { b_ty = `Flex
-                      ; b_at = `G new_g
+          if not (in_constraint_interior old_g old_bound) then
+            begin
+              (* We've hit the frontier; replace it with a bottom node and
+               * constrain it to be equal to the old thing. *)
+              let new_var = gen_u kind (`G new_g) in
+              cops.constrain_unify nv new_var;
+              new_var
+            end
+          else
+            (* First, generate the new bound. *)
+            let new_bound =
+              ( if UnionFind.equal nv old_root then
+                  { b_ty = `Flex
+                  ; b_at = `G new_g
+                  }
+                else
+                  (* point the new bound at the node that corresponds to the node
+                   * that the original was bound on.
+                   *
+                   * Note that this differs from {MLF-Graph-Infer}, which always
+                   * binds such nodes on new_root. I think the latter may not
+                   * actually be correct; with type annotations it can result
+                   * in things being raised above the rigid edge, allowing them
+                   * to be instatiated when they should not be.
+                   *
+                   * TODO: understand the descrepency more clearly.
+                  *)
+                  begin match old_bound.b_at with
+                    | `Ty at ->
+                      let {ty_id = old_bound_id; _} =
+                        get_tyvar (UnionFind.get (Lazy.force at))
+                      in
+                      let new_at = Map.find_exn !visited old_bound_id in
+                      { b_ty = old_bound.b_ty
+                      ; b_at = `Ty (lazy new_at)
                       }
-                    else
-                      (* point the new bound at the node that corresponds to the node
-                       * that the original was bound on.
-                       *
-                       * Note that this differs from {MLF-Graph-Infer}, which always
-                       * binds such nodes on new_root. I think the latter may not
-                       * actually be correct; with type annotations it can result
-                       * in things being raised above the rigid edge, allowing them
-                       * to be instatiated when they should not be.
-                       *
-                       * TODO: understand the descrepency more clearly.
-                       *)
-                      begin match old_bound.b_at with
-                      | `Ty at ->
-                          let {ty_id = old_bound_id; _} =
-                            get_tyvar (UnionFind.get (Lazy.force at))
-                          in
-                          let new_at = Map.find_exn !visited old_bound_id in
-                          { b_ty = old_bound.b_ty
-                          ; b_at = `Ty (lazy new_at)
-                          }
-                       | `G _ ->
-                          (* I don't think this is actually possible. *)
-                          { b_ty = old_bound.b_ty
-                          ; b_at = `Ty new_root
-                          }
-                      end
-                  )
-              in
-              let new_tyvar =
-                { ty_id = gensym ()
-                ; ty_bound = ref new_bound
-                }
-              in
+                    | `G _ ->
+                      (* I don't think this is actually possible. *)
+                      { b_ty = old_bound.b_ty
+                      ; b_at = `Ty new_root
+                      }
+                  end
+              )
+            in
+            let new_tyvar =
+              { ty_id = gensym ()
+              ; ty_bound = ref new_bound
+              }
+            in
 
-              (* Add a fresh unification variable to the map up front, in case we
-               * hit a recursive type. We'll merge it with the final result below. *)
-              let map_copy = UnionFind.make (`Free (new_tyvar, kind)) in
-              visited := Map.set !visited ~key:old_id ~data:map_copy;
+            (* Add a fresh unification variable to the map up front, in case we
+             * hit a recursive type. We'll merge it with the final result below. *)
+            let map_copy = UnionFind.make (`Free (new_tyvar, kind)) in
+            visited := Map.set !visited ~key:old_id ~data:map_copy;
 
-              (* Now do a deep copy, subbing in the new bound. *)
-              let ret = UnionFind.make (match n with
+            (* Now do a deep copy, subbing in the new bound. *)
+            let ret = UnionFind.make (match n with
                 | `Free _ -> `Free (new_tyvar, kind)
                 | `Quant (_, arg) ->
-                    `Quant(new_tyvar, go kind arg new_root)
+                  `Quant(new_tyvar, go kind arg new_root)
                 | `Const(_, c, args, _) ->
-                    `Const
-                      ( new_tyvar
-                      , c
-                      , List.map args ~f:(fun (t, k) -> (go k t new_root, k))
-                      , kind
-                      ))
-              in
+                  `Const
+                    ( new_tyvar
+                    , c
+                    , List.map args ~f:(fun (t, k) -> (go k t new_root, k))
+                    , kind
+                    ))
+            in
 
-              (* ...and do the merge. Rather than call unify, we just overwrite with
-               * the final value; there's no real unification going on here, we just
-               * need to avoid cycles. *)
-              UnionFind.merge
-                (fun _ r -> r)
-                map_copy
-                ret;
-              ret
+            (* ...and do the merge. Rather than call unify, we just overwrite with
+             * the final value; there's no real unification going on here, we just
+             * need to avoid cycles. *)
+            UnionFind.merge
+              (fun _ r -> r)
+              map_copy
+              ret;
+            ret
       end
     in
     let rec new_root = lazy (go `Type old_root new_root) in
@@ -172,41 +172,41 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
         let instance = expand cops g g' in
         cops.constrain_unify instance var
       | `Ty _ ->
-          failwith "propagate: node not bound at g-node."
+        failwith "propagate: node not bound at g-node."
     end
 
 let solve_constraints cs =
   let render_ucs = ref cs.unification in
   let render_ics = ref cs.instantiation in
   let render () = Render.render_graph
-    { unification = !render_ucs
-    ; instantiation = !render_ics
-    ; ty = cs.ty
-    }
+      { unification = !render_ucs
+      ; instantiation = !render_ics
+      ; ty = cs.ty
+      }
   in
   let solve_unify vars =
     render_ucs := vars;
     List.iter vars ~f:(fun (Unify (l, r)) ->
-      render ();
-      UnionFind.merge unify l r;
-      render_ucs := List.tl_exn !render_ucs;
-    );
+        render ();
+        UnionFind.merge unify l r;
+        render_ucs := List.tl_exn !render_ucs;
+      );
     render ()
   in
   solve_unify cs.unification;
   top_sort_inst cs.instantiation
   |> List.iter ~f:(fun (g, ts) ->
       List.iter ts ~f:(fun t ->
-        let cops, ucs, _ = make_cops () in
-        propagate cops g t;
-        render_ucs := !ucs;
-        render ();
-        render_ics := Map.update !render_ics g.g_id ~f:(function
-          | None -> failwith "impossible"
-          | Some (g, xs) -> (g, List.tl_exn xs)
+          let cops, ucs, _ = make_cops () in
+          propagate cops g t;
+          render_ucs := !ucs;
+          render ();
+          render_ics := Map.update !render_ics g.g_id ~f:(function
+              | None -> failwith "impossible"
+              | Some (g, xs) -> (g, List.tl_exn xs)
+            );
+          solve_unify !ucs;
         );
-        solve_unify !ucs;
-      );
       render_ics := Map.remove !render_ics g.g_id
     );
   render ();

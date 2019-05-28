@@ -21,11 +21,11 @@ module Make(P:Pair) = struct
 
     let t_of_sexp = function
       | Sexp.List [l; r] ->
-          ( P.Left.t_of_sexp l
-          , P.Right.t_of_sexp r
-          )
+        ( P.Left.t_of_sexp l
+        , P.Right.t_of_sexp r
+        )
       | sexp ->
-          raise (Sexp.Of_sexp_error (Failure "t_of_sexp: pair needed", sexp))
+        raise (Sexp.Of_sexp_error (Failure "t_of_sexp: pair needed", sexp))
 
 
     let compare (x1, y1) (x2, y2) =

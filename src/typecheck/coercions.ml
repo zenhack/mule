@@ -22,7 +22,7 @@ open Typecheck_types
  *
  * The algorithm in the paper will infer (int -> int), but this code
  * will invent a new constant type t and infer (t -> t).
- *)
+*)
 
 type env_t = (u_type UnionFind.var) VarMap.t
 
@@ -30,7 +30,7 @@ let gen_kind = function
   | Kind.Type -> `Type
   | Kind.Row -> `Row
   | Kind.Unknown ->
-      failwith "BUG: Infer_kind should already have been called"
+    failwith "BUG: Infer_kind should already have been called"
 
 (* [gen_type b_at env ~new_exist ty] generates a graphic type based on [ty].
  *
@@ -42,11 +42,11 @@ let gen_kind = function
  *   _must_ be contained within the map.
  *
  * The return value is a unification variable for the root of the type.
- *)
+*)
 let rec gen_type
   : bound_target
-  -> env_t
-  -> new_exist:([ `Type | `Row ] -> u_type UnionFind.var)
+    -> env_t
+    -> new_exist:([ `Type | `Row ] -> u_type UnionFind.var)
   -> 'i Type.t
   -> u_type UnionFind.var
   =
@@ -54,49 +54,49 @@ let rec gen_type
     let tv = ty_var_at b_at in
     match ty with
     | Type.Named (_, s) ->
-        UnionFind.make (`Const(tv, `Named s, [], `Type))
+      UnionFind.make (`Const(tv, `Named s, [], `Type))
     | Type.Fn (_, param, ret) ->
-        UnionFind.make
-          (fn tv
-            (gen_type b_at env ~new_exist param)
-            (gen_type b_at env ~new_exist ret))
+      UnionFind.make
+        (fn tv
+           (gen_type b_at env ~new_exist param)
+           (gen_type b_at env ~new_exist ret))
     | Type.Recur(_, v, body) ->
-        let ret = gen_u `Type b_at in
-        let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) ~new_exist body in
-        UnionFind.merge (fun _ r -> r) ret ret';
-        ret
+      let ret = gen_u `Type b_at in
+      let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) ~new_exist body in
+      UnionFind.merge (fun _ r -> r) ret ret';
+      ret
     | Type.Var (_, v) ->
-        Map.find_exn env v
+      Map.find_exn env v
     | Type.Record {r_info = _; r_types; r_values} ->
-        UnionFind.make (
-          record tv
-            (gen_row b_at env ~new_exist r_types)
-            (gen_row b_at env ~new_exist r_values)
-        )
+      UnionFind.make (
+        record tv
+          (gen_row b_at env ~new_exist r_types)
+          (gen_row b_at env ~new_exist r_values)
+      )
     | Type.Union row ->
-        UnionFind.make (union tv (gen_row b_at env ~new_exist row))
+      UnionFind.make (union tv (gen_row b_at env ~new_exist row))
     | Type.Quant(_, `All, v, k, body) ->
-        let ret = gen_u `Type b_at in
-        let bound_v = gen_u (gen_kind k) (`Ty (lazy ret)) in
-        let ret' =
-          UnionFind.make (`Quant
-            ( tv
-            , gen_type
-                b_at
-                (Map.set env ~key:v ~data:bound_v)
-                ~new_exist
-                body
-            )
-          )
-        in
-        UnionFind.merge (fun _ r -> r) ret ret';
-        ret
+      let ret = gen_u `Type b_at in
+      let bound_v = gen_u (gen_kind k) (`Ty (lazy ret)) in
+      let ret' =
+        UnionFind.make (`Quant
+                          ( tv
+                          , gen_type
+                              b_at
+                              (Map.set env ~key:v ~data:bound_v)
+                              ~new_exist
+                              body
+                          )
+                       )
+      in
+      UnionFind.merge (fun _ r -> r) ret ret';
+      ret
     | Type.Quant(_, `Exist, v, k, body) ->
-        gen_type
-          b_at
-          (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
-          ~new_exist
-          body
+      gen_type
+        b_at
+        (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
+        ~new_exist
+        body
 (* [gen_row] is like [gen_type], but for row variables. *)
 and gen_row b_at env ~new_exist (_, fields, rest) =
   let rest' =
@@ -108,14 +108,14 @@ and gen_row b_at env ~new_exist (_, fields, rest) =
     fields
     ~init:rest'
     ~f:(fun (lbl, ty) tail ->
-      UnionFind.make(
-        extend
-          (ty_var_at b_at)
-          lbl
-          (gen_type b_at env ~new_exist ty)
-          tail
+        UnionFind.make(
+          extend
+            (ty_var_at b_at)
+            lbl
+            (gen_type b_at env ~new_exist ty)
+            tail
+        )
       )
-    )
 
 let make_coercion_type g ty =
   (* Actually make the coercion.
@@ -127,27 +127,27 @@ let make_coercion_type g ty =
    *    see the discussion at the top of the file.
    * 3. Generate a function node, and bound the two copies of the type to
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
-   *)
+  *)
   let kinded_ty = Infer_kind.infer VarMap.empty ty in
   fst (Util.fix
-    (fun vars ->
-      let (param_var, ret_var) = Lazy.force vars in
-      UnionFind.make (fn (gen_ty_var g) param_var ret_var)
-    )
-    (fun root ->
-      (* [root] is the final root of the type; its argument and return values
-       * will be the two copies of the type in the annotation, and it will
-       * be the bound of the existentials.
-       *)
-      let gen ~new_exist = gen_type (`Ty root) VarMap.empty ~new_exist kinded_ty in
-      let param = gen ~new_exist:(fun k -> gen_u k (`Ty root)) in
-      let ret = gen ~new_exist:(fun k ->
-        let name = Var.to_string (Gensym.anon_var ()) in
-        UnionFind.make (`Const(ty_var_at (`Ty root), `Named name, [], k))
+         (fun vars ->
+            let (param_var, ret_var) = Lazy.force vars in
+            UnionFind.make (fn (gen_ty_var g) param_var ret_var)
+         )
+         (fun root ->
+            (* [root] is the final root of the type; its argument and return values
+             * will be the two copies of the type in the annotation, and it will
+             * be the bound of the existentials.
+            *)
+            let gen ~new_exist = gen_type (`Ty root) VarMap.empty ~new_exist kinded_ty in
+            let param = gen ~new_exist:(fun k -> gen_u k (`Ty root)) in
+            let ret = gen ~new_exist:(fun k ->
+                let name = Var.to_string (Gensym.anon_var ()) in
+                UnionFind.make (`Const(ty_var_at (`Ty root), `Named name, [], k))
+              )
+            in
+            let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
+            param_bound := { !param_bound with b_ty = `Rigid };
+            (param, ret)
+         )
       )
-      in
-      let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
-      param_bound := { !param_bound with b_ty = `Rigid };
-      (param, ret)
-    )
-  )

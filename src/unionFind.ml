@@ -12,14 +12,14 @@ let make v = ref (Repr v)
  * and [value] is the associated value.
  *
  * performs path compression.
- *)
+*)
 let rec get_rep_val: 'a var -> ('a var * 'a) =
   fun var -> match !var with
     | Repr value -> (var, value)
     | Ptr var' ->
-        let (rep, value) = get_rep_val var' in
-        var := Ptr rep;
-        (rep, value)
+      let (rep, value) = get_rep_val var' in
+      var := Ptr rep;
+      (rep, value)
 
 let get var =
   snd (get_rep_val var)

@@ -24,22 +24,22 @@ let set_root: int -> unit = fun id ->
 let fmt_node: node_type -> int -> string =
   fun ty n ->
     String.concat
-    [ "  n"
-    ; Int.to_string n
-    ; " [label=\""
-    ; begin match ty with
-      | `TyVar -> "V"
-      | `Const c ->
+      [ "  n"
+      ; Int.to_string n
+      ; " [label=\""
+      ; begin match ty with
+        | `TyVar -> "V"
+        | `Const c ->
           begin match c with
-          | `Named name -> name
-          | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
+            | `Named name -> name
+            | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
           end
-      | `G -> "G"
+        | `G -> "G"
       end
-    ; " : "
-    ; Int.to_string n
-    ; "\"];\n"
-    ]
+      ; " : "
+      ; Int.to_string n
+      ; "\"];\n"
+      ]
 
 let fmt_edge_ty = function
   | `Structural -> "[weight=7]"
@@ -57,19 +57,19 @@ let end_graph () =
   let dest = Out.create path in
   Out.fprintf dest "digraph g {\n";
   begin match !root_node with
-  | Some id -> Out.fprintf dest "  root=\"n%d\";\n" id
-  | None -> ()
+    | Some id -> Out.fprintf dest "  root=\"n%d\";\n" id
+    | None -> ()
   end;
   List.iter !nodes ~f:(fun (ty, id) ->
-    Out.fprintf dest "%s" (fmt_node ty id)
-  );
+      Out.fprintf dest "%s" (fmt_node ty id)
+    );
   List.iter !edges ~f:(fun (ty, from, to_) ->
-    match ty with
-    | `Sibling ->
-      Out.fprintf dest "  {rank=same; rankdir=LR; n%d -> n%d %s}\n" from to_ (fmt_edge_ty ty)
-    | _ ->
-      Out.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty)
-  );
+      match ty with
+      | `Sibling ->
+        Out.fprintf dest "  {rank=same; rankdir=LR; n%d -> n%d %s}\n" from to_ (fmt_edge_ty ty)
+      | _ ->
+        Out.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty)
+    );
   Out.fprintf dest "}\n";
   Out.close dest;
   let _ = Caml.Sys.command ("dot -Tsvg " ^ path ^ " -o " ^ path ^ ".svg") in

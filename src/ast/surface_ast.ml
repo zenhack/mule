@@ -2,7 +2,7 @@ open Common_ast
 
 module Type = struct
   type quantifier = [ `All | `Exist ]
-    [@@deriving sexp]
+  [@@deriving sexp]
 
   type t =
     | Fn of (t * t)
@@ -14,12 +14,12 @@ module Type = struct
     | App of (t * t)
     | Union of (t * t)
     | RowRest of Var.t
-    [@@deriving sexp]
-  and record_item =
-    | Field of (Label.t * t)
-    | Type of (Label.t * t option)
-    | Rest of Var.t
-    [@@deriving sexp]
+  [@@deriving sexp]
+and record_item =
+  | Field of (Label.t * t)
+  | Type of (Label.t * t option)
+  | Rest of Var.t
+[@@deriving sexp]
 end
 
 module Pattern = struct
@@ -29,7 +29,7 @@ module Pattern = struct
     | Wild
     | Annotated of (t * Type.t)
     | Integer of Bigint.t
-    [@@deriving sexp]
+  [@@deriving sexp]
 end
 
 module Expr = struct
@@ -45,14 +45,14 @@ module Expr = struct
     | Let of (Pattern.t * t * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
-    [@@deriving sexp]
-  and field =
-    [ `Value of
-        ( Label.t
+  [@@deriving sexp]
+and field =
+  [ `Value of
+      ( Label.t
         * Type.t option
         * t
-        )
-    | `Type of (Label.t * Type.t)
-    ]
-    [@@deriving sexp]
+      )
+  | `Type of (Label.t * Type.t)
+  ]
+[@@deriving sexp]
 end

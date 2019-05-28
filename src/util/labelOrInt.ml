@@ -11,9 +11,9 @@ module T = struct
 
   let sexp_of_t = function
     | Label l ->
-        Sexp.List [Sexp.Atom "label"; Common_ast.Label.sexp_of_t l]
+      Sexp.List [Sexp.Atom "label"; Common_ast.Label.sexp_of_t l]
     | Int n ->
-        Sexp.List [Sexp.Atom "int"; Int.sexp_of_t n]
+      Sexp.List [Sexp.Atom "int"; Int.sexp_of_t n]
 end
 include T
 include Comparator.Make(T)

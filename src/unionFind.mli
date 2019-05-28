@@ -4,7 +4,7 @@
  *
  * We call the sets "unification variables" (or just [var]). Each set has an
  * associated value.
- *)
+*)
 
 (* A set (or unification variable). *)
 type 'a var
@@ -31,7 +31,7 @@ val equal : 'a var -> 'a var -> bool
  * variable to merge that is in use by an existing call to merge (higher up
  * in the stack), but note that the final value will follow a "last update
  * wins" rule. It is *not* concurrency safe.
- *)
+*)
 val merge
   : ('a -> 'a -> 'a)
   -> 'a var
