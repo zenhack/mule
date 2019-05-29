@@ -77,7 +77,15 @@ let rec gen_type
       UnionFind.make (union tv (gen_row b_at env ~new_exist row))
     | Type.Quant(_, `All, v, k, body) ->
       let ret = gen_u `Type b_at in
-      let bound_v = gen_u (gen_kind k) (`Ty (lazy ret)) in
+      let bound_v =
+        UnionFind.make
+          (`Free
+             ( { ty_id = Gensym.gensym ()
+               ; ty_bound = ref { b_ty = `Rigid; b_at = `Ty (lazy ret) }
+               }
+             , gen_kind k
+             ))
+      in
       let ret' =
         UnionFind.make (`Quant
                           ( tv
