@@ -37,13 +37,21 @@ let rec walk_type env = function
   | Type.Quant(_, q, v, k, body) ->
     let u_var = UnionFind.make k in
     let body' = walk_type (Map.set env ~key:v ~data:u_var) body in
-    Type.Quant
-      ( UnionFind.make Kind.Type
-      , q
-      , v
-      , UnionFind.get u_var
-      , body'
-      )
+    (* XXX: HACK: if the variable name doesn't actually appear in the body
+     * of the type, then this will still be 'Unknown'. In this case we can
+     * safely default it to 'Type', since it isn't actually used. This is
+     * a bit gross though, in that it depends critically on the fact that
+     * (for kinds only) we are interleaving constraint building and
+     * unification steps.
+     *
+     * Ideally we'd re-jigger things so that this got dealt with in infer
+     * where we default everything else.
+     *)
+    let k' = match UnionFind.get u_var with
+      | Kind.Unknown -> Kind.Type
+      | k -> k
+    in
+    Type.Quant(UnionFind.make Kind.Type, q, v, k', body')
 and walk_row env (_, fields, rest) =
   let fields' = List.map fields ~f:(fun (l, t) -> (l, walk_type env t)) in
   match rest with
