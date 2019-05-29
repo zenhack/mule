@@ -1,0 +1,6 @@
+let rank2 : all b. (all a. a -> a) -> {} =
+  fn rank1. rank1 {}
+in
+# This should fail, since (fn _. 4) is only an *instance* of the required
+# (polymorphic) type:
+rank2 (fn _. 4)

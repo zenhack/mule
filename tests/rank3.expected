@@ -1,0 +1,41 @@
+
+Desugared:
+
+	(Let
+	 (rank3
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (rank3
+	      (App
+	       ((WithType
+	         (Quant
+	          (() All b Unknown
+	           (Fn
+	            (()
+	             (Fn
+	              (()
+	               (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a))))))
+	               (Var (() b))))
+	             (Var (() b)))))))
+	        (Lam (rank2 (App ((Var rank2) (Lam (x (Var x)))))))))))))
+	  (App
+	   ((Var rank3)
+	    (Lam (rank1 (App ((Var rank1) (App ((Var rank1) (Integer 4)))))))))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(App
+	 ((Lam
+	   (0 ()
+	    (App ((Var 0) (Lam (0 () (App ((Var 0) (App ((Var 0) (Integer 4)))))))))))
+	  (App
+	   ((Fix Let) (Lam (0 () (Lam (0 () (App ((Var 0) (Lam (0 () (Var 0)))))))))))))
+
+Evaluated:
+
+	(Integer 4)

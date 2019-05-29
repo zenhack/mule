@@ -1,0 +1,4 @@
+let rank3 : all b. ((all a. a -> a) -> b) -> b =
+  fn rank2. rank2 (fn x. x)
+in
+rank3 (fn rank1. rank1 (rank1 4))
