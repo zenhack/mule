@@ -82,6 +82,8 @@ let rec desugar = function
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var v :: pats, body) ->
     D.Lam(v, desugar (S.Lam (pats, body)))
+  | S.Lam (SP.Wild :: pats, body) ->
+    D.Lam(Gensym.anon_var (), desugar (S.Lam (pats, body)))
   | S.Lam ((SP.Annotated (SP.Var v, ty) :: pats), body) ->
     let v' = Gensym.anon_var () in
     D.Lam
