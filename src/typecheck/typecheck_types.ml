@@ -34,6 +34,8 @@ and bound_target =
   | `G of g_node
   ]
 
+type u_var = u_type UnionFind.var
+
 (* constructors for common type constants. *)
 let int tv = `Const(tv, `Named "int", [], `Type)
 let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)

@@ -190,18 +190,8 @@ let rec unify already_merged l r =
       whnf_unify already_merged argl argr;
       `Quant(merge_tv (), argl)
 
-    | `Quant(_, arg), `Const(tv, c, args, k)
-    | `Const (tv, c, args, k), `Quant(_, arg) ->
-      (* Merge the const with the arg, and then wrap it up in a quant. *)
-      let tv' =
-        { ty_id = gensym ()
-        ; ty_bound = ref (!(tv.ty_bound))
-        }
-      in
-      whnf_unify already_merged
-        (UnionFind.make (`Const(tv', c, args, k)))
-        arg;
-      `Quant(merge_tv (), arg)
+    | `Quant _, `Const _ | `Const _, `Quant _ ->
+      failwith "BUG: normalization left quant & const paired."
     | `Const(_, cl, argsl, k), `Const(_, cr, argsr, _) ->
       if typeconst_eq cl cr then
         (* Top level type constructors that match. We recursively
@@ -270,7 +260,8 @@ let rec unify already_merged l r =
             ctorErr cl cr
         end
   end
-(* Wrapper around UnionFind.merge/unify that first reduces the arguments to whnf. *)
+(* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
 and whnf_unify already_merged l r =
-  UnionFind.merge (unify already_merged) (Normalize.whnf l) (Normalize.whnf r)
+  let l, r = Normalize.pair l r in
+  UnionFind.merge (unify already_merged) l r
 let unify = unify IntPairSet.empty
