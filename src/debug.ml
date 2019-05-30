@@ -1,5 +1,7 @@
 include Debug_t
 
+let render_hook = ref (fun () -> ())
+
 let frame_no: int ref = ref 0
 
 let edges: (edge_type * int * int) list ref = ref []

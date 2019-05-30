@@ -155,20 +155,20 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
 let solve_constraints cs =
   let render_ucs = ref cs.unification in
   let render_ics = ref cs.instantiation in
-  let render () = Render.render_graph
+  Debug.render_hook := (fun () -> Render.render_graph
       { unification = !render_ucs
       ; instantiation = !render_ics
       ; ty = cs.ty
       }
-  in
+  );
   let solve_unify vars =
     render_ucs := vars;
     List.iter vars ~f:(fun (Unify (l, r)) ->
-        render ();
+        !Debug.render_hook ();
         UnionFind.merge unify l r;
         render_ucs := List.tl_exn !render_ucs;
       );
-    render ()
+    !Debug.render_hook ()
   in
   solve_unify cs.unification;
   top_sort_inst cs.instantiation
@@ -177,7 +177,7 @@ let solve_constraints cs =
           let cops, ucs, _ = make_cops () in
           propagate cops g t;
           render_ucs := !ucs;
-          render ();
+          !Debug.render_hook ();
           render_ics := Map.update !render_ics g.g_id ~f:(function
               | None -> failwith "impossible"
               | Some (g, xs) -> (g, List.tl_exn xs)
@@ -186,6 +186,6 @@ let solve_constraints cs =
         );
       render_ics := Map.remove !render_ics g.g_id
     );
-  render ();
+  !Debug.render_hook ();
   cs.ty
 

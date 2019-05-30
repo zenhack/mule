@@ -162,6 +162,7 @@ let graft: u_type -> tyvar -> u_type = fun t v ->
   t
 
 let rec unify already_merged l r =
+  !Debug.render_hook ();
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
   if lid = rid || Set.mem already_merged (lid, rid) then
     l
