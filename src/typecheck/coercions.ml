@@ -145,13 +145,24 @@ let make_coercion_type g ty =
   fst (Util.fix
          (fun vars ->
             let (param_var, ret_var) = Lazy.force vars in
-            UnionFind.make (fn (gen_ty_var g) param_var ret_var)
+            UnionFind.make
+              ( `Quant
+                  ( gen_ty_var g
+                  , UnionFind.make (fn (gen_ty_var g) param_var ret_var)
+                  )
+              )
          )
          (fun root ->
-            (* [root] is the final root of the type; its argument and return values
-             * will be the two copies of the type in the annotation, and it will
-             * be the bound of the existentials.
-            *)
+            (* [root] is the final root of the type; it is a quant node, whose child is
+             * a function, whose argument and return values will be the two copies of
+             * the type in the annotation. The quant node will be the bound of the
+             * existentials.
+             *
+             * TODO: binding existentials at top-level is an artifact of the way the
+             * paper treats existentials, which I think doesn't apply to us, since we
+             * don't share nodes between the two trees. It would be more natural to
+             * just bind them where their quantifiers actually are.
+             *)
             let gen ~forall_bound ~new_exist =
               gen_type (`Ty root) VarMap.empty ~forall_bound ~new_exist kinded_ty
             in
