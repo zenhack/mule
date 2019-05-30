@@ -1,4 +1,3 @@
-open Ast
 open Ast.Desugared
 open Gen_t
 open Typecheck_types
@@ -32,28 +31,40 @@ let gen_kind = function
   | Kind.Unknown ->
     failwith "BUG: Infer_kind should already have been called"
 
-(* [gen_type b_at env ~forall_bound ~new_exist ty] generates a graphic type based on [ty].
+type sign = [ `Pos | `Neg ]
+
+let flip_sign = function
+  | `Pos -> `Neg
+  | `Neg -> `Pos
+
+let get_flag: Type.quantifier -> sign -> bound_ty =
+  fun q sign-> match q, sign with
+    | `All, `Pos -> `Flex
+    | `All, `Neg -> `Rigid
+    | `Exist, `Pos -> `Rigid
+    | `Exist, `Neg -> `Flex
+
+
+(* [gen_type b_at env sign ty] generates a graphic type based on [ty].
  *
  * - monomorphic nodes are bound on [b_at].
- * - [forall_bound] is the flag on bindings of univeral quantifiers within the
- *   type.
- * - [new_exist] is used to generate nodes for existentially bound variables;
- *   it is called once per type variable, and passed the kind of that variable.
  * - [env] is a mapping from type variable names to unification variables; free
  *   variables will be replaced with their values in the map. All free variables
  *   _must_ be contained within the map.
+ * - [sign] indicates whether we are in positive or negative position. This is
+ *   used to determine the binding flag to use when we see a quantifier. [sign]
+ *   is flipped each time we go down the parameter side of a function node.
  *
  * The return value is a unification variable for the root of the type.
-*)
+ *)
 let rec gen_type
   : bound_target
     -> env_t
-    -> forall_bound:([ `Flex | `Rigid])
-    -> new_exist:([ `Type | `Row ] -> u_type UnionFind.var)
+    -> sign
   -> 'i Type.t
   -> u_type UnionFind.var
   =
-  fun b_at env ~forall_bound ~new_exist ty ->
+  fun b_at env sign ty ->
     let tv = ty_var_at b_at in
     match ty with
     | Type.Named (_, s) ->
@@ -61,11 +72,11 @@ let rec gen_type
     | Type.Fn (_, param, ret) ->
       UnionFind.make
         (fn tv
-           (gen_type b_at env ~forall_bound ~new_exist param)
-           (gen_type b_at env ~forall_bound ~new_exist ret))
+           (gen_type b_at env (flip_sign sign) param)
+           (gen_type b_at env sign ret))
     | Type.Recur(_, v, body) ->
       let ret = gen_u `Type b_at in
-      let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) ~forall_bound ~new_exist body in
+      let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) sign body in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
     | Type.Var (_, v) ->
@@ -73,18 +84,21 @@ let rec gen_type
     | Type.Record {r_info = _; r_types; r_values} ->
       UnionFind.make (
         record tv
-          (gen_row b_at env ~forall_bound ~new_exist r_types)
-          (gen_row b_at env ~forall_bound ~new_exist r_values)
+          (gen_row b_at env sign r_types)
+          (gen_row b_at env sign r_values)
       )
     | Type.Union row ->
-      UnionFind.make (union tv (gen_row b_at env ~forall_bound ~new_exist row))
-    | Type.Quant(_, `All, v, k, body) ->
+      UnionFind.make (union tv (gen_row b_at env sign row))
+    | Type.Quant(_, q, v, k, body) ->
       let ret = gen_u `Type b_at in
       let bound_v =
         UnionFind.make
           (`Free
              ( { ty_id = Gensym.gensym ()
-               ; ty_bound = ref { b_ty = forall_bound; b_at = `Ty (lazy ret) }
+               ; ty_bound = ref
+                  { b_ty = get_flag q sign
+                  ; b_at = `Ty (lazy ret)
+                  }
                }
              , gen_kind k
              ))
@@ -95,23 +109,15 @@ let rec gen_type
                           , gen_type
                               b_at
                               (Map.set env ~key:v ~data:bound_v)
-                              ~forall_bound
-                              ~new_exist
+                              sign
                               body
                           )
                        )
       in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
-    | Type.Quant(_, `Exist, v, k, body) ->
-      gen_type
-        b_at
-        (Map.set env ~key:v ~data:(new_exist (gen_kind k)))
-        ~forall_bound
-        ~new_exist
-        body
 (* [gen_row] is like [gen_type], but for row variables. *)
-and gen_row b_at env ~forall_bound ~new_exist (_, fields, rest) =
+and gen_row b_at env sign (_, fields, rest) =
   let rest' =
     match rest with
     | Some v -> Map.find_exn env v
@@ -125,7 +131,7 @@ and gen_row b_at env ~forall_bound ~new_exist (_, fields, rest) =
           extend
             (ty_var_at b_at)
             lbl
-            (gen_type b_at env ~forall_bound ~new_exist ty)
+            (gen_type b_at env sign ty)
             tail
         )
       )
@@ -157,23 +163,10 @@ let make_coercion_type g ty =
              * a function, whose argument and return values will be the two copies of
              * the type in the annotation. The quant node will be the bound of the
              * existentials.
-             *
-             * TODO: binding existentials at top-level is an artifact of the way the
-             * paper treats existentials, which I think doesn't apply to us, since we
-             * don't share nodes between the two trees. It would be more natural to
-             * just bind them where their quantifiers actually are.
              *)
-            let gen ~forall_bound ~new_exist =
-              gen_type (`Ty root) VarMap.empty ~forall_bound ~new_exist kinded_ty
+            let gen sign =
+              gen_type (`Ty root) VarMap.empty sign kinded_ty
             in
-            let param = gen ~forall_bound:`Rigid ~new_exist:(fun k -> gen_u k (`Ty root)) in
-            let ret = gen ~forall_bound:`Flex ~new_exist:(fun k ->
-                let name = Var.to_string (Gensym.anon_var ()) in
-                UnionFind.make (`Const(ty_var_at (`Ty root), `Named name, [], k))
-              )
-            in
-            let param_bound = (get_tyvar (UnionFind.get param)).ty_bound in
-            param_bound := { !param_bound with b_ty = `Rigid };
-            (param, ret)
+            (gen `Neg, gen `Pos)
          )
       )

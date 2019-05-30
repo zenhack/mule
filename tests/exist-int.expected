@@ -1,0 +1,16 @@
+
+Desugared:
+
+	(App ((WithType (Quant (() Exist t Unknown (Var (() t))))) (Integer 4)))
+
+inferred type:
+
+	(Var (() a))
+
+Runtime term:
+
+	(Integer 4)
+
+Evaluated:
+
+	(Integer 4)
