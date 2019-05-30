@@ -26,7 +26,7 @@ let rec walk cops env g = function
     UnionFind.make (int (gen_ty_var g))
   | Expr.Var v ->
     let tv = gen_u `Type (`G g) in
-    begin match Map.find_exn env v with
+    begin match Lazy.force (Map.find_exn env v) with
       | `Ty tv' ->
         cops.constrain_unify tv' tv
       | `G g' ->
@@ -53,7 +53,7 @@ let rec walk cops env g = function
     let g_body = with_g g
         (fun g -> walk
             cops
-            (Map.set env ~key:param ~data:(`Ty param_var))
+            (Map.set env ~key:param ~data:(lazy (`Ty param_var)))
             (Lazy.force g)
             body
         )
@@ -62,7 +62,7 @@ let rec walk cops env g = function
     f_var
   | Expr.Let(v, e, body) ->
     let g_e = with_g g (fun g -> walk cops env (Lazy.force g) e) in
-    walk cops (Map.set env ~key:v ~data:(`G g_e)) g body
+    walk cops (Map.set env ~key:v ~data:(lazy (`G g_e))) g body
   | Expr.App (f, arg) ->
     let param_var = gen_u `Type (`G g) in
     let ret_var = gen_u `Type (`G g) in
@@ -195,7 +195,7 @@ and walk_match cops env g final = function
   | [] -> (final, gen_u `Type (`G g))
   | ((lbl, (var, body)) :: rest) ->
     let ty = gen_u `Type (`G g) in
-    let bodyVar = walk cops (Map.set env ~key:var ~data:(`Ty ty)) g body in
+    let bodyVar = walk cops (Map.set env ~key:var ~data:(lazy (`Ty ty))) g body in
     let (row, body') = walk_match cops env g final rest in
     cops.constrain_unify bodyVar body';
     ( UnionFind.make (extend (gen_ty_var g) lbl ty row)
@@ -247,9 +247,9 @@ let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints =
         (fun g ->
            let g = Lazy.force g in
            let env = Map.map env_exprs ~f:(fun e ->
-               `G (with_g g (fun g ->
+               lazy (`G (with_g g (fun g ->
                    walk cops VarMap.empty (Lazy.force g) e
-                 ))
+                 )))
              )
            in
            let root = walk cops env g expr in
