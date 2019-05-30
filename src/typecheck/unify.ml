@@ -187,7 +187,7 @@ let rec unify already_merged l r =
     (* Neither side of these is a type variable, so we need to do a merge.
      * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
     | `Quant(_, argl), `Quant(_, argr) ->
-      whnf_unify already_merged argl argr;
+      normalize_unify already_merged argl argr;
       `Quant(merge_tv (), argl)
 
     | `Quant _, `Const _ | `Const _, `Quant _ ->
@@ -212,7 +212,7 @@ let rec unify already_merged l r =
         *)
         begin
           List.iter2_exn argsl argsr
-            ~f:(fun (l, _) (r, _) -> whnf_unify already_merged l r);
+            ~f:(fun (l, _) (r, _) -> normalize_unify already_merged l r);
           `Const(merge_tv (), cl, argsl, k)
         end
       else
@@ -246,10 +246,10 @@ let rec unify already_merged l r =
                 ; ty_bound = (get_tyvar l).ty_bound
                 }
               in
-              whnf_unify already_merged
+              normalize_unify already_merged
                 r_rest
                 (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
-              whnf_unify already_merged
+              normalize_unify already_merged
                 l_rest
                 (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
             end;
@@ -261,7 +261,7 @@ let rec unify already_merged l r =
         end
   end
 (* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
-and whnf_unify already_merged l r =
+and normalize_unify already_merged l r =
   let l, r = Normalize.pair l r in
   UnionFind.merge (unify already_merged) l r
 let unify = unify IntPairSet.empty
