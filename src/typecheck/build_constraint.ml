@@ -12,7 +12,14 @@ let child_g parent child =
   }
 
 let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
-  fun parent f -> fst (Util.fix (child_g (Some{b_ty = `Flex; b_at = parent})) f)
+  fun parent f -> fst
+      ( Util.fix
+          (child_g (Some{b_ty = `Flex; b_at = parent}))
+          (fun g ->
+             let root = f g in
+             UnionFind.make (`Quant(gen_ty_var (Lazy.force g), root))
+          )
+      )
 
 let rec walk cops env g = function
   | Expr.Integer _ ->
@@ -245,7 +252,8 @@ let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints =
                  ))
              )
            in
-           walk cops env g expr
+           let root = walk cops env g expr in
+           UnionFind.make(`Quant(gen_ty_var g, root))
         )
     in
     { unification = !ucs

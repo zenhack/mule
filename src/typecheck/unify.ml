@@ -264,4 +264,6 @@ let rec unify already_merged l r =
 and normalize_unify already_merged l r =
   let l, r = Normalize.pair l r in
   UnionFind.merge (unify already_merged) l r
+
 let unify = unify IntPairSet.empty
+let normalize_unify = normalize_unify IntPairSet.empty

@@ -2,7 +2,6 @@ open Typecheck_types
 open Build_constraint
 open Gensym
 open Gen_t
-open Unify
 
 let rec in_constraint_interior: g_node -> bound_target bound -> bool =
   fun g child -> begin match child.b_at with
@@ -165,7 +164,7 @@ let solve_constraints cs =
     render_ucs := vars;
     List.iter vars ~f:(fun (Unify (l, r)) ->
         !Debug.render_hook ();
-        UnionFind.merge unify l r;
+        Unify.normalize_unify l r;
         render_ucs := List.tl_exn !render_ucs;
       );
     !Debug.render_hook ()
