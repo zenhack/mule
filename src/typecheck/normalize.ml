@@ -34,5 +34,7 @@ let rec pair: u_var -> u_var -> (u_var * u_var) =
           }
         in
         (l, UnionFind.make (`Quant(tv', r)))
-      | _, `Quant _ -> pair r l
+      | _, `Quant _ ->
+        let (r, l) = pair r l in
+        (l, r)
       | _ -> (l, r)
