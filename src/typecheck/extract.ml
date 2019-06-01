@@ -107,7 +107,7 @@ let rec semi_extract_t: IntSet.t -> u_type UnionFind.var -> semi_t =
       begin
         let visited = Set.add visited ty_id in
         match t with
-        | `Quant({ty_id; _}, arg) ->
+        | `Quant(_, arg) ->
           `Quant
             { q_id = ty_id
             ; q_arg = semi_extract_t visited arg
