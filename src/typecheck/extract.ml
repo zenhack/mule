@@ -199,8 +199,8 @@ let rec fix_quantifiers: semi_t -> (semi_t * fix_q_ctx) = function
     begin match Map.find arg_ctx.fq_var_of_q q.q_id with
     | None -> (arg', arg_ctx)
     | Some vars ->
-      ( Set.to_list vars
-        |> List.fold ~init:arg' ~f:(fun arg v ->
+      let vars = Set.to_list vars in
+      ( List.fold vars ~init:arg' ~f:(fun arg v ->
             let {v_flag; _} = Map.find_exn arg_ctx.fq_vars_by_id v in
             `Quant
               { q with
@@ -209,7 +209,15 @@ let rec fix_quantifiers: semi_t -> (semi_t * fix_q_ctx) = function
               ; q_arg = arg
               }
           )
-      , arg_ctx
+      , List.fold
+        vars
+        ~init:{ arg_ctx with fq_var_of_q = Map.remove arg_ctx.fq_var_of_q q.q_id }
+        ~f:(fun ctx v ->
+          { ctx with
+              fq_var_to_q = Map.remove ctx.fq_var_to_q v
+            ; fq_vars_by_id = Map.remove ctx.fq_vars_by_id v
+          }
+        )
       )
     end
   | `Union (i, row) ->
@@ -236,7 +244,23 @@ and fix_row_quantifiers: semi_row -> (semi_row * fix_q_ctx) = function
     , merge_ctxs head_ctx tail_ctx
     )
 
-let fix_quantifiers t = fst (fix_quantifiers t)
+let fix_quantifiers t =
+  (* Some of the type variables may be bound on the g-node that is at the
+   * root; look for any remaining variables and add quantifier nodes with
+   * them attached. *)
+  let (ty, {fq_vars_by_id; _}) = fix_quantifiers t in
+  Map.to_alist fq_vars_by_id
+  |> List.map ~f:snd
+  |> List.fold
+       ~init:ty
+       ~f:(fun arg v ->
+           `Quant
+             { q_id = v.v_q_id
+             ; q_var = v.v_var_id
+             ; q_flag = v.v_flag
+             ; q_arg = arg
+             }
+         )
 
 
 let invert_sign = function

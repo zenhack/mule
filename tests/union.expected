@@ -5,9 +5,14 @@ Desugared:
 
 inferred type:
 
-	(Union
-	 (() ((Ok (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
-	  (b)))
+	(Quant
+	 (() All a Unknown
+	  (Quant
+	   (() All b Unknown
+	    (Union
+	     (()
+	      ((Ok (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
+	      (b)))))))
 
 Runtime term:
 

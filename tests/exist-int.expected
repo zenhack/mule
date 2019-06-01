@@ -5,7 +5,7 @@ Desugared:
 
 inferred type:
 
-	(Var (() a))
+	(Quant (() Exist a Unknown (Var (() a))))
 
 Runtime term:
 

@@ -9,7 +9,9 @@ Desugared:
 
 inferred type:
 
-	(Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))
+	(Quant
+	 (() All a Unknown
+	  (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
 
 Runtime term:
 

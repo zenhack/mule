@@ -34,17 +34,28 @@ Desugared:
 
 inferred type:
 
-	(Record (r_info ()) (r_types (() () (a)))
-	 (r_values
-	  (()
-	   ((a (Record (r_info ()) (r_types (() () (b))) (r_values (() () ()))))
-	    (b
-	     (Record (r_info ()) (r_types (() () (c)))
-	      (r_values
-	       (()
-	        ((z (Record (r_info ()) (r_types (() () (d))) (r_values (() () ())))))
-	        ())))))
-	   ())))
+	(Quant
+	 (() All a Unknown
+	  (Quant
+	   (() All b Unknown
+	    (Quant
+	     (() All c Unknown
+	      (Quant
+	       (() All d Unknown
+	        (Record (r_info ()) (r_types (() () (d)))
+	         (r_values
+	          (()
+	           ((a
+	             (Record (r_info ()) (r_types (() () (c))) (r_values (() () ()))))
+	            (b
+	             (Record (r_info ()) (r_types (() () (b)))
+	              (r_values
+	               (()
+	                ((z
+	                  (Record (r_info ()) (r_types (() () (a)))
+	                   (r_values (() () ())))))
+	                ())))))
+	           ())))))))))))
 
 Runtime term:
 

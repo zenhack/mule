@@ -16,12 +16,16 @@ Desugared:
 
 inferred type:
 
-	(Fn
-	 (()
-	  (Fn
-	   (() (Fn (() (Var (() a)) (Var (() b))))
-	    (Fn (() (Var (() a)) (Var (() b))))))
-	  (Fn (() (Var (() a)) (Var (() b))))))
+	(Quant
+	 (() All a Unknown
+	  (Quant
+	   (() All b Unknown
+	    (Fn
+	     (()
+	      (Fn
+	       (() (Fn (() (Var (() b)) (Var (() a))))
+	        (Fn (() (Var (() b)) (Var (() a))))))
+	      (Fn (() (Var (() b)) (Var (() a))))))))))
 
 Runtime term:
 
