@@ -221,14 +221,9 @@ let rec unify already_merged l r =
            * equivalence relation on rows. *)
           | `Extend l_lbl, [l_ty, _; l_rest, _], `Extend r_lbl, [r_ty, _; r_rest, _] ->
             begin
-              (* XXX: I(@zenhack) am not sure what the bounds should be here;
-               * my rough intuition is that they should be the same as the
-               * other row variable, but I need to think about the logic here
-               * more carefully. This is the only place in the unification
-               * algorithm where we actually generate new bottom nodes, and the
-               * MLF papers don't talk about this since the stuff from {Records}
-               * is an extension.
-              *)
+              (* Extend nodes are always inert, so the exact bounds we choose
+               * for the new nodes don't really matter, as long as the resulting
+               * graph is well-formed. *)
               let new_with_bound v =
                 UnionFind.make
                   (`Free
