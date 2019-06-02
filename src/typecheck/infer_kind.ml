@@ -10,7 +10,6 @@ let unify_kind l r = match l, r with
   | Kind.Row, Kind.Type ->
     raise (MuleErr.MuleExn(MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type))))
 
-
 let rec walk_type env = function
   | Type.Named (_, s) ->
     Type.Named (UnionFind.make(Kind.Unknown), s)
@@ -24,12 +23,13 @@ let rec walk_type env = function
   | Type.Recur(_, var, body) ->
     let u_var = UnionFind.make Kind.Type in
     Type.Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
-  | Type.Record {r_info = _; r_types = _; r_values} ->
+  | Type.Record {r_info = _; r_types; r_values} ->
+    let (env, u_types) = collect_assoc_types env r_types in
     let u_var = UnionFind.make Kind.Type in
     Type.Record
       { r_info = u_var
       (* TODO: make use of the type row. *)
-      ; r_types = (UnionFind.make Kind.Row, [], None)
+      ; r_types = u_types
       ; r_values = walk_row env r_values
       }
   | Type.Union row ->
@@ -61,6 +61,17 @@ and walk_row env (_, fields, rest) =
     let u_var = Map.find_exn env v in
     UnionFind.merge unify_kind u_var (UnionFind.make Kind.Row);
     (UnionFind.make Kind.Type, fields', Some v)
+and collect_assoc_types env (i, field_types, rest) =
+  let env =
+    List.map field_types ~f:(fun (lbl, _) -> (lbl, UnionFind.make Kind.Type))
+    |> List.fold ~init:env ~f:(fun accum (lbl, u) ->
+        Map.set
+          accum
+          ~key:(Ast.Label.to_string lbl |> Ast.Var.of_string)
+          ~data:u
+      )
+  in
+  (env, walk_row env (i, field_types, rest))
 
 let infer env ty =
   let env = Map.map env ~f:UnionFind.make in
