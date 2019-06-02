@@ -106,7 +106,6 @@ let ctor = token (
 let rec typ_term = lazy (
   choice
     [ lazy_p typ_factor
-    ; (var |>> fun v -> Type.Var v)
     ; (ctor |>> fun c -> Type.Ctor c)
     ; lazy_p record_type
     ; lazy_p recur_type
