@@ -16,6 +16,18 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
+let rec hoist_assoc_types _sign _type =
+  (* Transform the type so we don't have any opaque associated types or
+   * types projected from records. For example:
+   *
+   * `{ type t }`  becomes `exist a. { type t = a }`
+   *
+   * `{ type t } -> a`  becomes `all b. { type t = b } -> a`
+   *
+   * `(x : { type t, y : t }) -> x.t` becomes `all a. { type t = a, y : a } -> a`
+   *)
+  failwith "TODO"
+
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
     DT.Fn((), desugar_type param, desugar_type ret)
