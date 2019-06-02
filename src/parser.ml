@@ -1,6 +1,22 @@
 open MParser
 open Ast.Surface
 
+module Let_syntax = struct
+  (* currently unused, but potentially used by the desugaring process.
+  let return =
+    return
+
+  let both x y =
+    x >>= fun x' -> y |>> fun y' -> (x', y')
+  *)
+
+  let map x ~f =
+    x |>> f
+
+  let bind x ~f =
+    x >>= f
+end
+
 let lazy_p p = return () >>= fun () -> Lazy.force p
 
 (* Set of reserved keywords *)
@@ -40,15 +56,14 @@ let identifier : (string, unit) MParser.t = (
     <|> digit
     <|> choice (List.map ~f:char ['_';'-';'!';'?'])
   in
-  id_start
-  >>= fun c -> many_chars id_cont
-               |>> fun cs -> String.make 1 c ^ cs
+  let%bind c = id_start in
+  let%map cs = many_chars id_cont in
+  String.make 1 c ^ cs
 ) <?> "identifier"
 
 (* A variable. *)
 let var = token (
-    identifier
-    >>= fun name ->
+    let%bind name = identifier in
     if Set.mem keywords name then
       fail "reserved word"
     else
@@ -56,18 +71,15 @@ let var = token (
   )
 
 let int: (Z.t, unit) MParser.t = token (
-    option (char '+' <|> char '-')
-    >>= fun sign ->
+    let%bind sign = option (char '+' <|> char '-') in
     let sign =
       begin match sign with
         | Some c -> String.of_char c
         | None -> ""
       end
     in
-    digit
-    >>= fun d ->
-    many_chars (digit <|> letter <|> char '_')
-    >>= fun ds ->
+    let%bind d = digit in
+    let%bind ds = many_chars (digit <|> letter <|> char '_') in
     (* We accept the same integer formats as zarith, except that we also
      * allow underscores as visual separators. Strip those out before passing
      * them on to the library.
@@ -82,13 +94,14 @@ let int: (Z.t, unit) MParser.t = token (
   )
 
 let label =
-  var |>> fun v -> Ast.Var.to_string v |> Ast.Label.of_string
+  let%map v = var in
+  Ast.Var.to_string v |> Ast.Label.of_string
 
 let ctor = token (
-    uppercase
-    >>= fun c -> many_chars (letter <|> char '_' <|> digit)
-                 |>> fun cs -> Ast.Label.of_string (String.make 1 c ^ cs)
-  ) <?> "constructor"
+  let%bind c = uppercase in
+  let%map cs = many_chars (letter <|> char '_' <|> digit) in
+  Ast.Label.of_string (String.make 1 c ^ cs)
+) <?> "constructor"
 
 let rec typ_term = lazy (
   choice
@@ -102,78 +115,80 @@ let rec typ_term = lazy (
     ]
 )
 and typ_app = lazy (
-  (lazy_p typ_term)
-  >>= fun t -> many (lazy_p typ_term)
-               |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
+  let%bind t = lazy_p typ_term in
+  many (lazy_p typ_term)
+  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
 )
 and recur_type = lazy (
-  kwd "rec"
-  >> var
-  >>= fun v -> kwd "."
-  >> lazy_p typ
-               |>> fun ty -> Type.Recur(v, ty)
+  kwd "rec" >>
+  let%bind v = var in
+  kwd "." >>
+  let%map ty = lazy_p typ in
+  Type.Recur(v, ty)
 )
 and quantified_type binder quantifier = lazy (
-  kwd binder
-  >> many1 var
-  >>= fun vs -> kwd "."
-  >> lazy_p typ
-                |>> fun ty -> Type.Quant(quantifier, vs, ty)
-  )
+  kwd binder >>
+  let%bind vs = many1 var in
+  kwd "." >>
+  let%map ty = lazy_p typ in
+  Type.Quant(quantifier, vs, ty)
+)
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
-  braces (optional (kwd ",") >> sep_end_by (lazy_p record_item) (kwd ","))
-  |>> fun items -> Type.Record items
+  let%map items =
+    braces (optional (kwd ",")
+    >> sep_end_by (lazy_p record_item) (kwd ","))
+  in
+  Type.Record items
 ) and record_item = lazy (
-    choice
-      [ lazy_p type_decl
-      ; lazy_p field_decl
-      ; kwd "..." >> (var |>> fun v -> Type.Rest v)
-      ]
-  ) and type_decl = lazy (
-    kwd "type"
-    >> label
-    >>= fun l -> option (kwd "=" >> lazy_p typ_term)
-                 |>> fun ty -> Type.Type(l, ty)
-  ) and field_decl = lazy (
-    label
-    >>= fun l -> kwd ":"
-    >> lazy_p typ
-                 |>> fun ty -> Type.Field (l, ty)
-  ) and typ = lazy (
-    expression
-      [ [ Infix ((kwd "|" >>$ fun l r -> Type.Union (l, r)), Assoc_right) ]
-      ; [ Infix ((kwd "->" >>$ fun p r -> Type.Fn(p, r)), Assoc_right) ]
-      ]
-      (lazy_p typ_app)
-  )
+  choice
+    [ lazy_p type_decl
+    ; lazy_p field_decl
+    ; kwd "..." >> (var |>> fun v -> Type.Rest v)
+    ]
+) and type_decl = lazy (
+  let%bind l = kwd "type" >> label in
+  let%map ty = option (kwd "=" >> lazy_p typ_term) in
+  Type.Type(l, ty)
+) and field_decl = lazy (
+  let%bind l = label in
+  let%map ty = kwd ":" >> lazy_p typ in
+  Type.Field (l, ty)
+) and typ = lazy (
+  expression
+    [ [ Infix ((kwd "|" >>$ fun l r -> Type.Union (l, r)), Assoc_right) ]
+    ; [ Infix ((kwd "->" >>$ fun p r -> Type.Fn(p, r)), Assoc_right) ]
+    ]
+    (lazy_p typ_app)
+)
 
 let rec expr = lazy ((
-    lazy_p ex0
-    >>= fun e -> option (kwd ":" >> lazy_p typ)
-                 |>> (function
-                     | Some ty -> Expr.WithType(e, ty)
-                     | None -> e
-                   )
-  ) <?> "expression")
+  let%bind e = lazy_p ex0 in
+  begin match%map option (kwd ":" >> lazy_p typ) with
+  | Some ty -> Expr.WithType(e, ty)
+  | None -> e
+  end
+) <?> "expression")
 and ex0 = lazy (
-  lazy_p ex1
-  >>= fun t -> many (lazy_p ex1)
-               |>> fun ts -> List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
+  let%bind t = lazy_p ex1 in
+  let%map ts = many (lazy_p ex1) in
+  List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
 )
 and ex1 = lazy (
-  lazy_p ex2
-  >>= fun old -> choice
-    [ (kwd "where" >> lazy_p record_fields
-       |>> fun fields -> Expr.Update (old, fields))
+  let%bind old = lazy_p ex2 in
+  choice
+    [ begin
+        let%map fields = kwd "where" >> lazy_p record_fields in
+        Expr.Update (old, fields)
+      end
     ; return old
     ]
 )
 and ex2 = lazy (
-  lazy_p ex3
-  >>= fun head -> many (kwd "." >> label)
-                  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField(e, l))
+  let%bind head = lazy_p ex3 in
+  many (kwd "." >> label)
+  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField(e, l))
 )
 and ex3 = lazy (
   choice
@@ -188,75 +203,69 @@ and ex3 = lazy (
     ]
 )
 and lambda = lazy ((
-    kwd "fn"
-    >> many1 (lazy_p pattern)
-    >>= fun params -> kwd "."
-    >> lazy_p expr
-                      |>> fun body -> Expr.Lam (params, body)
-  ) <?> "lambda")
+  let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
+  let%map body = kwd "." >> lazy_p expr in
+  Expr.Lam (params, body)
+) <?> "lambda")
 and let_expr = lazy ((
-    kwd "let"
-    >> lazy_p pattern
-    >>= fun pat -> kwd "="
-    >> lazy_p expr
-    >>= fun e -> kwd "in"
-    >> lazy_p expr
-                 |>> fun body -> Expr.Let(pat, e, body)
-  ) <?> "let expression")
+  let%bind pat = kwd "let" >> lazy_p pattern in
+  let%bind e   = kwd "=" >> lazy_p expr in
+  let%map body = kwd "in" >> lazy_p expr in
+  Expr.Let(pat, e, body)
+) <?> "let expression")
 and match_expr = lazy ((
-    kwd "match"
-    >> lazy_p expr
-    >>= fun e -> kwd "with"
-    >> optional (kwd "|")
-    >> sep_by1 (lazy_p case) (kwd "|")
-    >>= fun cases -> kwd "end"
-                     |>> fun _ -> Expr.Match(e, cases)
+    let%bind e = kwd "match" >> lazy_p expr in
+    let%bind cases =
+      kwd "with"
+      >> optional (kwd "|")
+      >> sep_by1 (lazy_p case) (kwd "|")
+    in
+    kwd "end"
+    >>$ Expr.Match(e, cases)
   ) <?> "match expression")
 and case = lazy (
-  lazy_p pattern
-  >>= fun p -> kwd "->"
-  >> lazy_p expr
-               |>> fun e -> (p, e)
+  let%bind p = lazy_p pattern in
+  let%map e = kwd "->" >> lazy_p expr in
+  (p, e)
 )
 and pattern = lazy ((
+  let%bind p =
     choice
       [ (int |>> fun n -> Pattern.Integer n)
       ; parens (lazy_p pattern)
       ; (kwd "_" |>> fun _ -> Pattern.Wild)
       ; (var |>> fun v -> Pattern.Var v)
-      ; (ctor
-         >>= fun lbl -> lazy_p pattern
-                        |>> fun p -> Pattern.Ctor (lbl, p)
-        )
-        ;
+      ; begin
+         let%bind lbl = ctor in
+         let%map p = lazy_p pattern in
+         Pattern.Ctor (lbl, p)
+        end
       ]
-    >>= fun p -> option (kwd ":" >> lazy_p typ)
-                 |>> fun ty -> begin match ty with
-                   | Some ty' -> Pattern.Annotated(p, ty')
-                   | None -> p
-                 end
-  ) <?> "pattern")
+  in
+  begin match%map option (kwd ":" >> lazy_p typ) with
+  | Some ty -> Pattern.Annotated(p, ty)
+  | None -> p
+  end
+) <?> "pattern")
 and record_fields = lazy ((
-    braces (optional (kwd ",") >> sep_end_by (lazy_p field_def) (kwd ","))
-  ) <?> "record")
+    braces (optional (kwd ",")
+    >> sep_end_by (lazy_p field_def) (kwd ","))
+) <?> "record")
 and record = lazy (
   lazy_p record_fields
   |>> fun fields -> Expr.Record fields
 )
 and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
-  kwd "type"
-  >> label
-  >>= fun l -> kwd "="
-  >> lazy_p typ
-               |>> fun ty -> `Type (l, ty)
+  let%bind l = kwd "type" >> label in
+  let%map ty = kwd "=" >> lazy_p typ in
+  `Type (l, ty)
 )
 and value_field_def = lazy (
-  label
-  >>= fun l -> option (kwd ":" >> lazy_p typ)
-  >>= fun ty -> kwd "="
-  >> lazy_p expr
-                |>> fun e -> `Value (l, ty, e)
+  let%bind l = label in
+  let%bind ty = option (kwd ":" >> lazy_p typ) in
+  let%map e = kwd "=" >> lazy_p expr in
+  `Value (l, ty, e)
 )
 
 let expr = Lazy.force expr
