@@ -44,6 +44,20 @@ let get_flag: Type.quantifier -> sign -> bound_ty =
     | `Exist, `Pos -> `Rigid
     | `Exist, `Neg -> `Flex
 
+let rec add_row_to_env: env_t -> u_var -> env_t =
+  fun env u ->
+    match UnionFind.get u with
+    | `Const(_, `Named "<empty>", [], _) | `Free _ -> env
+    | `Const(_, `Extend lbl, [head, _; tail, _], _) ->
+      add_row_to_env
+        (Map.set
+           env
+           ~key:(Ast.Label.to_string lbl |> Ast.Var.of_string)
+           ~data:head)
+        tail
+    | _ ->
+      failwith "Illegal row"
+
 
 (* [gen_type b_at env sign ty] generates a graphic type based on [ty].
  *
@@ -82,9 +96,11 @@ let rec gen_type
     | Type.Var (_, v) ->
       Map.find_exn env v
     | Type.Record {r_info = _; r_types; r_values} ->
+      let type_row = gen_row b_at env sign r_types in
+      let env = add_row_to_env env type_row in
       UnionFind.make (
         record tv
-          (gen_row b_at env sign r_types)
+          type_row
           (gen_row b_at env sign r_values)
       )
     | Type.Union row ->

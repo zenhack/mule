@@ -81,18 +81,8 @@ let check_unbound_vars expr =
     | Type.Fn(param, ret) ->
       go_type typ param;
       go_type typ ret
-    | Type.Record (Type.Type(_, Some ty) :: rest) ->
-      go_type typ ty;
-      go_type typ (Type.Record rest)
-    | Type.Record (Type.Type(_, None) :: rest) ->
-      go_type typ (Type.Record rest)
-    | Type.Record (Type.Field(_, ty) :: rest) ->
-      go_type typ ty;
-      go_type typ (Type.Record rest)
-    | Type.Record (Type.Rest var :: rest) ->
-      go_type typ (Type.Var var);
-      go_type typ (Type.Record rest)
-    | Type.Record [] -> ()
+    | Type.Record record ->
+      go_record typ record
     | Type.Ctor _ -> ()
     | Type.App (f, x) ->
       go_type typ f;
@@ -104,6 +94,23 @@ let check_unbound_vars expr =
       go_type typ (Type.Var v)
     | Type.Annotated(v, ty) ->
       go_type (Set.add typ v) ty
+  and go_record typ items =
+    let (types, values) =
+      List.partition_map items ~f:(function
+        | Type.Type(lbl, Some _) ->
+          `Fst (Ast.Label.to_string lbl |> Ast.Var.of_string)
+        | x ->
+          `Snd x
+      )
+    in
+    let typ' = List.fold types ~init:typ ~f:Set.add in
+    List.iter values ~f:(go_record_item typ')
+  and go_record_item typ = function
+    | Type.Type(_, Some ty) ->
+      go_type typ ty
+    | Type.Type(_, None) -> ()
+    | Type.Field(_, ty) -> go_type typ ty
+    | Type.Rest var -> go_type typ (Type.Var var)
   in
   let term =
     Intrinsics.intrinsics
