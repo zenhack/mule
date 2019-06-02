@@ -100,23 +100,27 @@ let rec typ_term = lazy (
     ; lazy_p exist_type
     ; parens (lazy_p typ)
     ]
-) and typ_app = lazy (
-    (lazy_p typ_term)
-    >>= fun t -> many (lazy_p typ_term)
-                 |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
-  ) and recur_type = lazy (
-    kwd "rec"
-    >> var
-    >>= fun v -> kwd "."
-    >> lazy_p typ
-                 |>> fun ty -> Type.Recur(v, ty)
-  ) and quantified_type binder quantifier = lazy (
-    kwd binder
-    >> many1 var
-    >>= fun vs -> kwd "."
-    >> lazy_p typ
-                  |>> fun ty -> Type.Quant(quantifier, vs, ty)
-  ) and all_type = lazy (lazy_p (quantified_type "all" `All))
+)
+and typ_app = lazy (
+  (lazy_p typ_term)
+  >>= fun t -> many (lazy_p typ_term)
+               |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
+)
+and recur_type = lazy (
+  kwd "rec"
+  >> var
+  >>= fun v -> kwd "."
+  >> lazy_p typ
+               |>> fun ty -> Type.Recur(v, ty)
+)
+and quantified_type binder quantifier = lazy (
+  kwd binder
+  >> many1 var
+  >>= fun vs -> kwd "."
+  >> lazy_p typ
+                |>> fun ty -> Type.Quant(quantifier, vs, ty)
+  )
+and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
   braces (optional (kwd ",") >> sep_end_by (lazy_p record_item) (kwd ","))
