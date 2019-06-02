@@ -67,7 +67,7 @@ and collect_assoc_types env (i, field_types, rest) =
     |> List.fold ~init:env ~f:(fun accum (lbl, u) ->
         Map.set
           accum
-          ~key:(Ast.Label.to_string lbl |> Ast.Var.of_string)
+          ~key:(Ast.var_of_label lbl)
           ~data:u
       )
   in

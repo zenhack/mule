@@ -94,8 +94,7 @@ let int: (Z.t, unit) MParser.t = token (
   )
 
 let label =
-  let%map v = var in
-  Ast.Var.to_string v |> Ast.Label.of_string
+  var |>> Ast.var_to_label
 
 let ctor = token (
   let%bind c = uppercase in

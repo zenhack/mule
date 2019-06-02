@@ -52,7 +52,7 @@ let rec add_row_to_env: env_t -> u_var -> env_t =
       add_row_to_env
         (Map.set
            env
-           ~key:(Ast.Label.to_string lbl |> Ast.Var.of_string)
+           ~key:(Ast.var_of_label lbl)
            ~data:head)
         tail
     | _ ->

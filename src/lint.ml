@@ -32,7 +32,7 @@ let check_unbound_vars expr =
       let new_vars =
         List.filter_map fields ~f:(function
             | `Value(l, _, _) ->
-              Some (Ast.Var.of_string (Ast.Label.to_string l))
+              Some (Ast.var_of_label l)
             | _ ->
               None
           )
@@ -98,7 +98,7 @@ let check_unbound_vars expr =
     let (types, values) =
       List.partition_map items ~f:(function
         | Type.Type(lbl, Some _) ->
-          `Fst (Ast.Label.to_string lbl |> Ast.Var.of_string)
+          `Fst (Ast.var_of_label lbl)
         | x ->
           `Snd x
       )
