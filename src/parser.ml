@@ -119,6 +119,17 @@ and typ_app = lazy (
   many (lazy_p typ_term)
   |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
 )
+and typ_annotated = lazy (
+  choice
+    [ begin
+        let%bind _v = attempt (var << kwd ":") in
+        (* TODO: attach the variable to the AST somewhere. *)
+        let%map ty = lazy_p typ_app in
+        ty
+      end
+    ; lazy_p typ_app
+    ]
+)
 and recur_type = lazy (
   kwd "rec" >>
   let%bind v = var in
@@ -160,7 +171,7 @@ and record_type = lazy (
     [ [ Infix ((kwd "|" >>$ fun l r -> Type.Union (l, r)), Assoc_right) ]
     ; [ Infix ((kwd "->" >>$ fun p r -> Type.Fn(p, r)), Assoc_right) ]
     ]
-    (lazy_p typ_app)
+    (lazy_p typ_annotated)
 )
 
 let rec expr = lazy ((
