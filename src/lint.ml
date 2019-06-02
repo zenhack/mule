@@ -72,8 +72,8 @@ let check_unbound_vars expr =
     | Pattern.Ctor(_, p) -> go_pat typ p
     | Pattern.Annotated(_, ty) -> go_type typ ty
   and go_type typ = function
-    | Type.Var v when Set.mem typ v -> ()
-    | Type.Var v -> unboundVar v
+    | Type.Var v | Type.Path(v, _) when Set.mem typ v -> ()
+    | Type.Var v | Type.Path(v, _) -> unboundVar v
     | Type.Quant(_, vars, ty) ->
       go_type (List.fold ~init:typ ~f:Set.add vars) ty
     | Type.Recur(var, ty) ->
@@ -158,6 +158,7 @@ let check_duplicate_record_fields =
     | Pattern.Var _ | Pattern.Wild -> ()
   and go_type = function
     | Type.Var _
+    | Type.Path _
     | Type.Ctor _
     | Type.RowRest _ -> ()
     | Type.Quant(_, _, ty) -> go_type ty
