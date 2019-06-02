@@ -122,10 +122,10 @@ and typ_app = lazy (
 and typ_annotated = lazy (
   choice
     [ begin
-        let%bind _v = attempt (var << kwd ":") in
+        let%bind v = attempt (var << kwd ":") in
         (* TODO: attach the variable to the AST somewhere. *)
         let%map ty = lazy_p typ_app in
-        ty
+        Type.Annotated(v, ty)
       end
     ; lazy_p typ_app
     ]

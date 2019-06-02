@@ -102,6 +102,8 @@ let check_unbound_vars expr =
       go_type typ y
     | Type.RowRest v ->
       go_type typ (Type.Var v)
+    | Type.Annotated(v, ty) ->
+      go_type (Set.add typ v) ty
   in
   let term =
     Intrinsics.intrinsics
@@ -175,6 +177,7 @@ let check_duplicate_record_fields =
       |> go_labels
     | Type.Union(l, r) -> go_type l; go_type r
     | Type.App(f, x) -> go_type f; go_type x
+    | Type.Annotated(_, ty) -> go_type ty
   and go_labels =
     let rec go all dups = function
       | (l :: ls) when Set.mem all l ->

@@ -33,6 +33,7 @@ let rec desugar_type = function
     DT.Union((), [(l, desugar_type t)], None)
   | ST.RowRest v ->
     DT.Union((), [], Some v)
+  | ST.Annotated(_, ty) -> desugar_type ty
   | _ ->
     failwith "TODO"
 and desugar_q_type q vars body =

@@ -14,6 +14,7 @@ module Type = struct
     | App of (t * t)
     | Union of (t * t)
     | RowRest of Var.t
+    | Annotated of (Var.t * t)
   [@@deriving sexp]
 and record_item =
   | Field of (Label.t * t)
