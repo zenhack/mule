@@ -105,7 +105,8 @@ let ctor = token (
 
 let rec typ_term = lazy (
   choice
-    [ (var |>> fun v -> Type.Var v)
+    [ lazy_p typ_factor
+    ; (var |>> fun v -> Type.Var v)
     ; (ctor |>> fun c -> Type.Ctor c)
     ; lazy_p record_type
     ; lazy_p recur_type
@@ -113,6 +114,11 @@ let rec typ_term = lazy (
     ; lazy_p exist_type
     ; parens (lazy_p typ)
     ]
+)
+and typ_factor = lazy (
+  let%bind v = var in
+  many (kwd "." >> label)
+  |>> List.fold_left ~init:(Type.Var v) ~f:(fun old _part -> old)
 )
 and typ_app = lazy (
   let%bind t = lazy_p typ_term in
