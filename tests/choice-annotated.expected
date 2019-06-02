@@ -26,14 +26,24 @@ Desugared:
 
 inferred type:
 
-	(Fn
-	 (() (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a))))))
-	  (Record (r_info ()) (r_types (() () (b)))
-	   (r_values
-	    (()
-	     ((x (Record (r_info ()) (r_types (() () (c))) (r_values (() () ()))))
-	      (y (Fn (() (Var (() d)) (Var (() d))))))
-	     ())))))
+	(Quant
+	 (() All a Unknown
+	  (Quant
+	   (() All b Unknown
+	    (Quant
+	     (() All c Unknown
+	      (Quant
+	       (() Exist d Unknown
+	        (Fn
+	         (() (Fn (() (Var (() d)) (Fn (() (Var (() d)) (Var (() d))))))
+	          (Record (r_info ()) (r_types (() () (c)))
+	           (r_values
+	            (()
+	             ((x
+	               (Record (r_info ()) (r_types (() () (b)))
+	                (r_values (() () ()))))
+	              (y (Fn (() (Var (() a)) (Var (() a))))))
+	             ())))))))))))))
 
 Runtime term:
 
