@@ -28,7 +28,7 @@ let rec desugar_type = function
   | ST.Union u ->
     DT.Union (desugar_union_type None u)
   | ST.Record r ->
-    desugar_record_type [] r
+    desugar_record_type [] [] r
   | ST.App(ST.Ctor l, t) ->
     DT.Union((), [(l, desugar_type t)], None)
   | ST.RowRest v ->
@@ -54,24 +54,27 @@ and desugar_union_type tail (l, r) =
            (MuleErr.MuleExn
               (MuleErr.MalformedType
                  "Unions must be composed of ctors and at most one ...r"))
-and desugar_record_type fields = function
-  | (ST.Type _ :: fs) ->
-    (* TODO: do something with this. *)
-    desugar_record_type fields fs
+and desugar_record_type types fields = function
+  (* TODO: how do we have variable fields for the type row? *)
+  | (ST.Type(lbl, Some t) :: fs) ->
+    desugar_record_type ((lbl, desugar_type t)::types) fields fs
+  | (ST.Type(_lbl, None) :: fs) ->
+     (* TODO *)
+     desugar_record_type types fields fs
   | [] ->
     DT.Record
       { r_info = ()
-      ; r_types = ((), [], None)
+      ; r_types = ((), types, None)
       ; r_values = ((), fields, None)
       }
   | [ST.Rest v] ->
     DT.Record
       { r_info = ()
-      ; r_types = ((), [], None)
+      ; r_types = ((), types, None)
       ; r_values = ((), fields, Some v)
       }
   | (ST.Field (l, t) :: rest) ->
-    desugar_record_type ((l, desugar_type t)::fields) rest
+    desugar_record_type types ((l, desugar_type t)::fields) rest
   | (ST.Rest _ :: _) -> raise
                           (MuleErr.MuleExn
                              (MuleErr.MalformedType "row variable before the end of a record type."))
