@@ -16,7 +16,10 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
-let rec hoist_assoc_types _sign _type =
+let pack_q q (_env, vars, body) =
+  ST.Quant(q, vars, body)
+
+let rec hoist_assoc_types env = function
   (* Transform the type so we don't have any opaque associated types or
    * types projected from records. For example:
    *
@@ -26,7 +29,69 @@ let rec hoist_assoc_types _sign _type =
    *
    * `(x : { type t, y : t }) -> x.t` becomes `all a. { type t = a, y : a } -> a`
    *)
-  failwith "TODO"
+  | ST.Record items ->
+    (* TODO: recurse (and generally finish this). *)
+    let opaque_types =
+      List.filter_map items ~f:(function
+        | ST.Type(lbl, None) -> Some (lbl, Gensym.anon_var ())
+        | _ -> None
+      )
+      |> Map.of_alist_exn (module Ast.Label)
+    in
+    let items = List.map items ~f:(function
+        | ST.Type(lbl, None) ->
+          ST.Type (lbl, Some(ST.Var(Map.find_exn opaque_types lbl)))
+        | x -> x
+      )
+    in
+    ( Map.map opaque_types ~f:(fun v -> ST.Var v)
+      |> Map.merge_skewed env ~combine:(fun ~key:_ l _r -> l)
+    , Map.to_alist opaque_types
+      |> List.map ~f:snd
+    , ST.Record items
+    )
+  | ST.Fn(param, ret) ->
+    let param_env, param_vars, param = hoist_assoc_types env param in
+    let ret = pack_q `Exist (hoist_assoc_types param_env ret) in
+    ( env
+    , []
+    , ST.Quant(`All, param_vars, ST.Fn(param, ret))
+    )
+  | ST.Annotated (v, ty) ->
+    let env', vars, ty' = hoist_assoc_types env ty in
+    ( Map.set env' ~key:v ~data:ty'
+    , v :: vars
+    , ty'
+    )
+  | ST.Path(v, parts) ->
+    let rec go ty ps = match ty, ps with
+      | _, [] ->
+        (* TODO: we should refactor so this can be ruled out statically.
+         * Probably var and path should be the same tag.
+         *)
+        failwith "IMPOSSIBLE"
+      | ST.Record items, [lbl] ->
+        (* TODO: raise a proper error if not found. *)
+        List.find_map_exn items ~f:(function
+            | ST.Type(lbl', Some t) when Label.equal lbl lbl' ->
+              Some t
+            | _ ->
+              None
+          )
+      | ST.Record items, (l::ls) ->
+        let ty = List.find_map_exn items ~f:(function
+            | ST.Field (lbl, ty) when Label.equal lbl l ->
+              Some ty
+            | _ ->
+              None
+          )
+        in
+        go ty ls
+      | _, (_ :: _) ->
+        (* TODO: raise a proper error. *)
+        failwith "Projection on non-record."
+    in
+    go (Map.find_exn env v) parts
 
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
