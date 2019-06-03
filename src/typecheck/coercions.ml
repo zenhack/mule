@@ -31,19 +31,6 @@ let gen_kind = function
   | Kind.Unknown ->
     failwith "BUG: Infer_kind should already have been called"
 
-type sign = [ `Pos | `Neg ]
-
-let flip_sign = function
-  | `Pos -> `Neg
-  | `Neg -> `Pos
-
-let get_flag: Type.quantifier -> sign -> bound_ty =
-  fun q sign-> match q, sign with
-    | `All, `Pos -> `Flex
-    | `All, `Neg -> `Rigid
-    | `Exist, `Pos -> `Rigid
-    | `Exist, `Neg -> `Flex
-
 let rec add_row_to_env: env_t -> u_var -> env_t =
   fun env u ->
     match UnionFind.get u with

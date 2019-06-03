@@ -36,6 +36,21 @@ and bound_target =
 
 type u_var = u_type UnionFind.var
 
+type sign = [ `Pos | `Neg ]
+
+type quantifier = [ `All | `Exist ]
+
+let flip_sign = function
+  | `Pos -> `Neg
+  | `Neg -> `Pos
+
+let get_flag: quantifier -> sign -> bound_ty =
+  fun q sign-> match q, sign with
+    | `All, `Pos -> `Flex
+    | `All, `Neg -> `Rigid
+    | `Exist, `Pos -> `Rigid
+    | `Exist, `Neg -> `Flex
+
 (* constructors for common type constants. *)
 let int tv = `Const(tv, `Named "int", [], `Type)
 let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
