@@ -17,11 +17,12 @@ module Type = struct
     | Annotated of (Var.t * t)
     | Path of (Var.t * Label.t list)
   [@@deriving sexp]
-and record_item =
-  | Field of (Label.t * t)
-  | Type of (Label.t * t option)
-  | Rest of Var.t
-[@@deriving sexp]
+
+  and record_item =
+    | Field of (Label.t * t)
+    | Type of (Label.t * t option)
+    | Rest of Var.t
+  [@@deriving sexp]
 end
 
 module Pattern = struct
