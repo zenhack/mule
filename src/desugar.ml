@@ -16,6 +16,7 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
+(*
 let pack_q q (_env, vars, body) =
   ST.Quant(q, vars, body)
 
@@ -115,6 +116,7 @@ let rec hoist_assoc_types env = function
         failwith "Projection on non-record."
     in
     go (Map.find_exn env v) parts
+      *)
 
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
