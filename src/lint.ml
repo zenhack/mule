@@ -4,9 +4,8 @@ open Ast.Surface.Expr
 let rec collect_pat_vars = function
   | Pattern.Integer _ -> VarSet.empty
   | Pattern.Wild -> VarSet.empty
-  | Pattern.Var v -> VarSet.singleton v
+  | Pattern.Var (v, _) -> VarSet.singleton v
   | Pattern.Ctor(_, p) -> collect_pat_vars p
-  | Pattern.Annotated(p, _) -> collect_pat_vars p
 
 let err e =
   raise (MuleErr.MuleExn e)
@@ -68,9 +67,9 @@ let check_unbound_vars expr =
   and go_pat typ = function
     | Pattern.Integer _ -> ()
     | Pattern.Wild -> ()
-    | Pattern.Var _ -> ()
+    | Pattern.Var (_, None) -> ()
+    | Pattern.Var (_, Some ty ) -> go_type typ ty
     | Pattern.Ctor(_, p) -> go_pat typ p
-    | Pattern.Annotated(_, ty) -> go_type typ ty
   and go_type typ = function
     | Type.Var v | Type.Path(v, _) when Set.mem typ v -> ()
     | Type.Var v | Type.Path(v, _) -> unboundVar v
@@ -160,9 +159,9 @@ let check_duplicate_record_fields =
     go_labels labels
   and go_pat = function
     | Pattern.Integer _ -> ()
-    | Pattern.Annotated(pat, ty) -> go_pat pat; go_type ty
     | Pattern.Ctor(_, pat) -> go_pat pat
-    | Pattern.Var _ | Pattern.Wild -> ()
+    | Pattern.Var (_, None) | Pattern.Wild -> ()
+    | Pattern.Var (_, Some ty) -> go_type ty
   and go_type = function
     | Type.Var _
     | Type.Path _

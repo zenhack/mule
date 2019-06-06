@@ -28,9 +28,8 @@ end
 module Pattern = struct
   type t =
     | Ctor of (Label.t * t)
-    | Var of Var.t
+    | Var of (Var.t * Type.t option)
     | Wild
-    | Annotated of (t * Type.t)
     | Integer of Bigint.t
   [@@deriving sexp]
 end

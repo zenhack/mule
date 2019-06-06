@@ -181,11 +181,11 @@ let rec desugar = function
   | S.Integer n -> D.Integer n
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
-  | S.Lam (SP.Var v :: pats, body) ->
+  | S.Lam (SP.Var (v, None) :: pats, body) ->
     D.Lam(v, desugar (S.Lam (pats, body)))
   | S.Lam (SP.Wild :: pats, body) ->
     D.Lam(Gensym.anon_var (), desugar (S.Lam (pats, body)))
-  | S.Lam ((SP.Annotated (SP.Var v, ty) :: pats), body) ->
+  | S.Lam ((SP.Var (v, Some ty) :: pats), body) ->
     let v' = Gensym.anon_var () in
     D.Lam
       ( v'
@@ -233,13 +233,13 @@ let rec desugar = function
   | S.Let((SP.Integer _) as p, _, _) ->
     incomplete_pattern p
   | S.Let(SP.Wild, e, body) ->
-    desugar (S.Let(SP.Var (Gensym.anon_var ()), e, body))
-  | S.Let(SP.Annotated(pat, ty), e, body) ->
-    desugar (S.Let(pat, S.WithType(e, ty), body))
+    desugar (S.Let(SP.Var (Gensym.anon_var (), None), e, body))
+  | S.Let(SP.Var(v, Some ty), e, body) ->
+    desugar (S.Let(SP.Var (v, None), S.WithType(e, ty), body))
   | S.Let(SP.Ctor(lbl, pat), e, body) ->
     let v = Gensym.anon_var () in
-    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var v), S.Let(pat, S.Var v, body))]))
-  | S.Let(SP.Var v, e, body) ->
+    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(pat, S.Var v, body))]))
+  | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
@@ -341,9 +341,6 @@ and desugar_match cases =
               { cases = LabelMap.empty
               ; default = None
               }
-    | ((SP.Annotated (pat, _ty), body) :: rest) ->
-      (* TODO: do something with the type. *)
-      desugar_match ((pat, body) :: rest)
     | ((SP.Wild, _) :: _) | ((SP.Var _, _) :: _) ->
       unreachable_case SP.Wild
   end
@@ -354,14 +351,13 @@ and desugar_int_match dict = function
                            }
   | ((SP.Wild, _) :: _) ->
     unreachable_case SP.Wild
-  | [(SP.Var v, body)] -> D.IntMatch
-                            { im_default = D.Lam(v, desugar body)
-                            ; im_cases = dict
-                            }
+  | [(SP.Var _) as p, body] ->
+      D.IntMatch
+        { im_default = desugar (S.Lam([p], body))
+        ; im_cases = dict
+        }
   | ((SP.Var _, _) :: _) ->
     unreachable_case SP.Wild
-  | ((SP.Annotated(pat, _ty), body) :: rest) ->
-    desugar_int_match dict ((pat, body) :: rest)
   | ((SP.Integer n, body) :: rest) ->
     begin match Map.find dict n with
       | Some _ -> unreachable_case (SP.Integer n)
@@ -386,11 +382,12 @@ and desugar_lbl_match dict = function
                            { default = Some (None, desugar body)
                            ; cases = finalize_dict dict
                            }
-  | [(SP.Var v, body)] -> D.Match
-                            { default = Some (Some v, desugar body)
-                            ; cases = finalize_dict dict
-                            }
-  | [(SP.Annotated (SP.Var v, ty), body)] ->
+  | [SP.Var (v, None), body] ->
+      D.Match
+        { default = Some (Some v, desugar body)
+        ; cases = finalize_dict dict
+        }
+  | [SP.Var (v, Some ty), body] ->
     let v' = Gensym.anon_var () in
     let let_ = D.Let
         ( v
@@ -410,11 +407,6 @@ and desugar_lbl_match dict = function
         )
     in
     desugar_lbl_match dict' cases
-  | (SP.Annotated (p, _), body) :: cases ->
-    (* TODO: we'll want to actually do something with these eventually.
-     * Maybe the thing to do is just only allow annotations on pattern variables,
-     * rather than arbitrary patterns? *)
-    desugar_lbl_match dict ((p, body) :: cases)
   | (_ :: _) ->
     raise MuleErr.(MuleExn UnreachableCases)
 and finalize_dict dict =

@@ -245,23 +245,22 @@ and case = lazy (
   (p, e)
 )
 and pattern = lazy ((
-  let%bind p =
-    choice
-      [ (int |>> fun n -> Pattern.Integer n)
-      ; parens (lazy_p pattern)
-      ; (kwd "_" |>> fun _ -> Pattern.Wild)
-      ; (var |>> fun v -> Pattern.Var v)
-      ; begin
-         let%bind lbl = ctor in
-         let%map p = lazy_p pattern in
-         Pattern.Ctor (lbl, p)
-        end
-      ]
-  in
-  begin match%map option (kwd ":" >> lazy_p typ) with
-  | Some ty -> Pattern.Annotated(p, ty)
-  | None -> p
-  end
+  choice
+    [ (int |>> fun n -> Pattern.Integer n)
+    ; parens (lazy_p pattern)
+    ; (kwd "_" |>> fun _ -> Pattern.Wild)
+    ; begin
+        let%bind v = var in
+        match%map option (kwd ":" >> lazy_p typ) with
+        | Some ty -> Pattern.Var (v, Some ty)
+        | None -> Pattern.Var (v, None)
+      end
+    ; begin
+       let%bind lbl = ctor in
+       let%map p = lazy_p pattern in
+       Pattern.Ctor (lbl, p)
+      end
+    ]
 ) <?> "pattern")
 and record_fields = lazy ((
     braces (optional (kwd ",")
