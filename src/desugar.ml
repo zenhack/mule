@@ -28,6 +28,28 @@ let rec hoist_assoc_types env = function
    * `{ type t } -> a`  becomes `all b. { type t = b } -> a`
    *
    * `(x : { type t, y : t }) -> x.t` becomes `all a. { type t = a, y : a } -> a`
+   *
+   * Returns a 3-tuple of:
+   *
+   * - a new environment, with bindings for any annotated types
+   * - a list of generated variables for associated types, which should be
+   *   bound with a quantifier by the caller
+   * - the modified type itself
+   *
+   * The variable list is returned rather than inserted, so that the caller
+   * can (1) bind the variables somewhere other than immediately around the
+   * type and (2) choose which quantifier to use for example, with:
+   *
+   *  `{ type t } -> int`
+   *
+   * The recursive call on `{ type t }` returns:
+   *
+   *    (env, [a], { type t = a })
+   *
+   * The caller then chooses to use a universal quantifier, and place it
+   * outside the function constructor, i.e.
+   *
+   *    all a. { type t = a } -> int
    *)
   | ST.Record items ->
     (* TODO: recurse (and generally finish this). *)
