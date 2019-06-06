@@ -119,8 +119,9 @@ let rec hoist_assoc_types env = function
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
     DT.Fn((), desugar_type param, desugar_type ret)
-  | ST.Quant(q, vars, body) ->
-    desugar_q_type q vars body
+  | ST.Quant(q, (v :: vs), body) ->
+    DT.Quant((), q, v, DK.Unknown, desugar_type (ST.Quant(q, vs, body)))
+  | ST.Quant(_, [], body) -> desugar_type body
   | ST.Recur(v, body) ->
     DT.Recur((), v, desugar_type body)
   | ST.Var v ->
@@ -136,12 +137,6 @@ let rec desugar_type = function
   | ST.Annotated(_, ty) -> desugar_type ty
   | _ ->
     failwith "TODO"
-and desugar_q_type q vars body =
-  let rec go = function
-    | [] -> desugar_type body
-    | (x :: xs) -> DT.Quant((), q, x, DK.Unknown, go xs)
-  in
-  go vars
 and desugar_union_type tail (l, r) =
   match desugar_type l, desugar_type r, tail with
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), (Some v)
