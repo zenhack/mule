@@ -52,26 +52,24 @@ let rec hoist_assoc_types env = function
    *    all a. { type t = a } -> int
    *)
   | ST.Record items ->
-    (* TODO: recurse (and generally finish this). *)
-    let opaque_types =
-      List.filter_map items ~f:(function
-        | ST.Type(lbl, None) -> Some (lbl, Gensym.anon_var ())
-        | _ -> None
-      )
-      |> Map.of_alist_exn (module Ast.Label)
+    let env_ref = ref env in
+    let new_vars = ref [] in
+    (* TODO: types should be able to reference one another; this doesn't currently
+     * support that. Need to think about how. *)
+    let items =
+      List.map items ~f:(function
+          | ST.Type(lbl, None) ->
+            let var = Gensym.anon_var () in
+            env_ref := Map.set !env_ref ~key:(Ast.var_of_label lbl) ~data:(ST.Var var);
+            new_vars := var :: !new_vars;
+            ST.Type(lbl, Some (ST.Var var))
+          | ST.Type(lbl, Some ty) ->
+            ST.Type(lbl, Some (pack_q `Exist (hoist_assoc_types !env_ref ty)))
+          | ST.Rest v ->
+            ST.Rest v
+        )
     in
-    let items = List.map items ~f:(function
-        | ST.Type(lbl, None) ->
-          ST.Type (lbl, Some(ST.Var(Map.find_exn opaque_types lbl)))
-        | x -> x
-      )
-    in
-    ( Map.map opaque_types ~f:(fun v -> ST.Var v)
-      |> Map.merge_skewed env ~combine:(fun ~key:_ l _r -> l)
-    , Map.to_alist opaque_types
-      |> List.map ~f:snd
-    , ST.Record items
-    )
+    (!env_ref, !new_vars, ST.Record items)
   | ST.Fn(param, ret) ->
     let param_env, param_vars, param = hoist_assoc_types env param in
     let ret = pack_q `Exist (hoist_assoc_types param_env ret) in
@@ -93,13 +91,16 @@ let rec hoist_assoc_types env = function
          *)
         failwith "IMPOSSIBLE"
       | ST.Record items, [lbl] ->
-        (* TODO: raise a proper error if not found. *)
-        List.find_map_exn items ~f:(function
-            | ST.Type(lbl', Some t) when Label.equal lbl lbl' ->
-              Some t
-            | _ ->
-              None
-          )
+        ( env
+        , []
+        , (* TODO: raise a proper error if not found. *)
+          List.find_map_exn items ~f:(function
+              | ST.Type(lbl', Some t) when Label.equal lbl lbl' ->
+                Some t
+              | _ ->
+                None
+            )
+        )
       | ST.Record items, (l::ls) ->
         let ty = List.find_map_exn items ~f:(function
             | ST.Field (lbl, ty) when Label.equal lbl l ->
