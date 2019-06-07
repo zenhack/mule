@@ -16,107 +16,44 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
-(*
-let pack_q q (_env, vars, body) =
-  ST.Quant(q, vars, body)
+let rec quantify_opaques = function
+  | DT.Record {r_info; r_types = (i, fields, rest); r_values} ->
+    let vars = ref [] in
+    let fields' = List.map fields ~f:(fun (lbl, ty) ->
+        match quantify_opaques ty with
+        | DT.Opaque i ->
+          let var = Gensym.anon_var () in
+          vars := var :: !vars;
+          (lbl, DT.Var (i, var))
+        | ty' -> (lbl, ty')
+      )
+    in
+    let init =
+      DT.Record
+        { r_info
+        ; r_types = (i, fields', rest)
+        ; r_values = quantify_row_opaques r_values
+        }
+    in
+    List.fold !vars ~init ~f:(fun ty v ->
+      DT.Quant((), `Exist, v, DK.Unknown, ty)
+    )
+  | DT.Opaque i -> DT.Opaque i
+  | DT.Fn(i, param, ret) ->
+    DT.Fn(i, quantify_opaques param, quantify_opaques ret)
+  | DT.Recur (i, v, t) -> DT.Recur(i, v, quantify_opaques t)
+  | DT.Var v -> DT.Var v
+  | DT.Union row -> DT.Union(quantify_row_opaques row)
+  | DT.Quant(i, q, v, k, t) -> DT.Quant(i, q, v, k, quantify_opaques t)
+  | DT.Named(i, s) -> DT.Named(i, s)
+and quantify_row_opaques (i, fields, rest) =
+  ( i
+  , List.map
+      fields
+      ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty))
+  , rest
+  )
 
-let rec hoist_assoc_types env = function
-  (* Transform the type so we don't have any opaque associated types or
-   * types projected from records. For example:
-   *
-   * `{ type t }`  becomes `exist a. { type t = a }`
-   *
-   * `{ type t } -> a`  becomes `all b. { type t = b } -> a`
-   *
-   * `(x : { type t, y : t }) -> x.t` becomes `all a. { type t = a, y : a } -> a`
-   *
-   * Returns a 3-tuple of:
-   *
-   * - a new environment, with bindings for any annotated types
-   * - a list of generated variables for associated types, which should be
-   *   bound with a quantifier by the caller
-   * - the modified type itself
-   *
-   * The variable list is returned rather than inserted, so that the caller
-   * can (1) bind the variables somewhere other than immediately around the
-   * type and (2) choose which quantifier to use for example, with:
-   *
-   *  `{ type t } -> int`
-   *
-   * The recursive call on `{ type t }` returns:
-   *
-   *    (env, [a], { type t = a })
-   *
-   * The caller then chooses to use a universal quantifier, and place it
-   * outside the function constructor, i.e.
-   *
-   *    all a. { type t = a } -> int
-   *)
-  | ST.Record items ->
-    let env_ref = ref env in
-    let new_vars = ref [] in
-    (* TODO: types should be able to reference one another; this doesn't currently
-     * support that. Need to think about how. *)
-    let items =
-      List.map items ~f:(function
-          | ST.Type(lbl, None) ->
-            let var = Gensym.anon_var () in
-            env_ref := Map.set !env_ref ~key:(Ast.var_of_label lbl) ~data:(ST.Var var);
-            new_vars := var :: !new_vars;
-            ST.Type(lbl, Some (ST.Var var))
-          | ST.Type(lbl, Some ty) ->
-            ST.Type(lbl, Some (pack_q `Exist (hoist_assoc_types !env_ref ty)))
-          | ST.Rest v ->
-            ST.Rest v
-        )
-    in
-    (!env_ref, !new_vars, ST.Record items)
-  | ST.Fn(param, ret) ->
-    let param_env, param_vars, param = hoist_assoc_types env param in
-    let ret = pack_q `Exist (hoist_assoc_types param_env ret) in
-    ( env
-    , []
-    , ST.Quant(`All, param_vars, ST.Fn(param, ret))
-    )
-  | ST.Annotated (v, ty) ->
-    let env', vars, ty' = hoist_assoc_types env ty in
-    ( Map.set env' ~key:v ~data:ty'
-    , v :: vars
-    , ty'
-    )
-  | ST.Path(v, parts) ->
-    let rec go ty ps = match ty, ps with
-      | _, [] ->
-        (* TODO: we should refactor so this can be ruled out statically.
-         * Probably var and path should be the same tag.
-         *)
-        failwith "IMPOSSIBLE"
-      | ST.Record items, [lbl] ->
-        ( env
-        , []
-        , (* TODO: raise a proper error if not found. *)
-          List.find_map_exn items ~f:(function
-              | ST.Type(lbl', Some t) when Label.equal lbl lbl' ->
-                Some t
-              | _ ->
-                None
-            )
-        )
-      | ST.Record items, (l::ls) ->
-        let ty = List.find_map_exn items ~f:(function
-            | ST.Field (lbl, ty) when Label.equal lbl l ->
-              Some ty
-            | _ ->
-              None
-          )
-        in
-        go ty ls
-      | _, (_ :: _) ->
-        (* TODO: raise a proper error. *)
-        failwith "Projection on non-record."
-    in
-    go (Map.find_exn env v) parts
-      *)
 
 let rec desugar_type = function
   | ST.Fn(param, ret) ->
@@ -174,6 +111,11 @@ and desugar_record_type types fields = function
   | (ST.Rest _ :: _) -> raise
                           (MuleErr.MuleExn
                              (MuleErr.MalformedType "row variable before the end of a record type."))
+
+
+let desugar_type t =
+  desugar_type t
+  |> quantify_opaques
 
 
 let rec desugar = function
