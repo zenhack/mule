@@ -1,0 +1,25 @@
+
+Desugared:
+
+	(App
+	 ((WithType
+	   (Quant
+	    (() Exist $0 Unknown
+	     (Record (r_info ()) (r_types (() ((t (Var (() $0)))) ()))
+	      (r_values (() () ()))))))
+	  EmptyRecord))
+
+inferred type:
+
+	(Quant
+	 (() Exist a Unknown
+	  (Record (r_info ()) (r_types (() ((t (Var (() a)))) ()))
+	   (r_values (() () ())))))
+
+Runtime term:
+
+	(Record ())
+
+Evaluated:
+
+	(Record ())
