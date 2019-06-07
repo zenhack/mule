@@ -35,6 +35,7 @@ let relabel_type () =
   let get = new_get () in
   let get v = Var.of_string (get v) in
   let rec go = function
+    | Opaque i -> Opaque i
     | Named(i, s) -> Named (i, s)
     | Fn (i, l, r) ->
       let l' = go l in

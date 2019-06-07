@@ -155,9 +155,8 @@ and desugar_record_type types fields = function
   (* TODO: how do we have variable fields for the type row? *)
   | (ST.Type(lbl, Some t) :: fs) ->
     desugar_record_type ((lbl, desugar_type t)::types) fields fs
-  | (ST.Type(_lbl, None) :: fs) ->
-     (* TODO *)
-     desugar_record_type types fields fs
+  | (ST.Type(lbl, None) :: fs) ->
+     desugar_record_type ((lbl, DT.Opaque ())::types) fields fs
   | [] ->
     DT.Record
       { r_info = ()

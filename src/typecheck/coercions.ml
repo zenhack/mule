@@ -68,6 +68,10 @@ let rec gen_type
   fun b_at env sign ty ->
     let tv = ty_var_at b_at in
     match ty with
+    | Type.Opaque _ ->
+      failwith
+        ("Opaque types should have been removed before generating " ^
+         "the constraint graph.")
     | Type.Named (_, s) ->
       UnionFind.make (`Const(tv, `Named s, [], `Type))
     | Type.Fn (_, param, ret) ->

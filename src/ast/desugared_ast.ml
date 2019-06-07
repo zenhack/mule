@@ -24,12 +24,14 @@ module Type = struct
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
     | Named of ('i * string)
+    | Opaque of 'i
   [@@deriving sexp]
 and 'i row =
   ('i * (Label.t * 'i t) list * Var.t option)
 [@@deriving sexp]
 
 let rec map ty ~f = match ty with
+  | Opaque x -> Opaque (f x)
   | Named(x, s) ->
     Named(f x, s)
   | Fn(x, l, r) ->
