@@ -190,7 +190,7 @@ let rec walk cops env g = function
          (UnionFind.make (union tv rowVar))
          bodyVar)
   | Expr.WithType ty ->
-    Coercions.make_coercion_type g ty
+    Coercions.make_coercion_type g ty cops
 and walk_match cops env g final = function
   | [] -> (final, gen_u `Type (`G g))
   | ((lbl, (var, body)) :: rest) ->

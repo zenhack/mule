@@ -2,6 +2,8 @@ open Ast.Desugared
 open Gen_t
 open Typecheck_types
 
+open Build_constraint_t
+
 (* Generate coercion types from type annotations.
  *
  * This is based on {MLF-Graph-Infer} section 6, but we do one important
@@ -46,8 +48,9 @@ let rec add_row_to_env: env_t -> u_var -> env_t =
       failwith "Illegal row"
 
 
-(* [gen_type b_at env sign ty] generates a graphic type based on [ty].
+(* [gen_type cops b_at env sign ty] generates a graphic type based on [ty].
  *
+ * - [cops] is used to generate unification constraints.
  * - monomorphic nodes are bound on [b_at].
  * - [env] is a mapping from type variable names to unification variables; free
  *   variables will be replaced with their values in the map. All free variables
@@ -59,18 +62,19 @@ let rec add_row_to_env: env_t -> u_var -> env_t =
  * The return value is a unification variable for the root of the type.
  *)
 let rec gen_type
-  : bound_target
-    -> env_t
-    -> sign
+  : constraint_ops
+  -> bound_target
+  -> env_t
+  -> sign
   -> 'i Type.t
   -> u_type UnionFind.var
   =
-  fun b_at env sign ty ->
+  fun cops b_at env sign ty ->
     let tv = ty_var_at b_at in
     match ty with
     | Type.Annotated (_, _, t) ->
         (* TODO: use the var. *)
-        gen_type b_at env sign t
+        gen_type cops b_at env sign t
     | Type.Opaque _ ->
       failwith
         ("Opaque types should have been removed before generating " ^
@@ -80,25 +84,25 @@ let rec gen_type
     | Type.Fn (_, param, ret) ->
       UnionFind.make
         (fn tv
-           (gen_type b_at env (flip_sign sign) param)
-           (gen_type b_at env sign ret))
+           (gen_type cops b_at env (flip_sign sign) param)
+           (gen_type cops b_at env sign ret))
     | Type.Recur(_, v, body) ->
       let ret = gen_u `Type b_at in
-      let ret' = gen_type b_at (Map.set env ~key:v ~data:ret) sign body in
+      let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
     | Type.Var (_, v) ->
       Map.find_exn env v
     | Type.Record {r_info = _; r_types; r_values} ->
-      let type_row = gen_row b_at env sign r_types in
+      let type_row = gen_row cops b_at env sign r_types in
       let env = add_row_to_env env type_row in
       UnionFind.make (
         record tv
           type_row
-          (gen_row b_at env sign r_values)
+          (gen_row cops b_at env sign r_values)
       )
     | Type.Union row ->
-      UnionFind.make (union tv (gen_row b_at env sign row))
+      UnionFind.make (union tv (gen_row cops b_at env sign row))
     | Type.Quant(_, q, v, k, body) ->
       let ret = gen_u `Type b_at in
       let bound_v =
@@ -117,6 +121,7 @@ let rec gen_type
         UnionFind.make (`Quant
                           ( tv
                           , gen_type
+                              cops
                               b_at
                               (Map.set env ~key:v ~data:bound_v)
                               sign
@@ -127,7 +132,7 @@ let rec gen_type
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
 (* [gen_row] is like [gen_type], but for row variables. *)
-and gen_row b_at env sign (_, fields, rest) =
+and gen_row cops b_at env sign (_, fields, rest) =
   let rest' =
     match rest with
     | Some v -> Map.find_exn env v
@@ -141,12 +146,12 @@ and gen_row b_at env sign (_, fields, rest) =
           extend
             (ty_var_at b_at)
             lbl
-            (gen_type b_at env sign ty)
+            (gen_type cops b_at env sign ty)
             tail
         )
       )
 
-let make_coercion_type g ty =
+let make_coercion_type g ty cops =
   (* Actually make the coercion.
    *
    * General procedure:
@@ -175,7 +180,7 @@ let make_coercion_type g ty =
              * existentials.
              *)
             let gen sign =
-              gen_type (`Ty root) VarMap.empty sign kinded_ty
+              gen_type cops (`Ty root) VarMap.empty sign kinded_ty
             in
             (gen `Neg, gen `Pos)
          )
