@@ -11,6 +11,7 @@ let unify_kind l r = match l, r with
     raise (MuleErr.MuleExn(MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type))))
 
 let rec walk_type env = function
+  | Type.Annotated(_, _, t) -> walk_type env t
   | Type.Opaque _ ->
     Type.Opaque (UnionFind.make (Kind.Unknown))
   | Type.Named (_, s) ->
@@ -20,6 +21,10 @@ let rec walk_type env = function
     let u_var = Map.find_exn env v in
     UnionFind.merge unify_kind u_var (UnionFind.make Kind.Type);
     Type.Var(u_var, v)
+  | Type.Fn(_, Type.Annotated(_, v, l), r) ->
+      let l' = walk_type env l in
+      let r' = walk_type (Map.set env ~key:v ~data:(UnionFind.make Kind.Type)) r in
+      Type.Fn(UnionFind.make Kind.Type, l', r')
   | Type.Fn(_, l, r) ->
     Type.Fn(UnionFind.make Kind.Type, walk_type env l, walk_type env r)
   | Type.Recur(_, var, body) ->

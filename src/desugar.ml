@@ -17,6 +17,8 @@ let unreachable_case (_p:SP.t) =
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
 let rec quantify_opaques = function
+  | DT.Annotated(i, v, t) ->
+      DT.Annotated(i, v, quantify_opaques t)
   | DT.Record {r_info; r_types = (i, fields, rest); r_values} ->
     let vars = ref [] in
     let fields' = List.map fields ~f:(fun (lbl, ty) ->
@@ -73,7 +75,8 @@ let rec desugar_type = function
     DT.Union((), [(l, desugar_type t)], None)
   | ST.RowRest v ->
     DT.Union((), [], Some v)
-  | ST.Annotated(_, ty) -> desugar_type ty
+  | ST.Annotated(v, ty) ->
+    DT.Annotated((), v, desugar_type ty)
   | _ ->
     failwith "TODO"
 and desugar_union_type tail (l, r) =

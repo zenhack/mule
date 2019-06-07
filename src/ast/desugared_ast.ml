@@ -25,12 +25,14 @@ module Type = struct
     | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
     | Named of ('i * string)
     | Opaque of 'i
+    | Annotated of ('i * Var.t * 'i t)
   [@@deriving sexp]
 and 'i row =
   ('i * (Label.t * 'i t) list * Var.t option)
 [@@deriving sexp]
 
 let rec map ty ~f = match ty with
+  | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
   | Opaque x -> Opaque (f x)
   | Named(x, s) ->
     Named(f x, s)

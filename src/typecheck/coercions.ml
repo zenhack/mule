@@ -68,6 +68,9 @@ let rec gen_type
   fun b_at env sign ty ->
     let tv = ty_var_at b_at in
     match ty with
+    | Type.Annotated (_, _, t) ->
+        (* TODO: use the var. *)
+        gen_type b_at env sign t
     | Type.Opaque _ ->
       failwith
         ("Opaque types should have been removed before generating " ^
