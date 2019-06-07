@@ -122,7 +122,7 @@ let rec gen_type
                           ( tv
                           , gen_type
                               cops
-                              b_at
+                              (`Ty (lazy bound_v))
                               (Map.set env ~key:v ~data:bound_v)
                               sign
                               body
