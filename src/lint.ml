@@ -77,6 +77,9 @@ let check_unbound_vars expr =
       go_type (List.fold ~init:typ ~f:Set.add vars) ty
     | Type.Recur(var, ty) ->
       go_type (Set.add typ var) ty
+    | Type.Fn(Type.Annotated(v, param), ret) ->
+        go_type typ param;
+        go_type (Set.add typ v) ret
     | Type.Fn(param, ret) ->
       go_type typ param;
       go_type typ ret
@@ -91,8 +94,8 @@ let check_unbound_vars expr =
       go_type typ y
     | Type.RowRest v ->
       go_type typ (Type.Var v)
-    | Type.Annotated(v, ty) ->
-      go_type (Set.add typ v) ty
+    | Type.Annotated(_, ty) ->
+      go_type typ ty
   and go_record typ items =
     let (types, values) =
       List.partition_map items ~f:(function

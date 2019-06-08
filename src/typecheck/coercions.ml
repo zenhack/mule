@@ -73,7 +73,6 @@ let rec gen_type
     let tv = ty_var_at b_at in
     match ty with
     | Type.Annotated (_, _, t) ->
-        (* TODO: use the var. *)
         gen_type cops b_at env sign t
     | Type.Opaque _ ->
       failwith
@@ -82,17 +81,26 @@ let rec gen_type
     | Type.Named (_, s) ->
       UnionFind.make (`Const(tv, `Named s, [], `Type))
     | Type.Fn (_, param, ret) ->
-      UnionFind.make
-        (fn tv
-           (gen_type cops b_at env (flip_sign sign) param)
-           (gen_type cops b_at env sign ret))
+        let param' =
+          gen_type cops b_at env (flip_sign sign) param
+        in
+        let env' = match param with
+          | Type.Annotated(_, v, _) ->
+              Map.set env ~key:v ~data:param'
+          | _ ->
+              env
+        in
+        let ret' =
+          gen_type cops b_at env' sign ret
+        in
+        UnionFind.make (fn tv param' ret')
     | Type.Recur(_, v, body) ->
       let ret = gen_u `Type b_at in
       let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
     | Type.Var (_, v) ->
-      Map.find_exn env v
+        Map.find_exn env v
     | Type.Record {r_info = _; r_types; r_values} ->
       let type_row = gen_row cops b_at env sign r_types in
       let env = add_row_to_env env type_row in
