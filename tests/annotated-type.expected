@@ -1,0 +1,25 @@
+
+Desugared:
+
+	(App
+	 ((WithType
+	   (Fn
+	    (()
+	     (Annotated
+	      (() y (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	     (Var (() y)))))
+	  (Lam (x (Var x)))))
+
+inferred type:
+
+	(Fn
+	 (() (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))
+	  (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+
+Runtime term:
+
+	(Lam (0 () (Var 0)))
+
+Evaluated:
+
+	(Lam (0 () (Var 0)))

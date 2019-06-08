@@ -24,7 +24,11 @@ let rec walk_type env = function
   | Type.Fn(_, Type.Annotated(_, v, l), r) ->
       let l' = walk_type env l in
       let r' = walk_type (Map.set env ~key:v ~data:(UnionFind.make Kind.Type)) r in
-      Type.Fn(UnionFind.make Kind.Type, l', r')
+      Type.Fn
+        ( UnionFind.make Kind.Type
+        , Type.Annotated(UnionFind.make Kind.Type, v, l')
+        , r'
+        )
   | Type.Fn(_, l, r) ->
     Type.Fn(UnionFind.make Kind.Type, walk_type env l, walk_type env r)
   | Type.Recur(_, var, body) ->
