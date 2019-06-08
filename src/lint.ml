@@ -99,7 +99,7 @@ let check_unbound_vars expr =
   and go_record typ items =
     let (types, values) =
       List.partition_map items ~f:(function
-        | Type.Type(lbl, Some _) ->
+        | Type.Type(lbl, _) ->
           `Fst (Ast.var_of_label lbl)
         | x ->
           `Snd x
