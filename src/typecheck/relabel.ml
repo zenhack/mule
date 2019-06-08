@@ -56,6 +56,7 @@ let relabel_type () =
       let v' = get v in
       let body' = go body in
       Quant (i, q, v', k, body')
+    | Path(i, v, ls) -> Path(i, get v, ls)
   and go_row (i, fields, rest) =
     let fields' = List.map fields ~f:(fun (l, ty) -> (l, go ty)) in
     let rest' = Option.map rest ~f:get in

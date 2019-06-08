@@ -16,6 +16,7 @@ module Type = struct
     | Fn of ('i * 'i t * 'i t)
     | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
+    | Path of ('i * Var.t * Label.t list)
     | Record of
         { r_info : 'i
         ; r_types : 'i row
@@ -40,6 +41,8 @@ let rec map ty ~f = match ty with
     Fn(f x, map l ~f, map r ~f)
   | Recur(x, v, body) ->
     Recur(f x, v, map body ~f)
+  | Path(x, v, ls) ->
+    Path(f x, v, ls)
   | Var (x, v) ->
     Var(f x, v)
   | Record {r_info; r_types; r_values} ->

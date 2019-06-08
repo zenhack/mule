@@ -101,6 +101,32 @@ let rec gen_type
       ret
     | Type.Var (_, v) ->
         Map.find_exn env v
+    | Type.Path(_, v, ls) ->
+        let rec go t = function
+          | [] -> t
+          | [lbl] ->
+            let ret = gen_u `Type b_at in
+            let record =
+              UnionFind.make
+                (record (ty_var_at b_at)
+                   (UnionFind.make (extend (ty_var_at b_at) lbl ret (gen_u `Row b_at)))
+                   (gen_u `Row b_at))
+            in
+            cops.constrain_unify record t;
+            ret
+          | (l :: ls) ->
+            let l' = gen_u `Type b_at in
+            let ret = go l' ls in
+            let record =
+              UnionFind.make
+                (record (ty_var_at b_at)
+                   (gen_u `Row b_at)
+                   (UnionFind.make (extend (ty_var_at b_at) l l' (gen_u `Row b_at))))
+            in
+            cops.constrain_unify record t;
+            ret
+        in
+        go (Map.find_exn env v) ls
     | Type.Record {r_info = _; r_types; r_values} ->
       let type_row = gen_row cops b_at env sign r_types in
       let env = add_row_to_env env type_row in

@@ -21,6 +21,10 @@ let rec walk_type env = function
     let u_var = Map.find_exn env v in
     UnionFind.merge unify_kind u_var (UnionFind.make Kind.Type);
     Type.Var(u_var, v)
+  | Type.Path(_, v, ls) ->
+    let u_var = Map.find_exn env v in
+    UnionFind.merge unify_kind u_var (UnionFind.make Kind.Type);
+    Type.Path(u_var, v, ls)
   | Type.Fn(_, Type.Annotated(_, v, l), r) ->
       let l' = walk_type env l in
       let r' = walk_type (Map.set env ~key:v ~data:(UnionFind.make Kind.Type)) r in

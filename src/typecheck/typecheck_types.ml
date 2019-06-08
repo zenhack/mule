@@ -55,7 +55,7 @@ let get_flag: quantifier -> sign -> bound_ty =
 let int tv = `Const(tv, `Named "int", [], `Type)
 let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
 let union tv row = `Const(tv, `Named "|", [row, `Row], `Type)
-let record tv r_types r_values= `Const(tv, `Named "{...}", [r_types, `Row; r_values, `Row], `Type)
+let record tv r_types r_values = `Const(tv, `Named "{...}", [r_types, `Row; r_values, `Row], `Type)
 let empty tv = `Const(tv, `Named "<empty>", [], `Row)
 let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
 

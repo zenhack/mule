@@ -48,6 +48,7 @@ let rec quantify_opaques = function
   | DT.Union row -> DT.Union(quantify_row_opaques row)
   | DT.Quant(i, q, v, k, t) -> DT.Quant(i, q, v, k, quantify_opaques t)
   | DT.Named(i, s) -> DT.Named(i, s)
+  | DT.Path p -> DT.Path p
 and quantify_row_opaques (i, fields, rest) =
   ( i
   , List.map
@@ -77,6 +78,8 @@ let rec desugar_type = function
     DT.Union((), [], Some v)
   | ST.Annotated(v, ty) ->
     DT.Annotated((), v, desugar_type ty)
+  | ST.Path(v, ls) ->
+    DT.Path((), v, ls)
   | _ ->
     failwith "TODO"
 and desugar_union_type tail (l, r) =
