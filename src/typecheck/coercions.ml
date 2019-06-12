@@ -4,6 +4,8 @@ open Typecheck_types
 
 open Build_constraint_t
 
+include Coercions_t
+
 (* Generate coercion types from type annotations.
  *
  * This is based on {MLF-Graph-Infer} section 6, but we do one important
@@ -25,8 +27,6 @@ open Build_constraint_t
  * will invent a new constant type t and infer (t -> t).
 *)
 
-type env_t = (u_type UnionFind.var) VarMap.t
-
 let gen_kind = function
   | Kind.Type -> `Type
   | Kind.Row -> `Row
@@ -47,27 +47,13 @@ let rec add_row_to_env: env_t -> u_var -> env_t =
     | _ ->
       failwith "Illegal row"
 
-
-(* [gen_type cops b_at env sign ty] generates a graphic type based on [ty].
- *
- * - [cops] is used to generate unification constraints.
- * - monomorphic nodes are bound on [b_at].
- * - [env] is a mapping from type variable names to unification variables; free
- *   variables will be replaced with their values in the map. All free variables
- *   _must_ be contained within the map.
- * - [sign] indicates whether we are in positive or negative position. This is
- *   used to determine the binding flag to use when we see a quantifier. [sign]
- *   is flipped each time we go down the parameter side of a function node.
- *
- * The return value is a unification variable for the root of the type.
- *)
 let rec gen_type
   : constraint_ops
   -> bound_target
   -> env_t
   -> sign
   -> 'i Type.t
-  -> u_type UnionFind.var
+  -> u_var
   =
   fun cops b_at env sign ty ->
     let tv = ty_var_at b_at in
@@ -186,9 +172,7 @@ and gen_row cops b_at env sign (_, fields, rest) =
       )
 
 let make_coercion_type g ty cops =
-  (* Actually make the coercion.
-   *
-   * General procedure:
+  (* General procedure:
    *
    * 1. Infer the kinds within the type.
    * 2. Call [gen_type] twice on ty, with different values for [new_exist];
