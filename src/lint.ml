@@ -117,12 +117,14 @@ let check_unbound_vars expr =
     | Type.Field(_, ty) -> go_type typ ty
     | Type.Rest var -> go_type typ (Type.Var var)
   in
-  let term =
-    Intrinsics.intrinsics
+  let keyset m =
+    m
     |> Map.keys
     |> Set.of_list (module Ast.Var)
   in
-  go_expr VarSet.empty term expr
+  let term = keyset Intrinsics.values in
+  let typ = keyset Intrinsics.types in
+  go_expr typ term expr
 
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =

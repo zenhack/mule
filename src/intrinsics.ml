@@ -17,7 +17,7 @@ let int_binop f =
   , prim (fun x -> prim (fun y -> R.Expr.Integer (f (assert_int x) (assert_int y))))
   )
 
-let intrinsics =
+let values =
   [ "add", int_binop Z.add
   ; "sub", int_binop Z.sub
   ; "mul", int_binop Z.mul
@@ -26,3 +26,6 @@ let intrinsics =
   ]
   |> List.map ~f:(fun (k, v) -> (Var.of_string k, v))
   |> Map.of_alist_exn (module Var)
+
+let types =
+  VarMap.singleton (Var.of_string "int") int_t
