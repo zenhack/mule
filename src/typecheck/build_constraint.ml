@@ -226,9 +226,9 @@ let make_cops: unit ->
     }
   in (cops, ucs, ics)
 
-let build_constraints: 'a Type.t VarMap.t -> Expr.t -> built_constraints =
-  fun env_types expr ->
-
+let build_constraints: Expr.t -> built_constraints =
+  fun expr ->
+    let env_types = Map.map ~f:fst Intrinsics.values in
     let env_exprs = Map.map env_types ~f:(fun ty ->
         let arg = Gensym.anon_var () in
         (* XXX: This is a bit of a hack; to build expressions with the appropriate

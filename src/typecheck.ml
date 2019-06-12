@@ -1,7 +1,6 @@
 let typecheck expr =
-  let env = Map.map ~f:fst Intrinsics.values in
   try
-    Build_constraint.build_constraints env expr
+    Build_constraint.build_constraints expr
     |> Solve.solve_constraints
     |> Extract.get_var_type
     |> fun t -> Ok t
