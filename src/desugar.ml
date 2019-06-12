@@ -188,6 +188,8 @@ let rec desugar = function
     desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
+  | S.LetType(v, ty, body) ->
+    D.LetType(v, desugar_type ty, desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_record fields =
@@ -203,6 +205,7 @@ and desugar_record fields =
     |> Map.of_alist_exn (module Ast.Label)
   in
   let rec subst env expr = match expr with
+    (* TODO: do stuff with type variables *)
     | D.Integer n -> D.Integer n
     | D.Var v ->
       let lbl = var_to_lbl v in
@@ -252,6 +255,8 @@ and desugar_record fields =
         , subst env e
         , subst (Map.remove env (var_to_lbl v)) body
         )
+    | D.LetType(v, ty, body) ->
+      D.LetType(v, ty, subst env body)
     | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ ->
       expr
   in

@@ -224,10 +224,25 @@ and lambda = lazy ((
   Expr.Lam (params, body)
 ) <?> "lambda")
 and let_expr = lazy ((
-  let%bind pat = kwd "let" >> lazy_p pattern in
-  let%bind e   = kwd "=" >> lazy_p expr in
+  let%bind _ = kwd "let" in
+  let%bind bound = choice
+      [ begin
+          let%bind v = kwd "type" >> var in
+          let%map ty = kwd "=" >> lazy_p typ in
+          `Type(v, ty)
+        end
+      ; begin
+          let%bind pat = lazy_p pattern in
+          let%map e    = kwd "=" >> lazy_p expr in
+          `Value(pat, e)
+        end
+      ]
+  in
   let%map body = kwd "in" >> lazy_p expr in
-  Expr.Let(pat, e, body)
+  begin match bound with
+    | `Type(v, ty) -> Expr.LetType(v, ty, body)
+    | `Value(pat, e) -> Expr.Let(pat, e, body)
+  end
 ) <?> "let expression")
 and match_expr = lazy ((
     let%bind e = kwd "match" >> lazy_p expr in

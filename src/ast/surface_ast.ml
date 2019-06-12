@@ -45,6 +45,7 @@ module Expr = struct
     | Update of (t * field list)
     | Match of (t * (Pattern.t * t) list)
     | Let of (Pattern.t * t * t)
+    | LetType of (Var.t * Type.t * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
   [@@deriving sexp]

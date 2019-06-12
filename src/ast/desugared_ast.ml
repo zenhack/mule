@@ -82,6 +82,7 @@ module Expr = struct
         }
     | WithType of unit Type.t
     | Let of (Var.t * t * t)
+    | LetType of (Var.t * unit Type.t * t)
     | Integer of Bigint.t
   [@@deriving sexp]
 end

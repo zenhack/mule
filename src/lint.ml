@@ -51,6 +51,9 @@ let check_unbound_vars expr =
       go_pat typ pat;
       go_expr typ term_new e;
       go_expr typ term_new body
+    | LetType(var, ty, body) ->
+      go_type typ ty;
+      go_expr (Set.add typ var) term body
     | WithType (e, ty) ->
       go_expr typ term e;
       go_type typ ty
@@ -142,6 +145,9 @@ let check_duplicate_record_fields =
       go_pat pat;
       go_expr e;
       go_expr body
+    | LetType(_, ty, body) ->
+      go_expr body;
+      go_type ty
     | Var _ -> ()
     | Ctor _ -> ()
     | WithType(e, ty) ->

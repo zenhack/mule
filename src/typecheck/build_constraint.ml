@@ -63,6 +63,9 @@ let rec walk cops env g = function
   | Expr.Let(v, e, body) ->
     let g_e = with_g g (fun g -> walk cops env (Lazy.force g) e) in
     walk cops (Map.set env ~key:v ~data:(lazy (`G g_e))) g body
+  | Expr.LetType(_, _, body) ->
+    (* TODO: pass through the type. *)
+    walk cops env g body
   | Expr.App (f, arg) ->
     let param_var = gen_u `Type (`G g) in
     let ret_var = gen_u `Type (`G g) in

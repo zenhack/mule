@@ -81,6 +81,8 @@ let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
       )
     | D.Let (v, e, body) ->
       translate depth env (D.App (D.Lam (v, body), e))
+    | D.LetType(_, _, body) ->
+      translate depth env body
 and translate_fix_rec depth env = function
   | D.Lam(v, body) ->
     let (n, lblmap) =
