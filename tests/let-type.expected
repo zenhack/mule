@@ -1,0 +1,18 @@
+
+Desugared:
+
+	(LetType
+	 (t (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))
+	  (App ((WithType (Var (() t))) EmptyRecord))))
+
+inferred type:
+
+	(Record (r_info ()) (r_types (() () ())) (r_values (() () ())))
+
+Runtime term:
+
+	(Record ())
+
+Evaluated:
+
+	(Record ())

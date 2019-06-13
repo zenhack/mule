@@ -1,0 +1,1 @@
+let type t = {} in {} : t

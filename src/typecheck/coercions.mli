@@ -38,6 +38,10 @@ include module type of Coercions_t
  *   is flipped each time we go down the parameter side of a function node.
  *
  * The return value is a unification variable for the root of the type.
+ *
+ * TODO: this probably doesn't belong in coercions per se. It used to just be
+ * a helper function for [make_coercion_type], but it's now used elsewhere as
+ * well.
  *)
 val gen_type
   : constraint_ops
@@ -48,4 +52,4 @@ val gen_type
   -> u_var
 
 (* Actually make the coercion. *)
-val make_coercion_type : g_node -> 'i Type.t -> constraint_ops -> u_var
+val make_coercion_type : env_t -> g_node -> 'i Type.t -> constraint_ops -> u_var

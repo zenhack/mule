@@ -1,0 +1,16 @@
+
+Desugared:
+
+	(App ((WithType (Var (() int))) (Integer 4)))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(Integer 4)
+
+Evaluated:
+
+	(Integer 4)
