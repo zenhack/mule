@@ -229,30 +229,21 @@ let make_cops: unit ->
 let build_constraints: Expr.t -> built_constraints =
   fun expr ->
     let env_types = Map.map ~f:fst Intrinsics.values in
-    let env_exprs = Map.map env_types ~f:(fun ty ->
-        let arg = Gensym.anon_var () in
-        (* XXX: This is a bit of a hack; to build expressions with the appropriate
-         * type, we add a type annotation to (fix (fn x. x)), which has type (all a. a),
-         * since it is non-terminating -- and thus will always unify with the coercion.
-        *)
-        Expr.App
-          ( Expr.WithType ty
-          , Expr.App
-              ( Expr.Fix `Let
-              , Expr.Lam(arg, Expr.Var arg)
-              )
-          )
-      ) in
-
     let cops, ucs, ics = make_cops () in
     let (_, ty) = Util.fix
         (child_g None)
         (fun g ->
            let g = Lazy.force g in
-           let env = Map.map env_exprs ~f:(fun e ->
+           let env = Map.map env_types ~f:(fun ty ->
                lazy (`G (with_g g (fun g ->
-                   walk cops VarMap.empty (Lazy.force g) e
+                  let b_at = `G (Lazy.force g) in
+                  UnionFind.make (
+                    `Quant
+                      ( ty_var_at b_at
+                      , Coercions.gen_type cops b_at VarMap.empty `Pos ty
+                      )
                  )))
+               )
              )
            in
            let root = walk cops env g expr in
