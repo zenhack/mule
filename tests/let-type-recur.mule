@@ -1,0 +1,5 @@
+let type int-list
+  = Cons { hd : int, tl : int-list }
+  | Nil {}
+in
+(Cons { hd = 4, tl = Nil {} } : int-list)

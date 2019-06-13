@@ -189,7 +189,7 @@ let rec desugar = function
   | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
   | S.LetType(v, ty, body) ->
-    D.LetType(v, desugar_type ty, desugar body)
+    D.LetType(v, DT.Recur((), v, desugar_type ty), desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_record fields =

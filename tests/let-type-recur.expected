@@ -1,0 +1,57 @@
+
+Desugared:
+
+	(LetType
+	 (int-list
+	  (Recur
+	   (() int-list
+	    (Union
+	     (()
+	      ((Cons
+	        (Record (r_info ()) (r_types (() () ()))
+	         (r_values (() ((tl (Var (() int-list))) (hd (Var (() int)))) ()))))
+	       (Nil (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	      ()))))
+	  (App
+	   ((WithType (Var (() int-list)))
+	    (App
+	     ((Lam (x (Ctor (Cons (Var x)))))
+	      (App
+	       ((Fix Record)
+	        (Lam
+	         ($0
+	          (App
+	           ((App
+	             ((Update hd)
+	              (App
+	               ((App ((Update tl) EmptyRecord))
+	                (App ((Lam (x (Ctor (Nil (Var x))))) EmptyRecord))))))
+	            (Integer 4)))))))))))))
+
+inferred type:
+
+	(Recur
+	 (() a
+	  (Union
+	   (()
+	    ((Cons
+	      (Record (r_info ()) (r_types (() () ()))
+	       (r_values (() ((hd (Named (() int))) (tl (Var (() a)))) ()))))
+	     (Nil (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	    ()))))
+
+Runtime term:
+
+	(App
+	 ((Lam (0 () (Ctor (Cons (Var 0)))))
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     (0 ()
+	      (Record
+	       ((hd (Integer 4))
+	        (tl (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ()))))))))))))
+
+Evaluated:
+
+	(Ctor (Cons (Record ((hd (Integer 4)) (tl (Ctor (Nil (Record ()))))))))

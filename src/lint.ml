@@ -52,8 +52,9 @@ let check_unbound_vars expr =
       go_expr typ term_new e;
       go_expr typ term_new body
     | LetType(var, ty, body) ->
+      let typ = Set.add typ var in
       go_type typ ty;
-      go_expr (Set.add typ var) term body
+      go_expr typ term body
     | WithType (e, ty) ->
       go_expr typ term e;
       go_type typ ty
