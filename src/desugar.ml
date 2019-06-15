@@ -96,9 +96,11 @@ and desugar_union_type tail (l, r) =
                  "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type types fields = function
   (* TODO: how do we have variable fields for the type row? *)
-  | (ST.Type(lbl, Some t) :: fs) ->
+  | (ST.Type(_, (_ :: _), _) :: _) ->
+    failwith "TODO: desugar parametrized types."
+  | (ST.Type(lbl, [], Some t) :: fs) ->
     desugar_record_type ((lbl, desugar_type t)::types) fields fs
-  | (ST.Type(lbl, None) :: fs) ->
+  | (ST.Type(lbl, [], None) :: fs) ->
      desugar_record_type ((lbl, DT.Opaque ())::types) fields fs
   | [] ->
     DT.Record
@@ -188,7 +190,9 @@ let rec desugar = function
     desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | S.LetType(v, ty, body) ->
+  | S.LetType(_, (_ :: _), _, _) ->
+    failwith "TODO: desugar parameterized types"
+  | S.LetType(v, [], ty, body) ->
     D.LetType(v, DT.Recur((), v, desugar_type ty), desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)

@@ -165,8 +165,9 @@ and record_type = lazy (
     ]
 ) and type_decl = lazy (
   let%bind l = kwd "type" >> label in
+  let%bind vars = many var in
   let%map ty = option (kwd "=" >> lazy_p typ_term) in
-  Type.Type(l, ty)
+  Type.Type(l, vars, ty)
 ) and field_decl = lazy (
   let%bind l = label in
   let%map ty = kwd ":" >> lazy_p typ in
@@ -228,8 +229,9 @@ and let_expr = lazy ((
   let%bind bound = choice
       [ begin
           let%bind v = kwd "type" >> var in
+          let%bind params = many var in
           let%map ty = kwd "=" >> lazy_p typ in
-          `Type(v, ty)
+          `Type(v, params, ty)
         end
       ; begin
           let%bind pat = lazy_p pattern in
@@ -240,7 +242,7 @@ and let_expr = lazy ((
   in
   let%map body = kwd "in" >> lazy_p expr in
   begin match bound with
-    | `Type(v, ty) -> Expr.LetType(v, ty, body)
+    | `Type(v, params, ty) -> Expr.LetType(v, params, ty, body)
     | `Value(pat, e) -> Expr.Let(pat, e, body)
   end
 ) <?> "let expression")

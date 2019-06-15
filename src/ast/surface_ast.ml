@@ -20,7 +20,7 @@ module Type = struct
 
   and record_item =
     | Field of (Label.t * t)
-    | Type of (Label.t * t option)
+    | Type of (Label.t * Var.t list * t option)
     | Rest of Var.t
   [@@deriving sexp]
 end
@@ -45,7 +45,7 @@ module Expr = struct
     | Update of (t * field list)
     | Match of (t * (Pattern.t * t) list)
     | Let of (Pattern.t * t * t)
-    | LetType of (Var.t * Type.t * t)
+    | LetType of (Var.t * Var.t list * Type.t * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
   [@@deriving sexp]

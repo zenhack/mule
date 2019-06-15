@@ -51,8 +51,8 @@ let check_unbound_vars expr =
       go_pat typ pat;
       go_expr typ term_new e;
       go_expr typ term_new body
-    | LetType(var, ty, body) ->
-      let typ = Set.add typ var in
+    | LetType(var, params, ty, body) ->
+      let typ = List.fold (var::params) ~init:typ ~f:Set.add in
       go_type typ ty;
       go_expr typ term body
     | WithType (e, ty) ->
@@ -103,7 +103,7 @@ let check_unbound_vars expr =
   and go_record typ items =
     let (types, values) =
       List.partition_map items ~f:(function
-        | Type.Type(lbl, _) ->
+        | Type.Type(lbl, _, _) ->
           `Fst (Ast.var_of_label lbl)
         | x ->
           `Snd x
@@ -112,9 +112,10 @@ let check_unbound_vars expr =
     let typ' = List.fold types ~init:typ ~f:Set.add in
     List.iter values ~f:(go_record_item typ')
   and go_record_item typ = function
-    | Type.Type(_, Some ty) ->
+    | Type.Type(_, vars, Some ty) ->
+      let typ = List.fold vars ~init:typ ~f:Set.add in
       go_type typ ty
-    | Type.Type(_, None) -> ()
+    | Type.Type(_, _, None) -> ()
     | Type.Field(_, ty) -> go_type typ ty
     | Type.Rest var -> go_type typ (Type.Var var)
   in
@@ -148,7 +149,7 @@ let check_duplicate_record_fields =
       go_pat pat;
       go_expr e;
       go_expr body
-    | LetType(_, ty, body) ->
+    | LetType(_, _, ty, body) ->
       go_expr body;
       go_type ty
     | Var _ -> ()
@@ -186,10 +187,10 @@ let check_duplicate_record_fields =
       List.map fields ~f:(function
           | Type.Rest _ -> []
           | Type.Field(lbl, ty)
-          | Type.Type(lbl, Some ty) ->
+          | Type.Type(lbl, _, Some ty) ->
             go_type ty;
             [lbl]
-          | Type.Type (lbl, None) ->
+          | Type.Type (lbl, _, None) ->
             [lbl]
         )
       |> List.concat
