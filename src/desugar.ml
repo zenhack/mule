@@ -16,6 +16,54 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
+let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
+  fun old new_ vars ->
+  let rec go ty =
+    if Poly.equal ty old then
+      new_
+    else
+      begin match ty with
+        | ST.Quant (q, vs, body) ->
+          let shadowed =
+            List.fold
+              vs
+              ~init:false
+              ~f:(fun ret var -> ret || Set.mem vars var)
+          in
+          if shadowed then
+            ty
+          else
+            ST.Quant(q, vs, go body)
+        | ST.Recur(v, body) ->
+          if Set.mem vars v then
+            ty
+          else
+            ST.Recur(v, go body)
+        | ST.Fn(p, r) -> ST.Fn(go p, go r)
+        | ST.App(f, x) -> ST.App(go f, go x)
+        | ST.Union(l, r) -> ST.Union(go l, go r)
+        | ST.Annotated(v, t) -> ST.Annotated(v, go t)
+        | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
+        | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ -> ty
+      end
+  and go_record_item = function
+    | ST.Field(l, t) -> ST.Field(l, go t)
+    | ST.Type(_, _, None) as ty -> ty
+    | ST.Type(lbl, vs, Some ty) ->
+      let shadowed =
+        List.fold
+          (Ast.var_of_label lbl :: vs)
+          ~init:false
+          ~f:(fun ret var -> ret || Set.mem vars var)
+      in
+      if shadowed then
+        ST.Type(lbl, vs, Some ty)
+      else
+        ST.Type(lbl, vs, Some (go ty))
+    | ST.Rest v -> ST.Rest v
+  in
+  go
+
 let rec quantify_opaques = function
   | DT.TypeLam(i, v, t) ->
       DT.TypeLam(i, v, quantify_opaques t)
@@ -193,13 +241,31 @@ let rec desugar = function
   | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
   | S.LetType(v, params, ty, body) ->
+    (* Here, we convert things like `type t a b = ... (t a b) ...` to
+     * `lam a b. rec t. ... t ...`.
+     *)
+    let target =
+      List.fold_left
+        params
+        ~init:(ST.Var v)
+        ~f:(fun f x -> ST.App(f, ST.Var x))
+    in
+    let ty =
+      ST.Recur
+        ( v
+        , substitue_type_apps
+            target
+            (ST.Var v)
+            (Set.of_list (module Ast.Var) params)
+            ty
+        )
+    in
     let ty =
       List.fold_right
         params
         ~init:(desugar_type ty)
         ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
     in
-    let ty = DT.Recur((), v, ty) in
     D.LetType(v, ty, desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
