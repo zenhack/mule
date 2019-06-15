@@ -290,8 +290,9 @@ and record = lazy (
 and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
   let%bind l = kwd "type" >> label in
+  let%bind params = many var in
   let%map ty = kwd "=" >> lazy_p typ in
-  `Type (l, ty)
+  `Type (l, params, ty)
 )
 and value_field_def = lazy (
   let%bind l = label in

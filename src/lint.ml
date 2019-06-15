@@ -62,7 +62,8 @@ let check_unbound_vars expr =
     | `Value (_, ty, e) ->
       go_expr typ term e;
       Option.iter ty ~f:(go_type typ)
-    | `Type (_, ty) ->
+    | `Type (_, params, ty) ->
+      let typ = List.fold params ~init:typ ~f:Set.add in
       go_type typ ty
   and go_case typ term (pat, e) =
     go_pat typ pat;
@@ -162,12 +163,12 @@ let check_duplicate_record_fields =
         | `Value (_, ty, e) ->
           Option.iter ty ~f:go_type;
           go_expr e
-        | `Type (_, ty) ->
+        | `Type (_, _, ty) ->
           go_type ty
       );
     let labels = List.map fields ~f:(function
         | `Value (lbl, _, _) -> lbl
-        | `Type (lbl, _) -> lbl
+        | `Type (lbl, _, _) -> lbl
       ) in
     go_labels labels
   and go_pat = function

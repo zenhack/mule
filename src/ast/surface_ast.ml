@@ -55,7 +55,7 @@ and field =
         * Type.t option
         * t
       )
-  | `Type of (Label.t * Type.t)
+  | `Type of (Label.t * Var.t list * Type.t)
   ]
 [@@deriving sexp]
 end
