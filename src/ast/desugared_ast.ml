@@ -27,6 +27,7 @@ module Type = struct
     | Named of ('i * string)
     | Opaque of 'i
     | Annotated of ('i * Var.t * 'i t)
+    | TypeLam of ('i * Var.t * 'i t)
   [@@deriving sexp]
 and 'i row =
   ('i * (Label.t * 'i t) list * Var.t option)
@@ -55,6 +56,8 @@ let rec map ty ~f = match ty with
     Union(map_row row ~f)
   | Quant(x, q, v, k, body) ->
     Quant(f x, q, v, k, map body ~f)
+  | TypeLam(x, v, body) ->
+    TypeLam(f x, v, map body ~f)
 and map_row (x, fields, rest) ~f =
   ( f x
   , List.map fields ~f:(fun(l, t) -> (l, map t ~f))

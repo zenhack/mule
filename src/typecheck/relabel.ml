@@ -35,7 +35,12 @@ let relabel_type () =
   let get = new_get () in
   let get v = Var.of_string (get v) in
   let rec go = function
-    | Annotated(i, v, t) -> Annotated(i, v, go t)
+    | TypeLam(i, v, t) ->
+        let v = get v in
+        TypeLam(i, v, go t)
+    | Annotated(i, v, t) ->
+        let v = get v in
+        Annotated(i, v, go t)
     | Opaque i -> Opaque i
     | Named(i, s) -> Named (i, s)
     | Fn (i, l, r) ->

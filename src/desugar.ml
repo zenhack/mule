@@ -17,6 +17,8 @@ let unreachable_case (_p:SP.t) =
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
 let rec quantify_opaques = function
+  | DT.TypeLam(i, v, t) ->
+      DT.TypeLam(i, v, quantify_opaques t)
   | DT.Annotated(i, v, t) ->
       DT.Annotated(i, v, quantify_opaques t)
   | DT.Record {r_info; r_types = (i, fields, rest); r_values} ->
@@ -190,10 +192,15 @@ let rec desugar = function
     desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(pat, S.Var v, body))]))
   | S.Let(SP.Var (v, None), e, body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | S.LetType(_, (_ :: _), _, _) ->
-    failwith "TODO: desugar parameterized types"
-  | S.LetType(v, [], ty, body) ->
-    D.LetType(v, DT.Recur((), v, desugar_type ty), desugar body)
+  | S.LetType(v, params, ty, body) ->
+    let ty =
+      List.fold_right
+        params
+        ~init:(desugar_type ty)
+        ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
+    in
+    let ty = DT.Recur((), v, ty) in
+    D.LetType(v, ty, desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
 and desugar_record fields =

@@ -11,6 +11,7 @@ let unify_kind l r = match l, r with
     raise (MuleErr.MuleExn(MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type))))
 
 let rec walk_type env = function
+  | Type.TypeLam _ -> failwith "TODO: type lambdas"
   | Type.Annotated(_, _, t) -> walk_type env t
   | Type.Opaque _ ->
     Type.Opaque (UnionFind.make (Kind.Unknown))
