@@ -28,16 +28,15 @@ let check_unbound_vars expr =
       go_expr typ (Set.union term term_new) (Lam(pats, body))
     | App(f, x) -> go_expr typ term f; go_expr typ term x
     | Record fields ->
-      let new_vars =
-        List.filter_map fields ~f:(function
-            | `Value(l, _, _) ->
-              Some (Ast.var_of_label l)
-            | _ ->
-              None
+      let (new_types, new_terms) =
+        List.partition_map fields ~f:(function
+            | `Type(l, _, _)  -> `Fst (Ast.var_of_label l)
+            | `Value(l, _, _) -> `Snd (Ast.var_of_label l)
           )
-        |> Set.of_list (module Ast.Var)
       in
-      List.iter fields ~f:(go_field typ (Set.union term new_vars))
+      let typ = List.fold new_types ~init:typ ~f:Set.add in
+      let term = List.fold new_terms ~init:term ~f:Set.add in
+      List.iter fields ~f:(go_field typ term)
     | GetField (e, _) -> go_expr typ term e
     | Ctor _ -> ()
     | Update (e, fields) ->
