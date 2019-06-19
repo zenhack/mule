@@ -5,7 +5,7 @@ type edge_type =
   | `Unify
   | `Instance
   | `Sibling
-  | `Binding of [ `Flex | `Rigid ]
+  | `Binding of [ `Flex | `Rigid | `Explicit ]
   ]
 type node_type =
   [ `TyVar

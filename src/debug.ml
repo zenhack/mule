@@ -49,6 +49,7 @@ let fmt_edge_ty = function
   | `Instance -> "[color=red, constraint=false, weight=4]"
   | `Binding `Flex -> "[style=dotted, dir=back, weight=1]"
   | `Binding `Rigid -> "[style=dashed, dir=back, weight=1]"
+  | `Binding `Explicit -> "[color=blue, dir=back, weight=1]"
   | `Sibling -> "[style=invis, constriant=false]"
 
 module Out = Stdio.Out_channel

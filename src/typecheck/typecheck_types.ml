@@ -15,7 +15,7 @@ and u_type =
   | `Quant of (tyvar * u_type UnionFind.var)
   | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * u_kind) list * u_kind)
   ]
-and bound_ty = [ `Rigid | `Flex ]
+and bound_ty = [ `Rigid | `Flex | `Explicit ]
 and 'a bound =
   { b_ty: bound_ty
   ; b_at: 'a
@@ -59,7 +59,7 @@ let record tv r_types r_values = `Const(tv, `Named "{...}", [r_types, `Row; r_va
 let empty tv = `Const(tv, `Named "<empty>", [], `Row)
 let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
 
-type permission = F | R | L
+type permission = F | R | L | E
 
 type unify_edge =
   | Unify of (u_type UnionFind.var * u_type UnionFind.var)

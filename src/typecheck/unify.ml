@@ -13,11 +13,15 @@ let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
   fun p ->
     let rec go p = match Sequence.next p with
       | None -> F
+      | Some (`Explicit, _) -> E
       | Some (`Rigid, _) -> R
       | Some (`Flex, bs) ->
         begin match go bs with
           | F -> F
           | R | L -> L
+          | E -> failwith
+              ("BUG: explicit nodes should never have other nodes bound " ^
+               "on them.")
         end
     in go (Sequence.Generator.run p)
 
@@ -79,15 +83,19 @@ let rec bound_lca: bound_target bound -> bound_target bound -> bound_target boun
     let lid, rid = bound_id l, bound_id r in
     if lid = rid then
       l
-    else if lid < rid then
-      begin match raised_bound r with
-        | Some b -> bound_lca l b
-        | None -> failwith "No LCA!"
-      end
     else
-      begin match raised_bound l with
-        | Some b -> bound_lca b r
-        | None -> failwith "No LCA!"
+      begin match bound_permission l, bound_permission r with
+        | E, _ | _, E | L, _ | _, L -> permErr `Raise
+        | _ when lid < rid ->
+            begin match raised_bound r with
+              | Some b -> bound_lca l b
+              | None -> failwith "No LCA!"
+            end
+        | _ ->
+            begin match raised_bound l with
+              | Some b -> bound_lca b r
+              | None -> failwith "No LCA!"
+            end
       end
 
 (* "Unify" two binding edges. This does a combination of raising and
@@ -97,7 +105,12 @@ let unify_bound l r =
   let {b_at; _} = bound_lca l r in
   match l.b_ty, r.b_ty with
   | `Flex, `Flex -> {b_at; b_ty = `Flex}
-  | _ -> {b_at; b_ty = `Rigid}
+  | `Flex, `Rigid | `Rigid, `Flex | `Rigid, `Rigid ->
+      {b_at; b_ty = `Rigid}
+  | `Flex, `Explicit | `Explicit, `Flex | `Explicit, `Explicit ->
+      {b_at; b_ty = `Explicit}
+  | `Rigid, `Explicit | `Explicit, `Rigid ->
+      permErr `Raise
 
 (* Thin wrapper around [unify_bound], which updates the [tyvar]s' bounds
  * in-place. It does *not* permanantly link them, in the way that
