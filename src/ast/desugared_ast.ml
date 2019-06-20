@@ -1,12 +1,26 @@
 open Common_ast
 
 module Kind = struct
-  type t =
+  type maybe_kind =
     [ `Unknown
     | `Type
     | `Row
+    | `Arrow of maybe_kind * maybe_kind
     ]
   [@@deriving sexp]
+
+  type t =
+    [ `Type
+    | `Row
+    | `Arrow of t * t
+    ]
+  [@@deriving sexp]
+
+  let rec default_unknowns = function
+    | `Unknown -> `Type
+    | `Row -> `Row
+    | `Type -> `Type
+    | `Arrow(x, y) -> `Arrow(default_unknowns x, default_unknowns y)
 end
 
 module Type = struct
@@ -24,7 +38,7 @@ module Type = struct
         ; r_values : 'i row
         }
     | Union of 'i row
-    | Quant of ('i * quantifier * Var.t * Kind.t * 'i t)
+    | Quant of ('i * quantifier * Var.t * Kind.maybe_kind * 'i t)
     | Named of ('i * string)
     | Opaque of 'i
     | Annotated of ('i * Var.t * 'i t)

@@ -1,3 +1,3 @@
 open Ast.Desugared
 
-val infer : Kind.t VarMap.t -> 'a Type.t -> [ `Type | `Row ] Type.t
+val infer : Kind.maybe_kind VarMap.t -> 'a Type.t -> Kind.t Type.t

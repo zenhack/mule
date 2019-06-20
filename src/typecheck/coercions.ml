@@ -27,11 +27,15 @@ include Coercions_t
  * will invent a new constant type t and infer (t -> t).
 *)
 
-let gen_kind = function
+let rec gen_kind: Kind.maybe_kind -> u_kind = function
   | `Type -> `Type
   | `Row -> `Row
-  | `Unknown ->
-    failwith "BUG: Infer_kind should already have been called"
+  | `Arrow (x, y) ->
+      `Arrow
+        ( UnionFind.make (gen_kind x)
+        , UnionFind.make (gen_kind y)
+        )
+  | `Unknown -> failwith "BUG: infer_kind should have removed this."
 
 let rec add_row_to_env: env_t -> u_var -> env_t =
   fun env u ->

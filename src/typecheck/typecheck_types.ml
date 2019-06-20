@@ -3,6 +3,7 @@
 type u_kind =
   [ `Row
   | `Type
+  | `Arrow of u_kind UnionFind.var * u_kind UnionFind.var
   ]
 
 type u_typeconst =

@@ -4,10 +4,15 @@ type ctor =
   [ `Named of string
   | `Extend of Ast.Label.t
   ]
-type kind = [ `Row | `Type ]
+type kind =
+  [ `Row
+  | `Type
+  | `Arrow of kind * kind
+  ]
 type type_error
   = MismatchedCtors of (ctor * ctor)
   | MismatchedKinds of (kind * kind)
+  | OccursCheckKind
   | PermissionErr of op
 
 type t =
@@ -31,15 +36,19 @@ let show_op = function
   | `Raise -> "raise"
   | `Weaken -> "weaken"
 
-let show_kind = function
+let rec show_kind = function
   | `Type -> "type"
   | `Row -> "row"
+  | `Arrow(l, r) ->
+    String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
 let show_type_error = function
   | MismatchedCtors (l, r) ->
     "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
   | MismatchedKinds (l, r) ->
     "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
+  | OccursCheckKind ->
+    "inferring kinds: occurs check failed"
   | PermissionErr op ->
     "permission error during " ^ show_op op
 
