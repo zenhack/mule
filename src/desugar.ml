@@ -3,7 +3,6 @@ module S = Ast.Surface.Expr
 module ST = Ast.Surface.Type
 module D = Ast.Desugared.Expr
 module DT = Ast.Desugared.Type
-module DK = Ast.Desugared.Kind
 
 let error e =
   raise (MuleErr.MuleExn e)
@@ -88,7 +87,7 @@ let rec quantify_opaques = function
         }
     in
     List.fold !vars ~init ~f:(fun ty v ->
-      DT.Quant((), `Exist, v, DK.Unknown, ty)
+      DT.Quant((), `Exist, v, `Unknown, ty)
     )
   | DT.Opaque i -> DT.Opaque i
   | DT.Fn(i, param, ret) ->
@@ -112,7 +111,7 @@ let rec desugar_type = function
   | ST.Fn(param, ret) ->
     DT.Fn((), desugar_type param, desugar_type ret)
   | ST.Quant(q, (v :: vs), body) ->
-    DT.Quant((), q, v, DK.Unknown, desugar_type (ST.Quant(q, vs, body)))
+    DT.Quant((), q, v, `Unknown, desugar_type (ST.Quant(q, vs, body)))
   | ST.Quant(_, [], body) -> desugar_type body
   | ST.Recur(v, body) ->
     DT.Recur((), v, desugar_type body)

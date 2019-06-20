@@ -28,9 +28,9 @@ include Coercions_t
 *)
 
 let gen_kind = function
-  | Kind.Type -> `Type
-  | Kind.Row -> `Row
-  | Kind.Unknown ->
+  | `Type -> `Type
+  | `Row -> `Row
+  | `Unknown ->
     failwith "BUG: Infer_kind should already have been called"
 
 let rec add_row_to_env: env_t -> u_var -> env_t =
@@ -184,7 +184,7 @@ let make_coercion_type env g ty cops =
   (* FIXME: this precludes us from having named types for anything not of kind
    * [Type]; find a better solution:
    *)
-  let kind_env = Map.map env ~f:(fun _ -> Kind.Type) in
+  let kind_env = Map.map env ~f:(fun _ -> `Type) in
   let kinded_ty = Infer_kind.infer kind_env ty in
   fst (Util.fix
          (fun vars ->

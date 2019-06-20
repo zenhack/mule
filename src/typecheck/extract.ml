@@ -285,7 +285,7 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
       ( q.q_id
       , sign_flag_to_q sign q.q_flag
       , ivar q.q_var
-      , Kind.Unknown
+      , `Unknown
       , finish_extract_t sign q.q_arg
       )
   | `Fn (i, param, ret) ->

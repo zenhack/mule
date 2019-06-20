@@ -1,47 +1,47 @@
 open Ast.Desugared
 
 let unify_kind l r = match l, r with
-  | Kind.Unknown, _ -> r
-  | _, Kind.Unknown -> l
-  | Kind.Type, Kind.Type -> Kind.Type
-  | Kind.Row, Kind.Row -> Kind.Row
+  | `Unknown, _ -> r
+  | _, `Unknown -> l
+  | `Type, `Type -> `Type
+  | `Row, `Row -> `Row
 
-  | Kind.Type, Kind.Row
-  | Kind.Row, Kind.Type ->
+  | `Type, `Row
+  | `Row, `Type ->
     raise (MuleErr.MuleExn(MuleErr.TypeError(MuleErr.MismatchedKinds(`Row, `Type))))
 
 let rec walk_type env = function
   | Type.TypeLam _ -> failwith "TODO: type lambdas"
   | Type.Annotated(_, _, t) -> walk_type env t
   | Type.Opaque _ ->
-    Type.Opaque (UnionFind.make (Kind.Unknown))
+    Type.Opaque (UnionFind.make `Unknown)
   | Type.Named (_, s) ->
-    Type.Named (UnionFind.make(Kind.Unknown), s)
+    Type.Named (UnionFind.make `Unknown, s)
   | Type.Var(_, v) ->
     (* TODO: proper exception *)
     let u_var = Map.find_exn env v in
-    UnionFind.merge unify_kind u_var (UnionFind.make Kind.Type);
+    UnionFind.merge unify_kind u_var (UnionFind.make `Type);
     Type.Var(u_var, v)
   | Type.Path(_, v, ls) ->
     let u_var = Map.find_exn env v in
-    UnionFind.merge unify_kind u_var (UnionFind.make Kind.Type);
+    UnionFind.merge unify_kind u_var (UnionFind.make `Type);
     Type.Path(u_var, v, ls)
   | Type.Fn(_, Type.Annotated(_, v, l), r) ->
       let l' = walk_type env l in
-      let r' = walk_type (Map.set env ~key:v ~data:(UnionFind.make Kind.Type)) r in
+      let r' = walk_type (Map.set env ~key:v ~data:(UnionFind.make `Type)) r in
       Type.Fn
-        ( UnionFind.make Kind.Type
-        , Type.Annotated(UnionFind.make Kind.Type, v, l')
+        ( UnionFind.make `Type
+        , Type.Annotated(UnionFind.make `Type, v, l')
         , r'
         )
   | Type.Fn(_, l, r) ->
-    Type.Fn(UnionFind.make Kind.Type, walk_type env l, walk_type env r)
+    Type.Fn(UnionFind.make `Type, walk_type env l, walk_type env r)
   | Type.Recur(_, var, body) ->
-    let u_var = UnionFind.make Kind.Type in
+    let u_var = UnionFind.make `Type in
     Type.Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
   | Type.Record {r_info = _; r_types; r_values} ->
     let (env, u_types) = collect_assoc_types env r_types in
-    let u_var = UnionFind.make Kind.Type in
+    let u_var = UnionFind.make `Type in
     Type.Record
       { r_info = u_var
       (* TODO: make use of the type row. *)
@@ -64,22 +64,22 @@ let rec walk_type env = function
      * where we default everything else.
      *)
     let k' = match UnionFind.get u_var with
-      | Kind.Unknown -> Kind.Type
+      | `Unknown -> `Type
       | k -> k
     in
-    Type.Quant(UnionFind.make Kind.Type, q, v, k', body')
+    Type.Quant(UnionFind.make `Type, q, v, k', body')
 and walk_row env (_, fields, rest) =
   let fields' = List.map fields ~f:(fun (l, t) -> (l, walk_type env t)) in
   match rest with
-  | None -> (UnionFind.make Kind.Type, fields', None)
+  | None -> (UnionFind.make `Type, fields', None)
   | Some v ->
     (* TODO: raise a proper error *)
     let u_var = Map.find_exn env v in
-    UnionFind.merge unify_kind u_var (UnionFind.make Kind.Row);
-    (UnionFind.make Kind.Type, fields', Some v)
+    UnionFind.merge unify_kind u_var (UnionFind.make `Row);
+    (UnionFind.make `Type, fields', Some v)
 and collect_assoc_types env (i, field_types, rest) =
   let env =
-    List.map field_types ~f:(fun (lbl, _) -> (lbl, UnionFind.make Kind.Type))
+    List.map field_types ~f:(fun (lbl, _) -> (lbl, UnionFind.make `Type))
     |> List.fold ~init:env ~f:(fun accum (lbl, u) ->
         Map.set
           accum
@@ -94,7 +94,7 @@ let infer env ty =
   let ty' = walk_type env ty in
   Type.map ty' ~f:(fun x ->
       match UnionFind.get x with
-      | Kind.Unknown -> `Type
-      | Kind.Type -> `Type
-      | Kind.Row -> `Row
+      | `Unknown -> `Type
+      | `Type -> `Type
+      | `Row -> `Row
     )

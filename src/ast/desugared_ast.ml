@@ -2,9 +2,10 @@ open Common_ast
 
 module Kind = struct
   type t =
-    | Unknown
-    | Type
-    | Row
+    [ `Unknown
+    | `Type
+    | `Row
+    ]
   [@@deriving sexp]
 end
 
