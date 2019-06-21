@@ -52,7 +52,19 @@ let rec unify_kind l r = match l, r with
       )
 
 let rec walk_type env = function
-  | Type.TypeLam _ -> failwith "TODO: type lambdas"
+  | Type.TypeLam(_, param, body) ->
+      let param_k = to_kvar `Unknown in
+      let body_t = walk_type (Map.set env ~key:param ~data:param_k) body in
+      Type.TypeLam
+          ( UnionFind.make
+              (`Arrow
+                 ( param_k
+                 , Type.get_info body_t
+                 )
+              )
+          , param
+          , body_t
+          )
   | Type.Annotated(_, _, t) -> walk_type env t
   | Type.Opaque _ ->
     Type.Opaque (to_kvar `Unknown)

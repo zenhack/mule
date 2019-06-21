@@ -48,6 +48,19 @@ and 'i row =
   ('i * (Label.t * 'i t) list * Var.t option)
 [@@deriving sexp]
 
+let get_info = function
+  | Fn(x, _, _) -> x
+  | Recur(x, _, _) -> x
+  | Var(x, _) -> x
+  | Path(x, _, _) -> x
+  | Record {r_info; _} -> r_info
+  | Union(x, _, _) -> x
+  | Quant(x, _, _, _, _) -> x
+  | Named(x, _) -> x
+  | Opaque x -> x
+  | Annotated(x, _, _) -> x
+  | TypeLam(x, _, _) -> x
+
 let rec map ty ~f = match ty with
   | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
   | Opaque x -> Opaque (f x)
