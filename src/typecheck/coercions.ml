@@ -62,6 +62,7 @@ let rec gen_type
   fun cops b_at env sign ty ->
     let tv = ty_var_at b_at in
     match ty with
+    | Type.App _ -> failwith "TODO: App"
     | Type.TypeLam _ -> failwith "TODO: TypeLam"
     | Type.Annotated (_, _, t) ->
         gen_type cops b_at env sign t

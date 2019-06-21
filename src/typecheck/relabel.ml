@@ -35,6 +35,10 @@ let relabel_type () =
   let get = new_get () in
   let get v = Var.of_string (get v) in
   let rec go = function
+    | App(i, f, x) ->
+        let f' = go f in
+        let x' = go x in
+        App(i, f', x')
     | TypeLam(i, v, t) ->
         let v = get v in
         TypeLam(i, v, go t)

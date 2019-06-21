@@ -52,6 +52,14 @@ let rec unify_kind l r = match l, r with
       )
 
 let rec walk_type env = function
+  | Type.App(_, f, x) ->
+      let f_t = walk_type env f in
+      let x_t = walk_type env x in
+      let result_k = to_kvar `Unknown in
+      let f_k = Type.get_info f_t in
+      let x_k = Type.get_info x_t in
+      UnionFind.merge unify_kind f_k (UnionFind.make (`Arrow(x_k, result_k)));
+      Type.App(result_k, f_t, x_t)
   | Type.TypeLam(_, param, body) ->
       let param_k = to_kvar `Unknown in
       let body_t = walk_type (Map.set env ~key:param ~data:param_k) body in

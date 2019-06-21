@@ -43,6 +43,7 @@ module Type = struct
     | Opaque of 'i
     | Annotated of ('i * Var.t * 'i t)
     | TypeLam of ('i * Var.t * 'i t)
+    | App of ('i * 'i t * 'i t)
   [@@deriving sexp]
 and 'i row =
   ('i * (Label.t * 'i t) list * Var.t option)
@@ -60,6 +61,7 @@ let get_info = function
   | Opaque x -> x
   | Annotated(x, _, _) -> x
   | TypeLam(x, _, _) -> x
+  | App(x, _, _) -> x
 
 let rec map ty ~f = match ty with
   | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
@@ -86,6 +88,8 @@ let rec map ty ~f = match ty with
     Quant(f x, q, v, k, map body ~f)
   | TypeLam(x, v, body) ->
     TypeLam(f x, v, map body ~f)
+  | App(x, fn, arg) ->
+    App(f x, map fn ~f, map arg ~f)
 and map_row (x, fields, rest) ~f =
   ( f x
   , List.map fields ~f:(fun(l, t) -> (l, map t ~f))

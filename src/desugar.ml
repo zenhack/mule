@@ -64,6 +64,12 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
   go
 
 let rec quantify_opaques = function
+  | DT.App(i, f, x) ->
+      DT.App
+        ( i
+        , quantify_opaques f
+        , quantify_opaques x
+        )
   | DT.TypeLam(i, v, t) ->
       DT.TypeLam(i, v, quantify_opaques t)
   | DT.Annotated(i, v, t) ->
