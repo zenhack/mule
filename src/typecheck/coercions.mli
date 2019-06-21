@@ -48,7 +48,7 @@ val gen_type
   -> bound_target
   -> env_t
   -> sign
-  -> 'i Type.t
+  -> Kind.t Type.t
   -> u_var
 
 (* Actually make the coercion. *)

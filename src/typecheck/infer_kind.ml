@@ -99,7 +99,9 @@ let rec walk_type env = function
     Type.Fn(to_kvar `Type, walk_type env l, walk_type env r)
   | Type.Recur(_, var, body) ->
     let u_var = to_kvar `Type in
-    Type.Recur(u_var, var, walk_type (Map.set env ~key:var ~data:u_var) body)
+    let body_t = walk_type (Map.set env ~key:var ~data:u_var) body in
+    UnionFind.merge unify_kind u_var (Type.get_info body_t);
+    Type.Recur(u_var, var, body_t)
   | Type.Record {r_info = _; r_types; r_values} ->
     let (env, u_types) = collect_assoc_types env r_types in
     Type.Record

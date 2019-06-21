@@ -79,7 +79,8 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
         (`G g)
         env_types
         `Pos
-        ty
+        (* FIXME: carry along the kind environment as well: *)
+        (Infer_kind.infer (Map.set Intrinsics.kinds ~key:v ~data:`Unknown) ty)
     in
     walk
       ~cops
@@ -279,7 +280,12 @@ let build_constraints: Expr.t -> built_constraints =
                UnionFind.make
                  ( `Quant
                    ( ty_var_at b_at
-                   , Coercions.gen_type cops b_at VarMap.empty `Pos ty
+                   , Coercions.gen_type
+                       cops
+                       b_at
+                       VarMap.empty
+                       `Pos
+                       (Infer_kind.infer Intrinsics.kinds ty)
                    )
                  )
              )
@@ -290,7 +296,12 @@ let build_constraints: Expr.t -> built_constraints =
                   UnionFind.make (
                     `Quant
                       ( ty_var_at b_at
-                      , Coercions.gen_type cops b_at env_types `Pos ty
+                      , Coercions.gen_type
+                          cops
+                          b_at
+                          env_types
+                          `Pos
+                          (Infer_kind.infer Intrinsics.kinds ty)
                       )
                  )))
                )

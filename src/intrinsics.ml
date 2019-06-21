@@ -29,3 +29,6 @@ let values =
 
 let types =
   VarMap.singleton (Var.of_string "int") int_t
+
+let kinds =
+  VarMap.singleton (Var.of_string "int") `Type
