@@ -52,6 +52,15 @@ let get_flag: quantifier -> sign -> bound_ty =
     | `Exist, `Pos -> `Rigid
     | `Exist, `Neg -> `Flex
 
+let rec make_u_kind: Ast.Desugared.Kind.t -> u_kind = function
+  | `Type -> `Type
+  | `Row -> `Row
+  | `Arrow(x, y) ->
+      `Arrow
+        ( UnionFind.make (make_u_kind x)
+        , UnionFind.make (make_u_kind y)
+        )
+
 (* constructors for common type constants. *)
 let int tv = `Const(tv, `Named "int", [], `Type)
 let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
@@ -59,6 +68,14 @@ let union tv row = `Const(tv, `Named "|", [row, `Row], `Type)
 let record tv r_types r_values = `Const(tv, `Named "{...}", [r_types, `Row; r_values, `Row], `Type)
 let empty tv = `Const(tv, `Named "<empty>", [], `Row)
 let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
+let apply tv f fk x xk =
+  begin match fk with
+    | `Arrow(pk, rk) when Poly.equal pk xk ->
+        `Const(tv, `Named "<apply>", [f, make_u_kind fk; x, make_u_kind xk], make_u_kind rk)
+    | _ ->
+        (* TODO: better error handling. *)
+        failwith "Mismatched kinds"
+  end
 
 type permission = F | R | L | E
 

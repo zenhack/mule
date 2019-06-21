@@ -135,6 +135,8 @@ let rec desugar_type = function
     DT.Annotated((), v, desugar_type ty)
   | ST.Path(v, ls) ->
     DT.Path((), v, ls)
+  | ST.App(f, x) ->
+    DT.App((), desugar_type f, desugar_type x)
   | _ ->
     failwith "TODO"
 and desugar_union_type tail (l, r) =
