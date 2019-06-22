@@ -66,7 +66,15 @@ let rec gen_type
         let f' = gen_type cops b_at env sign f in
         let x' = gen_type cops b_at env sign x in
         UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
-    | Type.TypeLam _ -> failwith "TODO: TypeLam"
+    | Type.TypeLam(`Arrow(param, ret), v, ty) ->
+        let tv = ty_var_at b_at in
+        let param = Kind.default_unknowns param |> gen_kind in
+        let ret = Kind.default_unknowns ret |> gen_kind in
+        Gen_t.lambda tv param ret (fun b_at p ->
+            gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
+          )
+    | Type.TypeLam _ ->
+        failwith "BUG: lambda had non-arrow kind."
     | Type.Annotated (_, _, t) ->
         gen_type cops b_at env sign t
     | Type.Opaque _ ->
