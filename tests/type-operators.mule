@@ -1,0 +1,2 @@
+let type t a = int in
+(4 : t {})

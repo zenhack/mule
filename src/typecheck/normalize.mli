@@ -3,8 +3,8 @@
  *)
 open Typecheck_types
 
-(* Reduce the term inside the variable to weak head normal form. *)
-val whnf : u_var -> u_var
+(* Reduce the term inside the variable to normal form. *)
+val nf : u_var -> u_var
 
 (* Normalize two types with respect to each other, up to whnf.
  *
