@@ -24,8 +24,6 @@ open Build_constraint_t
  * will invent a new constant type t and infer (t -> t).
 *)
 
-include module type of Coercions_t
-
 (* [gen_type cops b_at env sign ty] generates a graphic type based on [ty].
  *
  * - [cops] is used to generate unification constraints.
@@ -46,10 +44,10 @@ include module type of Coercions_t
 val gen_type
   : constraint_ops
   -> bound_target
-  -> env_t
+  -> u_var VarMap.t
   -> sign
   -> Kind.t Type.t
   -> u_var
 
 (* Actually make the coercion. *)
-val make_coercion_type : env_t -> g_node -> 'i Type.t -> constraint_ops -> u_var
+val make_coercion_type : u_var VarMap.t -> g_node -> 'i Type.t -> constraint_ops -> u_var

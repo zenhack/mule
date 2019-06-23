@@ -4,8 +4,6 @@ open Typecheck_types
 
 open Build_constraint_t
 
-include Coercions_t
-
 (* Generate coercion types from type annotations.
  *
  * This is based on {MLF-Graph-Infer} section 6, but we do one important
@@ -37,7 +35,7 @@ let rec gen_kind: Kind.maybe_kind -> u_kind = function
         )
   | `Unknown -> failwith "BUG: infer_kind should have removed this."
 
-let rec add_row_to_env: env_t -> u_var -> env_t =
+let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
   fun env u ->
     match UnionFind.get u with
     | `Const(_, `Named "<empty>", [], _) | `Free _ -> env
@@ -54,7 +52,7 @@ let rec add_row_to_env: env_t -> u_var -> env_t =
 let rec gen_type
   : constraint_ops
   -> bound_target
-  -> env_t
+  -> u_var VarMap.t
   -> sign
   -> Kind.t Type.t
   -> u_var

@@ -81,7 +81,6 @@ let rec walk_type env = function
   | Type.Var(_, v) ->
     (* TODO: proper exception *)
     let u_var = Map.find_exn env v in
-    UnionFind.merge unify_kind u_var (to_kvar `Type);
     Type.Var(u_var, v)
   | Type.Path(_, v, ls) ->
     let u_var = Map.find_exn env v in
