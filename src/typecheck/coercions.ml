@@ -54,7 +54,7 @@ let rec gen_type
   -> bound_target
   -> u_var VarMap.t
   -> sign
-  -> Kind.t Type.t
+  -> k_var Type.t
   -> u_var
   =
   fun cops b_at env sign ty ->
@@ -64,15 +64,16 @@ let rec gen_type
         let f' = gen_type cops b_at env sign f in
         let x' = gen_type cops b_at env sign x in
         UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
-    | Type.TypeLam(`Arrow(param, ret), v, ty) ->
-        let tv = ty_var_at b_at in
-        let param = Kind.default_unknowns param |> gen_kind in
-        let ret = Kind.default_unknowns ret |> gen_kind in
-        Gen_t.lambda tv param ret (fun b_at p ->
-            gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
-          )
-    | Type.TypeLam _ ->
-        failwith "BUG: lambda had non-arrow kind."
+    | Type.TypeLam(k, v, ty) ->
+        begin match UnionFind.get k with
+          | `Arrow(param, ret) ->
+            let tv = ty_var_at b_at in
+            Gen_t.lambda tv param ret (fun b_at p ->
+                gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
+              )
+          | _ ->
+            failwith "BUG: lambda had non-arrow kind."
+        end
     | Type.Annotated (_, _, t) ->
         gen_type cops b_at env sign t
     | Type.Opaque _ ->
@@ -80,7 +81,7 @@ let rec gen_type
         ("Opaque types should have been removed before generating " ^
          "the constraint graph.")
     | Type.Named (_, s) ->
-      UnionFind.make (`Const(tv, `Named s, [], `Type))
+        UnionFind.make (`Const(tv, `Named s, [], kvar_type))
     | Type.Fn (_, param, ret) ->
         let param' =
           gen_type cops b_at env (flip_sign sign) param
@@ -96,7 +97,7 @@ let rec gen_type
         in
         UnionFind.make (fn tv param' ret')
     | Type.Recur(_, v, body) ->
-      let ret = gen_u `Type b_at in
+      let ret = gen_u kvar_type b_at in
       let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
@@ -106,23 +107,23 @@ let rec gen_type
         let rec go t = function
           | [] -> t
           | [lbl] ->
-            let ret = gen_u `Type b_at in
+            let ret = gen_u kvar_type b_at in
             let record =
               UnionFind.make
                 (record (ty_var_at b_at)
-                   (UnionFind.make (extend (ty_var_at b_at) lbl ret (gen_u `Row b_at)))
-                   (gen_u `Row b_at))
+                   (UnionFind.make (extend (ty_var_at b_at) lbl ret (gen_u kvar_row b_at)))
+                   (gen_u kvar_row b_at))
             in
             cops.constrain_unify record t;
             ret
           | (l :: ls) ->
-            let l' = gen_u `Type b_at in
+            let l' = gen_u kvar_type b_at in
             let ret = go l' ls in
             let record =
               UnionFind.make
                 (record (ty_var_at b_at)
-                   (gen_u `Row b_at)
-                   (UnionFind.make (extend (ty_var_at b_at) l l' (gen_u `Row b_at))))
+                   (gen_u kvar_row b_at)
+                   (UnionFind.make (extend (ty_var_at b_at) l l' (gen_u kvar_row b_at))))
             in
             cops.constrain_unify record t;
             ret
@@ -139,7 +140,7 @@ let rec gen_type
     | Type.Union row ->
       UnionFind.make (union tv (gen_row cops b_at env sign row))
     | Type.Quant(_, q, v, k, body) ->
-      let ret = gen_u `Type b_at in
+      let ret = gen_u kvar_type b_at in
       let bound_v =
         UnionFind.make
           (`Free
@@ -149,7 +150,7 @@ let rec gen_type
                   ; b_at = `Ty (lazy ret)
                   }
                }
-             , gen_kind k
+             , UnionFind.make (gen_kind k)
              ))
       in
       let ret' =
@@ -195,10 +196,7 @@ let make_coercion_type env g ty cops =
    * 3. Generate a function node, and bound the two copies of the type to
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
   *)
-  (* FIXME: this precludes us from having named types for anything not of kind
-   * [Type]; find a better solution:
-   *)
-  let kind_env = Map.map env ~f:(fun _ -> `Type) in
+  let kind_env = Map.map env ~f:get_kind in
   let kinded_ty = Infer_kind.infer kind_env ty in
   fst (Util.fix
          (fun vars ->

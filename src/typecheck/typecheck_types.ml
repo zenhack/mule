@@ -1,10 +1,20 @@
 (* types used by the type checker *)
 
 type u_kind =
-  [ `Row
+  [ `Free of int
+  | `Row
   | `Type
-  | `Arrow of u_kind UnionFind.var * u_kind UnionFind.var
+  | `Arrow of k_var * k_var
   ]
+and k_var = u_kind UnionFind.var
+
+(* These can be the same physical variables for all type/row kind vars,
+ * since their identity has no meaning. *)
+let kvar_type = UnionFind.make `Type
+let kvar_row = UnionFind.make `Row
+
+let gen_k: unit -> k_var =
+  fun () -> UnionFind.make (`Free (Gensym.gensym ()))
 
 type u_typeconst =
   [ `Named of string
@@ -12,9 +22,9 @@ type u_typeconst =
   ]
 (* Contents of unification variables: *)
 and u_type =
-  [ `Free of (tyvar * u_kind)
+  [ `Free of (tyvar * k_var)
   | `Quant of (tyvar * u_type UnionFind.var)
-  | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * u_kind) list * u_kind)
+  | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex | `Explicit ]
 and 'a bound =
@@ -41,6 +51,11 @@ type sign = [ `Pos | `Neg ]
 
 type quantifier = [ `All | `Exist ]
 
+let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
+  | `Const(_, _, _, k) -> k
+  | `Free (_, k) -> k
+  | `Quant(_, t) -> get_kind t
+
 let flip_sign = function
   | `Pos -> `Neg
   | `Neg -> `Pos
@@ -62,19 +77,38 @@ let rec make_u_kind: Ast.Desugared.Kind.t -> u_kind = function
         )
 
 (* constructors for common type constants. *)
-let int tv = `Const(tv, `Named "int", [], `Type)
-let fn tv param ret = `Const(tv, `Named "->", [param, `Type; ret, `Type], `Type)
-let union tv row = `Const(tv, `Named "|", [row, `Row], `Type)
-let record tv r_types r_values = `Const(tv, `Named "{...}", [r_types, `Row; r_values, `Row], `Type)
-let empty tv = `Const(tv, `Named "<empty>", [], `Row)
-let extend tv lbl head tail = `Const(tv, `Extend lbl, [head, `Type; tail, `Row], `Row)
-let apply tv f fk x xk =
-  begin match fk with
-    | `Arrow(pk, rk) when Poly.equal pk xk ->
-        `Const(tv, `Named "<apply>", [f, make_u_kind fk; x, make_u_kind xk], make_u_kind rk)
-    | _ ->
-        (* TODO: better error handling. *)
-        failwith "Mismatched kinds"
+let int: tyvar -> u_type = fun tv ->
+  `Const(tv, `Named "int", [], kvar_type)
+let fn: tyvar -> u_var -> u_var -> u_type = fun tv param ret ->
+  `Const(tv, `Named "->", [param, kvar_type; ret, kvar_type], kvar_type)
+let union: tyvar -> u_var -> u_type = fun tv row ->
+  `Const(tv, `Named "|", [row, kvar_row], kvar_type)
+let record: tyvar -> u_var -> u_var -> u_type = fun tv r_types r_values ->
+  `Const(tv, `Named "{...}", [r_types, kvar_row; r_values, kvar_row], kvar_type)
+let empty: tyvar -> u_type = fun tv ->
+  `Const(tv, `Named "<empty>", [], kvar_row)
+let extend: tyvar -> Ast.Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
+  `Const(tv, `Extend lbl, [head, kvar_type; tail, kvar_row], kvar_row)
+let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x xk ->
+  begin match UnionFind.get fk with
+    | `Arrow(_, rk) ->
+        `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
+    | `Free _ ->
+        let rk = gen_k () in
+        UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
+        `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
+    | k ->
+        raise MuleErr.(
+          MuleExn
+            (TypeError (MismatchedKinds
+                         ( `Arrow(`Type, `Type)
+                         , match k with
+                           | `Type -> `Type
+                           | `Row -> `Row
+                           | _ -> failwith "impossible"
+                         )
+                       ))
+        )
   end
 
 type permission = F | R | L | E

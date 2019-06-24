@@ -25,7 +25,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
   | Expr.Integer _ ->
     UnionFind.make (int (gen_ty_var g))
   | Expr.Var v ->
-    let tv = gen_u `Type (`G g) in
+    let tv = gen_u kvar_type (`G g) in
     begin match Lazy.force (Map.find_exn env_terms v) with
       | `Ty tv' ->
         cops.constrain_unify tv' tv
@@ -37,7 +37,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     (* all a. (a -> a) -> a *)
     let rec ret = lazy (
       let b_at = `Ty ret in
-      let a = gen_u `Type b_at in
+      let a = gen_u kvar_type b_at in
       UnionFind.make
         ( fn
             (gen_ty_var g)
@@ -47,8 +47,8 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     ) in
     Lazy.force ret
   | Expr.Lam (param, body) ->
-    let param_var = gen_u `Type (`G g) in
-    let ret_var = gen_u `Type (`G g) in
+    let param_var = gen_u kvar_type (`G g) in
+    let ret_var = gen_u kvar_type (`G g) in
     let f_var = UnionFind.make (fn (gen_ty_var g) param_var ret_var) in
     let g_body = with_g g
         (fun g -> walk
@@ -72,15 +72,15 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       ~g
       body
   | Expr.LetType(v, ty, body) ->
-    (* TODO: pass through the type. *)
+    let env_kinds = Map.map env_types ~f:get_kind in
+    let ty = Type.map ty ~f:gen_k in
     let u_var =
       Coercions.gen_type
         cops
         (`G g)
         env_types
         `Pos
-        (* FIXME: carry along the kind environment as well: *)
-        (Infer_kind.infer (Map.set Intrinsics.kinds ~key:v ~data:`Unknown) ty)
+        (Infer_kind.infer (Map.set env_kinds ~key:v ~data:(gen_k ())) ty)
     in
     walk
       ~cops
@@ -89,8 +89,8 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       ~g
       body
   | Expr.App (f, arg) ->
-    let param_var = gen_u `Type (`G g) in
-    let ret_var = gen_u `Type (`G g) in
+    let param_var = gen_u kvar_type (`G g) in
+    let ret_var = gen_u kvar_type (`G g) in
     let f_var = UnionFind.make(fn (gen_ty_var g) param_var ret_var) in
     let g_f =
       with_g g (fun g -> walk ~cops ~env_types ~env_terms ~g:(Lazy.force g) f)
@@ -105,7 +105,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     UnionFind.make
       (record
          (ty_var_at (`G g))
-         (gen_u `Row (`G g))
+         (gen_u kvar_row (`G g))
          (UnionFind.make (empty (ty_var_at (`G g))))
       )
   | Expr.GetField (_, lbl) ->
@@ -115,20 +115,20 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     *)
     let rec ret = lazy (
       let b_at = `Ty ret in
-      let head_var = gen_u `Type b_at in
+      let head_var = gen_u kvar_type b_at in
       UnionFind.make
         (fn
            (gen_ty_var g)
            (UnionFind.make
               (record
                  (ty_var_at b_at)
-                 (gen_u `Row b_at)
+                 (gen_u kvar_row b_at)
                  (UnionFind.make
                     (extend
                        (ty_var_at b_at)
                        lbl
                        head_var
-                       (gen_u `Row b_at)
+                       (gen_u kvar_row b_at)
                     ))))
            head_var)
     )
@@ -141,9 +141,9 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     *)
     let rec ret = lazy (
       let b_at = `Ty ret in
-      let head_var = gen_u `Type b_at in
-      let tail_var = gen_u `Row b_at in
-      let types_row_var = gen_u `Row b_at in
+      let head_var = gen_u kvar_type b_at in
+      let tail_var = gen_u kvar_row b_at in
+      let types_row_var = gen_u kvar_row b_at in
       UnionFind.make
         (fn
            (gen_ty_var g)
@@ -179,7 +179,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
                (ty_var_at (`G g))
                lbl
                param_var
-               (gen_u `Row (`G g)))
+               (gen_u kvar_row (`G g)))
          )
       )
   | Expr.Match {cases; default} when Map.is_empty cases ->
@@ -193,7 +193,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     in
     walk ~cops ~env_types ~env_terms ~g term
   | Expr.IntMatch {im_cases; im_default} ->
-    let body_ty = gen_u `Type (`G g) in
+    let body_ty = gen_u kvar_type (`G g) in
     Map.iter im_cases ~f:(fun body ->
         let ty = walk ~cops ~env_types ~env_terms ~g body in
         cops.constrain_unify ty body_ty
@@ -212,7 +212,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
   | Expr.Match {cases; default} ->
     let final = match default with
       | None -> UnionFind.make (empty (gen_ty_var g))
-      | Some _ -> gen_u `Row (`G g)
+      | Some _ -> gen_u kvar_row (`G g)
     in
     let (rowVar, bodyVar) =
       walk_match ~cops ~env_types ~env_terms ~g final (Map.to_alist cases)
@@ -225,11 +225,12 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
          (UnionFind.make (union tv rowVar))
          bodyVar)
   | Expr.WithType ty ->
+    let ty = Type.map ty ~f:gen_k in
     Coercions.make_coercion_type env_types g ty cops
 and walk_match ~cops ~env_types ~env_terms ~g final = function
-  | [] -> (final, gen_u `Type (`G g))
+  | [] -> (final, gen_u kvar_type (`G g))
   | ((lbl, (var, body)) :: rest) ->
-    let ty = gen_u `Type (`G g) in
+    let ty = gen_u kvar_type (`G g) in
     let bodyVar =
       walk
         ~cops
@@ -277,6 +278,7 @@ let build_constraints: Expr.t -> built_constraints =
            let g = Lazy.force g in
            let b_at = `G g in
            let env_types = Map.map Intrinsics.types ~f:(fun ty ->
+               let ty = Type.map ty ~f:gen_k in
                UnionFind.make
                  ( `Quant
                    ( ty_var_at b_at
@@ -291,6 +293,7 @@ let build_constraints: Expr.t -> built_constraints =
              )
            in
            let env_terms = Map.map env_terms ~f:(fun ty ->
+               let ty = Type.map ty ~f:gen_k in
                lazy (`G (with_g g (fun g ->
                   let b_at = `G (Lazy.force g) in
                   UnionFind.make (

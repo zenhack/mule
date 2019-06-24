@@ -3,6 +3,8 @@ open Ast
 module D = Desugared
 module R = Runtime
 
+open Typecheck_types
+
 let int_t = D.Type.Named((), "int")
 let fn_t p r = D.Type.Fn ((), p, r)
 
@@ -31,4 +33,4 @@ let types =
   VarMap.singleton (Var.of_string "int") int_t
 
 let kinds =
-  VarMap.singleton (Var.of_string "int") `Type
+  VarMap.singleton (Var.of_string "int") kvar_type

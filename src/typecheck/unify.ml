@@ -243,7 +243,7 @@ let rec unify already_merged l r =
                      ( { ty_id = gensym ()
                        ; ty_bound = ref (get_u_bound (UnionFind.get v))
                        }
-                     , `Row
+                     , kvar_row
                      )
                   )
               in

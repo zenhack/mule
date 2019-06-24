@@ -46,8 +46,13 @@ val gen_type
   -> bound_target
   -> u_var VarMap.t
   -> sign
-  -> Kind.t Type.t
+  -> k_var Type.t
   -> u_var
 
 (* Actually make the coercion. *)
-val make_coercion_type : u_var VarMap.t -> g_node -> 'i Type.t -> constraint_ops -> u_var
+val make_coercion_type
+  : u_var VarMap.t
+  -> g_node
+  -> k_var Type.t
+  -> constraint_ops
+  -> u_var

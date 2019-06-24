@@ -138,7 +138,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             ret
       end
     in
-    let rec new_root = lazy (go `Type old_root new_root) in
+    let rec new_root = lazy (go kvar_type old_root new_root) in
     Lazy.force new_root
 
 let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =

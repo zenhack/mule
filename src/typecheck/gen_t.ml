@@ -11,7 +11,7 @@ let ty_var_at: bound_target -> tyvar = fun b_at ->
 
 let gen_ty_var: g_node -> tyvar = fun g -> ty_var_at (`G g)
 
-let gen_u: u_kind -> bound_target -> u_type UnionFind.var =
+let gen_u: k_var -> bound_target -> u_type UnionFind.var =
   fun kind targ -> UnionFind.make
       (`Free
          ( { ty_id = gensym ()
@@ -20,7 +20,7 @@ let gen_u: u_kind -> bound_target -> u_type UnionFind.var =
          , kind
          ))
 
-let lambda: tyvar -> u_kind -> u_kind -> (bound_target -> u_var -> u_var) -> u_var =
+let lambda: tyvar -> k_var -> k_var -> (bound_target -> u_var -> u_var) -> u_var =
   fun tv kparam kret f ->
     fst (
       Util.fix
@@ -31,10 +31,7 @@ let lambda: tyvar -> u_kind -> u_kind -> (bound_target -> u_var -> u_var) -> u_v
                ( tv
                , `Named "<lambda>"
                , [param, kparam; ret, kret]
-               , `Arrow
-                   ( UnionFind.make kparam
-                   , UnionFind.make kret
-                   )
+               , UnionFind.make (`Arrow (kparam, kret))
                )
            )
         )
