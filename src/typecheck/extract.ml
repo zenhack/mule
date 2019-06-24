@@ -339,6 +339,7 @@ and finish_extract_row sign row =
 
 let get_var_type uvar =
   uvar
+  |> Normalize.nf
   |> semi_extract_t IntSet.empty
   |> fix_quantifiers
   |> add_rec_binders

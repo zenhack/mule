@@ -14,17 +14,20 @@ let rec is_bound_above {ty_bound; _} parent =
 
 (* Reduce the contents of the unification variable to normal form. *)
 let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
-  (* Right now this is a no-op, but once we add higher-kinds/type operators,
-   * we'll do beta reduction here.
-   *)
   fun uvar ->
     match UnionFind.get uvar with
     | `Const(_, `Named "<apply>", [f, _; x, _], _) ->
       apply uvar (nf f) (nf x)
+    | `Quant(tv, arg) ->
+      UnionFind.set (`Quant(tv, nf arg)) uvar;
+      uvar
     | _ ->
       uvar
 and apply appvar f x =
   match UnionFind.get f with
+  | `Quant(_, arg) ->
+    (* FIXME/XXX: What do we do with the q-node? what if things are bound on it? *)
+    apply appvar arg x
   | `Const(tv, `Named "<lambda>", [p, _; r, _], _) ->
     let (tv, p, r) =
       if is_bound_above tv appvar then
@@ -36,6 +39,8 @@ and apply appvar f x =
     tv.ty_bound := new_bound;
     let x_tv = get_tyvar (UnionFind.get x) in
     x_tv.ty_bound := new_bound;
+    let r_tv = get_tyvar (UnionFind.get r) in
+    r_tv.ty_bound := new_bound;
     UnionFind.merge (fun _ r -> r) p x;
     UnionFind.merge (fun _ r -> r) appvar r;
     r

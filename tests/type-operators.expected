@@ -1,0 +1,23 @@
+
+Desugared:
+
+	(LetType
+	 (t (TypeLam (() a (Recur (() t (Var (() int))))))
+	  (App
+	   ((WithType
+	     (App
+	      (() (Var (() t))
+	       (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))))
+	    (Integer 4)))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(Integer 4)
+
+Evaluated:
+
+	(Integer 4)
