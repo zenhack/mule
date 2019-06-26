@@ -26,6 +26,9 @@ type t =
 
 exception MuleExn of t
 
+let throw e =
+  raise (MuleExn e)
+
 let show_ctor = function
   | `Named name -> name
   | `Extend lbl -> "row containing " ^ Ast.Label.to_string lbl
