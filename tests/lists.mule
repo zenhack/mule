@@ -1,6 +1,9 @@
-let type t a = Cons { hd : a, tl : t a } | Nil {} in
-let length : all a. t a -> int =
-      fn list. match list with
+let type list a
+  = Cons { hd : a, tl : list a }
+  | Nil {}
+in
+let length : all a. list a -> int =
+      fn lst. match lst with
         | Nil _ -> 0
         | Cons l -> add 1 (length l.tl)
       end

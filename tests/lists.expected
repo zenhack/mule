@@ -2,16 +2,16 @@
 Desugared:
 
 	(LetType
-	 (t
+	 (list
 	  (TypeLam
 	   (() a
 	    (Recur
-	     (() t
+	     (() list
 	      (Union
 	       (()
 	        ((Cons
 	          (Record (r_info ()) (r_types (() () ()))
-	           (r_values (() ((tl (Var (() t))) (hd (Var (() a)))) ()))))
+	           (r_values (() ((tl (Var (() list))) (hd (Var (() a)))) ()))))
 	         (Nil
 	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
 	        ()))))))
@@ -25,9 +25,9 @@ Desugared:
 	         ((WithType
 	           (Quant
 	            (() All a Unknown
-	             (Fn (() (App (() (Var (() t)) (Var (() a)))) (Var (() int)))))))
+	             (Fn (() (App (() (Var (() list)) (Var (() a)))) (Var (() int)))))))
 	          (Lam
-	           (list
+	           (lst
 	            (App
 	             ((Match
 	               (cases
@@ -49,7 +49,7 @@ Desugared:
 	                    ((Match (cases ()) (default ((() (Integer 0)))))
 	                     (Var $4)))))))
 	               (default ()))
-	              (Var list)))))))))))
+	              (Var lst)))))))))))
 	    (App
 	     ((Var length)
 	      (App
