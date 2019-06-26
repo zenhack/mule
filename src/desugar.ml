@@ -185,6 +185,7 @@ let desugar_type t =
 
 let rec desugar = function
   | S.Integer n -> D.Integer n
+  | S.Text s -> D.Text s
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var (v, None) :: pats, body) ->
@@ -291,6 +292,7 @@ and desugar_record fields =
   let rec subst env expr = match expr with
     (* TODO: do stuff with type variables *)
     | D.Integer n -> D.Integer n
+    | D.Text s -> D.Text s
     | D.Var v ->
       let lbl = var_to_lbl v in
       begin match Map.find env lbl with

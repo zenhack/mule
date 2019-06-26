@@ -8,6 +8,7 @@ type binding = [ `Index of int | `Term of R.t ]
 let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
   fun depth env -> function
     | D.Integer n -> (0, R.Integer n)
+    | D.Text s -> (0, R.Text s)
     | D.Var v ->
       begin match Map.find_exn env v with
         | `Index m ->

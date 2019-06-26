@@ -79,6 +79,8 @@ let rec make_u_kind: Ast.Desugared.Kind.t -> u_kind = function
 (* constructors for common type constants. *)
 let int: tyvar -> u_type = fun tv ->
   `Const(tv, `Named "int", [], kvar_type)
+let text: tyvar -> u_type = fun tv ->
+  `Const(tv, `Named "text", [], kvar_type)
 let fn: tyvar -> u_var -> u_var -> u_type = fun tv param ret ->
   `Const(tv, `Named "->", [param, kvar_type; ret, kvar_type], kvar_type)
 let union: tyvar -> u_var -> u_type = fun tv row ->

@@ -25,6 +25,7 @@ module Expr = struct
     | Lazy of (t list * t ref)
     | Vec of t array
     | Integer of Bigint.t
+    | Text of string
     | Prim of (t -> t)
   [@@deriving sexp]
 end

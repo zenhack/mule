@@ -17,7 +17,7 @@ let duplicate_fields dups =
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
   let rec go_expr typ term = function
-    | Integer _ -> ()
+    | Integer _ | Text _ -> ()
     | Var v when Set.mem term v -> ()
     | Var v -> unboundVar v
     | Lam([], body) ->
@@ -132,7 +132,7 @@ let check_unbound_vars expr =
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
   let rec go_expr = function
-    | Integer _ -> ()
+    | Integer _ | Text _ -> ()
     | Record fields ->
       go_fields fields
     | Update(e, fields) ->

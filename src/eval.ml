@@ -32,6 +32,7 @@ and eval stack expr =
   begin match whnf stack expr with
     | Prim p -> Prim p
     | Integer n -> Integer n
+    | Text s -> Text s
     | Lazy (env, e) ->
       e := eval (env @ stack) !e;
       !e

@@ -48,6 +48,7 @@ module Expr = struct
     | LetType of (Var.t * Var.t list * Type.t * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
+    | Text of string
   [@@deriving sexp]
 and field =
   [ `Value of
