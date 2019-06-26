@@ -6,6 +6,7 @@ module R = Runtime
 open Typecheck_types
 
 let int_t = D.Type.Named((), "int")
+let text_t = D.Type.Named((), "text")
 let fn_t p r = D.Type.Fn ((), p, r)
 
 let prim x = R.Expr.Prim x
@@ -19,18 +20,24 @@ let int_binop f =
   , prim (fun x -> prim (fun y -> R.Expr.Integer (f (assert_int x) (assert_int y))))
   )
 
-let values =
+let dict kvs =
+  List.map kvs ~f:(fun (k, v) -> (Var.of_string k, v))
+  |> Map.of_alist_exn (module Var)
+
+let values = dict
   [ "add", int_binop Z.add
   ; "sub", int_binop Z.sub
   ; "mul", int_binop Z.mul
   ; "div", int_binop Z.div
   ; "rem", int_binop Z.rem
   ]
-  |> List.map ~f:(fun (k, v) -> (Var.of_string k, v))
-  |> Map.of_alist_exn (module Var)
 
-let types =
-  VarMap.singleton (Var.of_string "int") int_t
+let types = dict
+  [ "int", int_t
+  ; "text", text_t
+  ]
 
-let kinds =
-  VarMap.singleton (Var.of_string "int") kvar_type
+let kinds = dict
+  [ "int", kvar_type
+  ; "text", kvar_type
+  ]
