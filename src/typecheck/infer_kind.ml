@@ -78,8 +78,15 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
       Type.Named (to_kvar `Unknown, s)
     | Type.Var(_, v) ->
       (* TODO: proper exception *)
-      let u_var = Map.find_exn env v in
-      Type.Var(u_var, v)
+        begin match Map.find env v with
+        | Some u_var ->
+            Type.Var(u_var, v)
+        | None ->
+            failwith
+              ("BUG: unbound variable '" ^ Ast.Var.to_string v ^ "' when inferring kind."
+               ^ " This should have been caught by the linter."
+              )
+        end
     | Type.Path(_, v, ls) ->
       let u_var = Map.find_exn env v in
       UnionFind.merge unify_kind u_var (to_kvar `Type);
