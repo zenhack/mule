@@ -51,9 +51,10 @@ let check_unbound_vars expr =
       go_expr typ term_new e;
       go_expr typ term_new body
     | LetType(var, params, ty, body) ->
-      let typ = List.fold (var::params) ~init:typ ~f:Set.add in
-      go_type typ ty;
-      go_expr typ term body
+      let typ_ty = List.fold (var::params) ~init:typ ~f:Set.add in
+      let typ_body = Set.add typ var in
+      go_type typ_ty ty;
+      go_expr typ_body term body
     | WithType (e, ty) ->
       go_expr typ term e;
       go_type typ ty

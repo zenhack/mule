@@ -1,0 +1,4 @@
+# This is a regression test. This should be stopped by the linter, because
+# in the body of the let, the variable 'a' is unbound.
+let type t a = int in
+4 : t a
