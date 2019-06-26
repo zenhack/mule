@@ -93,6 +93,26 @@ let int: (Z.t, unit) MParser.t = token (
       fail ("Illegal integer literal: " ^ str)
   )
 
+let text_legal =
+  none_of "\"\\"
+
+let escaped =
+  let%bind _ = char '\\' in
+  match%bind any_char with
+  | '\\' -> return '\\'
+  | '"' -> return '"'
+  | 'n' -> return '\n'
+  | 't' -> return '\t'
+  | 'r' -> return '\r'
+  | c -> fail ("Illegal escape sequence: \\" ^ String.of_char c)
+
+let text: (Expr.t, unit) MParser.t = token (
+    let%bind _ = char '"' in
+    let%bind chars = many (text_legal <|> escaped) in
+    let%map _ = char '"' in
+    Expr.Text (String.of_char_list chars)
+)
+
 let label =
   var |>> Ast.var_to_label
 
@@ -223,6 +243,7 @@ and ex3 = lazy (
     [ lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
+    ; text
     ; (var |>> fun v -> Expr.Var v)
     ; parens (lazy_p expr)
     ; lazy_p record
