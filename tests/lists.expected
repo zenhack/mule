@@ -1,0 +1,169 @@
+
+Desugared:
+
+	(LetType
+	 (t
+	  (TypeLam
+	   (() a
+	    (Recur
+	     (() t
+	      (Union
+	       (()
+	        ((Cons
+	          (Record (r_info ()) (r_types (() () ()))
+	           (r_values (() ((tl (Var (() t))) (hd (Var (() a)))) ()))))
+	         (Nil
+	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	        ()))))))
+	  (Let
+	   (length
+	    (App
+	     ((Fix Let)
+	      (Lam
+	       (length
+	        (App
+	         ((WithType
+	           (Quant
+	            (() All a Unknown
+	             (Fn (() (App (() (Var (() t)) (Var (() a)))) (Var (() int)))))))
+	          (Lam
+	           (list
+	            (App
+	             ((Match
+	               (cases
+	                ((Cons
+	                  ($3
+	                   (App
+	                    ((Match (cases ())
+	                      (default
+	                       (((l)
+	                         (App
+	                          ((App ((Var add) (Integer 1)))
+	                           (App
+	                            ((Var length)
+	                             (App ((GetField (Strict tl)) (Var l)))))))))))
+	                     (Var $3)))))
+	                 (Nil
+	                  ($4
+	                   (App
+	                    ((Match (cases ()) (default ((() (Integer 0)))))
+	                     (Var $4)))))))
+	               (default ()))
+	              (Var list)))))))))))
+	    (App
+	     ((Var length)
+	      (App
+	       ((Lam (x (Ctor (Cons (Var x)))))
+	        (App
+	         ((Fix Record)
+	          (Lam
+	           ($0
+	            (App
+	             ((App
+	               ((Update hd)
+	                (App
+	                 ((App ((Update tl) EmptyRecord))
+	                  (App
+	                   ((Lam (x (Ctor (Cons (Var x)))))
+	                    (App
+	                     ((Fix Record)
+	                      (Lam
+	                       ($1
+	                        (App
+	                         ((App
+	                           ((Update hd)
+	                            (App
+	                             ((App ((Update tl) EmptyRecord))
+	                              (App
+	                               ((Lam (x (Ctor (Cons (Var x)))))
+	                                (App
+	                                 ((Fix Record)
+	                                  (Lam
+	                                   ($2
+	                                    (App
+	                                     ((App
+	                                       ((Update hd)
+	                                        (App
+	                                         ((App ((Update tl) EmptyRecord))
+	                                          (App
+	                                           ((Lam (x (Ctor (Nil (Var x)))))
+	                                            EmptyRecord))))))
+	                                      (Integer 1)))))))))))))
+	                          (Integer 0)))))))))))))
+	              (Integer 4)))))))))))))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(App
+	 ((Lam
+	   (0 ()
+	    (App
+	     ((Var 0)
+	      (App
+	       ((Lam (0 () (Ctor (Cons (Var 0)))))
+	        (App
+	         ((Fix Record)
+	          (Lam
+	           (0 ()
+	            (Record
+	             ((hd (Integer 4))
+	              (tl
+	               (App
+	                ((Lam (0 () (Ctor (Cons (Var 0)))))
+	                 (App
+	                  ((Fix Record)
+	                   (Lam
+	                    (0 ()
+	                     (Record
+	                      ((hd (Integer 0))
+	                       (tl
+	                        (App
+	                         ((Lam (0 () (Ctor (Cons (Var 0)))))
+	                          (App
+	                           ((Fix Record)
+	                            (Lam
+	                             (0 ()
+	                              (Record
+	                               ((hd (Integer 1))
+	                                (tl
+	                                 (App
+	                                  ((Lam (0 () (Ctor (Nil (Var 0)))))
+	                                   (Record ()))))))))))))))))))))))))))))))))))
+	  (App
+	   ((Fix Let)
+	    (Lam
+	     (3 ()
+	      (Lam
+	       (3 ()
+	        (App
+	         ((Match
+	           (cases
+	            ((Cons
+	              (Lam
+	               (3 ()
+	                (App
+	                 ((Match (cases ())
+	                   (default
+	                    ((Lam
+	                      (3 ()
+	                       (App
+	                        ((App ((Prim <fun>) (Integer 1)))
+	                         (App
+	                          ((Var 3) (App ((GetField (Strict tl)) (Var 0))))))))))))
+	                  (Var 0))))))
+	             (Nil
+	              (Lam
+	               (0 ()
+	                (App
+	                 ((Match (cases ()) (default ((Lam (0 () (Integer 0))))))
+	                  (Var 0))))))))
+	           (default ()))
+	          (Var 0)))))))))))
+
+Evaluated:
+
+	(Integer 3)
