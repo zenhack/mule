@@ -1,5 +1,5 @@
-let type list a
-  = Cons { hd : a, tl : list a }
+let type list a =
+  | Cons { hd : a, tl : list a }
   | Nil {}
 in
 let length : all a. list a -> int =

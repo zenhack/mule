@@ -172,13 +172,24 @@ and record_type = lazy (
   let%bind l = label in
   let%map ty = kwd ":" >> lazy_p typ in
   Type.Field (l, ty)
-) and typ = lazy (
-  expression
-    [ [ Infix ((kwd "|" >>$ fun l r -> Type.Union (l, r)), Assoc_right) ]
-    ; [ Infix ((kwd "->" >>$ fun p r -> Type.Fn(p, r)), Assoc_right) ]
-    ]
-    (lazy_p typ_annotated)
-)
+) and typ_fn = lazy (
+    begin match%map sep_by1 (lazy_p typ_annotated) (kwd "->") with
+      | [t] -> t
+      | ts ->
+        let ts = List.rev ts in
+        begin match ts with
+        | [] -> failwith "impossible"
+        | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn(l, r))
+        end
+    end
+) and typ_sum = lazy (
+    optional (kwd "|") >>
+    begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
+    | [] -> failwith "impossible"
+    | (t::ts) ->
+        List.fold_right ts ~init:t ~f:(fun r l -> Type.Union(l, r))
+    end
+) and typ = lazy (lazy_p typ_sum)
 
 let rec expr = lazy ((
   let%bind e = lazy_p ex0 in
