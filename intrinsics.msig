@@ -10,4 +10,12 @@
   , mul : int -> int -> int
   , div : int -> int -> int
   , rem : int -> int -> int
+
+  , type text
+  , text : {
+    , type t = text
+    , append : t -> t -> t
+    , from-int : int -> t
+    , length : t -> int
+    }
 }
