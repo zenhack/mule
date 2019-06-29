@@ -177,20 +177,23 @@ and record_type = lazy (
     >> sep_end_by (lazy_p record_item) (kwd ","))
   in
   Type.Record items
-) and record_item = lazy (
+) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
   choice
     [ lazy_p type_decl
     ; lazy_p field_decl
     ; kwd "..." >> (var |>> fun v -> Type.Rest v)
     ]
-) and type_decl = lazy (
+) and type_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
   let%bind l = kwd "type" >> label in
   let%bind vars = many var in
-  let%map ty = option (kwd "=" >> lazy_p typ_term) in
+  let%bind () = optional text in
+  let%map ty = option (kwd "=" >> lazy_p typ_term)
+  in
   Type.Type(l, vars, ty)
-) and field_decl = lazy (
+) and field_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
   let%bind l = label in
-  let%map ty = kwd ":" >> lazy_p typ in
+  let%bind ty = kwd ":" >> lazy_p typ in
+  let%map () = optional text in
   Type.Field (l, ty)
 ) and typ_fn = lazy (
     begin match%map sep_by1 (lazy_p typ_annotated) (kwd "->") with
@@ -323,12 +326,14 @@ and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
   let%bind l = kwd "type" >> label in
   let%bind params = many var in
+  let%bind () = optional text in
   let%map ty = kwd "=" >> lazy_p typ in
   `Type (l, params, ty)
 )
 and value_field_def = lazy (
   let%bind l = label in
   let%bind ty = option (kwd ":" >> lazy_p typ) in
+  let%bind () = optional text in
   let%map e = kwd "=" >> lazy_p expr in
   `Value (l, ty, e)
 )
