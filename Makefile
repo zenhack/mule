@@ -10,7 +10,7 @@ repl: all
 check: $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*
-	@./_build/default/main.exe $*.mule > $*.actual || true
+	@./_build/default/main.exe test $*.mule > $*.actual || true
 	@diff -u $*.expected $*.actual
 	@touch $@
 clean:
