@@ -259,27 +259,26 @@ and lambda = lazy ((
   let%map body = kwd "." >> lazy_p expr in
   Expr.Lam (params, body)
 ) <?> "lambda")
+and binding = lazy (
+  choice
+    [ begin
+        let%bind v = kwd "type" >> var in
+        let%bind params = many var in
+        let%map ty = kwd "=" >> lazy_p typ in
+        `BindType(v, params, ty)
+      end
+    ; begin
+        let%bind pat = lazy_p pattern in
+        let%map e    = kwd "=" >> lazy_p expr in
+        `BindVal(pat, e)
+      end
+    ]
+)
 and let_expr = lazy ((
   let%bind _ = kwd "let" in
-  let%bind bound = choice
-      [ begin
-          let%bind v = kwd "type" >> var in
-          let%bind params = many var in
-          let%map ty = kwd "=" >> lazy_p typ in
-          `Type(v, params, ty)
-        end
-      ; begin
-          let%bind pat = lazy_p pattern in
-          let%map e    = kwd "=" >> lazy_p expr in
-          `Value(pat, e)
-        end
-      ]
-  in
+  let%bind bindings = optional (kwd ",") >> sep_by1 (lazy_p binding) (kwd ",") in
   let%map body = kwd "in" >> lazy_p expr in
-  begin match bound with
-    | `Type(v, params, ty) -> Expr.Let([`BindType(v, params, ty)], body)
-    | `Value(pat, e) -> Expr.Let([`BindVal(pat, e)], body)
-  end
+  Expr.Let(bindings, body)
 ) <?> "let expression")
 and match_expr = lazy ((
     let%bind e = kwd "match" >> lazy_p expr in
@@ -316,7 +315,7 @@ and pattern = lazy ((
 ) <?> "pattern")
 and record_fields = lazy ((
     braces (optional (kwd ",")
-    >> sep_end_by (lazy_p field_def) (kwd ","))
+    >> sep_by (lazy_p field_def) (kwd ","))
 ) <?> "record")
 and record = lazy (
   lazy_p record_fields
