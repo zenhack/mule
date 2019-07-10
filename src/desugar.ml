@@ -237,46 +237,10 @@ let rec desugar = function
     D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
     D.App (desugar_match cases, desugar e)
-  | S.Let(`BindVal((SP.Integer _) as p, _), _) ->
-    incomplete_pattern p
-  | S.Let(`BindVal(SP.Wild, e), body) ->
-    desugar (S.Let(`BindVal(SP.Var (Gensym.anon_var (), None), e), body))
-  | S.Let(`BindVal(SP.Var(v, Some ty), e), body) ->
-    desugar (S.Let(`BindVal(SP.Var (v, None), S.WithType(e, ty)), body))
-  | S.Let(`BindVal(SP.Ctor(lbl, pat), e), body) ->
-    let v = Gensym.anon_var () in
-    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(`BindVal(pat, S.Var v), body))]))
-  | S.Let(`BindVal(SP.Var (v, None), e), body) ->
-    D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | S.Let(`BindType(v, params, ty), body) ->
-    (* Here, we convert things like `type t a b = ... (t a b) ...` to
-     * `lam a b. rec t. ... t ...`.
-     *)
-    let target =
-      List.fold_left
-        params
-        ~init:(ST.Var v)
-        ~f:(fun f x -> ST.App(f, ST.Var x))
-    in
-    let ty =
-      ST.Recur
-        ( v
-        , substitue_type_apps
-            target
-            (ST.Var v)
-            (Set.of_list (module Ast.Var) params)
-            ty
-        )
-    in
-    let ty =
-      List.fold_right
-        params
-        ~init:(desugar_type ty)
-        ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
-    in
-    D.LetType(v, ty, desugar body)
   | S.WithType(e, ty) ->
     D.App(D.WithType(desugar_type ty), desugar e)
+  | S.Let(bindings, body) ->
+    desugar_let bindings body
 and desugar_record fields =
   let record_var = Gensym.anon_var () in
   let get_record_field lbl =
@@ -458,6 +422,50 @@ and finalize_dict dict =
             )
         )
       )
+and desugar_let bindings body = match bindings with
+  | _ :: _ :: _ -> failwith "TODO"
+  | [] ->
+      (* Shouldn't ever happen, but the correct behavior is clear. *)
+      desugar body
+
+  | [`BindVal((SP.Integer _) as p, _)] ->
+    incomplete_pattern p
+  | [`BindVal(SP.Wild, e)]  ->
+    desugar (S.Let([`BindVal(SP.Var (Gensym.anon_var (), None), e)], body))
+  | [`BindVal(SP.Var(v, Some ty), e)] ->
+    desugar (S.Let([`BindVal(SP.Var (v, None), S.WithType(e, ty))], body))
+  | [`BindVal(SP.Ctor(lbl, pat), e)] ->
+    let v = Gensym.anon_var () in
+    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let([`BindVal(pat, S.Var v)], body))]))
+  | [`BindVal(SP.Var (v, None), e)] ->
+    D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
+  | [`BindType(v, params, ty)] ->
+    (* Here, we convert things like `type t a b = ... (t a b) ...` to
+     * `lam a b. rec t. ... t ...`.
+     *)
+    let target =
+      List.fold_left
+        params
+        ~init:(ST.Var v)
+        ~f:(fun f x -> ST.App(f, ST.Var x))
+    in
+    let ty =
+      ST.Recur
+        ( v
+        , substitue_type_apps
+            target
+            (ST.Var v)
+            (Set.of_list (module Ast.Var) params)
+            ty
+        )
+    in
+    let ty =
+      List.fold_right
+        params
+        ~init:(desugar_type ty)
+        ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
+    in
+    D.LetType(v, ty, desugar body)
 
 let desugar e =
   try Ok (desugar e)

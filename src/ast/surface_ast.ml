@@ -44,7 +44,7 @@ module Expr = struct
     | Ctor of Label.t
     | Update of (t * field list)
     | Match of (t * (Pattern.t * t) list)
-    | Let of (binding * t)
+    | Let of (binding list * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
     | Text of string
