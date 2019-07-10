@@ -169,6 +169,37 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
                           )))))))
     ) in
     Lazy.force ret
+  | Expr.Update(`Type, lbl) ->
+    let rec ret = lazy (
+      let b_at = `Ty ret in
+      let kvar = gen_k () in
+      let head_var = gen_u kvar b_at in
+      let tail_var = gen_u kvar_row b_at in
+      let vals_row_var = gen_u kvar_row b_at in
+      UnionFind.make
+        (fn
+          (gen_ty_var g)
+          (UnionFind.make
+             (record
+               (ty_var_at b_at)
+               tail_var
+               vals_row_var))
+          (UnionFind.make
+             (fn
+               (ty_var_at b_at)
+               (UnionFind.make (witness (ty_var_at b_at) kvar head_var))
+               (UnionFind.make
+                  (record
+                    (ty_var_at b_at)
+                    (UnionFind.make
+                       (extend
+                         (ty_var_at b_at)
+                         lbl
+                         head_var
+                         tail_var))
+                   vals_row_var)))))
+    ) in
+    Lazy.force ret
   | Expr.Ctor (lbl, param) ->
     let param_var = walk ~cops ~env_types ~env_terms ~g param in
     UnionFind.make
@@ -227,6 +258,10 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
   | Expr.WithType ty ->
     let ty = Type.map ty ~f:gen_k in
     Coercions.make_coercion_type env_types g ty cops
+  | Expr.Witness ty ->
+    let ty = Type.map ty ~f:gen_k in
+    let uty = Coercions.gen_type cops (`G g) env_types `Pos ty in
+    UnionFind.make (witness (ty_var_at (`G g)) (Type.get_info ty) uty)
 and walk_match ~cops ~env_types ~env_terms ~g final = function
   | [] -> (final, gen_u kvar_type (`G g))
   | ((lbl, (var, body)) :: rest) ->

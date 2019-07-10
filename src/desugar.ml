@@ -307,7 +307,7 @@ and desugar_record fields =
         )
     | D.LetType(v, ty, body) ->
       D.LetType(v, ty, subst env body)
-    | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ ->
+    | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ | D.Witness _ ->
       expr
   in
   let rec build_record = function

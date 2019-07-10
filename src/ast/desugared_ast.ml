@@ -105,7 +105,7 @@ module Expr = struct
     | Fix of [ `Let | `Record ]
     | EmptyRecord
     | GetField of ([`Lazy|`Strict] * Label.t)
-    | Update of ([`Value] * Label.t)
+    | Update of ([`Value | `Type] * Label.t)
     | Ctor of (Label.t * t)
     | Match of {
         cases: (Var.t * t) LabelMap.t;
@@ -116,6 +116,7 @@ module Expr = struct
         ; im_default: t
         }
     | WithType of unit Type.t
+    | Witness of unit Type.t
     | Let of (Var.t * t * t)
     | LetType of (Var.t * unit Type.t * t)
     | Integer of Bigint.t

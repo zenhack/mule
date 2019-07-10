@@ -91,6 +91,8 @@ let empty: tyvar -> u_type = fun tv ->
   `Const(tv, `Named "<empty>", [], kvar_row)
 let extend: tyvar -> Ast.Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
   `Const(tv, `Extend lbl, [head, kvar_type; tail, kvar_row], kvar_row)
+let witness: tyvar -> k_var -> u_var -> u_type = fun tv kind ty ->
+  `Const(tv, `Named "<witness>", [ty, kind], kvar_type)
 let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x xk ->
   begin match UnionFind.get fk with
     | `Arrow(_, rk) ->
