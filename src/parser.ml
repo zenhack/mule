@@ -35,6 +35,12 @@ let keywords = Set.of_list (module String)
     ; "in"
     ]
 
+let sep_start_by p sep =
+  optional sep >> sep_by p sep
+
+let sep_start_by1 p sep =
+  optional sep >> sep_by1 p sep
+
 let comment = char '#' >> many_chars (satisfy (function '\n' -> false | _ -> true))
 
 let ignorable = skip_many (skip space <|> skip comment)
@@ -47,6 +53,12 @@ let kwd name =
 
 let parens p = between (kwd "(") (kwd ")") p
 let braces p = between (kwd "{") (kwd "}") p
+
+let comma_list p =
+  sep_start_by p (kwd ",")
+
+let comma_list1 p =
+  sep_start_by1 p (kwd ",")
 
 (* An identifier. Does not check if the identifier is a reserved word. *)
 let identifier : (string, unit) MParser.t = (
@@ -172,10 +184,7 @@ and quantified_type binder quantifier = lazy (
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
-  let%map items =
-    braces (optional (kwd ",")
-    >> sep_end_by (lazy_p record_item) (kwd ","))
-  in
+  let%map items = braces (comma_list (lazy_p record_item)) in
   Type.Record items
 ) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
   choice
@@ -276,7 +285,7 @@ and binding = lazy (
 )
 and let_expr = lazy ((
   let%bind _ = kwd "let" in
-  let%bind bindings = optional (kwd ",") >> sep_by1 (lazy_p binding) (kwd ",") in
+  let%bind bindings = comma_list1 (lazy_p binding) in
   let%map body = kwd "in" >> lazy_p expr in
   Expr.Let(bindings, body)
 ) <?> "let expression")
@@ -313,10 +322,8 @@ and pattern = lazy ((
       end
     ]
 ) <?> "pattern")
-and record_fields = lazy ((
-    braces (optional (kwd ",")
-    >> sep_by (lazy_p field_def) (kwd ","))
-) <?> "record")
+and record_fields =
+  lazy (braces (comma_list (lazy_p field_def)) <?> "record")
 and record = lazy (
   lazy_p record_fields
   |>> fun fields -> Expr.Record fields
