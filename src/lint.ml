@@ -45,12 +45,12 @@ let check_unbound_vars expr =
     | Match (e, cases) ->
       go_expr typ term e;
       List.iter cases ~f:(go_case typ term)
-    | Let (pat, e, body) ->
+    | Let (`BindVal (pat, e), body) ->
       let term_new = Set.union term (collect_pat_vars pat) in
       go_pat typ pat;
       go_expr typ term_new e;
       go_expr typ term_new body
-    | LetType(var, params, ty, body) ->
+    | Let(`BindType (var, params, ty), body) ->
       let typ_ty = List.fold (var::params) ~init:typ ~f:Set.add in
       let typ_body = Set.add typ var in
       go_type typ_ty ty;
@@ -146,11 +146,11 @@ let check_duplicate_record_fields =
       List.iter cases ~f:go_case
     | App (f, x) -> go_expr f; go_expr x
     | GetField(e, _) -> go_expr e
-    | Let (pat, e, body) ->
+    | Let (`BindVal(pat, e), body) ->
       go_pat pat;
       go_expr e;
       go_expr body
-    | LetType(_, _, ty, body) ->
+    | Let (`BindType(_, _, ty), body) ->
       go_expr body;
       go_type ty
     | Var _ -> ()

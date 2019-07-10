@@ -44,12 +44,16 @@ module Expr = struct
     | Ctor of Label.t
     | Update of (t * field list)
     | Match of (t * (Pattern.t * t) list)
-    | Let of (Pattern.t * t * t)
-    | LetType of (Var.t * Var.t list * Type.t * t)
+    | Let of (binding * t)
     | WithType of (t * Type.t)
     | Integer of Bigint.t
     | Text of string
   [@@deriving sexp]
+and binding =
+  [ `BindType of Var.t * Var.t list * Type.t
+  | `BindVal of Pattern.t * t
+  ]
+[@@deriving sexp]
 and field =
   [ `Value of
       ( Label.t

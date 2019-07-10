@@ -237,18 +237,18 @@ let rec desugar = function
     D.Lam (param, D.Ctor (label, D.Var param))
   | S.Match (e, cases) ->
     D.App (desugar_match cases, desugar e)
-  | S.Let((SP.Integer _) as p, _, _) ->
+  | S.Let(`BindVal((SP.Integer _) as p, _), _) ->
     incomplete_pattern p
-  | S.Let(SP.Wild, e, body) ->
-    desugar (S.Let(SP.Var (Gensym.anon_var (), None), e, body))
-  | S.Let(SP.Var(v, Some ty), e, body) ->
-    desugar (S.Let(SP.Var (v, None), S.WithType(e, ty), body))
-  | S.Let(SP.Ctor(lbl, pat), e, body) ->
+  | S.Let(`BindVal(SP.Wild, e), body) ->
+    desugar (S.Let(`BindVal(SP.Var (Gensym.anon_var (), None), e), body))
+  | S.Let(`BindVal(SP.Var(v, Some ty), e), body) ->
+    desugar (S.Let(`BindVal(SP.Var (v, None), S.WithType(e, ty)), body))
+  | S.Let(`BindVal(SP.Ctor(lbl, pat), e), body) ->
     let v = Gensym.anon_var () in
-    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(pat, S.Var v, body))]))
-  | S.Let(SP.Var (v, None), e, body) ->
+    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let(`BindVal(pat, S.Var v), body))]))
+  | S.Let(`BindVal(SP.Var (v, None), e), body) ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | S.LetType(v, params, ty, body) ->
+  | S.Let(`BindType(v, params, ty), body) ->
     (* Here, we convert things like `type t a b = ... (t a b) ...` to
      * `lam a b. rec t. ... t ...`.
      *)

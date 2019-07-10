@@ -277,8 +277,8 @@ and let_expr = lazy ((
   in
   let%map body = kwd "in" >> lazy_p expr in
   begin match bound with
-    | `Type(v, params, ty) -> Expr.LetType(v, params, ty, body)
-    | `Value(pat, e) -> Expr.Let(pat, e, body)
+    | `Type(v, params, ty) -> Expr.Let(`BindType(v, params, ty), body)
+    | `Value(pat, e) -> Expr.Let(`BindVal(pat, e), body)
   end
 ) <?> "let expression")
 and match_expr = lazy ((
