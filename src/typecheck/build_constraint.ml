@@ -134,7 +134,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
     )
     in
     Lazy.force ret
-  | Expr.Update lbl ->
+  | Expr.Update (`Value, lbl) ->
     (* Record updates have the type:
      *
      * all a r. {...r} -> a -> {lbl: a, ...r}

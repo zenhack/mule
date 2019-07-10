@@ -224,7 +224,7 @@ let rec desugar = function
   | S.Update(e, []) ->
     desugar e
   | S.Update(e, (`Value (l, _, v)::fs)) ->
-    D.App(D.App(D.Update l, (desugar (S.Update(e, fs)))), desugar v)
+    D.App(D.App(D.Update(`Value, l), (desugar (S.Update(e, fs)))), desugar v)
   | S.Update(e, (`Type _ :: fs)) ->
     (* TODO: do something with this. *)
     desugar (S.Update(e, fs))
@@ -321,7 +321,7 @@ and desugar_record fields =
       in
       D.App
         ( D.App
-            ( D.Update l
+            ( D.Update (`Value, l)
             , build_record fs
             )
         , subst label_map (desugar v')

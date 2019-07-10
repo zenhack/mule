@@ -34,7 +34,7 @@ let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
       (0, R.Lam(0, [], R.Var 0))
     | D.EmptyRecord -> (0, R.Record LabelMap.empty)
     | D.GetField (mode, lbl) -> (0, R.GetField (mode, lbl))
-    | D.Update label ->
+    | D.Update (`Value, label) ->
       ( 0
       , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))
       )
@@ -103,7 +103,7 @@ and translate_fix_rec depth env = function
 and translate_record_body depth env = function
   | D.EmptyRecord ->
     (0, LabelMap.empty)
-  | D.App(D.App(D.Update lbl, old), field) ->
+  | D.App(D.App(D.Update(`Value, lbl), old), field) ->
     let (n, head) = translate depth env field in
     let (m, tail) = translate_record_body depth env old in
     (max n m, Map.set tail ~key:lbl ~data:head)

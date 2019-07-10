@@ -105,7 +105,7 @@ module Expr = struct
     | Fix of [ `Let | `Record ]
     | EmptyRecord
     | GetField of ([`Lazy|`Strict] * Label.t)
-    | Update of Label.t
+    | Update of ([`Value] * Label.t)
     | Ctor of (Label.t * t)
     | Match of {
         cases: (Var.t * t) LabelMap.t;
