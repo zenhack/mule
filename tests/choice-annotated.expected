@@ -17,9 +17,9 @@ Desugared:
 	       ($1
 	        (App
 	         ((App
-	           ((Update x)
+	           ((Update (Value x))
 	            (App
-	             ((App ((Update y) EmptyRecord))
+	             ((App ((Update (Value y)) EmptyRecord))
 	              (App
 	               ((App ((Var choice) (Lam (x (Var x))))) (Lam (x (Var x)))))))))
 	          (App ((App ((Var choice) EmptyRecord)) EmptyRecord))))))))))))

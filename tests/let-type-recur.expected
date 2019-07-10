@@ -22,9 +22,9 @@ Desugared:
 	         ($0
 	          (App
 	           ((App
-	             ((Update hd)
+	             ((Update (Value hd))
 	              (App
-	               ((App ((Update tl) EmptyRecord))
+	               ((App ((Update (Value tl)) EmptyRecord))
 	                (App ((Lam (x (Ctor (Nil (Var x))))) EmptyRecord))))))
 	            (Integer 4)))))))))))))
 

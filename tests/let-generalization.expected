@@ -9,9 +9,9 @@ Desugared:
 	     ($0
 	      (App
 	       ((App
-	         ((Update a)
+	         ((Update (Value a))
 	          (App
-	           ((App ((Update b) EmptyRecord))
+	           ((App ((Update (Value b)) EmptyRecord))
 	            (App ((Var f) (App ((Lam (x (Ctor (Ok (Var x))))) EmptyRecord))))))))
 	        (App ((Var f) (Lam (y (Var y)))))))))))))
 

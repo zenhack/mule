@@ -9,7 +9,9 @@ Desugared:
 	     (r
 	      (App
 	       ((Fix Record)
-	        (Lam ($1 (App ((App ((Update y) EmptyRecord)) (Lam (x (Var x)))))))))))))
+	        (Lam
+	         ($1
+	          (App ((App ((Update (Value y)) EmptyRecord)) (Lam (x (Var x)))))))))))))
 	  (Let
 	   (f
 	    (App
@@ -26,9 +28,9 @@ Desugared:
 	       ($0
 	        (App
 	         ((App
-	           ((Update l)
+	           ((Update (Value l))
 	            (App
-	             ((App ((Update k) EmptyRecord))
+	             ((App ((Update (Value k)) EmptyRecord))
 	              (App ((Var f) (Lam (z (Var z)))))))))
 	          (App ((Var f) EmptyRecord))))))))))))
 

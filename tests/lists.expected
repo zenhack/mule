@@ -60,9 +60,9 @@ Desugared:
 	           ($0
 	            (App
 	             ((App
-	               ((Update hd)
+	               ((Update (Value hd))
 	                (App
-	                 ((App ((Update tl) EmptyRecord))
+	                 ((App ((Update (Value tl)) EmptyRecord))
 	                  (App
 	                   ((Lam (x (Ctor (Cons (Var x)))))
 	                    (App
@@ -71,9 +71,9 @@ Desugared:
 	                       ($1
 	                        (App
 	                         ((App
-	                           ((Update hd)
+	                           ((Update (Value hd))
 	                            (App
-	                             ((App ((Update tl) EmptyRecord))
+	                             ((App ((Update (Value tl)) EmptyRecord))
 	                              (App
 	                               ((Lam (x (Ctor (Cons (Var x)))))
 	                                (App
@@ -82,9 +82,10 @@ Desugared:
 	                                   ($2
 	                                    (App
 	                                     ((App
-	                                       ((Update hd)
+	                                       ((Update (Value hd))
 	                                        (App
-	                                         ((App ((Update tl) EmptyRecord))
+	                                         ((App
+	                                           ((Update (Value tl)) EmptyRecord))
 	                                          (App
 	                                           ((Lam (x (Ctor (Nil (Var x)))))
 	                                            EmptyRecord))))))
