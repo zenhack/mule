@@ -422,24 +422,14 @@ and finalize_dict dict =
             )
         )
       )
-and desugar_let bindings body = match bindings with
-  | _ :: _ :: _ -> failwith "TODO"
+and desugar_let bs body = match simplify_bindings bs with
+  | _ :: _ :: _ -> failwith "TODO: desugar multi-binding lets"
   | [] ->
       (* Shouldn't ever happen, but the correct behavior is clear. *)
       desugar body
-
-  | [`BindVal((SP.Integer _) as p, _)] ->
-    incomplete_pattern p
-  | [`BindVal(SP.Wild, e)]  ->
-    desugar (S.Let([`BindVal(SP.Var (Gensym.anon_var (), None), e)], body))
-  | [`BindVal(SP.Var(v, Some ty), e)] ->
-    desugar (S.Let([`BindVal(SP.Var (v, None), S.WithType(e, ty))], body))
-  | [`BindVal(SP.Ctor(lbl, pat), e)] ->
-    let v = Gensym.anon_var () in
-    desugar (S.Match(e, [(SP.Ctor(lbl, SP.Var (v, None)), S.Let([`BindVal(pat, S.Var v)], body))]))
-  | [`BindVal(SP.Var (v, None), e)] ->
+  | [`Value(v, e)] ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | [`BindType(v, params, ty)] ->
+  | [`Type(v, params, ty)] ->
     (* Here, we convert things like `type t a b = ... (t a b) ...` to
      * `lam a b. rec t. ... t ...`.
      *)
@@ -466,6 +456,26 @@ and desugar_let bindings body = match bindings with
         ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
     in
     D.LetType(v, ty, desugar body)
+and simplify_bindings = function
+  (* Simplify a list of bindings, such that there are no "complex" patterns;
+   * everything is a simple variable. *)
+  | [] -> []
+  | `BindType t :: bs ->
+    `Type t :: simplify_bindings bs
+  | `BindVal (SP.Var (v, None), e) :: bs ->
+    `Value(v, e) :: simplify_bindings bs
+  | `BindVal((SP.Integer _) as p, _) :: _ ->
+    incomplete_pattern p
+  | `BindVal(SP.Wild, e) :: bs  ->
+    `Value(Gensym.anon_var (), e) :: simplify_bindings bs
+  | `BindVal(SP.Var(v, Some ty), e) :: bs ->
+    `Value(v, S.WithType(e, ty)) :: simplify_bindings bs
+  | `BindVal(SP.Ctor(lbl, pat), e) :: bs ->
+    let bind_var = Gensym.anon_var () in
+    let match_var = Gensym.anon_var () in
+    `Value(bind_var, S.Match(e, [(SP.Ctor(lbl, SP.Var(match_var, None)), S.Var match_var)]))
+    :: simplify_bindings (`BindVal(pat, S.Var bind_var) :: bs)
+
 
 let desugar e =
   try Ok (desugar e)
