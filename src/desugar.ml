@@ -429,7 +429,9 @@ and desugar_let bs body = match simplify_bindings bs with
       desugar body
   | [`Value(v, e)] ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | [`Type(v, params, ty)] ->
+  | [`Type(v, ty)] ->
+    D.LetType(v, ty, desugar body)
+and desugar_type_binding (v, params, ty) =
     (* Here, we convert things like `type t a b = ... (t a b) ...` to
      * `lam a b. rec t. ... t ...`.
      *)
@@ -455,13 +457,13 @@ and desugar_let bs body = match simplify_bindings bs with
         ~init:(desugar_type ty)
         ~f:(fun param tybody -> DT.TypeLam((), param, tybody))
     in
-    D.LetType(v, ty, desugar body)
+    (v, ty)
 and simplify_bindings = function
   (* Simplify a list of bindings, such that there are no "complex" patterns;
    * everything is a simple variable. *)
   | [] -> []
   | `BindType t :: bs ->
-    `Type t :: simplify_bindings bs
+    `Type (desugar_type_binding t) :: simplify_bindings bs
   | `BindVal (SP.Var (v, None), e) :: bs ->
     `Value(v, e) :: simplify_bindings bs
   | `BindVal((SP.Integer _) as p, _) :: _ ->
