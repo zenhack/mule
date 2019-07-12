@@ -10,7 +10,7 @@ let type_of_string_exn s =
 
 type runner =
   { want_type : Ast.Surface.Type.t
-  ; run : R.Expr.t -> unit
+  ; run : R.Expr.t -> R.Expr.t Lwt.t
   }
 
 (* TODO: some of these helpers are duplicated from intrinsics.ml;
@@ -69,11 +69,7 @@ let root_io =
     ->
     io.cmd {}
     "
-  ; run = fun f ->
-      Eval.eval (R.Expr.App (f, root_io_val))
-      |> assert_io
-      |> Lwt_main.run
-      |> ignore
+  ; run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val)))
   }
 
 
