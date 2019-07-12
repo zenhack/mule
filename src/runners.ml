@@ -58,8 +58,8 @@ let root_io_val =
     ]
 
 let root_io =
-  { want_type = type_of_string_exn "
-    (io : {
+  { want_type = type_of_string_exn
+    "(io : {
         , type cmd a
         , just : all a. a -> cmd a
         , then : all a b. cmd a -> (a -> cmd b) -> cmd b
