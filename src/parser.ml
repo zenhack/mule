@@ -345,5 +345,6 @@ and value_field_def = lazy (
 )
 
 let expr = Lazy.force expr
+let typ = Lazy.force typ
 
 let repl_line = ignorable >> option expr << eof
