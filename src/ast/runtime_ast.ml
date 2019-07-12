@@ -1,6 +1,10 @@
 open Common_ast
 
 module Expr = struct
+  type 'a io = 'a Lwt.t
+
+  let sexp_of_io _ _ = sexp_of_string "<io>"
+
   type t =
     | Var of int
     | Fix of [ `Let | `Record ]
@@ -27,5 +31,6 @@ module Expr = struct
     | Integer of Bigint.t
     | Text of string
     | Prim of (t -> t)
-  [@@deriving sexp]
+    | PrimIO of (t io)
+  [@@deriving sexp_of]
 end

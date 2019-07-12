@@ -30,6 +30,7 @@ let rec whnf stack expr =
 and eval stack expr =
   report "eval" expr;
   begin match whnf stack expr with
+    | PrimIO io -> PrimIO io
     | Prim p -> Prim p
     | Integer n -> Integer n
     | Text s -> Text s

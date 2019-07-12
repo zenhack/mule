@@ -6,6 +6,8 @@
   (libraries
     base
     stdio
+    lwt
+    lwt.unix
     mparser
     topological_sort
     zarith)
