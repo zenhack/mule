@@ -78,9 +78,9 @@ let rec quantify_opaques = function
     let vars = ref [] in
     let fields' = List.map fields ~f:(fun (lbl, ty) ->
         match quantify_opaques ty with
-        | DT.Opaque i ->
+        | DT.Opaque (i, k) ->
           let var = Gensym.anon_var () in
-          vars := var :: !vars;
+          vars := (var, k) :: !vars;
           (lbl, DT.Var (i, var))
         | ty' -> (lbl, ty')
       )
@@ -92,8 +92,8 @@ let rec quantify_opaques = function
         ; r_values = quantify_row_opaques r_values
         }
     in
-    List.fold !vars ~init ~f:(fun ty v ->
-      DT.Quant((), `Exist, v, `Unknown, ty)
+    List.fold !vars ~init ~f:(fun ty (v, k) ->
+      DT.Quant((), `Exist, v, k, ty)
     )
   | DT.Opaque i -> DT.Opaque i
   | DT.Fn(i, param, ret) ->
@@ -158,7 +158,7 @@ and desugar_record_type types fields = function
   | (ST.Type(lbl, [], Some t) :: fs) ->
     desugar_record_type ((lbl, desugar_type t)::types) fields fs
   | (ST.Type(lbl, [], None) :: fs) ->
-     desugar_record_type ((lbl, DT.Opaque ())::types) fields fs
+     desugar_record_type ((lbl, DT.Opaque ((), `Unknown))::types) fields fs
   | [] ->
     DT.Record
       { r_info = ()

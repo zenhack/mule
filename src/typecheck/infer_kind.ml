@@ -72,8 +72,8 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
             , body_t
             )
     | Type.Annotated(_, _, t) -> walk_type env t
-    | Type.Opaque _ ->
-      Type.Opaque (to_kvar `Unknown)
+    | Type.Opaque (_, k) ->
+      Type.Opaque (to_kvar k, k)
     | Type.Named (_, s) ->
       Type.Named (to_kvar `Unknown, s)
     | Type.Var(_, v) ->

@@ -40,7 +40,7 @@ module Type = struct
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * Kind.maybe_kind * 'i t)
     | Named of ('i * string)
-    | Opaque of 'i
+    | Opaque of ('i * Kind.maybe_kind)
     | Annotated of ('i * Var.t * 'i t)
     | TypeLam of ('i * Var.t * 'i t)
     | App of ('i * 'i t * 'i t)
@@ -58,14 +58,14 @@ let get_info = function
   | Union(x, _, _) -> x
   | Quant(x, _, _, _, _) -> x
   | Named(x, _) -> x
-  | Opaque x -> x
+  | Opaque (x, _) -> x
   | Annotated(x, _, _) -> x
   | TypeLam(x, _, _) -> x
   | App(x, _, _) -> x
 
 let rec map ty ~f = match ty with
   | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
-  | Opaque x -> Opaque (f x)
+  | Opaque (x, k) -> Opaque (f x, k)
   | Named(x, s) ->
     Named(f x, s)
   | Fn(x, l, r) ->
