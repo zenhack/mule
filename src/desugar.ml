@@ -157,8 +157,9 @@ and desugar_record_type types fields = function
     failwith "TODO: desugar parametrized types."
   | (ST.Type(lbl, [], Some t) :: fs) ->
     desugar_record_type ((lbl, desugar_type t)::types) fields fs
-  | (ST.Type(lbl, [], None) :: fs) ->
-     desugar_record_type ((lbl, DT.Opaque ((), `Unknown))::types) fields fs
+  | (ST.Type(lbl, params, None) :: fs) ->
+    let kind = List.fold params ~init:`Unknown ~f:(fun k _ -> `Arrow(`Unknown, k)) in
+    desugar_record_type ((lbl, DT.Opaque ((), kind))::types) fields fs
   | [] ->
     DT.Record
       { r_info = ()
