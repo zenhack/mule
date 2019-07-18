@@ -113,14 +113,14 @@ and quantify_row_opaques (i, fields, rest) =
   )
 
 
-let rec desugar_type = function
+let rec desugar_type' = function
   | ST.Fn(param, ret) ->
-    DT.Fn((), desugar_type param, desugar_type ret)
+    DT.Fn((), desugar_type' param, desugar_type' ret)
   | ST.Quant(q, (v :: vs), body) ->
-    DT.Quant((), q, v, `Unknown, desugar_type (ST.Quant(q, vs, body)))
-  | ST.Quant(_, [], body) -> desugar_type body
+    DT.Quant((), q, v, `Unknown, desugar_type' (ST.Quant(q, vs, body)))
+  | ST.Quant(_, [], body) -> desugar_type' body
   | ST.Recur(v, body) ->
-    DT.Recur((), v, desugar_type body)
+    DT.Recur((), v, desugar_type' body)
   | ST.Var v ->
     DT.Var((), v)
   | ST.Union u ->
@@ -128,19 +128,19 @@ let rec desugar_type = function
   | ST.Record r ->
     desugar_record_type [] [] r
   | ST.App(ST.Ctor l, t) ->
-    DT.Union((), [(l, desugar_type t)], None)
+    DT.Union((), [(l, desugar_type' t)], None)
   | ST.RowRest v ->
     DT.Union((), [], Some v)
   | ST.Annotated(v, ty) ->
-    DT.Annotated((), v, desugar_type ty)
+    DT.Annotated((), v, desugar_type' ty)
   | ST.Path(v, ls) ->
     DT.Path((), v, ls)
   | ST.App(f, x) ->
-    DT.App((), desugar_type f, desugar_type x)
+    DT.App((), desugar_type' f, desugar_type' x)
   | _ ->
     failwith "TODO"
 and desugar_union_type tail (l, r) =
-  match desugar_type l, desugar_type r, tail with
+  match desugar_type' l, desugar_type' r, tail with
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), (Some v)
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, Some v), None
   | DT.Union((), lbls_l, Some v), DT.Union((), lbls_r, None), None ->
@@ -153,10 +153,9 @@ and desugar_union_type tail (l, r) =
                  "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type types fields = function
   (* TODO: how do we have variable fields for the type row? *)
-  | (ST.Type(_, (_ :: _), _) :: _) ->
-    failwith "TODO: desugar parametrized types."
-  | (ST.Type(lbl, [], Some t) :: fs) ->
-    desugar_record_type ((lbl, desugar_type t)::types) fields fs
+  | (ST.Type(lbl, params, Some t) :: fs) ->
+    let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, t) in
+    desugar_record_type ((lbl, ty)::types) fields fs
   | (ST.Type(lbl, params, None) :: fs) ->
     let kind = List.fold params ~init:`Unknown ~f:(fun k _ -> `Arrow(`Unknown, k)) in
     desugar_record_type ((lbl, DT.Opaque ((), kind))::types) fields fs
@@ -173,18 +172,14 @@ and desugar_record_type types fields = function
       ; r_values = ((), fields, Some v)
       }
   | (ST.Field (l, t) :: rest) ->
-    desugar_record_type types ((l, desugar_type t)::fields) rest
+    desugar_record_type types ((l, desugar_type' t)::fields) rest
   | (ST.Rest _ :: _) -> raise
                           (MuleErr.MuleExn
                              (MuleErr.MalformedType "row variable before the end of a record type."))
-
-
-let desugar_type t =
-  desugar_type t
+and desugar_type t =
+  desugar_type' t
   |> quantify_opaques
-
-
-let rec desugar = function
+and desugar = function
   | S.Integer n -> D.Integer n
   | S.Text s -> D.Text s
   | S.Var v -> D.Var v
