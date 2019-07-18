@@ -221,9 +221,9 @@ and desugar = function
     desugar e
   | S.Update(e, (`Value (l, _, v)::fs)) ->
     D.App(D.App(D.Update(`Value, l), (desugar (S.Update(e, fs)))), desugar v)
-  | S.Update(e, (`Type _ :: fs)) ->
-    (* TODO: do something with this. *)
-    desugar (S.Update(e, fs))
+  | S.Update(e, (`Type (lbl, params, ty) :: fs)) ->
+    let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
+    D.App(D.App(D.Update(`Type, lbl), desugar (S.Update(e, fs))), D.Witness ty)
   | S.GetField (e, l) ->
     D.App(D.GetField(`Strict, l), desugar e)
   | S.Ctor label ->
