@@ -137,8 +137,8 @@ let rec desugar_type' = function
     DT.Path((), v, ls)
   | ST.App(f, x) ->
     DT.App((), desugar_type' f, desugar_type' x)
-  | _ ->
-    failwith "TODO"
+  | ST.Ctor _ ->
+    failwith "BUG: ctors should be applied."
 and desugar_union_type tail (l, r) =
   match desugar_type' l, desugar_type' r, tail with
   | DT.Union((), lbls_l, None), DT.Union((), lbls_r, None), (Some v)
