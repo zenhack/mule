@@ -45,21 +45,26 @@ let check_unbound_vars expr =
     | Match (e, cases) ->
       go_expr typ term e;
       List.iter cases ~f:(go_case typ term)
-    | Let ([`BindVal (pat, e)], body) ->
-      let term_new = Set.union term (collect_pat_vars pat) in
-      go_pat typ pat;
-      go_expr typ term_new e;
-      go_expr typ term_new body
-    | Let([`BindType (var, params, ty)], body) ->
-      let typ_ty = List.fold (var::params) ~init:typ ~f:Set.add in
-      let typ_body = Set.add typ var in
-      go_type typ_ty ty;
-      go_expr typ_body term body
-    | Let _ ->
-      failwith "TODO"
+    | Let(binds, body) ->
+      go_let typ term binds body
     | WithType (e, ty) ->
       go_expr typ term e;
       go_type typ ty
+  and go_let typ term binds body =
+    let (typ, term) = List.fold binds ~init:(typ, term) ~f:(fun (typ, term) -> function
+        | `BindVal(pat, _) -> (typ, Set.union (collect_pat_vars pat) term)
+        | `BindType(v, _, _) -> (Set.add typ v, term)
+      )
+    in
+    List.iter binds ~f:(go_binding typ term);
+    go_expr typ term body
+  and go_binding typ term = function
+    | `BindVal(pat, body) ->
+        go_pat typ pat;
+        go_expr typ term body
+    | `BindType(_, params, body) ->
+        let typ = List.fold params ~init:typ ~f:Set.add in
+        go_type typ body
   and go_field typ term = function
     | `Value (_, ty, e) ->
       go_expr typ term e;
