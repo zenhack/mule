@@ -187,6 +187,19 @@ and gen_row cops b_at env sign (_, fields, rest) =
         )
       )
 
+let gen_types
+  : constraint_ops
+  -> bound_target
+  -> u_var VarMap.t
+  -> sign
+  -> k_var Type.t VarMap.t
+  -> u_var VarMap.t
+  =
+  fun cops b_at env sign tys ->
+    let tmp_uvars = Map.map tys ~f:(fun t -> gen_u (Type.get_info t) b_at) in
+    let env' = Map.merge_skewed env tmp_uvars ~combine:(fun ~key:_ _ v -> v) in
+    Map.map tys ~f:(gen_type cops b_at env' sign)
+
 let make_coercion_type env g ty cops =
   (* General procedure:
    *

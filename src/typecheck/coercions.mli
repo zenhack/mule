@@ -49,6 +49,16 @@ val gen_type
   -> k_var Type.t
   -> u_var
 
+(* Like [gen_type], except that it takes multiple types at once, which may
+ * be mutually recursive. *)
+val gen_types
+  : constraint_ops
+  -> bound_target
+  -> u_var VarMap.t
+  -> sign
+  -> k_var Type.t VarMap.t
+  -> u_var VarMap.t
+
 (* Actually make the coercion. *)
 val make_coercion_type
   : u_var VarMap.t
