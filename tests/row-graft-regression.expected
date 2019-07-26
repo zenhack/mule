@@ -6,7 +6,7 @@ Desugared:
 	  (Lam
 	   (arg
 	    (App
-	     ((App ((Update y) (Var arg)))
+	     ((App ((Update (Value y)) (Var arg)))
 	      (App ((Var f) (App ((GetField (Strict z)) (Var arg)))))))))))
 
 inferred type:

@@ -2,7 +2,8 @@
 Desugared:
 
 	(App
-	 ((Fix Record) (Lam ($0 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))
+	 ((Fix Record)
+	  (Lam ($0 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))
 
 inferred type:
 

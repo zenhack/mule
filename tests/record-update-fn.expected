@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(Lam (x (App ((App ((Update y) (Var x))) EmptyRecord))))
+	(Lam (x (App ((App ((Update (Value y)) (Var x))) EmptyRecord))))
 
 inferred type:
 

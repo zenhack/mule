@@ -3,13 +3,13 @@ Desugared:
 
 	(App
 	 ((App
-	   ((Update y)
+	   ((Update (Value y))
 	    (App
 	     ((Fix Record)
-	      (Lam ($1 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))))
+	      (Lam ($1 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))))
 	  (App
 	   ((Fix Record)
-	    (Lam ($0 (App ((App ((Update z) EmptyRecord)) EmptyRecord))))))))
+	    (Lam ($0 (App ((App ((Update (Value z)) EmptyRecord)) EmptyRecord))))))))
 
 inferred type:
 

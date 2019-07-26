@@ -10,9 +10,9 @@ Desugared:
 	     ($0
 	      (App
 	       ((App
-	         ((Update a)
+	         ((Update (Value a))
 	          (App
-	           ((App ((Update b) EmptyRecord))
+	           ((App ((Update (Value b)) EmptyRecord))
 	            (App
 	             ((Var f)
 	              (App
@@ -20,17 +20,19 @@ Desugared:
 	                (Lam
 	                 ($2
 	                  (App
-	                   ((App ((Update y) EmptyRecord))
+	                   ((App ((Update (Value y)) EmptyRecord))
 	                    (App
 	                     ((Fix Record)
 	                      (Lam
 	                       ($3
-	                        (App ((App ((Update z) EmptyRecord)) EmptyRecord))))))))))))))))))
+	                        (App
+	                         ((App ((Update (Value z)) EmptyRecord)) EmptyRecord))))))))))))))))))
 	        (App
 	         ((Var f)
 	          (App
 	           ((Fix Record)
-	            (Lam ($1 (App ((App ((Update y) EmptyRecord)) EmptyRecord))))))))))))))))
+	            (Lam
+	             ($1 (App ((App ((Update (Value y)) EmptyRecord)) EmptyRecord))))))))))))))))
 
 inferred type:
 

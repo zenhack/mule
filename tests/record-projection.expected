@@ -5,7 +5,7 @@ Desugared:
 	 ((GetField (Strict x))
 	  (App
 	   ((Fix Record)
-	    (Lam ($0 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))))
+	    (Lam ($0 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))))
 
 inferred type:
 

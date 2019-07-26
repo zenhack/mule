@@ -10,9 +10,9 @@ Desugared:
 	       ($0
 	        (App
 	         ((App
-	           ((Update even)
+	           ((Update (Value even))
 	            (App
-	             ((App ((Update odd) EmptyRecord))
+	             ((App ((Update (Value odd)) EmptyRecord))
 	              (App
 	               ((WithType
 	                 (Fn

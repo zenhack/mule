@@ -1,40 +1,45 @@
 
 Desugared:
 
-	(App
-	 ((Match
-	   (cases
-	    ((Ok
-	      ($1
-	       (App
-	        ((Match (cases ())
-	          (default
-	           ((($0)
-	             (Let
-	              (x
+	(Let
+	 ($4
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     ($2
+	      (App
+	       ((App
+	         ((Update (Value $0))
+	          (App
+	           ((App ((Update (Value x)) EmptyRecord))
+	            (App
+	             ((WithType
+	               (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
+	              (App ((GetField (Lazy $0)) (Var $2)))))))))
+	        (App
+	         ((Match
+	           (cases
+	            ((Ok
+	              ($3
 	               (App
-	                ((Fix Let)
-	                 (Lam
-	                  (x
-	                   (App
-	                    ((WithType
-	                      (Quant
-	                       (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
-	                     (Var $0)))))))
-	               (App
-	                ((Fix Record)
-	                 (Lam
-	                  ($2
-	                   (App
-	                    ((App
-	                      ((Update k)
-	                       (App
-	                        ((App ((Update v) EmptyRecord))
-	                         (App ((Var x) (Lam (y (Var y)))))))))
-	                     (App ((Var x) EmptyRecord))))))))))))))
-	         (Var $1)))))))
-	   (default ()))
-	  (App ((Lam (x (Ctor (Ok (Var x))))) (Lam (x (Var x)))))))
+	                ((Match (cases ()) (default ((($1) (Var $1))))) (Var $3)))))))
+	           (default ()))
+	          (App ((Lam (x (Ctor (Ok (Var x))))) (Lam (x (Var x)))))))))))))
+	  (Let
+	   (x (App ((GetField (Strict x)) (Var $4)))
+	    (Let
+	     ($0 (App ((GetField (Strict $0)) (Var $4)))
+	      (App
+	       ((Fix Record)
+	        (Lam
+	         ($5
+	          (App
+	           ((App
+	             ((Update (Value k))
+	              (App
+	               ((App ((Update (Value v)) EmptyRecord))
+	                (App ((Var x) (Lam (y (Var y)))))))))
+	            (App ((Var x) EmptyRecord))))))))))))))
 
 inferred type:
 
@@ -55,30 +60,41 @@ inferred type:
 Runtime term:
 
 	(App
-	 ((Match
-	   (cases
-	    ((Ok
-	      (Lam
+	 ((Lam
+	   (1 ()
+	    (App
+	     ((Lam
 	       (1 ()
 	        (App
-	         ((Match (cases ())
-	           (default
-	            ((Lam
-	              (1 ()
-	               (App
-	                ((Lam
-	                  (0 ()
-	                   (App
-	                    ((Fix Record)
-	                     (Lam
-	                      (1 ()
-	                       (Record
-	                        ((k (App ((Var 1) (Record ()))))
-	                         (v (App ((Var 1) (Lam (0 () (Var 0))))))))))))))
-	                 (App ((Fix Let) (Lam (1 () (Var 1))))))))))))
-	          (Var 0))))))))
-	   (default ()))
-	  (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0)))))))
+	         ((Lam
+	           (1 ()
+	            (App
+	             ((Fix Record)
+	              (Lam
+	               (2 ()
+	                (Record
+	                 ((k (App ((Var 2) (Record ()))))
+	                  (v (App ((Var 2) (Lam (0 () (Var 0))))))))))))))
+	          (App ((GetField (Strict $0)) (Var 1)))))))
+	      (App ((GetField (Strict x)) (Var 0)))))))
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     (0 ()
+	      (Record
+	       (($0
+	         (App
+	          ((Match
+	            (cases
+	             ((Ok
+	               (Lam
+	                (0 ()
+	                 (App
+	                  ((Match (cases ()) (default ((Lam (0 () (Var 0))))))
+	                   (Var 0))))))))
+	            (default ()))
+	           (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0))))))))
+	        (x (App ((GetField (Lazy $0)) (Var 0))))))))))))
 
 Evaluated:
 

@@ -6,12 +6,15 @@ Desugared:
 	   (Record (r_info ())
 	    (r_types
 	     (()
-	      ((t (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	      ((t
+	        (Recur
+	         (() t
+	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))))
 	      ()))
 	    (r_values (() ((x (Var (() t)))) ()))))
 	  (App
 	   ((Fix Record)
-	    (Lam ($0 (App ((App ((Update x) EmptyRecord)) EmptyRecord))))))))
+	    (Lam ($0 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))))
 
 inferred type:
 
