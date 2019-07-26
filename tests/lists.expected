@@ -2,19 +2,19 @@
 Desugared:
 
 	(LetType
-	 (list
-	  (TypeLam
-	   (() a
-	    (Recur
-	     (() list
-	      (Union
-	       (()
-	        ((Cons
-	          (Record (r_info ()) (r_types (() () ()))
-	           (r_values (() ((tl (Var (() list))) (hd (Var (() a)))) ()))))
-	         (Nil
-	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	        ()))))))
+	 (((list
+	    (TypeLam
+	     (() a
+	      (Recur
+	       (() list
+	        (Union
+	         (()
+	          ((Cons
+	            (Record (r_info ()) (r_types (() () ()))
+	             (r_values (() ((tl (Var (() list))) (hd (Var (() a)))) ()))))
+	           (Nil
+	            (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	          ()))))))))
 	  (Let
 	   (length
 	    (App

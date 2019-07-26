@@ -2,7 +2,7 @@
 Desugared:
 
 	(LetType
-	 (t (TypeLam (() a (Recur (() t (Var (() int))))))
+	 (((t (TypeLam (() a (Recur (() t (Var (() int))))))))
 	  (App
 	   ((WithType
 	     (App

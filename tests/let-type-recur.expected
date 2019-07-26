@@ -2,16 +2,17 @@
 Desugared:
 
 	(LetType
-	 (int-list
-	  (Recur
-	   (() int-list
-	    (Union
-	     (()
-	      ((Cons
-	        (Record (r_info ()) (r_types (() () ()))
-	         (r_values (() ((tl (Var (() int-list))) (hd (Var (() int)))) ()))))
-	       (Nil (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	      ()))))
+	 (((int-list
+	    (Recur
+	     (() int-list
+	      (Union
+	       (()
+	        ((Cons
+	          (Record (r_info ()) (r_types (() () ()))
+	           (r_values (() ((tl (Var (() int-list))) (hd (Var (() int)))) ()))))
+	         (Nil
+	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	        ()))))))
 	  (App
 	   ((WithType (Var (() int-list)))
 	    (App

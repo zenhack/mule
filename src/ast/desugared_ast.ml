@@ -118,7 +118,7 @@ module Expr = struct
     | WithType of unit Type.t
     | Witness of unit Type.t
     | Let of (Var.t * t * t)
-    | LetType of (Var.t * unit Type.t * t)
+    | LetType of ((Var.t * unit Type.t) list * t)
     | Integer of Bigint.t
     | Text of string
   [@@deriving sexp]

@@ -301,8 +301,8 @@ and desugar_record fields =
         , subst env e
         , subst (Map.remove env (var_to_lbl v)) body
         )
-    | D.LetType(v, ty, body) ->
-      D.LetType(v, ty, subst env body)
+    | D.LetType(binds, body) ->
+      D.LetType(binds, subst env body)
     | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ | D.Witness _ ->
       expr
   in
@@ -426,7 +426,7 @@ and desugar_let bs body = match simplify_bindings bs with
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
   | [`Type t] ->
     let (v, ty) = desugar_type_binding t in
-    D.LetType(v, ty, desugar body)
+    D.LetType([v, ty], desugar body)
   | bindings ->
     let record =
       List.map bindings ~f:(function
@@ -454,7 +454,7 @@ and desugar_let bs body = match simplify_bindings bs with
                 )
           | `Type t ->
               let (v, ty) = desugar_type_binding t in
-              D.LetType(v, ty, accum)
+              D.LetType([v, ty], accum)
         )
     in
     D.Let(record_name, record, body)

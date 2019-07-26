@@ -71,20 +71,29 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       ~env_terms:(Map.set env_terms ~key:v ~data:(lazy (`G g_e)))
       ~g
       body
-  | Expr.LetType(v, ty, body) ->
+  | Expr.LetType(binds, body) ->
     let env_kinds = Map.map env_types ~f:get_kind in
-    let ty = Type.map ty ~f:gen_k in
-    let u_var =
-      Coercions.gen_type
+    let binds = Map.of_alist_exn (module Ast.Var) binds in
+    let binds = Map.map binds ~f:(Type.map ~f:gen_k) in
+    let u_vars =
+      Coercions.gen_types
         cops
         (`G g)
         env_types
         `Pos
-        (Infer_kind.infer (Map.set env_kinds ~key:v ~data:(gen_k ())) ty)
+        (Map.mapi
+           binds
+           ~f:(fun ~key ~data ->
+               Infer_kind.infer (Map.set env_kinds ~key ~data:(gen_k ())) data
+              )
+        )
+    in
+    let env_new =
+      Map.merge_skewed env_types u_vars ~combine:(fun ~key:_ _ v -> v)
     in
     walk
       ~cops
-      ~env_types:(Map.set ~key:v ~data:u_var env_types)
+      ~env_types:env_new
       ~env_terms
       ~g
       body

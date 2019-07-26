@@ -2,9 +2,9 @@
 Desugared:
 
 	(LetType
-	 (t
-	  (Recur
-	   (() t (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	 (((t
+	    (Recur
+	     (() t (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))))
 	  (App ((WithType (Var (() t))) EmptyRecord))))
 
 inferred type:
