@@ -1,0 +1,50 @@
+
+Desugared:
+
+	(Let
+	 ($1
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     ($0
+	      (App
+	       ((App
+	         ((Update (Value x))
+	          (App
+	           ((App ((Update (Value y)) EmptyRecord))
+	            (App
+	             ((App ((Var add) (App ((GetField (Lazy x)) (Var $0)))))
+	              (Integer 2)))))))
+	        (Integer 1)))))))
+	  (Let
+	   (y (App ((GetField (Strict y)) (Var $1)))
+	    (Let (x (App ((GetField (Strict x)) (Var $1))) (Var y)))))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(App
+	 ((Lam
+	   (1 ()
+	    (App
+	     ((Lam
+	       (1 ()
+	        (App ((Lam (1 () (Var 1))) (App ((GetField (Strict x)) (Var 1)))))))
+	      (App ((GetField (Strict y)) (Var 0)))))))
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     (0 ()
+	      (Record
+	       ((x (Integer 1))
+	        (y
+	         (App
+	          ((App ((Prim <fun>) (App ((GetField (Lazy x)) (Var 0)))))
+	           (Integer 2))))))))))))
+
+Evaluated:
+
+	(Integer 3)
