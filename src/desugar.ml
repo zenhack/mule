@@ -419,14 +419,45 @@ and finalize_dict dict =
         )
       )
 and desugar_let bs body = match simplify_bindings bs with
-  | _ :: _ :: _ -> failwith "TODO: desugar multi-binding lets"
   | [] ->
       (* Shouldn't ever happen, but the correct behavior is clear. *)
       desugar body
   | [`Value(v, e)] ->
     D.Let(v, D.App(D.Fix `Let, D.Lam(v, desugar e)), desugar body)
-  | [`Type(v, ty)] ->
+  | [`Type t] ->
+    let (v, ty) = desugar_type_binding t in
     D.LetType(v, ty, desugar body)
+  | bindings ->
+    let record =
+      List.map bindings ~f:(function
+          | `Value(v, S.WithType(e, ty)) ->
+              `Value(Ast.var_to_label v, Some ty, e)
+          | `Value (v, e) ->
+              `Value(Ast.var_to_label v, None, e)
+          | `Type (f, params, body) ->
+              `Type(Ast.var_to_label f, params, body)
+        )
+      |> desugar_record
+    in
+    let record_name = Gensym.anon_var () in
+    let body =
+      List.fold bindings ~init:(desugar body) ~f:(fun accum bind ->
+          match bind with
+          | `Value(v, _) ->
+              D.Let
+                ( v
+                , D.App
+                    ( D.GetField(`Strict, Ast.var_to_label v)
+                    , D.Var record_name
+                    )
+                , accum
+                )
+          | `Type t ->
+              let (v, ty) = desugar_type_binding t in
+              D.LetType(v, ty, accum)
+        )
+    in
+    D.Let(record_name, record, body)
 and desugar_type_binding (v, params, ty) =
     (* Here, we convert things like `type t a b = ... (t a b) ...` to
      * `lam a b. rec t. ... t ...`.
@@ -459,7 +490,7 @@ and simplify_bindings = function
    * everything is a simple variable. *)
   | [] -> []
   | `BindType t :: bs ->
-    `Type (desugar_type_binding t) :: simplify_bindings bs
+    `Type t :: simplify_bindings bs
   | `BindVal (SP.Var (v, None), e) :: bs ->
     `Value(v, e) :: simplify_bindings bs
   | `BindVal((SP.Integer _) as p, _) :: _ ->
