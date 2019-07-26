@@ -153,20 +153,21 @@ let check_duplicate_record_fields =
       List.iter cases ~f:go_case
     | App (f, x) -> go_expr f; go_expr x
     | GetField(e, _) -> go_expr e
-    | Let ([`BindVal(pat, e)], body) ->
-      go_pat pat;
-      go_expr e;
+    | Let(bindings, body) ->
+      go_let bindings;
       go_expr body
-    | Let ([`BindType(_, _, ty)], body) ->
-      go_expr body;
-      go_type ty
-    | Let _ ->
-      failwith "TODO"
     | Var _ -> ()
     | Ctor _ -> ()
     | WithType(e, ty) ->
       go_expr e;
       go_type ty
+  and go_let =
+    List.iter ~f:(function
+        | `BindVal(pat, e) ->
+            go_pat pat;
+            go_expr e
+        | `BindType(_, _, ty) -> go_type ty
+      )
   and go_fields fields =
     List.iter fields ~f:(function
         | `Value (_, ty, e) ->
@@ -228,6 +229,7 @@ let check expr =
     begin
       check_unbound_vars expr;
       check_duplicate_record_fields expr;
+      (* TODO: check for duplicate bound variables (in recursive lets). *)
       Ok ()
     end
   with
