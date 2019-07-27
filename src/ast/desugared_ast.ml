@@ -67,29 +67,29 @@ let rec map ty ~f = match ty with
   | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
   | Opaque (x, k) -> Opaque (f x, k)
   | Named(x, s) ->
-    Named(f x, s)
+      Named(f x, s)
   | Fn(x, l, r) ->
-    Fn(f x, map l ~f, map r ~f)
+      Fn(f x, map l ~f, map r ~f)
   | Recur(x, v, body) ->
-    Recur(f x, v, map body ~f)
+      Recur(f x, v, map body ~f)
   | Path(x, v, ls) ->
-    Path(f x, v, ls)
+      Path(f x, v, ls)
   | Var (x, v) ->
-    Var(f x, v)
+      Var(f x, v)
   | Record {r_info; r_types; r_values} ->
-    Record
-      { r_info = f r_info
-      ; r_types = map_row r_types ~f
-      ; r_values = map_row r_values ~f
-      }
+      Record
+        { r_info = f r_info
+        ; r_types = map_row r_types ~f
+        ; r_values = map_row r_values ~f
+        }
   | Union row ->
-    Union(map_row row ~f)
+      Union(map_row row ~f)
   | Quant(x, q, v, k, body) ->
-    Quant(f x, q, v, k, map body ~f)
+      Quant(f x, q, v, k, map body ~f)
   | TypeLam(x, v, body) ->
-    TypeLam(f x, v, map body ~f)
+      TypeLam(f x, v, map body ~f)
   | App(x, fn, arg) ->
-    App(f x, map fn ~f, map arg ~f)
+      App(f x, map fn ~f, map arg ~f)
 and map_row (x, fields, rest) ~f =
   ( f x
   , List.map fields ~f:(fun(l, t) -> (l, map t ~f))

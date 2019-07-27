@@ -48,37 +48,37 @@ let recordVal kvs =
   )
 
 let values = dict
-  [ "add", int_binop Z.add
-  ; "sub", int_binop Z.sub
-  ; "mul", int_binop Z.mul
-  ; "div", int_binop Z.div
-  ; "rem", int_binop Z.rem
-  ; "text",
+    [ "add", int_binop Z.add
+    ; "sub", int_binop Z.sub
+    ; "mul", int_binop Z.mul
+    ; "div", int_binop Z.div
+    ; "rem", int_binop Z.rem
+    ; "text",
       ( recordType
-        [ "t", text_t ]
-        [ "append", fn_t text_t (fn_t text_t text_t)
-        ; "from-int", fn_t int_t text_t
-        ; "length", fn_t text_t int_t
-        ]
+          [ "t", text_t ]
+          [ "append", fn_t text_t (fn_t text_t text_t)
+          ; "from-int", fn_t int_t text_t
+          ; "length", fn_t text_t int_t
+          ]
       , recordVal
-        [ "append",
+          [ "append",
             prim (fun l ->
-              prim (fun r ->
-                R.Expr.Text (assert_text l ^ assert_text r)))
-        ; "from-int",
+                prim (fun r ->
+                    R.Expr.Text (assert_text l ^ assert_text r)))
+          ; "from-int",
             prim (fun x -> R.Expr.Text (Z.to_string (assert_int x)))
-        ; "length",
+          ; "length",
             prim (fun s -> R.Expr.Integer (Z.of_int (String.length (assert_text s))))
-        ]
+          ]
       )
-  ]
+    ]
 
 let types = dict
-  [ "int", int_t
-  ; "text", text_t
-  ]
+    [ "int", int_t
+    ; "text", text_t
+    ]
 
 let kinds = dict
-  [ "int", kvar_type
-  ; "text", kvar_type
-  ]
+    [ "int", kvar_type
+    ; "text", kvar_type
+    ]

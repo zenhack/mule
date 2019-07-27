@@ -13,33 +13,33 @@ let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
       emit_bind_edge n !ty_bound dict;
       begin match t with
         | `Free _ ->
-          Debug.show_node `TyVar n
+            Debug.show_node `TyVar n
         | `Quant (_, arg) ->
-          Debug.show_node (`Const (`Named "Q")) n;
-          let v_id = (get_tyvar (UnionFind.get arg)).ty_id in
-          Debug.show_edge `Structural n v_id;
-          emit_all_nodes_ty arg dict
+            Debug.show_node (`Const (`Named "Q")) n;
+            let v_id = (get_tyvar (UnionFind.get arg)).ty_id in
+            Debug.show_edge `Structural n v_id;
+            emit_all_nodes_ty arg dict
         | `Const(_, c, args, _) ->
-          Debug.show_node (`Const c) n;
-          let n_ids = List.map args
-              ~f:(fun (uvar, _) ->
-                  let v_id = (get_tyvar (UnionFind.get uvar)).ty_id in
-                  Debug.show_edge `Structural n v_id;
-                  emit_all_nodes_ty uvar dict;
-                  v_id
-                )
-          in
-          begin match n_ids with
-            | [] -> ()
-            | (i :: is) ->
-              ignore (List.fold_left
-                        is
-                        ~init:i
-                        ~f:(fun l r ->
-                            Debug.show_edge `Sibling l r;
-                            r
-                          ))
-          end
+            Debug.show_node (`Const c) n;
+            let n_ids = List.map args
+                ~f:(fun (uvar, _) ->
+                    let v_id = (get_tyvar (UnionFind.get uvar)).ty_id in
+                    Debug.show_edge `Structural n v_id;
+                    emit_all_nodes_ty uvar dict;
+                    v_id
+                  )
+            in
+            begin match n_ids with
+              | [] -> ()
+              | (i :: is) ->
+                  ignore (List.fold_left
+                            is
+                            ~init:i
+                            ~f:(fun l r ->
+                                Debug.show_edge `Sibling l r;
+                                r
+                              ))
+            end
       end
     end
 and emit_all_nodes_g g dict =
@@ -52,22 +52,22 @@ and emit_all_nodes_g g dict =
     Debug.show_edge `Structural g.g_id ((get_tyvar (UnionFind.get (Lazy.force g.g_child))).ty_id);
     begin match g.g_bound with
       | Some {b_ty; b_at = g'} ->
-        Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
-        emit_all_nodes_g g' dict
+          Debug.show_edge (`Binding b_ty) g'.g_id g.g_id;
+          emit_all_nodes_g g' dict
       | None ->
-        Debug.set_root g.g_id
+          Debug.set_root g.g_id
     end
   end
 and emit_bind_edge n {b_at; b_ty} dict =
   match b_at with
   | `Ty parent ->
-    let parent = Lazy.force parent in
-    emit_all_nodes_ty parent dict;
-    let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
-    Debug.show_edge (`Binding b_ty) p_id n
+      let parent = Lazy.force parent in
+      emit_all_nodes_ty parent dict;
+      let p_id = (get_tyvar (UnionFind.get parent)).ty_id in
+      Debug.show_edge (`Binding b_ty) p_id n
   | `G g ->
-    emit_all_nodes_g g dict;
-    Debug.show_edge (`Binding b_ty) g.g_id n
+      emit_all_nodes_g g dict;
+      Debug.show_edge (`Binding b_ty) g.g_id n
 
 
 let render_graph cs =

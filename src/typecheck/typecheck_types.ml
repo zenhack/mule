@@ -103,16 +103,16 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
         `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
     | k ->
         raise MuleErr.(
-          MuleExn
-            (TypeError (MismatchedKinds
-                         ( `Arrow(`Type, `Type)
-                         , match k with
-                           | `Type -> `Type
-                           | `Row -> `Row
-                           | _ -> failwith "impossible"
-                         )
-                       ))
-        )
+            MuleExn
+              (TypeError (MismatchedKinds
+                            ( `Arrow(`Type, `Type)
+                            , match k with
+                            | `Type -> `Type
+                            | `Row -> `Row
+                            | _ -> failwith "impossible"
+                            )
+                         ))
+          )
   end
 
 type permission = F | R | L | E

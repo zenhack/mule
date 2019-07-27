@@ -40,22 +40,22 @@ let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
     match UnionFind.get u with
     | `Const(_, `Named "<empty>", [], _) | `Free _ -> env
     | `Const(_, `Extend lbl, [head, _; tail, _], _) ->
-      add_row_to_env
-        (Map.set
-           env
-           ~key:(Ast.var_of_label lbl)
-           ~data:head)
-        tail
+        add_row_to_env
+          (Map.set
+             env
+             ~key:(Ast.var_of_label lbl)
+             ~data:head)
+          tail
     | _ ->
-      failwith "Illegal row"
+        failwith "Illegal row"
 
 let rec gen_type
   : constraint_ops
-  -> bound_target
-  -> u_var VarMap.t
-  -> sign
-  -> k_var Type.t
-  -> u_var
+    -> bound_target
+    -> u_var VarMap.t
+    -> sign
+    -> k_var Type.t
+    -> u_var
   =
   fun cops b_at env sign ty ->
     let tv = ty_var_at b_at in
@@ -67,19 +67,19 @@ let rec gen_type
     | Type.TypeLam(k, v, ty) ->
         begin match UnionFind.get k with
           | `Arrow(param, ret) ->
-            let tv = ty_var_at b_at in
-            Gen_t.lambda tv param ret (fun b_at p ->
-                gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
-              )
+              let tv = ty_var_at b_at in
+              Gen_t.lambda tv param ret (fun b_at p ->
+                  gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
+                )
           | _ ->
-            failwith "BUG: lambda had non-arrow kind."
+              failwith "BUG: lambda had non-arrow kind."
         end
     | Type.Annotated (_, _, t) ->
         gen_type cops b_at env sign t
     | Type.Opaque _ ->
-      failwith
-        ("Opaque types should have been removed before generating " ^
-         "the constraint graph.")
+        failwith
+          ("Opaque types should have been removed before generating " ^
+           "the constraint graph.")
     | Type.Named (_, s) ->
         UnionFind.make (`Const(tv, `Named s, [], kvar_type))
     | Type.Fn (_, param, ret) ->
@@ -97,76 +97,76 @@ let rec gen_type
         in
         UnionFind.make (fn tv param' ret')
     | Type.Recur(_, v, body) ->
-      let ret = gen_u kvar_type b_at in
-      let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
-      UnionFind.merge (fun _ r -> r) ret ret';
-      ret
+        let ret = gen_u kvar_type b_at in
+        let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
+        UnionFind.merge (fun _ r -> r) ret ret';
+        ret
     | Type.Var (_, v) ->
         Map.find_exn env v
     | Type.Path(_, v, ls) ->
         let rec go t = function
           | [] -> t
           | [lbl] ->
-            let ret = gen_u kvar_type b_at in
-            let record =
-              UnionFind.make
-                (record (ty_var_at b_at)
-                   (UnionFind.make (extend (ty_var_at b_at) lbl ret (gen_u kvar_row b_at)))
-                   (gen_u kvar_row b_at))
-            in
-            cops.constrain_unify record t;
-            ret
+              let ret = gen_u kvar_type b_at in
+              let record =
+                UnionFind.make
+                  (record (ty_var_at b_at)
+                     (UnionFind.make (extend (ty_var_at b_at) lbl ret (gen_u kvar_row b_at)))
+                     (gen_u kvar_row b_at))
+              in
+              cops.constrain_unify record t;
+              ret
           | (l :: ls) ->
-            let l' = gen_u kvar_type b_at in
-            let ret = go l' ls in
-            let record =
-              UnionFind.make
-                (record (ty_var_at b_at)
-                   (gen_u kvar_row b_at)
-                   (UnionFind.make (extend (ty_var_at b_at) l l' (gen_u kvar_row b_at))))
-            in
-            cops.constrain_unify record t;
-            ret
+              let l' = gen_u kvar_type b_at in
+              let ret = go l' ls in
+              let record =
+                UnionFind.make
+                  (record (ty_var_at b_at)
+                     (gen_u kvar_row b_at)
+                     (UnionFind.make (extend (ty_var_at b_at) l l' (gen_u kvar_row b_at))))
+              in
+              cops.constrain_unify record t;
+              ret
         in
         go (Map.find_exn env v) ls
     | Type.Record {r_info = _; r_types; r_values} ->
-      let type_row = gen_row cops b_at env sign r_types in
-      let env = add_row_to_env env type_row in
-      UnionFind.make (
-        record tv
-          type_row
-          (gen_row cops b_at env sign r_values)
-      )
+        let type_row = gen_row cops b_at env sign r_types in
+        let env = add_row_to_env env type_row in
+        UnionFind.make (
+          record tv
+            type_row
+            (gen_row cops b_at env sign r_values)
+        )
     | Type.Union row ->
-      UnionFind.make (union tv (gen_row cops b_at env sign row))
+        UnionFind.make (union tv (gen_row cops b_at env sign row))
     | Type.Quant(_, q, v, k, body) ->
-      let ret = gen_u kvar_type b_at in
-      let bound_v =
-        UnionFind.make
-          (`Free
-             ( { ty_id = Gensym.gensym ()
-               ; ty_bound = ref
-                  { b_ty = get_flag q sign
-                  ; b_at = `Ty (lazy ret)
-                  }
-               }
-             , UnionFind.make (gen_kind k)
-             ))
-      in
-      let ret' =
-        UnionFind.make (`Quant
-                          ( tv
-                          , gen_type
-                              cops
-                              (`Ty (lazy bound_v))
-                              (Map.set env ~key:v ~data:bound_v)
-                              sign
-                              body
-                          )
-                       )
-      in
-      UnionFind.merge (fun _ r -> r) ret ret';
-      ret
+        let ret = gen_u kvar_type b_at in
+        let bound_v =
+          UnionFind.make
+            (`Free
+               ( { ty_id = Gensym.gensym ()
+                 ; ty_bound = ref
+                       { b_ty = get_flag q sign
+                       ; b_at = `Ty (lazy ret)
+                       }
+                 }
+               , UnionFind.make (gen_kind k)
+               ))
+        in
+        let ret' =
+          UnionFind.make (`Quant
+                            ( tv
+                            , gen_type
+                                cops
+                                (`Ty (lazy bound_v))
+                                (Map.set env ~key:v ~data:bound_v)
+                                sign
+                                body
+                            )
+                         )
+        in
+        UnionFind.merge (fun _ r -> r) ret ret';
+        ret
 (* [gen_row] is like [gen_type], but for row variables. *)
 and gen_row cops b_at env sign (_, fields, rest) =
   let rest' =
@@ -189,11 +189,11 @@ and gen_row cops b_at env sign (_, fields, rest) =
 
 let gen_types
   : constraint_ops
-  -> bound_target
-  -> u_var VarMap.t
-  -> sign
-  -> k_var Type.t VarMap.t
-  -> u_var VarMap.t
+    -> bound_target
+    -> u_var VarMap.t
+    -> sign
+    -> k_var Type.t VarMap.t
+    -> u_var VarMap.t
   =
   fun cops b_at env sign tys ->
     let tmp_uvars = Map.map tys ~f:(fun t -> gen_u (Type.get_info t) b_at) in
@@ -203,7 +203,7 @@ let gen_types
         | `Both(tmp, final) ->
             UnionFind.merge (fun _ v -> v) tmp final
         | `Left _ | `Right _ ->
-          failwith "impossible"
+            failwith "impossible"
       );
     tys
 
@@ -233,7 +233,7 @@ let make_coercion_type env g ty cops =
              * a function, whose argument and return values will be the two copies of
              * the type in the annotation. The quant node will be the bound of the
              * existentials.
-             *)
+            *)
             let gen sign =
               gen_type cops (`Ty root) env sign kinded_ty
             in

@@ -40,7 +40,7 @@ open Build_constraint_t
  * TODO: this probably doesn't belong in coercions per se. It used to just be
  * a helper function for [make_coercion_type], but it's now used elsewhere as
  * well.
- *)
+*)
 val gen_type
   : constraint_ops
   -> bound_target

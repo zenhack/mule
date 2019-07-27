@@ -55,20 +55,20 @@ let run : string -> unit LwtResult.t = fun input ->
   let module Let_syntax = Lwt_syntax in
   match MParser.parse_string Parser.repl_line input () with
   | MParser.Failed (msg, _) ->
-    let%map _ = display "Parse Error" msg in
-    Ok ()
+      let%map _ = display "Parse Error" msg in
+      Ok ()
   | MParser.Success None ->
-    (* empty input *)
-    Lwt.return (Ok ())
+      (* empty input *)
+      Lwt.return (Ok ())
   | MParser.Success (Some expr) ->
-    begin match%bind desugar_typecheck expr with
-      | Error e ->
-        let%map _ = print_endline (MuleErr.show e) in
-        Error e
-      | Ok dexp ->
-        let rexp = To_runtime.translate dexp in
-        let%bind _ = display "Runtime term" (Pretty.runtime_expr rexp) in
-        let ret = Eval.eval rexp in
-        let%map _ = display "Evaluated" (Pretty.runtime_expr ret) in
-        Ok ()
-    end
+      begin match%bind desugar_typecheck expr with
+        | Error e ->
+            let%map _ = print_endline (MuleErr.show e) in
+            Error e
+        | Ok dexp ->
+            let rexp = To_runtime.translate dexp in
+            let%bind _ = display "Runtime term" (Pretty.runtime_expr rexp) in
+            let ret = Eval.eval rexp in
+            let%map _ = display "Evaluated" (Pretty.runtime_expr ret) in
+            Ok ()
+      end

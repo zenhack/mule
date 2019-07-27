@@ -34,12 +34,12 @@ let ignore_io io =
 
 let io_just = prim (fun x ->
     prim_io (Lwt.return x)
-)
+  )
 
 let io_then = prim (fun x -> prim(fun f -> prim_io (
     let%bind x' = assert_io x in
     assert_io (Eval.eval(App(f, x')))
-)))
+  )))
 
 let io_print =
   prim (fun s -> ignore_io (Lwt_io.write Lwt_io.stdout (assert_text s)))
@@ -59,7 +59,7 @@ let root_io_val =
 
 let root_io =
   { want_type = type_of_string_exn
-    "(io : {
+        "(io : {
         , type cmd a
         , just : all a. a -> cmd a
         , then : all a b. cmd a -> (a -> cmd b) -> cmd b

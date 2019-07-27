@@ -32,10 +32,10 @@ let fmt_node: node_type -> int -> string =
       ; begin match ty with
         | `TyVar -> "V"
         | `Const c ->
-          begin match c with
-            | `Named name -> name
-            | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
-          end
+            begin match c with
+              | `Named name -> name
+              | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
+            end
         | `G -> "G"
       end
       ; " : "
@@ -69,9 +69,9 @@ let end_graph () =
   List.iter !edges ~f:(fun (ty, from, to_) ->
       match ty with
       | `Sibling ->
-        Out.fprintf dest "  {rank=same; rankdir=LR; n%d -> n%d %s}\n" from to_ (fmt_edge_ty ty)
+          Out.fprintf dest "  {rank=same; rankdir=LR; n%d -> n%d %s}\n" from to_ (fmt_edge_ty ty)
       | _ ->
-        Out.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty)
+          Out.fprintf dest "  n%d -> n%d %s;\n" from to_ (fmt_edge_ty ty)
     );
   Out.fprintf dest "}\n";
   Out.close dest;

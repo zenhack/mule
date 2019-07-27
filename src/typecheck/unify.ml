@@ -16,13 +16,13 @@ let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
       | Some (`Explicit, _) -> E
       | Some (`Rigid, _) -> R
       | Some (`Flex, bs) ->
-        begin match go bs with
-          | F -> F
-          | R | L -> L
-          | E -> failwith
-              ("BUG: explicit nodes should never have other nodes bound " ^
-               "on them.")
-        end
+          begin match go bs with
+            | F -> F
+            | R | L -> L
+            | E -> failwith
+                  ("BUG: explicit nodes should never have other nodes bound " ^
+                   "on them.")
+          end
     in go (Sequence.Generator.run p)
 
 let rec gnode_bound_list: g_node -> (unit, bound_ty) Sequence.Generator.t =
@@ -30,7 +30,7 @@ let rec gnode_bound_list: g_node -> (unit, bound_ty) Sequence.Generator.t =
       match g_bound with
       | None -> return ()
       | Some {b_ty; b_at} ->
-        yield b_ty >>= fun () -> gnode_bound_list b_at
+          yield b_ty >>= fun () -> gnode_bound_list b_at
     )
 let rec tyvar_bound_list: tyvar -> (unit, bound_ty) Sequence.Generator.t =
   fun {ty_bound; _} -> bound_list !ty_bound
@@ -59,15 +59,15 @@ let bound_id {b_at; _} = b_at_id b_at
 
 let bound_next {b_at; _} = match b_at with
   | `G {g_bound; _} ->
-    begin match g_bound with
-      | None -> None
-      | Some {b_ty; b_at = g} -> Some
-                                   { b_ty
-                                   ; b_at = `G g
-                                   }
-    end
+      begin match g_bound with
+        | None -> None
+        | Some {b_ty; b_at = g} -> Some
+              { b_ty
+              ; b_at = `G g
+              }
+      end
   | `Ty u ->
-    Some !((get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
+      Some !((get_tyvar (UnionFind.get (Lazy.force u))).ty_bound)
 
 (* Raise b one step, if it is legal to do so, otherwise throw an error. *)
 let raised_bound b =
@@ -135,12 +135,12 @@ let rec raise_bounds: bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -
       match (!(tv.ty_bound)).b_at with
       | `G {g_id; _} -> g_id
       | `Ty at ->
-        let {ty_id; _} =
-          Lazy.force at
-          |> UnionFind.get
-          |> get_tyvar
-        in
-        ty_id
+          let {ty_id; _} =
+            Lazy.force at
+            |> UnionFind.get
+            |> get_tyvar
+          in
+          ty_id
     in
     if not (Set.mem !visited tv.ty_id) then begin
       visited := Set.add !visited tv.ty_id;
@@ -151,12 +151,12 @@ let rec raise_bounds: bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -
       match t with
       | `Free _ -> ()
       | `Quant(_, arg) ->
-        raise_bounds bound new_above visited (UnionFind.get arg)
+          raise_bounds bound new_above visited (UnionFind.get arg)
       | `Const(_, _, args, _) ->
-        List.iter
-          args
-          ~f:(fun (ty, _) ->
-              raise_bounds bound new_above visited (UnionFind.get ty))
+          List.iter
+            args
+            ~f:(fun (ty, _) ->
+                raise_bounds bound new_above visited (UnionFind.get ty))
     end
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
@@ -200,73 +200,73 @@ let rec unify already_merged l r =
     (* Neither side of these is a type variable, so we need to do a merge.
      * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
     | `Quant(_, argl), `Quant(_, argr) ->
-      normalize_unify already_merged argl argr;
-      `Quant(merge_tv (), argl)
+        normalize_unify already_merged argl argr;
+        `Quant(merge_tv (), argl)
 
     | `Quant _, `Const _ | `Const _, `Quant _ ->
-      failwith "BUG: normalization left quant & const paired."
+        failwith "BUG: normalization left quant & const paired."
     | `Const(_, cl, argsl, k), `Const(_, cr, argsr, _) ->
-      if typeconst_eq cl cr then
-        (* Top level type constructors that match. We recursively
-         * merge the types in a bottom-up fashion. Doing this makes it
-         * easy to see that the conditions for being a valid merge
-         * are satisfied:
-         *
-         * - 1 & 2 are trivial, since the subgraphs are always identical.
-         * - 3 is enforced/checked by merge_tv ().
-         * - 4 follows vaccuously from the fact that merging the roots
-         *   will not cause any other nodes to be merged (since they already
-         *   have been).
-         *
-         * For this argument to work it is important that we can consider
-         * the merge of the roots not to have "started" until the subgraphs
-         * are fully merged -- so we must be careful not to violate this
-         * invariant.
-        *)
-        begin
-          List.iter2_exn argsl argsr
-            ~f:(fun (l, _) (r, _) -> normalize_unify already_merged l r);
-          `Const(merge_tv (), cl, argsl, k)
-        end
-      else
-        begin match cl, argsl, cr, argsr with
-          (* Mismatched extend constructors get treated specially, because of the
-           * equivalence relation on rows. *)
-          | `Extend l_lbl, [l_ty, _; l_rest, _], `Extend r_lbl, [r_ty, _; r_rest, _] ->
-            begin
-              (* Extend nodes are always inert, so the exact bounds we choose
-               * for the new nodes don't really matter, as long as the resulting
-               * graph is well-formed. *)
-              let new_with_bound v =
-                UnionFind.make
-                  (`Free
-                     ( { ty_id = gensym ()
-                       ; ty_bound = ref (get_u_bound (UnionFind.get v))
-                       }
-                     , kvar_row
-                     )
-                  )
-              in
-              let new_rest_r = new_with_bound r_rest in
-              let new_rest_l = new_with_bound l_rest in
-              let new_tv () =
-                { ty_id = gensym ()
-                ; ty_bound = (get_tyvar l).ty_bound
-                }
-              in
-              normalize_unify already_merged
-                r_rest
-                (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
-              normalize_unify already_merged
-                l_rest
-                (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
-            end;
-            extend (merge_tv ()) l_lbl l_ty l_rest
-          | _ ->
-            (* Top level type constructors that _do not_ match. In this case
-             * unfication fails. *)
-            ctorErr cl cr
-        end
+        if typeconst_eq cl cr then
+          (* Top level type constructors that match. We recursively
+           * merge the types in a bottom-up fashion. Doing this makes it
+           * easy to see that the conditions for being a valid merge
+           * are satisfied:
+           *
+           * - 1 & 2 are trivial, since the subgraphs are always identical.
+           * - 3 is enforced/checked by merge_tv ().
+           * - 4 follows vaccuously from the fact that merging the roots
+           *   will not cause any other nodes to be merged (since they already
+           *   have been).
+           *
+           * For this argument to work it is important that we can consider
+           * the merge of the roots not to have "started" until the subgraphs
+           * are fully merged -- so we must be careful not to violate this
+           * invariant.
+          *)
+          begin
+            List.iter2_exn argsl argsr
+              ~f:(fun (l, _) (r, _) -> normalize_unify already_merged l r);
+            `Const(merge_tv (), cl, argsl, k)
+          end
+        else
+          begin match cl, argsl, cr, argsr with
+            (* Mismatched extend constructors get treated specially, because of the
+             * equivalence relation on rows. *)
+            | `Extend l_lbl, [l_ty, _; l_rest, _], `Extend r_lbl, [r_ty, _; r_rest, _] ->
+                begin
+                  (* Extend nodes are always inert, so the exact bounds we choose
+                   * for the new nodes don't really matter, as long as the resulting
+                   * graph is well-formed. *)
+                  let new_with_bound v =
+                    UnionFind.make
+                      (`Free
+                         ( { ty_id = gensym ()
+                           ; ty_bound = ref (get_u_bound (UnionFind.get v))
+                           }
+                         , kvar_row
+                         )
+                      )
+                  in
+                  let new_rest_r = new_with_bound r_rest in
+                  let new_rest_l = new_with_bound l_rest in
+                  let new_tv () =
+                    { ty_id = gensym ()
+                    ; ty_bound = (get_tyvar l).ty_bound
+                    }
+                  in
+                  normalize_unify already_merged
+                    r_rest
+                    (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
+                  normalize_unify already_merged
+                    l_rest
+                    (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
+                end;
+                extend (merge_tv ()) l_lbl l_ty l_rest
+            | _ ->
+                (* Top level type constructors that _do not_ match. In this case
+                 * unfication fails. *)
+                ctorErr cl cr
+          end
   end
 (* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
 and normalize_unify already_merged l r =

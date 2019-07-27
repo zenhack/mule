@@ -6,4 +6,4 @@ let typecheck expr =
     |> fun t -> Ok t
   with
     MuleErr.MuleExn e ->
-    Error e
+      Error e

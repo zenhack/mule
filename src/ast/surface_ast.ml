@@ -18,11 +18,11 @@ module Type = struct
     | Path of (Var.t * Label.t list)
   [@@deriving sexp]
 
-  and record_item =
-    | Field of (Label.t * t)
-    | Type of (Label.t * Var.t list * t option)
-    | Rest of Var.t
-  [@@deriving sexp]
+and record_item =
+  | Field of (Label.t * t)
+  | Type of (Label.t * Var.t list * t option)
+  | Rest of Var.t
+[@@deriving sexp]
 end
 
 module Pattern = struct
@@ -55,12 +55,12 @@ and binding =
   ]
 [@@deriving sexp]
 and field =
-  [ `Value of
-      ( Label.t
-        * Type.t option
-        * t
-      )
-  | `Type of (Label.t * Var.t list * Type.t)
-  ]
+    [ `Value of
+        ( Label.t
+          * Type.t option
+          * t
+        )
+    | `Type of (Label.t * Var.t list * Type.t)
+    ]
 [@@deriving sexp]
 end

@@ -5,6 +5,6 @@ let memoize f =
     match Caml.Hashtbl.find_opt tbl x with
     | Some y -> y
     | None ->
-      let y = f x in
-      Caml.Hashtbl.add tbl x y;
-      y
+        let y = f x in
+        Caml.Hashtbl.add tbl x y;
+        y

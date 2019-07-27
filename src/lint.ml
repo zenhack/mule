@@ -21,35 +21,35 @@ let check_unbound_vars expr =
     | Var v when Set.mem term v -> ()
     | Var v -> unboundVar v
     | Lam([], body) ->
-      go_expr typ term body
+        go_expr typ term body
     | Lam(pat :: pats, body) ->
-      go_pat typ pat;
-      let term_new = collect_pat_vars pat in
-      go_expr typ (Set.union term term_new) (Lam(pats, body))
+        go_pat typ pat;
+        let term_new = collect_pat_vars pat in
+        go_expr typ (Set.union term term_new) (Lam(pats, body))
     | App(f, x) -> go_expr typ term f; go_expr typ term x
     | Record fields ->
-      let (new_types, new_terms) =
-        List.partition_map fields ~f:(function
-            | `Type(l, _, _)  -> `Fst (Ast.var_of_label l)
-            | `Value(l, _, _) -> `Snd (Ast.var_of_label l)
-          )
-      in
-      let typ = List.fold new_types ~init:typ ~f:Set.add in
-      let term = List.fold new_terms ~init:term ~f:Set.add in
-      List.iter fields ~f:(go_field typ term)
+        let (new_types, new_terms) =
+          List.partition_map fields ~f:(function
+              | `Type(l, _, _)  -> `Fst (Ast.var_of_label l)
+              | `Value(l, _, _) -> `Snd (Ast.var_of_label l)
+            )
+        in
+        let typ = List.fold new_types ~init:typ ~f:Set.add in
+        let term = List.fold new_terms ~init:term ~f:Set.add in
+        List.iter fields ~f:(go_field typ term)
     | GetField (e, _) -> go_expr typ term e
     | Ctor _ -> ()
     | Update (e, fields) ->
-      go_expr typ term e;
-      List.iter fields ~f:(go_field typ term)
+        go_expr typ term e;
+        List.iter fields ~f:(go_field typ term)
     | Match (e, cases) ->
-      go_expr typ term e;
-      List.iter cases ~f:(go_case typ term)
+        go_expr typ term e;
+        List.iter cases ~f:(go_case typ term)
     | Let(binds, body) ->
-      go_let typ term binds body
+        go_let typ term binds body
     | WithType (e, ty) ->
-      go_expr typ term e;
-      go_type typ ty
+        go_expr typ term e;
+        go_type typ ty
   and go_let typ term binds body =
     let (typ, term) = List.fold binds ~init:(typ, term) ~f:(fun (typ, term) -> function
         | `BindVal(pat, _) -> (typ, Set.union (collect_pat_vars pat) term)
@@ -67,11 +67,11 @@ let check_unbound_vars expr =
         go_type typ body
   and go_field typ term = function
     | `Value (_, ty, e) ->
-      go_expr typ term e;
-      Option.iter ty ~f:(go_type typ)
+        go_expr typ term e;
+        Option.iter ty ~f:(go_type typ)
     | `Type (_, params, ty) ->
-      let typ = List.fold params ~init:typ ~f:Set.add in
-      go_type typ ty
+        let typ = List.fold params ~init:typ ~f:Set.add in
+        go_type typ ty
   and go_case typ term (pat, e) =
     go_pat typ pat;
     let pat_new = collect_pat_vars pat in
@@ -86,43 +86,43 @@ let check_unbound_vars expr =
     | Type.Var v | Type.Path(v, _) when Set.mem typ v -> ()
     | Type.Var v | Type.Path(v, _) -> unboundVar v
     | Type.Quant(_, vars, ty) ->
-      go_type (List.fold ~init:typ ~f:Set.add vars) ty
+        go_type (List.fold ~init:typ ~f:Set.add vars) ty
     | Type.Recur(var, ty) ->
-      go_type (Set.add typ var) ty
+        go_type (Set.add typ var) ty
     | Type.Fn(Type.Annotated(v, param), ret) ->
         go_type typ param;
         go_type (Set.add typ v) ret
     | Type.Fn(param, ret) ->
-      go_type typ param;
-      go_type typ ret
+        go_type typ param;
+        go_type typ ret
     | Type.Record record ->
-      go_record typ record
+        go_record typ record
     | Type.Ctor _ -> ()
     | Type.App (f, x) ->
-      go_type typ f;
-      go_type typ x
+        go_type typ f;
+        go_type typ x
     | Type.Union(x, y) ->
-      go_type typ x;
-      go_type typ y
+        go_type typ x;
+        go_type typ y
     | Type.RowRest v ->
-      go_type typ (Type.Var v)
+        go_type typ (Type.Var v)
     | Type.Annotated(_, ty) ->
-      go_type typ ty
+        go_type typ ty
   and go_record typ items =
     let (types, values) =
       List.partition_map items ~f:(function
-        | Type.Type(lbl, _, _) ->
-          `Fst (Ast.var_of_label lbl)
-        | x ->
-          `Snd x
-      )
+          | Type.Type(lbl, _, _) ->
+              `Fst (Ast.var_of_label lbl)
+          | x ->
+              `Snd x
+        )
     in
     let typ' = List.fold types ~init:typ ~f:Set.add in
     List.iter values ~f:(go_record_item typ')
   and go_record_item typ = function
     | Type.Type(_, vars, Some ty) ->
-      let typ = List.fold vars ~init:typ ~f:Set.add in
-      go_type typ ty
+        let typ = List.fold vars ~init:typ ~f:Set.add in
+        go_type typ ty
     | Type.Type(_, _, None) -> ()
     | Type.Field(_, ty) -> go_type typ ty
     | Type.Rest var -> go_type typ (Type.Var var)
@@ -141,26 +141,26 @@ let check_duplicate_record_fields =
   let rec go_expr = function
     | Integer _ | Text _ -> ()
     | Record fields ->
-      go_fields fields
+        go_fields fields
     | Update(e, fields) ->
-      go_expr e; go_fields fields
+        go_expr e; go_fields fields
 
     | Lam (pats, body) ->
-      List.iter pats ~f:go_pat;
-      go_expr body
+        List.iter pats ~f:go_pat;
+        go_expr body
     | Match(e, cases) ->
-      go_expr e;
-      List.iter cases ~f:go_case
+        go_expr e;
+        List.iter cases ~f:go_case
     | App (f, x) -> go_expr f; go_expr x
     | GetField(e, _) -> go_expr e
     | Let(bindings, body) ->
-      go_let bindings;
-      go_expr body
+        go_let bindings;
+        go_expr body
     | Var _ -> ()
     | Ctor _ -> ()
     | WithType(e, ty) ->
-      go_expr e;
-      go_type ty
+        go_expr e;
+        go_type ty
   and go_let =
     List.iter ~f:(function
         | `BindVal(pat, e) ->
@@ -171,10 +171,10 @@ let check_duplicate_record_fields =
   and go_fields fields =
     List.iter fields ~f:(function
         | `Value (_, ty, e) ->
-          Option.iter ty ~f:go_type;
-          go_expr e
+            Option.iter ty ~f:go_type;
+            go_expr e
         | `Type (_, _, ty) ->
-          go_type ty
+            go_type ty
       );
     let labels = List.map fields ~f:(function
         | `Value (lbl, _, _) -> lbl
@@ -195,26 +195,26 @@ let check_duplicate_record_fields =
     | Type.Recur(_, ty) -> go_type ty
     | Type.Fn(param, ret) -> go_type param; go_type ret
     | Type.Record fields ->
-      List.map fields ~f:(function
-          | Type.Rest _ -> []
-          | Type.Field(lbl, ty)
-          | Type.Type(lbl, _, Some ty) ->
-            go_type ty;
-            [lbl]
-          | Type.Type (lbl, _, None) ->
-            [lbl]
-        )
-      |> List.concat
-      |> go_labels
+        List.map fields ~f:(function
+            | Type.Rest _ -> []
+            | Type.Field(lbl, ty)
+            | Type.Type(lbl, _, Some ty) ->
+                go_type ty;
+                [lbl]
+            | Type.Type (lbl, _, None) ->
+                [lbl]
+          )
+        |> List.concat
+        |> go_labels
     | Type.Union(l, r) -> go_type l; go_type r
     | Type.App(f, x) -> go_type f; go_type x
     | Type.Annotated(_, ty) -> go_type ty
   and go_labels =
     let rec go all dups = function
       | (l :: ls) when Set.mem all l ->
-        go all (Set.add dups l) ls
+          go all (Set.add dups l) ls
       | (l :: ls) ->
-        go (Set.add all l) dups ls
+          go (Set.add all l) dups ls
       | [] when Set.is_empty dups -> ()
       | [] -> duplicate_fields (Set.to_list dups)
     in go LabelSet.empty LabelSet.empty

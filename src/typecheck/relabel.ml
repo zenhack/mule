@@ -23,8 +23,8 @@ let new_get () =
     match Sequence.next !seq with
     | None -> failwith "impossible" (* the seq is infinite. *)
     | Some (x, xs) ->
-      seq := xs;
-      x
+        seq := xs;
+        x
   in
   Memoize.memoize (fun _ -> seq_next ())
 
@@ -48,23 +48,23 @@ let relabel_type () =
     | Opaque i -> Opaque i
     | Named(i, s) -> Named (i, s)
     | Fn (i, l, r) ->
-      let l' = go l in
-      let r' = go r in
-      Fn (i, l', r')
+        let l' = go l in
+        let r' = go r in
+        Fn (i, l', r')
     | Recur (i, v, body) ->
-      let v' = get v in
-      let body' = go body in
-      Recur (i, v', body')
+        let v' = get v in
+        let body' = go body in
+        Recur (i, v', body')
     | Var (i, v) -> Var (i, get v)
     | Record {r_info; r_types; r_values} ->
-      let r_types = go_row r_types in
-      let r_values = go_row r_values in
-      Record { r_info; r_types; r_values }
+        let r_types = go_row r_types in
+        let r_values = go_row r_values in
+        Record { r_info; r_types; r_values }
     | Union row -> Union (go_row row)
     | Quant (i, q, v, k, body) ->
-      let v' = get v in
-      let body' = go body in
-      Quant (i, q, v', k, body')
+        let v' = get v in
+        let body' = go body in
+        Quant (i, q, v', k, body')
     | Path(i, v, ls) -> Path(i, get v, ls)
   and go_row (i, fields, rest) =
     let fields' = List.map fields ~f:(fun (l, ty) -> (l, go ty)) in

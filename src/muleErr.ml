@@ -43,33 +43,33 @@ let rec show_kind = function
   | `Type -> "type"
   | `Row -> "row"
   | `Arrow(l, r) ->
-    String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
+      String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
 let show_type_error = function
   | MismatchedCtors (l, r) ->
-    "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
+      "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
   | MismatchedKinds (l, r) ->
-    "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
+      "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | OccursCheckKind ->
-    "inferring kinds: occurs check failed"
+      "inferring kinds: occurs check failed"
   | PermissionErr op ->
-    "permission error during " ^ show_op op
+      "permission error during " ^ show_op op
 
 let show = function
   | UnboundVar var ->
-    "unbound variable: " ^ Ast.Var.to_string var
+      "unbound variable: " ^ Ast.Var.to_string var
   | MalformedType msg ->
-    "malformed_type: " ^ msg
+      "malformed_type: " ^ msg
   | TypeError e ->
-    "Type error: " ^ show_type_error e
+      "Type error: " ^ show_type_error e
   | UnreachableCases ->
-    "Unreachable cases in match"
+      "Unreachable cases in match"
   | DuplicateFields fields ->
-    "Duplicate fields:\n" ^
-    (fields
-     |> List.map ~f:Ast.Label.to_string
-     |> String.concat ~sep:",")
+      "Duplicate fields:\n" ^
+      (fields
+       |> List.map ~f:Ast.Label.to_string
+       |> String.concat ~sep:",")
   | EmptyMatch ->
-    "Empty match expression."
+      "Empty match expression."
   | IncompletePattern _ ->
-    "Incomplete pattern"
+      "Incomplete pattern"
