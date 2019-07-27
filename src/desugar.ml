@@ -325,13 +325,13 @@ and desugar_record fields =
         | `Type (lbl, params, body) ->
             Some
               ( desugar_type_binding
-                ( Ast.var_of_label lbl
-                , params
-                , body
-                )
+                  ( Ast.var_of_label lbl
+                  , params
+                  , body
+                  )
               )
-          | `Value _ ->
-              None
+        | `Value _ ->
+            None
       )
     in
     D.LetType
