@@ -15,5 +15,7 @@ check: $(checks)
 	@touch $@
 clean:
 	rm -rf _build tests/*.check tests/*.actual
+format:
+	find src/ -type f -name '*.ml*' -exec ocp-indent -i \{} \;
 
-.PHONY: all repl check
+.PHONY: all repl check format
