@@ -124,9 +124,11 @@ and quantify_row_opaques (i, fields, rest) =
 let rec desugar_type' = function
   | ST.Fn(param, ret) ->
       DT.Fn((), desugar_type' param, desugar_type' ret)
-  | ST.Quant(q, (v :: vs), body) ->
-      DT.Quant((), q, v, `Unknown, desugar_type' (ST.Quant(q, vs, body)))
-  | ST.Quant(_, [], body) -> desugar_type' body
+  | ST.Quant(q, vs, body) ->
+      List.fold_right
+        vs
+        ~init:(desugar_type' body)
+        ~f:(fun v body -> DT.Quant((), q, v, `Unknown, body))
   | ST.Recur(v, body) ->
       DT.Recur((), v, desugar_type' body)
   | ST.Var v ->
