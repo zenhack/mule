@@ -64,6 +64,14 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
   go
 
 let rec quantify_opaques = function
+  (* Transform opaque type members into existentials, e.g.
+   *
+   * { type t }
+   *
+   * becomes:
+   *
+   * exist a. { type t = a }
+   *)
   | DT.App(i, f, x) ->
       DT.App
         ( i
