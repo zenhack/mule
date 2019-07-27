@@ -22,40 +22,40 @@ let gen_u: k_var -> bound_target -> u_type UnionFind.var =
 
 let lambda: tyvar -> k_var -> k_var -> (bound_target -> u_var -> u_var) -> u_var =
   fun tv kparam kret f ->
-    fst (
-      Util.fix
-        (fun kids ->
-           let param, ret = Lazy.force kids in
-           UnionFind.make (
-             `Const
-               ( tv
-               , `Named "<lambda>"
-               , [param, kparam; ret, kret]
-               , UnionFind.make (`Arrow (kparam, kret))
+  fst (
+    Util.fix
+      (fun kids ->
+         let param, ret = Lazy.force kids in
+         UnionFind.make (
+           `Const
+             ( tv
+             , `Named "<lambda>"
+             , [param, kparam; ret, kret]
+             , UnionFind.make (`Arrow (kparam, kret))
+             )
+         )
+      )
+      (fun lam ->
+         let param = UnionFind.make (
+             `Free
+               ( { ty_id = gensym ()
+                 ; ty_bound = ref { b_ty = `Explicit; b_at = `Ty lam }
+                 }
+               , kparam
                )
            )
-        )
-        (fun lam ->
-           let param = UnionFind.make (
-               `Free
-                 ( { ty_id = gensym ()
-                   ; ty_bound = ref { b_ty = `Explicit; b_at = `Ty lam }
-                   }
-                 , kparam
-                 )
-             )
-           in
-           let tv =
-             { ty_id = gensym ()
-             ; ty_bound = ref { b_ty = `Explicit; b_at = `Ty lam }
-             }
-           in
-           let ret = fst (
-               Util.fix
-                 (fun ret -> UnionFind.make (`Quant(tv, Lazy.force ret)))
-                 (fun q -> f (`Ty q) param)
-             )
-           in
-           (param, ret)
-        )
-    )
+         in
+         let tv =
+           { ty_id = gensym ()
+           ; ty_bound = ref { b_ty = `Explicit; b_at = `Ty lam }
+           }
+         in
+         let ret = fst (
+             Util.fix
+               (fun ret -> UnionFind.make (`Quant(tv, Lazy.force ret)))
+               (fun q -> f (`Ty q) param)
+           )
+         in
+         (param, ret)
+      )
+  )

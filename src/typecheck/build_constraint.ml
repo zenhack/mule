@@ -314,51 +314,51 @@ let make_cops: unit ->
 
 let build_constraints: Expr.t -> built_constraints =
   fun expr ->
-    let env_terms = Map.map ~f:fst Intrinsics.values in
-    let cops, ucs, ics = make_cops () in
-    let (_, ty) = Util.fix
-        (child_g None)
-        (fun g ->
-           let g = Lazy.force g in
-           let b_at = `G g in
-           let env_types = Map.map Intrinsics.types ~f:(fun ty ->
-               let ty = Type.map ty ~f:gen_k in
-               UnionFind.make
-                 ( `Quant
+  let env_terms = Map.map ~f:fst Intrinsics.values in
+  let cops, ucs, ics = make_cops () in
+  let (_, ty) = Util.fix
+      (child_g None)
+      (fun g ->
+         let g = Lazy.force g in
+         let b_at = `G g in
+         let env_types = Map.map Intrinsics.types ~f:(fun ty ->
+             let ty = Type.map ty ~f:gen_k in
+             UnionFind.make
+               ( `Quant
+                   ( ty_var_at b_at
+                   , Coercions.gen_type
+                       cops
+                       b_at
+                       VarMap.empty
+                       `Pos
+                       (Infer_kind.infer Intrinsics.kinds ty)
+                   )
+               )
+           )
+         in
+         let env_terms = Map.map env_terms ~f:(fun ty ->
+             let ty = Type.map ty ~f:gen_k in
+             lazy (`G (with_g g (fun g ->
+                 let b_at = `G (Lazy.force g) in
+                 UnionFind.make (
+                   `Quant
                      ( ty_var_at b_at
                      , Coercions.gen_type
                          cops
                          b_at
-                         VarMap.empty
+                         env_types
                          `Pos
                          (Infer_kind.infer Intrinsics.kinds ty)
                      )
-                 )
-             )
-           in
-           let env_terms = Map.map env_terms ~f:(fun ty ->
-               let ty = Type.map ty ~f:gen_k in
-               lazy (`G (with_g g (fun g ->
-                   let b_at = `G (Lazy.force g) in
-                   UnionFind.make (
-                     `Quant
-                       ( ty_var_at b_at
-                       , Coercions.gen_type
-                           cops
-                           b_at
-                           env_types
-                           `Pos
-                           (Infer_kind.infer Intrinsics.kinds ty)
-                       )
-                   )))
-                 )
-             )
-           in
-           let root = walk ~cops ~env_types ~env_terms ~g expr in
-           UnionFind.make(`Quant(gen_ty_var g, root))
-        )
-    in
-    { unification = !ucs
-    ; instantiation = !ics
-    ; ty = ty
-    }
+                 )))
+               )
+           )
+         in
+         let root = walk ~cops ~env_types ~env_terms ~g expr in
+         UnionFind.make(`Quant(gen_ty_var g, root))
+      )
+  in
+  { unification = !ucs
+  ; instantiation = !ics
+  ; ty = ty
+  }

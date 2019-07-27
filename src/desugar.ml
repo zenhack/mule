@@ -17,51 +17,51 @@ let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
 let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
   fun old new_ vars ->
-    let rec go ty =
-      if Poly.equal ty old then
-        new_
-      else
-        begin match ty with
-          | ST.Quant (q, vs, body) ->
-              let shadowed =
-                List.fold
-                  vs
-                  ~init:false
-                  ~f:(fun ret var -> ret || Set.mem vars var)
-              in
-              if shadowed then
-                ty
-              else
-                ST.Quant(q, vs, go body)
-          | ST.Recur(v, body) ->
-              if Set.mem vars v then
-                ty
-              else
-                ST.Recur(v, go body)
-          | ST.Fn(p, r) -> ST.Fn(go p, go r)
-          | ST.App(f, x) -> ST.App(go f, go x)
-          | ST.Union(l, r) -> ST.Union(go l, go r)
-          | ST.Annotated(v, t) -> ST.Annotated(v, go t)
-          | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
-          | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ -> ty
-        end
-    and go_record_item = function
-      | ST.Field(l, t) -> ST.Field(l, go t)
-      | ST.Type(_, _, None) as ty -> ty
-      | ST.Type(lbl, vs, Some ty) ->
-          let shadowed =
-            List.fold
-              (Ast.var_of_label lbl :: vs)
-              ~init:false
-              ~f:(fun ret var -> ret || Set.mem vars var)
-          in
-          if shadowed then
-            ST.Type(lbl, vs, Some ty)
-          else
-            ST.Type(lbl, vs, Some (go ty))
-      | ST.Rest v -> ST.Rest v
-    in
-    go
+  let rec go ty =
+    if Poly.equal ty old then
+      new_
+    else
+      begin match ty with
+        | ST.Quant (q, vs, body) ->
+            let shadowed =
+              List.fold
+                vs
+                ~init:false
+                ~f:(fun ret var -> ret || Set.mem vars var)
+            in
+            if shadowed then
+              ty
+            else
+              ST.Quant(q, vs, go body)
+        | ST.Recur(v, body) ->
+            if Set.mem vars v then
+              ty
+            else
+              ST.Recur(v, go body)
+        | ST.Fn(p, r) -> ST.Fn(go p, go r)
+        | ST.App(f, x) -> ST.App(go f, go x)
+        | ST.Union(l, r) -> ST.Union(go l, go r)
+        | ST.Annotated(v, t) -> ST.Annotated(v, go t)
+        | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
+        | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ -> ty
+      end
+  and go_record_item = function
+    | ST.Field(l, t) -> ST.Field(l, go t)
+    | ST.Type(_, _, None) as ty -> ty
+    | ST.Type(lbl, vs, Some ty) ->
+        let shadowed =
+          List.fold
+            (Ast.var_of_label lbl :: vs)
+            ~init:false
+            ~f:(fun ret var -> ret || Set.mem vars var)
+        in
+        if shadowed then
+          ST.Type(lbl, vs, Some ty)
+        else
+          ST.Type(lbl, vs, Some (go ty))
+    | ST.Rest v -> ST.Rest v
+  in
+  go
 
 let rec quantify_opaques = function
   | DT.App(i, f, x) ->

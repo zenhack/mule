@@ -4,44 +4,44 @@ open Build_constraint
 (* TODO: why are we using a map to unit here, rather than a set? *)
 let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
   fun v dict ->
-    let t = UnionFind.get v in
-    let {ty_id = n; ty_bound} = get_tyvar t in
-    if Map.mem !dict n then
-      ()
-    else begin
-      dict := Map.set !dict ~key:n ~data:();
-      emit_bind_edge n !ty_bound dict;
-      begin match t with
-        | `Free _ ->
-            Debug.show_node `TyVar n
-        | `Quant (_, arg) ->
-            Debug.show_node (`Const (`Named "Q")) n;
-            let v_id = (get_tyvar (UnionFind.get arg)).ty_id in
-            Debug.show_edge `Structural n v_id;
-            emit_all_nodes_ty arg dict
-        | `Const(_, c, args, _) ->
-            Debug.show_node (`Const c) n;
-            let n_ids = List.map args
-                ~f:(fun (uvar, _) ->
-                    let v_id = (get_tyvar (UnionFind.get uvar)).ty_id in
-                    Debug.show_edge `Structural n v_id;
-                    emit_all_nodes_ty uvar dict;
-                    v_id
-                  )
-            in
-            begin match n_ids with
-              | [] -> ()
-              | (i :: is) ->
-                  ignore (List.fold_left
-                            is
-                            ~init:i
-                            ~f:(fun l r ->
-                                Debug.show_edge `Sibling l r;
-                                r
-                              ))
-            end
-      end
+  let t = UnionFind.get v in
+  let {ty_id = n; ty_bound} = get_tyvar t in
+  if Map.mem !dict n then
+    ()
+  else begin
+    dict := Map.set !dict ~key:n ~data:();
+    emit_bind_edge n !ty_bound dict;
+    begin match t with
+      | `Free _ ->
+          Debug.show_node `TyVar n
+      | `Quant (_, arg) ->
+          Debug.show_node (`Const (`Named "Q")) n;
+          let v_id = (get_tyvar (UnionFind.get arg)).ty_id in
+          Debug.show_edge `Structural n v_id;
+          emit_all_nodes_ty arg dict
+      | `Const(_, c, args, _) ->
+          Debug.show_node (`Const c) n;
+          let n_ids = List.map args
+              ~f:(fun (uvar, _) ->
+                  let v_id = (get_tyvar (UnionFind.get uvar)).ty_id in
+                  Debug.show_edge `Structural n v_id;
+                  emit_all_nodes_ty uvar dict;
+                  v_id
+                )
+          in
+          begin match n_ids with
+            | [] -> ()
+            | (i :: is) ->
+                ignore (List.fold_left
+                          is
+                          ~init:i
+                          ~f:(fun l r ->
+                              Debug.show_edge `Sibling l r;
+                              r
+                            ))
+          end
     end
+  end
 and emit_all_nodes_g g dict =
   if Map.mem !dict g.g_id then
     ()

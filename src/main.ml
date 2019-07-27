@@ -6,18 +6,18 @@ let slurp_file (path : string) : string Lwt.t =
 
 let each_file : f:(string -> 'a Lwt.t) -> unit Lwt.t =
   fun ~f ->
-    let rec go i =
-      if i < Array.length Sys.argv then
-        begin
-          let path = Array.get Sys.argv i in
-          let%bind contents = slurp_file path in
-          let%bind () = f contents in
-          go (i + 1)
-        end
-      else
-        Lwt.return ()
-    in
-    go 2
+  let rec go i =
+    if i < Array.length Sys.argv then
+      begin
+        let path = Array.get Sys.argv i in
+        let%bind contents = slurp_file path in
+        let%bind () = f contents in
+        go (i + 1)
+      end
+    else
+      Lwt.return ()
+  in
+  go 2
 
 let exit_msg msg =
   let module Let_syntax = Lwt_syntax in

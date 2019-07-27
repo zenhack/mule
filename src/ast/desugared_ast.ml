@@ -45,56 +45,56 @@ module Type = struct
     | TypeLam of ('i * Var.t * 'i t)
     | App of ('i * 'i t * 'i t)
   [@@deriving sexp]
-and 'i row =
-  ('i * (Label.t * 'i t) list * Var.t option)
-[@@deriving sexp]
+  and 'i row =
+    ('i * (Label.t * 'i t) list * Var.t option)
+  [@@deriving sexp]
 
-let get_info = function
-  | Fn(x, _, _) -> x
-  | Recur(x, _, _) -> x
-  | Var(x, _) -> x
-  | Path(x, _, _) -> x
-  | Record {r_info; _} -> r_info
-  | Union(x, _, _) -> x
-  | Quant(x, _, _, _, _) -> x
-  | Named(x, _) -> x
-  | Opaque (x, _) -> x
-  | Annotated(x, _, _) -> x
-  | TypeLam(x, _, _) -> x
-  | App(x, _, _) -> x
+  let get_info = function
+    | Fn(x, _, _) -> x
+    | Recur(x, _, _) -> x
+    | Var(x, _) -> x
+    | Path(x, _, _) -> x
+    | Record {r_info; _} -> r_info
+    | Union(x, _, _) -> x
+    | Quant(x, _, _, _, _) -> x
+    | Named(x, _) -> x
+    | Opaque (x, _) -> x
+    | Annotated(x, _, _) -> x
+    | TypeLam(x, _, _) -> x
+    | App(x, _, _) -> x
 
-let rec map ty ~f = match ty with
-  | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
-  | Opaque (x, k) -> Opaque (f x, k)
-  | Named(x, s) ->
-      Named(f x, s)
-  | Fn(x, l, r) ->
-      Fn(f x, map l ~f, map r ~f)
-  | Recur(x, v, body) ->
-      Recur(f x, v, map body ~f)
-  | Path(x, v, ls) ->
-      Path(f x, v, ls)
-  | Var (x, v) ->
-      Var(f x, v)
-  | Record {r_info; r_types; r_values} ->
-      Record
-        { r_info = f r_info
-        ; r_types = map_row r_types ~f
-        ; r_values = map_row r_values ~f
-        }
-  | Union row ->
-      Union(map_row row ~f)
-  | Quant(x, q, v, k, body) ->
-      Quant(f x, q, v, k, map body ~f)
-  | TypeLam(x, v, body) ->
-      TypeLam(f x, v, map body ~f)
-  | App(x, fn, arg) ->
-      App(f x, map fn ~f, map arg ~f)
-and map_row (x, fields, rest) ~f =
-  ( f x
-  , List.map fields ~f:(fun(l, t) -> (l, map t ~f))
-  , rest
-  )
+  let rec map ty ~f = match ty with
+    | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
+    | Opaque (x, k) -> Opaque (f x, k)
+    | Named(x, s) ->
+        Named(f x, s)
+    | Fn(x, l, r) ->
+        Fn(f x, map l ~f, map r ~f)
+    | Recur(x, v, body) ->
+        Recur(f x, v, map body ~f)
+    | Path(x, v, ls) ->
+        Path(f x, v, ls)
+    | Var (x, v) ->
+        Var(f x, v)
+    | Record {r_info; r_types; r_values} ->
+        Record
+          { r_info = f r_info
+          ; r_types = map_row r_types ~f
+          ; r_values = map_row r_values ~f
+          }
+    | Union row ->
+        Union(map_row row ~f)
+    | Quant(x, q, v, k, body) ->
+        Quant(f x, q, v, k, map body ~f)
+    | TypeLam(x, v, body) ->
+        TypeLam(f x, v, map body ~f)
+    | App(x, fn, arg) ->
+        App(f x, map fn ~f, map arg ~f)
+  and map_row (x, fields, rest) ~f =
+    ( f x
+    , List.map fields ~f:(fun(l, t) -> (l, map t ~f))
+    , rest
+    )
 end
 
 module Expr = struct

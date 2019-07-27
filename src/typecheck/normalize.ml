@@ -15,14 +15,14 @@ let rec is_bound_above {ty_bound; _} parent =
 (* Reduce the contents of the unification variable to normal form. *)
 let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
   fun uvar ->
-    match UnionFind.get uvar with
-    | `Const(_, `Named "<apply>", [f, _; x, _], _) ->
-        apply uvar (nf f) (nf x)
-    | `Quant(tv, arg) ->
-        UnionFind.set (`Quant(tv, nf arg)) uvar;
-        uvar
-    | _ ->
-        uvar
+  match UnionFind.get uvar with
+  | `Const(_, `Named "<apply>", [f, _; x, _], _) ->
+      apply uvar (nf f) (nf x)
+  | `Quant(tv, arg) ->
+      UnionFind.set (`Quant(tv, nf arg)) uvar;
+      uvar
+  | _ ->
+      uvar
 and apply appvar f x =
   match UnionFind.get f with
   | `Quant(_, arg) ->

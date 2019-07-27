@@ -38,10 +38,10 @@ let ivar i = Ast.Var.of_string ("t" ^ Int.to_string i)
 
 let maybe_add_rec: int -> IntSet.t -> semi_t -> (IntSet.t * semi_t) =
   fun i vars ty ->
-    if Set.mem vars i then
-      (Set.remove vars i, `Recur(i, ty))
-    else
-      (vars, ty)
+  if Set.mem vars i then
+    (Set.remove vars i, `Recur(i, ty))
+  else
+    (vars, ty)
 
 let rec add_rec_binders: semi_t -> (IntSet.t * semi_t) = fun ty ->
   match ty with
@@ -99,41 +99,41 @@ let add_rec_binders ty =
 
 let rec semi_extract_t: IntSet.t -> u_type UnionFind.var -> semi_t =
   fun visited uvar ->
-    let t = UnionFind.get uvar in
-    let {ty_id; _} = get_tyvar t in
-    if Set.mem visited ty_id then
-      `Visited ty_id
-    else
-      begin
-        let visited = Set.add visited ty_id in
-        match t with
-        | `Quant(_, arg) ->
-            `Quant
-              { q_id = ty_id
-              ; q_arg = semi_extract_t visited arg
-              (* These will get changed later, in a second pass: *)
-              ; q_var = ty_id
-              ; q_flag = `Flex
-              }
-        | `Free(tyvar, _) -> `Var (semi_extract_tyvar tyvar)
-        | `Const (_, `Named name, args, _) ->
-            begin match name, args with
-              | "->", [param, _; ret, _] ->
-                  `Fn(ty_id, semi_extract_t visited param, semi_extract_t visited ret)
-              | "{...}", [r_types, _; r_values, _] ->
-                  `Record
-                    ( ty_id
-                    , semi_extract_row visited r_types
-                    , semi_extract_row visited r_values
-                    )
-              | "|", [row, _] ->
-                  `Union(ty_id, semi_extract_row visited row)
-              | _ ->
-                  `Named(ty_id, name, List.map args ~f:(fun (ty, _) -> semi_extract_t visited ty))
-            end
-        | `Const (_, `Extend _, _, _) ->
-            failwith "Kind error"
-      end
+  let t = UnionFind.get uvar in
+  let {ty_id; _} = get_tyvar t in
+  if Set.mem visited ty_id then
+    `Visited ty_id
+  else
+    begin
+      let visited = Set.add visited ty_id in
+      match t with
+      | `Quant(_, arg) ->
+          `Quant
+            { q_id = ty_id
+            ; q_arg = semi_extract_t visited arg
+            (* These will get changed later, in a second pass: *)
+            ; q_var = ty_id
+            ; q_flag = `Flex
+            }
+      | `Free(tyvar, _) -> `Var (semi_extract_tyvar tyvar)
+      | `Const (_, `Named name, args, _) ->
+          begin match name, args with
+            | "->", [param, _; ret, _] ->
+                `Fn(ty_id, semi_extract_t visited param, semi_extract_t visited ret)
+            | "{...}", [r_types, _; r_values, _] ->
+                `Record
+                  ( ty_id
+                  , semi_extract_row visited r_types
+                  , semi_extract_row visited r_values
+                  )
+            | "|", [row, _] ->
+                `Union(ty_id, semi_extract_row visited row)
+            | _ ->
+                `Named(ty_id, name, List.map args ~f:(fun (ty, _) -> semi_extract_t visited ty))
+          end
+      | `Const (_, `Extend _, _, _) ->
+          failwith "Kind error"
+    end
 and semi_extract_row visited uvar = match UnionFind.get uvar with
   | `Quant _ -> failwith "Kind error"
   | `Free(tyvar, _) -> `Var(semi_extract_tyvar tyvar)

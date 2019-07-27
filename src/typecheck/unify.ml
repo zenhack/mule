@@ -11,19 +11,19 @@ let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
  * in {MLF-Graph-Unify}. *)
 let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
   fun p ->
-    let rec go p = match Sequence.next p with
-      | None -> F
-      | Some (`Explicit, _) -> E
-      | Some (`Rigid, _) -> R
-      | Some (`Flex, bs) ->
-          begin match go bs with
-            | F -> F
-            | R | L -> L
-            | E -> failwith
-                  ("BUG: explicit nodes should never have other nodes bound " ^
-                   "on them.")
-          end
-    in go (Sequence.Generator.run p)
+  let rec go p = match Sequence.next p with
+    | None -> F
+    | Some (`Explicit, _) -> E
+    | Some (`Rigid, _) -> R
+    | Some (`Flex, bs) ->
+        begin match go bs with
+          | F -> F
+          | R | L -> L
+          | E -> failwith
+                ("BUG: explicit nodes should never have other nodes bound " ^
+                 "on them.")
+        end
+  in go (Sequence.Generator.run p)
 
 let rec gnode_bound_list: g_node -> (unit, bound_ty) Sequence.Generator.t =
   fun {g_bound; _} -> Sequence.Generator.(
@@ -46,7 +46,7 @@ and ty_bound_list ty =
 
 let tyvar_permission: tyvar -> permission =
   fun tv ->
-    get_permission (tyvar_bound_list tv)
+  get_permission (tyvar_bound_list tv)
 
 let bound_permission: bound_target bound -> permission =
   fun b -> get_permission (bound_list b)
@@ -80,23 +80,23 @@ let raised_bound b =
  * illegal raisings, fail. *)
 let rec bound_lca: bound_target bound -> bound_target bound -> bound_target bound =
   fun l r ->
-    let lid, rid = bound_id l, bound_id r in
-    if lid = rid then
-      l
-    else
-      begin match bound_permission l, bound_permission r with
-        | E, _ | _, E | L, _ | _, L -> permErr `Raise
-        | _ when lid < rid ->
-            begin match raised_bound r with
-              | Some b -> bound_lca l b
-              | None -> failwith "No LCA!"
-            end
-        | _ ->
-            begin match raised_bound l with
-              | Some b -> bound_lca b r
-              | None -> failwith "No LCA!"
-            end
-      end
+  let lid, rid = bound_id l, bound_id r in
+  if lid = rid then
+    l
+  else
+    begin match bound_permission l, bound_permission r with
+      | E, _ | _, E | L, _ | _, L -> permErr `Raise
+      | _ when lid < rid ->
+          begin match raised_bound r with
+            | Some b -> bound_lca l b
+            | None -> failwith "No LCA!"
+          end
+      | _ ->
+          begin match raised_bound l with
+            | Some b -> bound_lca b r
+            | None -> failwith "No LCA!"
+          end
+    end
 
 (* "Unify" two binding edges. This does a combination of raising and
  * weakening as needed to make them the same. It does not modify anything,
@@ -118,10 +118,10 @@ let unify_bound l r =
 *)
 let unify_tyvar: tyvar -> tyvar -> tyvar =
   fun l r ->
-    let new_bound = unify_bound !(l.ty_bound) !(r.ty_bound) in
-    l.ty_bound := new_bound;
-    r.ty_bound := new_bound;
-    l
+  let new_bound = unify_bound !(l.ty_bound) !(r.ty_bound) in
+  l.ty_bound := new_bound;
+  r.ty_bound := new_bound;
+  l
 
 let raise_tv: bound_target bound -> tyvar -> unit = fun b tv ->
   let new_bound = unify_bound !(tv.ty_bound) b in
@@ -130,34 +130,34 @@ let raise_tv: bound_target bound -> tyvar -> unit = fun b tv ->
 (* Raise the bounds for an entire subtree. *)
 let rec raise_bounds: bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -> unit =
   fun bound above visited t ->
-    let tv = get_tyvar t in
-    let bound_tgt_id =
-      match (!(tv.ty_bound)).b_at with
-      | `G {g_id; _} -> g_id
-      | `Ty at ->
-          let {ty_id; _} =
-            Lazy.force at
-            |> UnionFind.get
-            |> get_tyvar
-          in
-          ty_id
-    in
-    if not (Set.mem !visited tv.ty_id) then begin
-      visited := Set.add !visited tv.ty_id;
-      if not (Set.mem above bound_tgt_id) then begin
-        raise_tv bound tv
-      end;
-      let new_above = Set.add above tv.ty_id in
-      match t with
-      | `Free _ -> ()
-      | `Quant(_, arg) ->
-          raise_bounds bound new_above visited (UnionFind.get arg)
-      | `Const(_, _, args, _) ->
-          List.iter
-            args
-            ~f:(fun (ty, _) ->
-                raise_bounds bound new_above visited (UnionFind.get ty))
-    end
+  let tv = get_tyvar t in
+  let bound_tgt_id =
+    match (!(tv.ty_bound)).b_at with
+    | `G {g_id; _} -> g_id
+    | `Ty at ->
+        let {ty_id; _} =
+          Lazy.force at
+          |> UnionFind.get
+          |> get_tyvar
+        in
+        ty_id
+  in
+  if not (Set.mem !visited tv.ty_id) then begin
+    visited := Set.add !visited tv.ty_id;
+    if not (Set.mem above bound_tgt_id) then begin
+      raise_tv bound tv
+    end;
+    let new_above = Set.add above tv.ty_id in
+    match t with
+    | `Free _ -> ()
+    | `Quant(_, arg) ->
+        raise_bounds bound new_above visited (UnionFind.get arg)
+    | `Const(_, _, args, _) ->
+        List.iter
+          args
+          ~f:(fun (ty, _) ->
+              raise_bounds bound new_above visited (UnionFind.get ty))
+  end
 
 let graft: u_type -> tyvar -> u_type = fun t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a

@@ -118,5 +118,5 @@ and translate_record_body depth env = function
 
 let translate: D.t -> R.t =
   fun exp ->
-    let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
-    snd (translate 0 env exp)
+  let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
+  snd (translate 0 env exp)

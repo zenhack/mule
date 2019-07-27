@@ -25,23 +25,23 @@ let set_root: int -> unit = fun id ->
 
 let fmt_node: node_type -> int -> string =
   fun ty n ->
-    String.concat
-      [ "  n"
-      ; Int.to_string n
-      ; " [label=\""
-      ; begin match ty with
-        | `TyVar -> "V"
-        | `Const c ->
-            begin match c with
-              | `Named name -> name
-              | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
-            end
-        | `G -> "G"
-      end
-      ; " : "
-      ; Int.to_string n
-      ; "\"];\n"
-      ]
+  String.concat
+    [ "  n"
+    ; Int.to_string n
+    ; " [label=\""
+    ; begin match ty with
+      | `TyVar -> "V"
+      | `Const c ->
+          begin match c with
+            | `Named name -> name
+            | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
+          end
+      | `G -> "G"
+    end
+    ; " : "
+    ; Int.to_string n
+    ; "\"];\n"
+    ]
 
 let fmt_edge_ty = function
   | `Structural -> "[weight=7]"
