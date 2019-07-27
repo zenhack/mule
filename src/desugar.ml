@@ -321,9 +321,24 @@ and desugar_record fields =
       ~init:D.EmptyRecord
       ~f:(fun field old ->
           match field with
-          | `Type _ ->
-              (* TODO: do something with this. *)
-              old
+          | `Type (lbl, params, body) ->
+              (* TODO: this is insufficient, since the types may need to
+               * be mutually recursive, and in scope for all record fields.
+               *)
+              let (v, ty) =
+                desugar_type_binding
+                  ( Ast.var_of_label lbl
+                  , params
+                  , body
+                  )
+              in
+              D.LetType
+                ( [v, ty]
+                , D.App
+                    ( D.Update(`Type, lbl)
+                    , old
+                    )
+                )
           | `Value(l, ty, v) ->
               let v' =
                 begin match ty with
