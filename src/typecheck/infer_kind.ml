@@ -145,7 +145,7 @@ and walk_row env (_, fields, rest) =
       (to_kvar `Type, fields', Some v)
 and collect_assoc_types env (i, field_types, rest) =
   let env =
-    List.map field_types ~f:(fun (lbl, _) -> (lbl, to_kvar `Type))
+    List.map field_types ~f:(fun (lbl, _) -> (lbl, to_kvar `Unknown))
     |> List.fold ~init:env ~f:(fun accum (lbl, u) ->
         Map.set
           accum
