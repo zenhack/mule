@@ -335,8 +335,11 @@ and desugar_record fields =
               D.LetType
                 ( [v, ty]
                 , D.App
-                    ( D.Update(`Type, lbl)
-                    , old
+                    ( D.App
+                        ( D.Update(`Type, lbl)
+                        , old
+                        )
+                    , D.Witness (DT.Var ((), v))
                     )
                 )
           | `Value(l, ty, v) ->
