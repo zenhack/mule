@@ -15,6 +15,10 @@ let unreachable_case (_p:SP.t) =
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
+let rec prune e = match e with
+  | D.LetType([], body) -> prune body
+  | _ -> D.apply_to_kids e ~f:prune
+
 let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
   fun old new_ vars ->
   let rec go ty =
@@ -316,44 +320,48 @@ and desugar_record fields =
     | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ | D.Witness _ ->
         expr
   in
-  let build_record =
-    List.fold_right
-      ~init:D.EmptyRecord
-      ~f:(fun field old ->
-          match field with
-          | `Type (lbl, params, body) ->
-              (* TODO: this is insufficient, since the types may need to
-               * be mutually recursive, and in scope for all record fields.
-               *)
-              let (v, ty) =
-                desugar_type_binding
-                  ( Ast.var_of_label lbl
-                  , params
-                  , body
-                  )
-              in
-              D.LetType
-                ( [v, ty]
-                , D.App
+  let build_record fields =
+    let types = List.filter_map fields ~f:(function
+        | `Type (lbl, params, body) ->
+            Some
+              ( desugar_type_binding
+                ( Ast.var_of_label lbl
+                , params
+                , body
+                )
+              )
+          | `Value _ ->
+              None
+      )
+    in
+    D.LetType
+      ( types
+      , List.fold_right
+          fields
+          ~init:D.EmptyRecord
+          ~f:(fun field old ->
+              match field with
+              | `Type (lbl, _, _) ->
+                  D.App
                     ( D.App
                         ( D.Update(`Type, lbl)
                         , old
                         )
-                    , D.Witness (DT.Var ((), v))
+                    , D.Witness (DT.Var ((), Ast.var_of_label lbl))
                     )
-                )
-          | `Value(l, ty, v) ->
-              let v' =
-                begin match ty with
-                  | None -> v
-                  | Some ty' -> S.WithType(v, ty')
-                end
-              in
-              D.App
-                ( D.App(D.Update (`Value, l), old)
-                , subst label_map (desugar v')
-                )
-        )
+              | `Value(l, ty, v) ->
+                  let v' =
+                    begin match ty with
+                      | None -> v
+                      | Some ty' -> S.WithType(v, ty')
+                    end
+                  in
+                  D.App
+                    ( D.App(D.Update (`Value, l), old)
+                    , subst label_map (desugar v')
+                    )
+            )
+      )
   in
   D.App(D.Fix `Record, D.Lam(record_var, build_record fields))
 and desugar_match cases =
@@ -536,5 +544,5 @@ and simplify_bindings = function
 
 
 let desugar e =
-  try Ok (desugar e)
+  try Ok (prune (desugar e))
   with MuleErr.MuleExn err -> Error err

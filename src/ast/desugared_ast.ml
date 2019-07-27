@@ -122,4 +122,30 @@ module Expr = struct
     | Integer of Bigint.t
     | Text of string
   [@@deriving sexp]
+
+  let apply_to_kids e ~f = match e with
+    | Lam (v, body) -> Lam (v, f body)
+    | App(x, y) -> App(f x, f y)
+    | Ctor(l, arg) -> Ctor(l, f arg)
+    | Match {cases; default} ->
+        Match
+          { cases = Map.map cases ~f:(fun (k, v) -> (k, f v))
+          ; default = Option.map default ~f:(fun (k, v) -> (k, f v))
+          }
+    | IntMatch {im_cases; im_default} ->
+        IntMatch
+          { im_cases = Map.map im_cases ~f
+          ; im_default = f im_default
+          }
+    | Let(v, e, body) -> Let(v, f e, f body)
+    | LetType(binds, body) -> LetType(binds, f body)
+    | Var _
+    | Fix _
+    | EmptyRecord
+    | GetField _
+    | Update _
+    | WithType _
+    | Witness _
+    | Integer _
+    | Text _ -> e
 end
