@@ -89,6 +89,7 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
         end
     | Type.Path(_, v, ls) ->
         let u_var = Map.find_exn env v in
+        (* Needs to be of kind `Type, because we're projecting on a record. *)
         UnionFind.merge unify_kind u_var (to_kvar `Type);
         Type.Path(u_var, v, ls)
     | Type.Fn(_, Type.Annotated(_, v, l), r) ->
