@@ -18,13 +18,13 @@ Desugared:
 	              (App
 	               ((Fix Record)
 	                (Lam
-	                 ($2
+	                 ($1
 	                  (App
 	                   ((App ((Update (Value y)) EmptyRecord))
 	                    (App
 	                     ((Fix Record)
 	                      (Lam
-	                       ($3
+	                       ($2
 	                        (App
 	                         ((App ((Update (Value z)) EmptyRecord)) EmptyRecord))))))))))))))))))
 	        (App
@@ -32,7 +32,7 @@ Desugared:
 	          (App
 	           ((Fix Record)
 	            (Lam
-	             ($1 (App ((App ((Update (Value y)) EmptyRecord)) EmptyRecord))))))))))))))))
+	             ($3 (App ((App ((Update (Value y)) EmptyRecord)) EmptyRecord))))))))))))))))
 
 inferred type:
 

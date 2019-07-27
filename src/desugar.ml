@@ -316,25 +316,26 @@ and desugar_record fields =
     | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ | D.Witness _ ->
         expr
   in
-  let rec build_record = function
-    | [] -> D.EmptyRecord
-    | `Value(l, ty, v) :: fs ->
-        let v' =
-          begin match ty with
-            | None -> v
-            | Some ty' -> S.WithType(v, ty')
-          end
-        in
-        D.App
-          ( D.App
-              ( D.Update (`Value, l)
-              , build_record fs
-              )
-          , subst label_map (desugar v')
-          )
-    | `Type _ :: fs ->
-        (* TODO: do something with this. *)
-        build_record fs
+  let build_record =
+    List.fold_right
+      ~init:D.EmptyRecord
+      ~f:(fun field old ->
+          match field with
+          | `Type _ ->
+              (* TODO: do something with this. *)
+              old
+          | `Value(l, ty, v) ->
+              let v' =
+                begin match ty with
+                  | None -> v
+                  | Some ty' -> S.WithType(v, ty')
+                end
+              in
+              D.App
+                ( D.App(D.Update (`Value, l), old)
+                , subst label_map (desugar v')
+                )
+        )
   in
   D.App(D.Fix `Record, D.Lam(record_var, build_record fields))
 and desugar_match cases =

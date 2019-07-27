@@ -41,7 +41,7 @@ Desugared:
 	                   ((Match
 	                     (cases
 	                      ((S
-	                        ($3
+	                        ($1
 	                         (App
 	                          ((Match (cases ())
 	                            (default
@@ -74,9 +74,9 @@ Desugared:
 	                                        ())))))
 	                                   (App ((GetField (Lazy even)) (Var $0)))))
 	                                 (Var k)))))))
-	                           (Var $3)))))
+	                           (Var $1)))))
 	                       (Z
-	                        ($4
+	                        ($2
 	                         (App
 	                          ((Match (cases ())
 	                            (default
@@ -84,7 +84,7 @@ Desugared:
 	                               (App
 	                                ((Lam (x (Ctor (False (Var x)))))
 	                                 EmptyRecord))))))
-	                           (Var $4)))))))
+	                           (Var $2)))))))
 	                     (default ()))
 	                    (Var x)))))))))))
 	          (App
@@ -115,7 +115,7 @@ Desugared:
 	               ((Match
 	                 (cases
 	                  ((S
-	                    ($1
+	                    ($3
 	                     (App
 	                      ((Match (cases ())
 	                        (default
@@ -148,16 +148,16 @@ Desugared:
 	                                    ())))))
 	                               (App ((GetField (Lazy odd)) (Var $0)))))
 	                             (Var k)))))))
-	                       (Var $1)))))
+	                       (Var $3)))))
 	                   (Z
-	                    ($2
+	                    ($4
 	                     (App
 	                      ((Match (cases ())
 	                        (default
 	                         ((()
 	                           (App
 	                            ((Lam (x (Ctor (True (Var x))))) EmptyRecord))))))
-	                       (Var $2)))))))
+	                       (Var $4)))))))
 	                 (default ()))
 	                (Var x)))))))))))))))
 	  (App
