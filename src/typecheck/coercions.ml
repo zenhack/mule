@@ -198,7 +198,14 @@ let gen_types
   fun cops b_at env sign tys ->
     let tmp_uvars = Map.map tys ~f:(fun t -> gen_u (Type.get_info t) b_at) in
     let env' = Map.merge_skewed env tmp_uvars ~combine:(fun ~key:_ _ v -> v) in
-    Map.map tys ~f:(gen_type cops b_at env' sign)
+    let tys = Map.map tys ~f:(gen_type cops b_at env' sign) in
+    Map.iter2 tmp_uvars tys ~f:(fun ~key:_ ~data -> match data with
+        | `Both(tmp, final) ->
+            UnionFind.merge (fun _ v -> v) tmp final
+        | `Left _ | `Right _ ->
+          failwith "impossible"
+      );
+    tys
 
 let make_coercion_type env g ty cops =
   (* General procedure:
