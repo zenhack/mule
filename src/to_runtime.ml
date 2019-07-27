@@ -113,6 +113,10 @@ and translate_record_body depth env = function
       let (n, head) = translate depth env field in
       let (m, tail) = translate_record_body depth env old in
       (max n m, Map.set tail ~key:lbl ~data:head)
+  | D.App(D.App(D.Update(`Type, _lbl), old), _type) ->
+      translate_record_body depth env old
+  | D.LetType(_, body) ->
+      translate_record_body depth env body
   | _ ->
       failwith "BUG"
 
