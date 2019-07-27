@@ -71,7 +71,7 @@ let rec quantify_opaques = function
    * becomes:
    *
    * exist a. { type t = a }
-   *)
+  *)
   | DT.App(i, f, x) ->
       DT.App
         ( i

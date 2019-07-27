@@ -271,25 +271,25 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       let ty = Type.map ty ~f:gen_k in
       let uty = Coercions.gen_type cops (`G g) env_types `Pos ty in
       UnionFind.make (witness (ty_var_at (`G g)) (Type.get_info ty) uty)
-and walk_match ~cops ~env_types ~env_terms ~g final = function
-  | [] -> (final, gen_u kvar_type (`G g))
-  | ((lbl, (var, body)) :: rest) ->
-      let ty = gen_u kvar_type (`G g) in
-      let bodyVar =
-        walk
-          ~cops
-          ~env_types
-          ~env_terms:(Map.set env_terms ~key:var ~data:(lazy (`Ty ty)))
-          ~g
-          body
-      in
-      let (row, body') =
-        walk_match ~cops ~env_types ~env_terms ~g final rest
-      in
-      cops.constrain_unify bodyVar body';
-      ( UnionFind.make (extend (gen_ty_var g) lbl ty row)
-      , bodyVar
+and walk_match ~cops ~env_types ~env_terms ~g final =
+  List.fold_right
+    ~init:(final, gen_u kvar_type (`G g))
+    ~f:(fun (lbl, (var, body)) (row, body') ->
+        let ty = gen_u kvar_type (`G g) in
+        let bodyVar =
+          walk
+            ~cops
+            ~env_types
+            ~env_terms:(Map.set env_terms ~key:var ~data:(lazy (`Ty ty)))
+            ~g
+            body
+        in
+        cops.constrain_unify bodyVar body';
+        ( UnionFind.make (extend (gen_ty_var g) lbl ty row)
+        , bodyVar
+        )
       )
+
 
 let make_cops: unit ->
   ( constraint_ops
