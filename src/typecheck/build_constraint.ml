@@ -75,6 +75,12 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       let env_kinds = Map.map env_types ~f:get_kind in
       let binds = Map.of_alist_exn (module Ast.Var) binds in
       let binds = Map.map binds ~f:(Type.map ~f:gen_k) in
+      let env_kinds =
+        Map.merge_skewed
+          env_kinds
+          (Map.map binds ~f:Type.get_info)
+          ~combine:(fun ~key:_ _ v -> v)
+      in
       let u_vars =
         Coercions.gen_types
           cops
@@ -83,9 +89,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
           `Pos
           (Map.mapi
              binds
-             ~f:(fun ~key ~data ->
-                 Infer_kind.infer (Map.set env_kinds ~key ~data:(gen_k ())) data
-               )
+             ~f:(fun ~key:_ ~data -> Infer_kind.infer env_kinds data)
           )
       in
       let env_new =
