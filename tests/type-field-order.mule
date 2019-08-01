@@ -1,0 +1,7 @@
+# This test checks that the order of the fields doesn't matter wrt. types;
+# it should be OK to have a type field after a value field that uses the
+# type.
+{
+    , x : t = 4
+    , type t = int
+}

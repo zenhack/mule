@@ -1,0 +1,30 @@
+
+Desugared:
+
+	(App
+	 ((Fix Record)
+	  (Lam
+	   ($0
+	    (LetType
+	     (((t (Recur (() t (Var (() int))))))
+	      (App
+	       ((App
+	         ((Update (Value x))
+	          (App
+	           ((App ((Update (Type t)) EmptyRecord)) (Witness (Var (() t)))))))
+	        (App ((WithType (Var (() t))) (Integer 4)))))))))))
+
+inferred type:
+
+	(Quant
+	 (() All a Unknown
+	  (Record (r_info ()) (r_types (() ((t (Named (() int)))) (a)))
+	   (r_values (() ((x (Named (() int)))) ())))))
+
+Runtime term:
+
+	(App ((Fix Record) (Lam (0 () (Record ((x (Integer 4))))))))
+
+Evaluated:
+
+	(Record ((x (Integer 4))))
