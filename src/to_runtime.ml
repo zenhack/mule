@@ -5,7 +5,7 @@ module R = Runtime.Expr
 
 type binding = [ `Index of int | `Term of R.t ]
 
-let rec translate: int -> binding VarMap.t -> D.t -> (int * R.t) =
+let rec translate: int -> binding VarMap.t -> unit D.t -> (int * R.t) =
   fun depth env -> function
     | D.Integer n -> (0, R.Integer n)
     | D.Text s -> (0, R.Text s)
@@ -120,7 +120,7 @@ and translate_record_body depth env = function
   | _ ->
       failwith "BUG"
 
-let translate: D.t -> R.t =
+let translate: unit D.t -> R.t =
   fun exp ->
   let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
   snd (translate 0 env exp)

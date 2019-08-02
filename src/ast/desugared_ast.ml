@@ -98,27 +98,27 @@ module Type = struct
 end
 
 module Expr = struct
-  type t =
+  type 'i t =
     | Var of Var.t
-    | Lam of (Var.t * t)
-    | App of (t * t)
+    | Lam of (Var.t * 'i t)
+    | App of ('i t * 'i t)
     | Fix of [ `Let | `Record ]
     | EmptyRecord
     | GetField of ([`Lazy|`Strict] * Label.t)
     | Update of ([`Value | `Type] * Label.t)
-    | Ctor of (Label.t * t)
+    | Ctor of (Label.t * 'i t)
     | Match of {
-        cases: (Var.t * t) LabelMap.t;
-        default: (Var.t option * t) option;
+        cases: (Var.t * 'i t) LabelMap.t;
+        default: (Var.t option * 'i t) option;
       }
     | IntMatch of
-        { im_cases : t ZMap.t
-        ; im_default: t
+        { im_cases : 'i t ZMap.t
+        ; im_default: 'i t
         }
-    | WithType of unit Type.t
-    | Witness of unit Type.t
-    | Let of (Var.t * t * t)
-    | LetType of ((Var.t * unit Type.t) list * t)
+    | WithType of 'i Type.t
+    | Witness of 'i Type.t
+    | Let of (Var.t * 'i t * 'i t)
+    | LetType of ((Var.t * 'i Type.t) list * 'i t)
     | Integer of Bigint.t
     | Text of string
   [@@deriving sexp]

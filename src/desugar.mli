@@ -1,3 +1,3 @@
 open Ast
 
-val desugar : Surface.Expr.t -> (Desugared.Expr.t, MuleErr.t) Result.t
+val desugar : Surface.Expr.t -> (unit Desugared.Expr.t, MuleErr.t) Result.t

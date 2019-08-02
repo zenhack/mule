@@ -316,7 +316,7 @@ let make_cops: unit ->
     }
   in (cops, ucs, ics)
 
-let build_constraints: Expr.t -> built_constraints =
+let build_constraints: unit Expr.t -> built_constraints =
   fun expr ->
   let env_terms = Map.map ~f:fst Intrinsics.values in
   let cops, ucs, ics = make_cops () in
