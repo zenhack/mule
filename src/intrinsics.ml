@@ -5,9 +5,9 @@ module R = Runtime
 
 open Typecheck_types
 
-let int_t = D.Type.Named((), "int")
-let text_t = D.Type.Named((), "text")
-let fn_t p r = D.Type.Fn ((), p, r)
+let int_t = D.Type.Named(kvar_type, "int")
+let text_t = D.Type.Named(kvar_type, "text")
+let fn_t p r = D.Type.Fn (kvar_type, p, r)
 
 let prim x = R.Expr.Prim x
 
@@ -29,14 +29,14 @@ let dict kvs =
   |> Map.of_alist_exn (module Var)
 
 let row kvs =
-  ( ()
+  ( kvar_row
   , List.map kvs ~f:(fun (k, v) -> (Label.of_string k, v))
   , None
   )
 
 let recordType tys vals =
   D.Type.Record
-    { r_info = ()
+    { r_info = kvar_type
     ; r_types = row tys
     ; r_values = row vals
     }

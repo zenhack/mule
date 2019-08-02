@@ -5,7 +5,7 @@ module R = Runtime.Expr
 
 type binding = [ `Index of int | `Term of R.t ]
 
-let rec translate: int -> binding VarMap.t -> unit D.t -> (int * R.t) =
+let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
     | D.Integer n -> (0, R.Integer n)
     | D.Text s -> (0, R.Text s)

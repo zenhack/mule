@@ -148,4 +148,37 @@ module Expr = struct
     | Witness _
     | Integer _
     | Text _ -> e
+
+  let rec map e ~f =
+    match e with
+    | WithType ty -> WithType (Type.map ty ~f)
+    | Witness ty -> Witness (Type.map ty ~f)
+    | LetType(binds, body) ->
+        LetType
+          ( List.map binds ~f:(fun (k, v) -> (k, Type.map v ~f))
+          , map body ~f
+          )
+    | Lam(v, body) -> Lam(v, map body ~f)
+    | App(x, y) -> App(map x ~f, map y ~f)
+    | Ctor(l, arg) -> Ctor(l, map arg ~f)
+    | Match {cases; default} ->
+        let f' (k, v) = (k, map v ~f) in
+        Match
+          { cases = Map.map cases ~f:f'
+          ; default = Option.map default ~f:f'
+          }
+    | IntMatch {im_cases; im_default} ->
+        IntMatch
+          { im_cases = Map.map im_cases ~f:(map ~f)
+          ; im_default = map im_default ~f
+          }
+    | Let(v, e, body) -> Let(v, map e ~f, map body ~f)
+    | Var x -> Var x
+    | Fix x -> Fix x
+    | EmptyRecord -> EmptyRecord
+    | GetField x -> GetField x
+    | Update x -> Update x
+    | Integer x -> Integer x
+    | Text x -> Text x
+
 end

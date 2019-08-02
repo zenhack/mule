@@ -1,6 +1,7 @@
 let typecheck expr =
   try
-    Build_constraint.build_constraints expr
+    Ast.Desugared.Expr.map expr ~f:(fun _ -> Typecheck_types.gen_k ())
+    |> Build_constraint.build_constraints
     |> Solve.solve_constraints
     |> Extract.get_var_type
     |> fun t -> Ok t

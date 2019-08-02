@@ -74,7 +74,6 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
   | Expr.LetType(binds, body) ->
       let env_kinds = Map.map env_types ~f:get_kind in
       let binds = Map.of_alist_exn (module Ast.Var) binds in
-      let binds = Map.map binds ~f:(Type.map ~f:gen_k) in
       let env_kinds =
         Map.merge_skewed
           env_kinds
@@ -269,10 +268,8 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
            (UnionFind.make (union tv rowVar))
            bodyVar)
   | Expr.WithType ty ->
-      let ty = Type.map ty ~f:gen_k in
       Coercions.make_coercion_type env_types g ty cops
   | Expr.Witness ty ->
-      let ty = Type.map ty ~f:gen_k in
       let uty = Coercions.gen_type cops (`G g) env_types `Pos ty in
       UnionFind.make (witness (ty_var_at (`G g)) (Type.get_info ty) uty)
 and walk_match ~cops ~env_types ~env_terms ~g final =
@@ -316,7 +313,7 @@ let make_cops: unit ->
     }
   in (cops, ucs, ics)
 
-let build_constraints: unit Expr.t -> built_constraints =
+let build_constraints: k_var Expr.t -> built_constraints =
   fun expr ->
   let env_terms = Map.map ~f:fst Intrinsics.values in
   let cops, ucs, ics = make_cops () in
@@ -326,7 +323,6 @@ let build_constraints: unit Expr.t -> built_constraints =
          let g = Lazy.force g in
          let b_at = `G g in
          let env_types = Map.map Intrinsics.types ~f:(fun ty ->
-             let ty = Type.map ty ~f:gen_k in
              UnionFind.make
                ( `Quant
                    ( ty_var_at b_at
@@ -341,7 +337,6 @@ let build_constraints: unit Expr.t -> built_constraints =
            )
          in
          let env_terms = Map.map env_terms ~f:(fun ty ->
-             let ty = Type.map ty ~f:gen_k in
              lazy (`G (with_g g (fun g ->
                  let b_at = `G (Lazy.force g) in
                  UnionFind.make (
