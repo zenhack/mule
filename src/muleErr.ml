@@ -7,6 +7,7 @@ type ctor =
 type kind =
   [ `Row
   | `Type
+  | `Unknown
   | `Arrow of kind * kind
   ]
 type type_error
@@ -42,6 +43,7 @@ let show_op = function
 let rec show_kind = function
   | `Type -> "type"
   | `Row -> "row"
+  | `Unknown -> "unknown"
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 

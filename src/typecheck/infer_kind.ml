@@ -38,14 +38,7 @@ let rec unify_kind l r = match l, r with
 
   | _ ->
       MuleErr.(
-        throw
-          (TypeError
-             (MismatchedKinds
-                ( Kind.default_unknowns (extract l)
-                , Kind.default_unknowns (extract r)
-                )
-             )
-          )
+        throw (TypeError (MismatchedKinds(extract l, extract r)))
       )
 
 let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =

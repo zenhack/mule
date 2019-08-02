@@ -15,12 +15,6 @@ module Kind = struct
     | `Arrow of t * t
     ]
   [@@deriving sexp]
-
-  let rec default_unknowns = function
-    | `Unknown -> `Type
-    | `Row -> `Row
-    | `Type -> `Type
-    | `Arrow(x, y) -> `Arrow(default_unknowns x, default_unknowns y)
 end
 
 module Type = struct
