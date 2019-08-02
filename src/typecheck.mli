@@ -1,3 +1,3 @@
 val typecheck
-  : 'i Ast.Desugared.Expr.t
+  : Ast.Desugared.Kind.maybe_kind Ast.Desugared.Expr.t
   -> (int Ast.Desugared.Type.t, MuleErr.t) Result.t

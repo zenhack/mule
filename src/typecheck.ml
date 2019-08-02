@@ -1,6 +1,14 @@
+open Typecheck_types
+
+let rec gen_kind = function
+  | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
+  | `Type -> kvar_type
+  | `Row -> kvar_row
+  | `Unknown -> gen_k ()
+
 let typecheck expr =
   try
-    Ast.Desugared.Expr.map expr ~f:(fun _ -> Typecheck_types.gen_k ())
+    Ast.Desugared.Expr.map expr ~f:gen_kind
     |> Build_constraint.build_constraints
     |> Solve.solve_constraints
     |> Extract.get_var_type
