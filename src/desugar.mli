@@ -1,3 +1,5 @@
-open Ast
+module S = Ast.Surface.Expr
+module D = Ast.Desugared.Expr
+module DK = Ast.Desugared.Kind
 
-val desugar : Surface.Expr.t -> (unit Desugared.Expr.t, MuleErr.t) Result.t
+val desugar : S.t -> (DK.maybe_kind D.t, MuleErr.t) Result.t

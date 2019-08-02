@@ -120,7 +120,7 @@ and translate_record_body depth env = function
   | _ ->
       failwith "BUG"
 
-let translate: unit D.t -> R.t =
+let translate: 'i D.t -> R.t =
   fun exp ->
   let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
   snd (translate 0 env exp)

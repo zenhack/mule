@@ -18,13 +18,13 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Quant
-	     (() All c Unknown
+	     (() All c
 	      (Quant
-	       (() All d Unknown
+	       (() All d
 	        (Record (r_info ()) (r_types (() () (d)))
 	         (r_values
 	          (()

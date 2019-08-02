@@ -4,7 +4,7 @@ Desugared:
 	(App
 	 ((WithType
 	   (Quant
-	    (() Exist $0 Unknown
+	    (() Exist $0
 	     (Record (r_info ()) (r_types (() ((t (Var (() $0)))) ()))
 	      (r_values (() () ()))))))
 	  EmptyRecord))
@@ -12,7 +12,7 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() Exist a Unknown
+	 (() Exist a
 	  (Record (r_info ()) (r_types (() ((t (Var (() a)))) ()))
 	   (r_values (() () ())))))
 

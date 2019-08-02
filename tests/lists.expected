@@ -24,7 +24,7 @@ Desugared:
 	        (App
 	         ((WithType
 	           (Quant
-	            (() All a Unknown
+	            (() All a
 	             (Fn (() (App (() (Var (() list)) (Var (() a)))) (Var (() int)))))))
 	          (Lam
 	           (lst

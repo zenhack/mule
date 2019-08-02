@@ -10,10 +10,9 @@ Desugared:
 	      (App
 	       ((WithType
 	         (Quant
-	          (() All b Unknown
+	          (() All b
 	           (Fn
-	            (()
-	             (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a))))))
+	            (() (Quant (() All a (Fn (() (Var (() a)) (Var (() a))))))
 	             (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))))))
 	        (Lam (rank1 (App ((Var rank1) EmptyRecord))))))))))
 	  (App ((Var rank2) (Lam ($0 (Integer 4)))))))

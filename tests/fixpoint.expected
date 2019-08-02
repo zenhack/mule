@@ -17,9 +17,9 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Fn
 	     (()
 	      (Fn

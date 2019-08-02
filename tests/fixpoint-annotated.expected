@@ -10,9 +10,9 @@ Desugared:
 	      (App
 	       ((WithType
 	         (Quant
-	          (() All a Unknown
+	          (() All a
 	           (Quant
-	            (() All b Unknown
+	            (() All b
 	             (Fn
 	              (()
 	               (Fn
@@ -38,9 +38,9 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Fn
 	     (()
 	      (Fn

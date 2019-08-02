@@ -17,7 +17,7 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Record (r_info ())
 	   (r_types (() ((t (Named (() int))) (u (Named (() int)))) (a)))
 	   (r_values (() () ())))))

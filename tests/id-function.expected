@@ -5,7 +5,7 @@ Desugared:
 
 inferred type:
 
-	(Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a))))))
+	(Quant (() All a (Fn (() (Var (() a)) (Var (() a))))))
 
 Runtime term:
 

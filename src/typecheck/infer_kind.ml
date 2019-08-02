@@ -72,8 +72,8 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
           , body_t
           )
     | Type.Annotated(_, _, t) -> walk_type env t
-    | Type.Opaque (_, k) ->
-        Type.Opaque (to_kvar k, k)
+    | Type.Opaque k ->
+        Type.Opaque k
     | Type.Named (_, s) ->
         Type.Named (to_kvar `Unknown, s)
     | Type.Var(_, v) ->
@@ -117,24 +117,11 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
           }
     | Type.Union row ->
         Type.Union(walk_row env row)
-    | Type.Quant(_, q, v, k, body) ->
-        let u_var = to_kvar k in
+    | Type.Quant(_, q, v, body) ->
+        let u_var = gen_k () in
         let body' = walk_type (Map.set env ~key:v ~data:u_var) body in
-        (* XXX: HACK: if the variable name doesn't actually appear in the body
-         * of the type, then this will still be 'Unknown'. In this case we can
-         * safely default it to 'Type', since it isn't actually used. This is
-         * a bit gross though, in that it depends critically on the fact that
-         * (for kinds only) we are interleaving constraint building and
-         * unification steps.
-         *
-         * Ideally we'd re-jigger things so that this got dealt with in infer
-         * where we default everything else.
-        *)
-        let k' = match extract (UnionFind.get u_var) with
-          | `Unknown -> `Type
-          | k -> k
-        in
-        Type.Quant(to_kvar `Type, q, v, k', body')
+        UnionFind.merge unify_kind kvar_type (Type.get_info body');
+        Type.Quant(to_kvar `Type, q, v, body')
 and walk_row env (_, fields, rest) =
   let fields' = List.map fields ~f:(fun (l, t) -> (l, walk_type env t)) in
   match rest with

@@ -38,9 +38,9 @@ module Type = struct
         ; r_values : 'i row
         }
     | Union of 'i row
-    | Quant of ('i * quantifier * Var.t * Kind.maybe_kind * 'i t)
+    | Quant of ('i * quantifier * Var.t * 'i t)
     | Named of ('i * string)
-    | Opaque of ('i * Kind.maybe_kind)
+    | Opaque of 'i
     | Annotated of ('i * Var.t * 'i t)
     | TypeLam of ('i * Var.t * 'i t)
     | App of ('i * 'i t * 'i t)
@@ -56,16 +56,16 @@ module Type = struct
     | Path(x, _, _) -> x
     | Record {r_info; _} -> r_info
     | Union(x, _, _) -> x
-    | Quant(x, _, _, _, _) -> x
+    | Quant(x, _, _, _) -> x
     | Named(x, _) -> x
-    | Opaque (x, _) -> x
+    | Opaque x -> x
     | Annotated(x, _, _) -> x
     | TypeLam(x, _, _) -> x
     | App(x, _, _) -> x
 
   let rec map ty ~f = match ty with
     | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
-    | Opaque (x, k) -> Opaque (f x, k)
+    | Opaque x -> Opaque (f x)
     | Named(x, s) ->
         Named(f x, s)
     | Fn(x, l, r) ->
@@ -84,8 +84,8 @@ module Type = struct
           }
     | Union row ->
         Union(map_row row ~f)
-    | Quant(x, q, v, k, body) ->
-        Quant(f x, q, v, k, map body ~f)
+    | Quant(x, q, v, body) ->
+        Quant(f x, q, v, map body ~f)
     | TypeLam(x, v, body) ->
         TypeLam(f x, v, map body ~f)
     | App(x, fn, arg) ->

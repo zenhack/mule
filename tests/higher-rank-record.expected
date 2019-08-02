@@ -19,8 +19,7 @@ Desugared:
 	      (Lam
 	       (f
 	        (App
-	         ((WithType
-	           (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
+	         ((WithType (Quant (() All a (Fn (() (Var (() a)) (Var (() a)))))))
 	          (App ((GetField (Strict y)) (Var r)))))))))
 	    (App
 	     ((Fix Record)
@@ -37,11 +36,11 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Quant
-	     (() All c Unknown
+	     (() All c
 	      (Record (r_info ()) (r_types (() () (c)))
 	       (r_values
 	        (()

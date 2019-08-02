@@ -14,7 +14,7 @@ Desugared:
 	           ((App ((Update (Value x)) EmptyRecord))
 	            (App
 	             ((WithType
-	               (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a)))))))
+	               (Quant (() All a (Fn (() (Var (() a)) (Var (() a)))))))
 	              (App ((GetField (Lazy $0)) (Var $2)))))))))
 	        (App
 	         ((Match
@@ -44,11 +44,11 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Quant
-	     (() All c Unknown
+	     (() All c
 	      (Record (r_info ()) (r_types (() () (c)))
 	       (r_values
 	        (()

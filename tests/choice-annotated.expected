@@ -8,8 +8,7 @@ Desugared:
 	    (App
 	     ((WithType
 	       (Quant
-	        (() All a Unknown
-	         (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a)))))))))
+	        (() All a (Fn (() (Var (() a)) (Fn (() (Var (() a)) (Var (() a)))))))))
 	      (Var $0)))
 	    (App
 	     ((Fix Record)
@@ -27,13 +26,13 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Quant
-	     (() All c Unknown
+	     (() All c
 	      (Quant
-	       (() Exist d Unknown
+	       (() Exist d
 	        (Fn
 	         (() (Fn (() (Var (() d)) (Fn (() (Var (() d)) (Var (() d))))))
 	          (Record (r_info ()) (r_types (() () (c)))

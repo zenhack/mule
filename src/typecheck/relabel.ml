@@ -61,10 +61,10 @@ let relabel_type () =
         let r_values = go_row r_values in
         Record { r_info; r_types; r_values }
     | Union row -> Union (go_row row)
-    | Quant (i, q, v, k, body) ->
+    | Quant (i, q, v, body) ->
         let v' = get v in
         let body' = go body in
-        Quant (i, q, v', k, body')
+        Quant (i, q, v', body')
     | Path(i, v, ls) -> Path(i, get v, ls)
   and go_row (i, fields, rest) =
     let fields' = List.map fields ~f:(fun (l, ty) -> (l, go ty)) in

@@ -2,12 +2,12 @@
 Desugared:
 
 	(App
-	 ((WithType (Quant (() Exist t Unknown (Fn (() (Var (() t)) (Var (() t)))))))
+	 ((WithType (Quant (() Exist t (Fn (() (Var (() t)) (Var (() t)))))))
 	  (Lam (x (Integer 4)))))
 
 inferred type:
 
-	(Quant (() Exist a Unknown (Fn (() (Var (() a)) (Var (() a))))))
+	(Quant (() Exist a (Fn (() (Var (() a)) (Var (() a))))))
 
 Runtime term:
 

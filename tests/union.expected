@@ -6,9 +6,9 @@ Desugared:
 inferred type:
 
 	(Quant
-	 (() All a Unknown
+	 (() All a
 	  (Quant
-	   (() All b Unknown
+	   (() All b
 	    (Union
 	     (()
 	      ((Ok (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))

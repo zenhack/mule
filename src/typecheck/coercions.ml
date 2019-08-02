@@ -25,16 +25,6 @@ open Build_constraint_t
  * will invent a new constant type t and infer (t -> t).
 *)
 
-let rec gen_kind: Kind.maybe_kind -> u_kind = function
-  | `Type -> `Type
-  | `Row -> `Row
-  | `Arrow (x, y) ->
-      `Arrow
-        ( UnionFind.make (gen_kind x)
-        , UnionFind.make (gen_kind y)
-        )
-  | `Unknown -> failwith "BUG: infer_kind should have removed this."
-
 let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
   fun env u ->
   match UnionFind.get u with
@@ -139,7 +129,7 @@ let rec gen_type
       )
   | Type.Union row ->
       UnionFind.make (union tv (gen_row cops b_at env sign row))
-  | Type.Quant(_, q, v, k, body) ->
+  | Type.Quant(_, q, v, body) ->
       let ret = gen_u kvar_type b_at in
       let bound_v =
         UnionFind.make
@@ -150,7 +140,7 @@ let rec gen_type
                      ; b_at = `Ty (lazy ret)
                      }
                }
-             , UnionFind.make (gen_kind k)
+             , gen_k ()
              ))
       in
       let ret' =

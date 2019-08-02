@@ -10,12 +10,11 @@ Desugared:
 	      (App
 	       ((WithType
 	         (Quant
-	          (() All b Unknown
+	          (() All b
 	           (Fn
 	            (()
 	             (Fn
-	              (()
-	               (Quant (() All a Unknown (Fn (() (Var (() a)) (Var (() a))))))
+	              (() (Quant (() All a (Fn (() (Var (() a)) (Var (() a))))))
 	               (Var (() b))))
 	             (Var (() b)))))))
 	        (Lam (rank2 (App ((Var rank2) (Lam (x (Var x)))))))))))))
