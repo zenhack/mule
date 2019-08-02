@@ -97,7 +97,7 @@ let rec gen_type
       let rec go t = function
         | [] -> t
         | [lbl] ->
-            let ret = gen_u kvar_type b_at in
+            let ret = gen_u (gen_k ()) b_at in
             let record =
               UnionFind.make
                 (record (ty_var_at b_at)

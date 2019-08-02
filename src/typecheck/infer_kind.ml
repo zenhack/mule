@@ -89,10 +89,11 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
         end
     | Type.Path(_, v, ls) ->
         let u_var = Map.find_exn env v in
-        (* Needs to be of kind `Type, because we're projecting on a record. *)
+        (* v needs to be of kind `Type, because we're projecting on it as a
+         * record. *)
         UnionFind.merge unify_kind u_var (to_kvar `Type);
         Type.Path(u_var, v, ls)
-    | Type.Fn(_, Type.Annotated(_, v, l), r) ->
+    | Type.Fn(_, (Type.Annotated(_, v, _) as l), r) ->
         let l' = walk_type env l in
         let r' = walk_type (Map.set env ~key:v ~data:(to_kvar `Type)) r in
         Type.Fn
@@ -133,7 +134,7 @@ and walk_row env (_, fields, rest) =
       (to_kvar `Type, fields', Some v)
 and collect_assoc_types env (i, field_types, rest) =
   let env =
-    List.map field_types ~f:(fun (lbl, _) -> (lbl, to_kvar `Unknown))
+    List.map field_types ~f:(fun (lbl, t) -> (lbl, Type.get_info t))
     |> List.fold ~init:env ~f:(fun accum (lbl, u) ->
         Map.set
           accum
