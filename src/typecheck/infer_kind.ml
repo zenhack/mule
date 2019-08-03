@@ -67,12 +67,13 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
     | Type.Annotated(_, _, t) -> walk_type env t
     | Type.Opaque k ->
         Type.Opaque k
-    | Type.Named (_, s) ->
-        Type.Named (to_kvar `Unknown, s)
-    | Type.Var(_, v) ->
+    | Type.Named (k, s) ->
+        Type.Named (k, s)
+    | Type.Var(k, v) ->
         (* TODO: proper exception *)
         begin match Map.find env v with
           | Some u_var ->
+              UnionFind.merge unify_kind k u_var;
               Type.Var(u_var, v)
           | None ->
               failwith
