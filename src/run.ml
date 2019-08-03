@@ -52,23 +52,22 @@ let desugar_typecheck expr =
 let run : string -> unit LwtResult.t = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
    * regardless of whether we're at the repl: *)
-  let module Let_syntax = Lwt_syntax in
   match MParser.parse_string Parser.repl_line input () with
   | MParser.Failed (msg, _) ->
-      let%map _ = display "Parse Error" msg in
-      Ok ()
+      let%lwt _ = display "Parse Error" msg in
+      Lwt.return (Ok ())
   | MParser.Success None ->
       (* empty input *)
       Lwt.return (Ok ())
   | MParser.Success (Some expr) ->
-      begin match%bind desugar_typecheck expr with
+      begin match%lwt desugar_typecheck expr with
         | Error e ->
-            let%map _ = print_endline (MuleErr.show e) in
-            Error e
+            let%lwt _ = print_endline (MuleErr.show e) in
+            Lwt.return (Error e)
         | Ok dexp ->
             let rexp = To_runtime.translate dexp in
-            let%bind _ = display "Runtime term" (Pretty.runtime_expr rexp) in
+            let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
             let ret = Eval.eval rexp in
-            let%map _ = display "Evaluated" (Pretty.runtime_expr ret) in
-            Ok ()
+            let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
+            Lwt.return (Ok ())
       end

@@ -1,8 +1,6 @@
 
 module R = Ast.Runtime
 
-module Let_syntax = Lwt_syntax
-
 let type_of_string_exn s =
   match MParser.parse_string Parser.typ s () with
   | MParser.Failed (msg, _) -> failwith ("parse failed : " ^ msg)
@@ -37,7 +35,7 @@ let io_just = prim (fun x ->
   )
 
 let io_then = prim (fun x -> prim(fun f -> prim_io (
-    let%bind x' = assert_io x in
+    let%lwt x' = assert_io x in
     assert_io (Eval.eval(App(f, x')))
   )))
 
