@@ -6,3 +6,4 @@ let flag: string -> bool =
 
 let render_constraints = flag "RENDER_CONSTRAINTS"
 let print_eval_steps   = flag "PRINT_EVAL_STEPS"
+let always_print_stack_trace = flag "ALWAYS_PRINT_STACK_TRACE"

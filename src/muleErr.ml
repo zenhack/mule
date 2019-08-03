@@ -27,9 +27,6 @@ type t =
 
 exception MuleExn of t
 
-let throw e =
-  raise (MuleExn e)
-
 let show_ctor = function
   | `Named name -> name
   | `Extend lbl -> "row containing " ^ Ast.Label.to_string lbl
@@ -75,3 +72,13 @@ let show = function
       "Empty match expression."
   | IncompletePattern _ ->
       "Incomplete pattern"
+
+let throw e =
+  if Config.always_print_stack_trace then
+    begin
+      Caml.print_endline ("Mule Exception: " ^ show e);
+      Caml.Printexc.print_raw_backtrace
+        Caml.stdout
+        (Caml.Printexc.get_callstack 25);
+    end;
+  raise (MuleExn e)
