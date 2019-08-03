@@ -81,12 +81,18 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
                  ^ " This should have been caught by the linter."
                 )
         end
-    | Type.Path(_, v, ls) ->
-        let u_var = Map.find_exn env v in
-        (* v needs to be of kind `Type, because we're projecting on it as a
-         * record. *)
-        UnionFind.merge unify_kind u_var (to_kvar `Type);
-        Type.Path(u_var, v, ls)
+    | Type.Path(k, v, ls) ->
+        let kv = Map.find_exn env v in
+        (* The variable itself needs to be of kind `Type, because we're
+         * projecting on it as a record. *)
+        UnionFind.merge unify_kind kv kvar_type;
+        (* TODO: I(isd) have a strong feeling that this is missing something here;
+         * in particular, we're not doing anything with the kinds of the intermediate
+         * labels, which also should have kind type.
+         *
+         * This whole business is weird because of the way records are mixed in...
+         *)
+        Type.Path(k, v, ls)
     | Type.Fn(_, (Type.Annotated(_, v, _) as l), r) ->
         let l' = walk_type env l in
         let r' = walk_type (Map.set env ~key:v ~data:(to_kvar `Type)) r in
