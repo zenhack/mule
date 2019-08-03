@@ -137,7 +137,7 @@ let rec desugar_type' = function
   | ST.Recur(v, body) ->
       DT.Recur(`Type, v, desugar_type' body)
   | ST.Var v ->
-      DT.Var(`Type, v)
+      DT.Var(`Unknown, v)
   | ST.Union u ->
       DT.Union (desugar_union_type None u)
   | ST.Record r ->
