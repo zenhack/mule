@@ -552,5 +552,4 @@ and simplify_bindings = function
 
 
 let desugar e =
-  try Ok (prune (desugar e))
-  with MuleErr.MuleExn err -> Error err
+  prune (desugar e)

@@ -225,12 +225,6 @@ let check_duplicate_record_fields =
   go_expr
 
 let check expr =
-  try
-    begin
-      check_unbound_vars expr;
-      check_duplicate_record_fields expr;
-      (* TODO: check for duplicate bound variables (in recursive lets). *)
-      Ok ()
-    end
-  with
-    MuleErr.MuleExn e -> Error e
+  check_unbound_vars expr;
+  check_duplicate_record_fields expr
+(* TODO: check for duplicate bound variables (in recursive lets). *)

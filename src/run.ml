@@ -32,22 +32,19 @@ module LwtResult = struct
     Lwt.map (Result.map ~f) x
 
   let lwt: 'a Lwt.t -> 'a t =
-    Lwt.map Result.return
+    fun x -> Lwt.map Result.return x
 
   let result: ('a, MuleErr.t) Result.t -> 'a t =
     Lwt.return
 end
 
 let desugar_typecheck expr =
-  let module L = LwtResult in
-  let module Let_syntax = L in
-
-  let%bind _ = L.result (Lint.check expr) in
-  let%bind dexp = L.result (Desugar.desugar expr) in
-  let%bind _ = L.lwt (display "Desugared" (Pretty.expr dexp)) in
-  let%bind ty = L.result (Typecheck.typecheck dexp) in
-  let%bind _ = L.lwt (display "inferred type"  (Pretty.typ ty)) in
-  L.return dexp
+  let _ = Lint.check expr in
+  let dexp = Desugar.desugar expr in
+  let%lwt _ = display "Desugared" (Pretty.expr dexp) in
+  let ty = Typecheck.typecheck dexp in
+  let%lwt _ = display "inferred type"  (Pretty.typ ty) in
+  Lwt.return dexp
 
 let run : string -> unit LwtResult.t = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
@@ -60,14 +57,16 @@ let run : string -> unit LwtResult.t = fun input ->
       (* empty input *)
       Lwt.return (Ok ())
   | MParser.Success (Some expr) ->
-      begin match%lwt desugar_typecheck expr with
-        | Error e ->
+      begin
+        try%lwt
+          let%lwt dexp = desugar_typecheck expr in
+          let rexp = To_runtime.translate dexp in
+          let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
+          let ret = Eval.eval rexp in
+          let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
+          Lwt.return (Ok ())
+        with
+        | MuleErr.MuleExn e ->
             let%lwt _ = print_endline (MuleErr.show e) in
             Lwt.return (Error e)
-        | Ok dexp ->
-            let rexp = To_runtime.translate dexp in
-            let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
-            let ret = Eval.eval rexp in
-            let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
-            Lwt.return (Ok ())
       end

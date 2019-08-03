@@ -6,4 +6,4 @@
   * This is invoked by the type checker, before doing the more principled
   * type inference algorithm.
 *)
-val check : Ast.Surface.Expr.t -> (unit, MuleErr.t) Result.t
+val check : Ast.Surface.Expr.t -> unit
