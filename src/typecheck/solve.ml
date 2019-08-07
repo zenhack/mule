@@ -97,6 +97,23 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                   { b_ty = `Flex
                   ; b_at = `G new_g
                   }
+                else if Poly.equal old_bound.b_ty `Explicit then
+                  begin match old_bound.b_at with
+                    | `G _ -> failwith "BUG: explicit binding points at g-node"
+                    | `Ty at ->
+                        let {ty_id = old_parent_id; _} =
+                          Lazy.force at
+                          |> UnionFind.get
+                          |> get_tyvar
+                        in
+                        begin match Map.find !visited old_parent_id with
+                          | None -> failwith "BUG: node for parent not in map."
+                          | Some new_parent_node ->
+                              { b_ty = `Explicit
+                              ; b_at = `Ty (lazy new_parent_node)
+                              }
+                        end
+                  end
                 else
                   { b_ty = old_bound.b_ty
                   ; b_at = `Ty new_root

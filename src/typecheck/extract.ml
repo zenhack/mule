@@ -295,8 +295,12 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
         )
   | `Named(i, name, []) ->
       Type.Named (i, name)
-  | `Named (_, _, _ :: _) ->
-      failwith "BUG: can't use Named with args in desugared ast."
+  | `Named (i, name, params) ->
+      List.fold_right params ~init:(Type.Named(i, name)) ~f:(fun p acc ->
+          (* XXX(isd): Not 100% sure the sign is right here; it's negative
+           * position, but at the *kind* level, so? *)
+          Type.App(i, acc, finish_extract_t sign p)
+        )
   | `Union(_, row) ->
       Type.Union (finish_extract_row sign row)
   | `Record(i, rowl, rowr) ->
