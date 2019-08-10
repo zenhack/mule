@@ -57,15 +57,14 @@ let root_io_val =
 
 let root_io =
   { want_type = type_of_string_exn
-        "(io : {
-        , type cmd a
+        "all iocmd. {
+        , type cmd a = iocmd a
         , just : all a. a -> cmd a
         , then : all a b. cmd a -> (a -> cmd b) -> cmd b
         , print : text -> cmd {}
       }
-    )
     ->
-    io.cmd {}
+    iocmd {}
     "
   ; run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val)))
   }
