@@ -347,4 +347,8 @@ and value_field_def = lazy (
 let expr = Lazy.force expr
 let typ = Lazy.force typ
 
-let repl_line = ignorable >> option expr << eof
+let file p = ignorable >> p << eof
+let expr_file = file expr
+let type_file = file typ
+
+let repl_line = file (option expr)

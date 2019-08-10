@@ -43,7 +43,7 @@ let main () =
                     Caml.exit 1
                 | Some runner ->
                     let%lwt input = slurp_file file_name in
-                    begin match MParser.parse_string Parser.expr input () with
+                    begin match MParser.parse_string Parser.expr_file input () with
                       | Failed(msg, _) ->
                           let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
                           Caml.exit 1
