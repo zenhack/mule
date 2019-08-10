@@ -14,6 +14,8 @@ type semi_t =
   | `Record of (int * semi_row * semi_row)
   | `Recur of (int * semi_t)
   | `Visited of int
+  | `App of (int * semi_t * semi_t)
+  | `Lambda of (int * semi_var * semi_t)
   ]
 and semi_row =
   [ `Extend of (Label.t * semi_t * semi_row)
@@ -49,6 +51,12 @@ let rec add_rec_binders: semi_t -> (IntSet.t * semi_t) = fun ty ->
       ( IntSet.empty
       , ty
       )
+  | `App(i, f, x) ->
+      let (fvars, f') = add_rec_binders f in
+      let (xvars, x') = add_rec_binders x in
+      ( Set.union fvars xvars
+      , `App(i, f', x')
+      )
   | `Var {v_var_id; _} ->
       ( IntSet.singleton v_var_id
       , ty
@@ -61,6 +69,11 @@ let rec add_rec_binders: semi_t -> (IntSet.t * semi_t) = fun ty ->
       let (vs, ts) = add_rec_binders t in
       ( Set.remove vs i
       , `Recur(i, ts)
+      )
+  | `Lambda(i, param, body) ->
+      let (vs, body) = add_rec_binders body in
+      ( Set.remove vs i
+      , `Lambda(i, param, body)
       )
   | `Fn (i, f, x) ->
       let (fv, ft) = add_rec_binders f in
@@ -128,6 +141,11 @@ let rec semi_extract_t: IntSet.t -> u_type UnionFind.var -> semi_t =
                   )
             | "|", [row, _] ->
                 `Union(ty_id, semi_extract_row visited row)
+            | "<apply>", [f, _; x, _] ->
+                `App(ty_id, semi_extract_t visited f, semi_extract_t visited x)
+            | "<lambda>", [param, _; body, _] ->
+                let param_var = semi_extract_tyvar (get_tyvar (UnionFind.get param)) in
+                `Lambda(ty_id, param_var, semi_extract_t visited body)
             | _ ->
                 `Named(ty_id, name, List.map args ~f:(fun (ty, _) -> semi_extract_t visited ty))
           end
@@ -194,6 +212,15 @@ let rec fix_quantifiers: semi_t -> (semi_t * fix_q_ctx) = function
         |> List.fold ~init:empty_ctx ~f:merge_ctxs
       in
       (`Named(i, name, fixed_args), fixed_ctx)
+  | `App(i, f, x) ->
+      let (f', f_ctx) = fix_quantifiers f in
+      let (x', x_ctx) = fix_quantifiers x in
+      ( `App(i, f', x')
+      , merge_ctxs f_ctx x_ctx
+      )
+  | `Lambda(i, param, body) ->
+      let (body', ctx) = fix_quantifiers body in
+      (`Lambda(i, param, body'), ctx)
   | `Quant q ->
       let (arg', arg_ctx) = fix_quantifiers q.q_arg in
       begin match Map.find arg_ctx.fq_var_of_q q.q_id with
@@ -273,13 +300,18 @@ let sign_flag_to_q sign flag = match sign, flag with
   | `Neg, `Flex -> `Exist
   | `Neg, `Rigid -> `All
   | `Neg, `Explicit | `Pos, `Explicit ->
+      `All
+        (*
       (* TODO: see if we can find a way to avoid this possibility statically. *)
       failwith "BUG: explcit bounds should not appear in quantifiers."
+           *)
 
 let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
   | `Var v -> Type.Var(v.v_var_id, ivar v.v_var_id)
   | `Visited v -> Type.Var(v, ivar v)
   | `Recur(v, arg) -> Type.Recur(v, ivar v, finish_extract_t sign arg)
+  | `Lambda(i, param, body) ->
+      Type.TypeLam(i, ivar param.v_var_id, finish_extract_t sign body)
   | `Quant q ->
       Type.Quant
         ( q.q_id
@@ -295,12 +327,10 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
         )
   | `Named(i, name, []) ->
       Type.Named (i, name)
-  | `Named (i, name, params) ->
-      List.fold_right params ~init:(Type.Named(i, name)) ~f:(fun p acc ->
-          (* XXX(isd): Not 100% sure the sign is right here; it's negative
-           * position, but at the *kind* level, so? *)
-          Type.App(i, acc, finish_extract_t sign p)
-        )
+  | `App(i, f, x) ->
+      Type.App(i, finish_extract_t sign f, finish_extract_t sign x)
+  | `Named (_i, _name, _params) ->
+      failwith "BUG: can't use Named with arguments in desugared ast."
   | `Union(_, row) ->
       Type.Union (finish_extract_row sign row)
   | `Record(i, rowl, rowr) ->
