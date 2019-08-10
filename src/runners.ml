@@ -42,6 +42,11 @@ let io_then = prim (fun x -> prim(fun f -> prim_io (
 let io_print =
   prim (fun s -> ignore_io (Lwt_io.write Lwt_io.stdout (assert_text s)))
 
+let io_get_line =
+  Lwt_io.read_line Lwt_io.stdin
+  |> Lwt.map (fun s -> R.Expr.Text s)
+  |> prim_io
+
 let mk_record fields =
   fields
   |> List.map ~f:(fun (k, v) -> (Ast.Label.of_string k, v))
@@ -53,6 +58,7 @@ let root_io_val =
     [ "just", io_just
     ; "then", io_then
     ; "print", io_print
+    ; "get-line", io_get_line
     ]
 
 let root_io =
@@ -62,6 +68,7 @@ let root_io =
         , just : all a. a -> cmd a
         , then : all a b. cmd a -> (a -> cmd b) -> cmd b
         , print : text -> cmd {}
+        , get-line : cmd text
       }
     ->
     iocmd {}
