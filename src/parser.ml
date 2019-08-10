@@ -196,7 +196,7 @@ and record_type = lazy (
     let%bind l = kwd "type" >> label in
     let%bind vars = many var in
     let%bind () = optional text in
-    let%map ty = option (kwd "=" >> lazy_p typ_term)
+    let%map ty = option (kwd "=" >> lazy_p typ)
     in
     Type.Type(l, vars, ty)
   ) and field_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
