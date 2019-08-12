@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	(Integer 4)
+	(Const (Integer 4))
 
 Evaluated:
 
-	(Integer 4)
+	(Const (Integer 4))

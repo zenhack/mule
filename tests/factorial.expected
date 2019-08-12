@@ -10,7 +10,7 @@ Desugared:
 	      (Lam
 	       (n
 	        (App
-	         ((ConstMatch (cm_cases ((0 (Const (Integer 1)))))
+	         ((ConstMatch (cm_cases (((Integer 0) (Const (Integer 1)))))
 	           (cm_default
 	            (Lam
 	             (n
@@ -29,7 +29,7 @@ inferred type:
 Runtime term:
 
 	(App
-	 ((Lam (0 () (App ((Var 0) (Integer 5)))))
+	 ((Lam (0 () (App ((Var 0) (Const (Integer 5))))))
 	  (App
 	   ((Fix Let)
 	    (Lam
@@ -37,16 +37,17 @@ Runtime term:
 	      (Lam
 	       (2 ()
 	        (App
-	         ((ConstMatch (cm_cases ((0 (Integer 1))))
+	         ((ConstMatch (cm_cases (((Integer 0) (Const (Integer 1)))))
 	           (cm_default
 	            (Lam
 	             (2 ()
 	              (App
 	               ((App ((Prim <fun>) (Var 0)))
 	                (App
-	                 ((Var 2) (App ((App ((Prim <fun>) (Var 0))) (Integer 1)))))))))))
+	                 ((Var 2)
+	                  (App ((App ((Prim <fun>) (Var 0))) (Const (Integer 1))))))))))))
 	          (Var 0)))))))))))
 
 Evaluated:
 
-	(Integer 120)
+	(Const (Integer 120))

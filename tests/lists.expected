@@ -111,7 +111,7 @@ Runtime term:
 	          (Lam
 	           (0 ()
 	            (Record
-	             ((hd (Integer 4))
+	             ((hd (Const (Integer 4)))
 	              (tl
 	               (App
 	                ((Lam (0 () (Ctor (Cons (Var 0)))))
@@ -120,7 +120,7 @@ Runtime term:
 	                   (Lam
 	                    (0 ()
 	                     (Record
-	                      ((hd (Integer 0))
+	                      ((hd (Const (Integer 0)))
 	                       (tl
 	                        (App
 	                         ((Lam (0 () (Ctor (Cons (Var 0)))))
@@ -129,7 +129,7 @@ Runtime term:
 	                            (Lam
 	                             (0 ()
 	                              (Record
-	                               ((hd (Integer 1))
+	                               ((hd (Const (Integer 1)))
 	                                (tl
 	                                 (App
 	                                  ((Lam (0 () (Ctor (Nil (Var 0)))))
@@ -152,7 +152,7 @@ Runtime term:
 	                    ((Lam
 	                      (3 ()
 	                       (App
-	                        ((App ((Prim <fun>) (Integer 1)))
+	                        ((App ((Prim <fun>) (Const (Integer 1))))
 	                         (App
 	                          ((Var 3) (App ((GetField (Strict tl)) (Var 0))))))))))))
 	                  (Var 0))))))
@@ -160,11 +160,12 @@ Runtime term:
 	              (Lam
 	               (0 ()
 	                (App
-	                 ((Match (cases ()) (default ((Lam (0 () (Integer 0))))))
+	                 ((Match (cases ())
+	                   (default ((Lam (0 () (Const (Integer 0)))))))
 	                  (Var 0))))))))
 	           (default ()))
 	          (Var 0)))))))))))
 
 Evaluated:
 
-	(Integer 3)
+	(Const (Integer 3))

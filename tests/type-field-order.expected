@@ -23,8 +23,8 @@ inferred type:
 
 Runtime term:
 
-	(App ((Fix Record) (Lam (0 () (Record ((x (Integer 4))))))))
+	(App ((Fix Record) (Lam (0 () (Record ((x (Const (Integer 4)))))))))
 
 Evaluated:
 
-	(Record ((x (Integer 4))))
+	(Record ((x (Const (Integer 4)))))

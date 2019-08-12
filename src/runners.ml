@@ -1,5 +1,6 @@
 
 module R = Ast.Runtime
+module C = Ast.Const
 
 let type_of_string_exn s =
   match MParser.parse_string Parser.typ s () with
@@ -24,7 +25,7 @@ let assert_io = function
   | _ -> failwith "BUG: run-time type error."
 
 let assert_text = function
-  | R.Expr.Text s -> s
+  | R.Expr.Const (C.Text s) -> s
   | _ -> failwith "BUG: run-time type error."
 
 let ignore_io io =
@@ -44,7 +45,7 @@ let io_print =
 
 let io_get_line =
   Lwt_io.read_line Lwt_io.stdin
-  |> Lwt.map (fun s -> R.Expr.Text s)
+  |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
   |> prim_io
 
 let mk_record fields =

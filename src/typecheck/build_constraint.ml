@@ -22,9 +22,12 @@ let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
           )
       )
 
+let walk_const g = function
+  | Const.Integer _ -> UnionFind.make (int (gen_ty_var g))
+  | Const.Text _ -> UnionFind.make (text (gen_ty_var g))
+
 let rec walk ~cops ~env_types ~env_terms ~g = function
-  | Expr.Const (Const.Integer _) -> UnionFind.make (int (gen_ty_var g))
-  | Expr.Const (Const.Text _) -> UnionFind.make (text (gen_ty_var g))
+  | Expr.Const c -> walk_const g c
   | Expr.Var v ->
       let tv = gen_u kvar_type (`G g) in
       begin match Lazy.force (Map.find_exn env_terms v) with
@@ -238,15 +241,14 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
       walk ~cops ~env_types ~env_terms ~g term
   | Expr.ConstMatch {cm_cases; cm_default} ->
       let body_ty = gen_u kvar_type (`G g) in
-      Map.iter cm_cases ~f:(fun body ->
+      let arg_ty = gen_u kvar_type (`G g) in
+      Map.iteri cm_cases ~f:(fun ~key:c ~data:body ->
           let ty = walk ~cops ~env_types ~env_terms ~g body in
-          cops.constrain_unify ty body_ty
+          cops.constrain_unify ty body_ty;
+          cops.constrain_unify (walk_const g c) arg_ty
         );
-      let f_ty = UnionFind.make
-          (fn (gen_ty_var g)
-             (UnionFind.make (int (gen_ty_var g)))
-             body_ty
-          )
+      let f_ty =
+        UnionFind.make (fn (gen_ty_var g) arg_ty body_ty)
       in
       let default_ty =
         walk ~cops ~env_types ~env_terms ~g cm_default

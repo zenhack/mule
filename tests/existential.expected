@@ -11,8 +11,8 @@ inferred type:
 
 Runtime term:
 
-	(Lam (0 () (Integer 4)))
+	(Lam (0 () (Const (Integer 4))))
 
 Evaluated:
 
-	(Lam (0 () (Integer 4)))
+	(Lam (0 () (Const (Integer 4))))

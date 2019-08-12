@@ -50,9 +50,10 @@ Runtime term:
 	    (Lam
 	     (0 ()
 	      (Record
-	       ((hd (Integer 4))
+	       ((hd (Const (Integer 4)))
 	        (tl (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ()))))))))))))
 
 Evaluated:
 
-	(Ctor (Cons (Record ((hd (Integer 4)) (tl (Ctor (Nil (Record ()))))))))
+	(Ctor
+	 (Cons (Record ((hd (Const (Integer 4))) (tl (Ctor (Nil (Record ()))))))))

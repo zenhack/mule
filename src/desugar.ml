@@ -375,7 +375,7 @@ and desugar_match cases =
     | ((SP.Ctor _, _) :: _) ->
         desugar_lbl_match LabelMap.empty cases
     | ((SP.Integer _, _) :: _) ->
-        desugar_int_match ZMap.empty cases
+        desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
         desugar (S.Lam([pat], body))
     | [] -> D.Match
@@ -385,7 +385,7 @@ and desugar_match cases =
     | ((SP.Wild, _) :: _) | ((SP.Var _, _) :: _) ->
         unreachable_case SP.Wild
   end
-and desugar_int_match dict = function
+and desugar_const_match dict = function
   | [(SP.Wild, body)] -> D.ConstMatch
         { cm_default = D.Lam(Gensym.anon_var (), desugar body)
         ; cm_cases = dict
@@ -400,11 +400,11 @@ and desugar_int_match dict = function
   | ((SP.Var _, _) :: _) ->
       unreachable_case SP.Wild
   | ((SP.Integer n, body) :: rest) ->
-      begin match Map.find dict n with
+      begin match Map.find dict (C.Integer n) with
         | Some _ -> unreachable_case (SP.Integer n)
         | None ->
-            desugar_int_match
-              (Map.set dict ~key:n ~data:(desugar body))
+            desugar_const_match
+              (Map.set dict ~key:(C.Integer n) ~data:(desugar body))
               rest
       end
   | [] ->

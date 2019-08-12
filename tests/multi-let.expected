@@ -39,12 +39,12 @@ Runtime term:
 	    (Lam
 	     (0 ()
 	      (Record
-	       ((x (Integer 1))
+	       ((x (Const (Integer 1)))
 	        (y
 	         (App
 	          ((App ((Prim <fun>) (App ((GetField (Lazy x)) (Var 0)))))
-	           (Integer 2))))))))))))
+	           (Const (Integer 2)))))))))))))
 
 Evaluated:
 
-	(Integer 3)
+	(Const (Integer 3))

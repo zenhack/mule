@@ -23,13 +23,12 @@ module Expr = struct
         default: t option;
       }
     | ConstMatch of
-        { cm_cases: t ZMap.t
+        { cm_cases: t ConstMap.t
         ; cm_default: t
         }
     | Lazy of (t list * t ref)
     | Vec of t array
-    | Integer of Bigint.t
-    | Text of string
+    | Const of Const.t
     | Prim of (t -> t)
     | PrimIO of (t io)
   [@@deriving sexp_of]

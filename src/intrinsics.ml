@@ -1,5 +1,6 @@
 open Ast
 
+module C = Const
 module D = Desugared
 module R = Runtime
 
@@ -11,17 +12,24 @@ let fn_t p r = D.Type.Fn (kvar_type, p, r)
 
 let prim x = R.Expr.Prim x
 
-let assert_int = function
-  | R.Expr.Integer n -> n
+let int n = R.Expr.Const (C.Integer n)
+let text s = R.Expr.Const (C.Text s)
+
+let assert_const = function
+  | R.Expr.Const c -> c
   | _ -> failwith "BUG: run-time type error."
 
-let assert_text = function
-  | R.Expr.Text s -> s
+let assert_int e = match assert_const e with
+  | C.Integer n -> n
+  | _ -> failwith "BUG: run-time type error."
+
+let assert_text e = match assert_const e with
+  | C.Text s -> s
   | _ -> failwith "BUG: run-time type error."
 
 let int_binop f =
   ( fn_t int_t (fn_t int_t int_t)
-  , prim (fun x -> prim (fun y -> R.Expr.Integer (f (assert_int x) (assert_int y))))
+  , prim (fun x -> prim (fun y -> R.Expr.Const (C.Integer (f (assert_int x) (assert_int y)))))
   )
 
 let dict kvs =
@@ -62,13 +70,11 @@ let values = dict
           ]
       , recordVal
           [ "append",
-            prim (fun l ->
-                prim (fun r ->
-                    R.Expr.Text (assert_text l ^ assert_text r)))
+            prim (fun l -> prim (fun r -> text (assert_text l ^ assert_text r)))
           ; "from-int",
-            prim (fun x -> R.Expr.Text (Z.to_string (assert_int x)))
+            prim (fun x -> text (Z.to_string (assert_int x)))
           ; "length",
-            prim (fun s -> R.Expr.Integer (Z.of_int (String.length (assert_text s))))
+            prim (fun s -> int (Z.of_int (String.length (assert_text s))))
           ]
       )
     ]

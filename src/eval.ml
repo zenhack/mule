@@ -32,8 +32,7 @@ and eval stack expr =
   begin match whnf stack expr with
     | PrimIO io -> PrimIO io
     | Prim p -> Prim p
-    | Integer n -> Integer n
-    | Text s -> Text s
+    | Const c -> Const c
     | Lazy (env, e) ->
         e := eval (env @ stack) !e;
         !e
@@ -83,7 +82,12 @@ and apply stack f arg =
     | Match {cases; default} ->
         eval_match stack cases default (eval stack arg)
     | ConstMatch {cm_cases; cm_default} ->
-        eval_int_match stack cm_cases cm_default (eval stack arg)
+        begin match eval stack arg with
+          | Const c ->
+              eval_const_match stack cm_cases cm_default c
+          | e ->
+              bug "ConstMatch matched against non constant" e
+        end
     | GetField (`Strict, label) ->
         begin match eval stack arg with
           | Record r ->
@@ -137,12 +141,9 @@ and eval_match stack cases default =
         | None ->
             bug "Match failed" (Match{cases; default})
       end
-and eval_int_match stack cases default = function
-  | Integer n ->
-      begin match Map.find cases n with
-        | Some v -> eval stack v
-        | None -> eval stack (App(default, Integer n))
-      end
-  | e ->
-      bug "Tried to intmatch on non-integer" e
+and eval_const_match stack cases default c =
+  begin match Map.find cases c with
+    | Some v -> eval stack v
+    | None -> eval stack (App(default, Const c))
+  end
 let eval e = eval [] e

@@ -106,7 +106,7 @@ module Expr = struct
         default: (Var.t option * 'i t) option;
       }
     | ConstMatch of
-        { cm_cases : 'i t ZMap.t
+        { cm_cases : 'i t ConstMap.t
         ; cm_default: 'i t
         }
     | WithType of 'i Type.t

@@ -31,10 +31,12 @@ Runtime term:
 	(App
 	 ((Lam
 	   (0 ()
-	    (App ((Var 0) (Lam (0 () (App ((Var 0) (App ((Var 0) (Integer 4)))))))))))
+	    (App
+	     ((Var 0)
+	      (Lam (0 () (App ((Var 0) (App ((Var 0) (Const (Integer 4))))))))))))
 	  (App
 	   ((Fix Let) (Lam (0 () (Lam (0 () (App ((Var 0) (Lam (0 () (Var 0)))))))))))))
 
 Evaluated:
 
-	(Integer 4)
+	(Const (Integer 4))
