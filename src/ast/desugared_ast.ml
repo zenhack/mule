@@ -105,9 +105,9 @@ module Expr = struct
         cases: (Var.t * 'i t) LabelMap.t;
         default: (Var.t option * 'i t) option;
       }
-    | IntMatch of
-        { im_cases : 'i t ZMap.t
-        ; im_default: 'i t
+    | ConstMatch of
+        { cm_cases : 'i t ZMap.t
+        ; cm_default: 'i t
         }
     | WithType of 'i Type.t
     | Witness of 'i Type.t
@@ -126,10 +126,10 @@ module Expr = struct
           { cases = Map.map cases ~f:(fun (k, v) -> (k, f v))
           ; default = Option.map default ~f:(fun (k, v) -> (k, f v))
           }
-    | IntMatch {im_cases; im_default} ->
-        IntMatch
-          { im_cases = Map.map im_cases ~f
-          ; im_default = f im_default
+    | ConstMatch {cm_cases; cm_default} ->
+        ConstMatch
+          { cm_cases = Map.map cm_cases ~f
+          ; cm_default = f cm_default
           }
     | Let(v, e, body) -> Let(v, f e, f body)
     | LetType(binds, body) -> LetType(binds, f body)
@@ -161,10 +161,10 @@ module Expr = struct
           { cases = Map.map cases ~f:f'
           ; default = Option.map default ~f:f'
           }
-    | IntMatch {im_cases; im_default} ->
-        IntMatch
-          { im_cases = Map.map im_cases ~f:(map ~f)
-          ; im_default = map im_default ~f
+    | ConstMatch {cm_cases; cm_default} ->
+        ConstMatch
+          { cm_cases = Map.map cm_cases ~f:(map ~f)
+          ; cm_default = map cm_default ~f
           }
     | Let(v, e, body) -> Let(v, map e ~f, map body ~f)
     | Var x -> Var x

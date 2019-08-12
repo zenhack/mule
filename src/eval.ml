@@ -50,13 +50,13 @@ and eval stack expr =
           { cases = Map.map cases ~f:(eval stack)
           ; default = Option.map default ~f:(eval stack)
           }
-    | IntMatch {im_cases; im_default} ->
-        (* TODO/XXX: we definitely don't want to evaluate im_cases here,
+    | ConstMatch {cm_cases; cm_default} ->
+        (* TODO/XXX: we definitely don't want to evaluate cm_cases here,
          * but we probably still need to do something about embedded free
          * variables. *)
-        IntMatch
-          { im_cases
-          ; im_default = eval stack im_default
+        ConstMatch
+          { cm_cases
+          ; cm_default = eval stack cm_default
           }
     | GetField l -> GetField l
     | Ctor (c, arg) -> Ctor (c, eval stack arg)
@@ -82,8 +82,8 @@ and apply stack f arg =
         eval (eval stack arg :: (env @ stack)) body
     | Match {cases; default} ->
         eval_match stack cases default (eval stack arg)
-    | IntMatch {im_cases; im_default} ->
-        eval_int_match stack im_cases im_default (eval stack arg)
+    | ConstMatch {cm_cases; cm_default} ->
+        eval_int_match stack cm_cases cm_default (eval stack arg)
     | GetField (`Strict, label) ->
         begin match eval stack arg with
           | Record r ->

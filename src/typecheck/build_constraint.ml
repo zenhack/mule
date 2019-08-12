@@ -235,9 +235,9 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
             Expr.Lam (Ast.Var.of_string "_", body)
       in
       walk ~cops ~env_types ~env_terms ~g term
-  | Expr.IntMatch {im_cases; im_default} ->
+  | Expr.ConstMatch {cm_cases; cm_default} ->
       let body_ty = gen_u kvar_type (`G g) in
-      Map.iter im_cases ~f:(fun body ->
+      Map.iter cm_cases ~f:(fun body ->
           let ty = walk ~cops ~env_types ~env_terms ~g body in
           cops.constrain_unify ty body_ty
         );
@@ -248,7 +248,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
           )
       in
       let default_ty =
-        walk ~cops ~env_types ~env_terms ~g im_default
+        walk ~cops ~env_types ~env_terms ~g cm_default
       in
       cops.constrain_unify f_ty default_ty;
       f_ty

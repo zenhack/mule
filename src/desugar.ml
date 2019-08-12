@@ -310,10 +310,10 @@ and desugar_record fields =
                     )
               )
           }
-    | D.IntMatch {im_cases; im_default} ->
-        D.IntMatch
-          { im_cases = Map.map im_cases ~f:(subst env)
-          ; im_default = subst env im_default
+    | D.ConstMatch {cm_cases; cm_default} ->
+        D.ConstMatch
+          { cm_cases = Map.map cm_cases ~f:(subst env)
+          ; cm_default = subst env cm_default
           }
     | D.Let(v, e, body) ->
         D.Let
@@ -386,16 +386,16 @@ and desugar_match cases =
         unreachable_case SP.Wild
   end
 and desugar_int_match dict = function
-  | [(SP.Wild, body)] -> D.IntMatch
-        { im_default = D.Lam(Gensym.anon_var (), desugar body)
-        ; im_cases = dict
+  | [(SP.Wild, body)] -> D.ConstMatch
+        { cm_default = D.Lam(Gensym.anon_var (), desugar body)
+        ; cm_cases = dict
         }
   | ((SP.Wild, _) :: _) ->
       unreachable_case SP.Wild
   | [(SP.Var _) as p, body] ->
-      D.IntMatch
-        { im_default = desugar (S.Lam([p], body))
-        ; im_cases = dict
+      D.ConstMatch
+        { cm_default = desugar (S.Lam([p], body))
+        ; cm_cases = dict
         }
   | ((SP.Var _, _) :: _) ->
       unreachable_case SP.Wild
