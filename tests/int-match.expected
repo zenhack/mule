@@ -1,0 +1,22 @@
+
+Desugared:
+
+	(App
+	 ((ConstMatch (cm_cases (((Integer 1) (Const (Integer 1)))))
+	   (cm_default (Lam ($0 (Const (Integer 0))))))
+	  (Const (Integer 1))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(App
+	 ((ConstMatch (cm_cases (((Integer 1) (Const (Integer 1)))))
+	   (cm_default (Lam (0 () (Const (Integer 0))))))
+	  (Const (Integer 1))))
+
+Evaluated:
+
+	(Const (Integer 1))
