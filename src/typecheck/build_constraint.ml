@@ -22,8 +22,8 @@ let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
       )
 
 let rec walk ~cops ~env_types ~env_terms ~g = function
-  | Expr.Const (Expr.Integer _) -> UnionFind.make (int (gen_ty_var g))
-  | Expr.Const (Expr.Text _) -> UnionFind.make (text (gen_ty_var g))
+  | Expr.Const (Const.Integer _) -> UnionFind.make (int (gen_ty_var g))
+  | Expr.Const (Const.Text _) -> UnionFind.make (text (gen_ty_var g))
   | Expr.Var v ->
       let tv = gen_u kvar_type (`G g) in
       begin match Lazy.force (Map.find_exn env_terms v) with

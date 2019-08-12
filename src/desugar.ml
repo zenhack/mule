@@ -2,6 +2,7 @@ module SP = Ast.Surface.Pattern
 module S = Ast.Surface.Expr
 module ST = Ast.Surface.Type
 module D = Ast.Desugared.Expr
+module DC = Ast.Desugared.Const
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
@@ -200,8 +201,8 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
 and desugar = function
-  | S.Integer n -> D.Const (D.Integer n)
-  | S.Text s -> D.Const (D.Text s)
+  | S.Integer n -> D.Const (DC.Integer n)
+  | S.Text s -> D.Const (DC.Text s)
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var (v, None) :: pats, body) ->

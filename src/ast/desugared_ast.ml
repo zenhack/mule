@@ -91,6 +91,13 @@ module Type = struct
     )
 end
 
+module Const = struct
+  type t =
+    | Text of string
+    | Integer of Bigint.t
+  [@@deriving sexp]
+end
+
 module Expr = struct
   type 'i t =
     | Var of Var.t
@@ -113,12 +120,7 @@ module Expr = struct
     | Witness of 'i Type.t
     | Let of (Var.t * 'i t * 'i t)
     | LetType of ((Var.t * 'i Type.t) list * 'i t)
-    | Const of const
-  [@@deriving sexp]
-
-  and const =
-    | Text of string
-    | Integer of Bigint.t
+    | Const of Const.t
   [@@deriving sexp]
 
   let apply_to_kids e ~f = match e with
