@@ -2,6 +2,7 @@ open Ast.Desugared
 open Typecheck_types
 open Gensym
 open Gen_t
+module Const = Ast.Const
 
 include Build_constraint_t
 

@@ -34,5 +34,27 @@ end
 module Var : Name.S = Name.Impl
 module Label : Name.S = Name.Impl
 
+
 let var_to_label v = Var.to_string v |> Label.of_string
 let var_of_label l = Label.to_string l |> Var.of_string
+
+module Const = struct
+  module T = struct
+    type t =
+      | Text of string
+      | Integer of Bigint.t
+    [@@deriving sexp]
+    let compare x y =
+      let tag_no = function
+        | Text _ -> 1
+        | Integer _ -> 2
+      in
+      match x, y with
+        | Text x, Text y -> String.compare x y
+        | Integer x, Integer y -> Bigint.compare x y
+        | _ -> Int.compare (tag_no x) (tag_no y)
+  end
+
+  include T
+  include Comparator.Make(T)
+end
