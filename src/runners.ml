@@ -29,24 +29,24 @@ let assert_text = function
   | _ -> failwith "BUG: run-time type error."
 
 let ignore_io io =
-  prim_io (Lwt.map (fun _ -> R.Expr.Record LabelMap.empty) io)
+  prim_io (fun () -> Lwt.map (fun _ -> R.Expr.Record LabelMap.empty) (io ()))
 
 let io_just = prim (fun x ->
-    prim_io (Lwt.return x)
+    prim_io (fun () -> Lwt.return x)
   )
 
-let io_then = prim (fun x -> prim(fun f -> prim_io (
-    let%lwt x' = assert_io x in
-    assert_io (Eval.eval(App(f, x')))
+let io_then = prim (fun x -> prim(fun f -> prim_io (fun () ->
+    let%lwt x' = assert_io x () in
+    assert_io (Eval.eval(App(f, x'))) ()
   )))
 
 let io_print =
-  prim (fun s -> ignore_io (Lwt_io.write Lwt_io.stdout (assert_text s)))
+  prim (fun s -> ignore_io (fun () -> Lwt_io.write Lwt_io.stdout (assert_text s)))
 
-let io_get_line =
+let io_get_line = prim_io (fun () ->
   Lwt_io.read_line Lwt_io.stdin
   |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
-  |> prim_io
+  )
 
 let mk_record fields =
   fields
@@ -74,7 +74,7 @@ let root_io =
     ->
     iocmd {}
     "
-  ; run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val)))
+  ; run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val))) ()
   }
 
 

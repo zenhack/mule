@@ -1,7 +1,7 @@
 open Common_ast
 
 module Expr = struct
-  type 'a io = 'a Lwt.t
+  type 'a io = unit -> 'a Lwt.t
 
   let sexp_of_io _ _ = sexp_of_string "<io>"
 
