@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(App ((WithType (Var (() int))) (Integer 4)))
+	(App ((WithType (Var (() int))) (Const (Integer 4))))
 
 inferred type:
 

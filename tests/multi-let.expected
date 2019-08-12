@@ -14,8 +14,8 @@ Desugared:
 	           ((App ((Update (Value y)) EmptyRecord))
 	            (App
 	             ((App ((Var add) (App ((GetField (Lazy x)) (Var $0)))))
-	              (Integer 2)))))))
-	        (Integer 1)))))))
+	              (Const (Integer 2))))))))
+	        (Const (Integer 1))))))))
 	  (Let
 	   (y (App ((GetField (Strict y)) (Var $1)))
 	    (Let (x (App ((GetField (Strict x)) (Var $1))) (Var y)))))))

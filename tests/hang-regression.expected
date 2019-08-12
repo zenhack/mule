@@ -1,5 +1,5 @@
 
 Desugared:
 
-	(App ((WithType (Quant (() All a (Var (() a))))) (Integer 4)))
+	(App ((WithType (Quant (() All a (Var (() a))))) (Const (Integer 4))))
 Type error: permission error during graft

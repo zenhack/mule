@@ -8,7 +8,7 @@ Desugared:
 	     (App
 	      (() (Var (() t))
 	       (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))))
-	    (Integer 4)))))
+	    (Const (Integer 4))))))
 
 inferred type:
 

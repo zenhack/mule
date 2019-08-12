@@ -38,7 +38,7 @@ Desugared:
 	                      (default
 	                       (((l)
 	                         (App
-	                          ((App ((Var add) (Integer 1)))
+	                          ((App ((Var add) (Const (Integer 1))))
 	                           (App
 	                            ((Var length)
 	                             (App ((GetField (Strict tl)) (Var l)))))))))))
@@ -46,7 +46,7 @@ Desugared:
 	                 (Nil
 	                  ($4
 	                   (App
-	                    ((Match (cases ()) (default ((() (Integer 0)))))
+	                    ((Match (cases ()) (default ((() (Const (Integer 0))))))
 	                     (Var $4)))))))
 	               (default ()))
 	              (Var lst)))))))))))
@@ -89,9 +89,9 @@ Desugared:
 	                                          (App
 	                                           ((Lam (x (Ctor (Nil (Var x)))))
 	                                            EmptyRecord))))))
-	                                      (Integer 1)))))))))))))
-	                          (Integer 0)))))))))))))
-	              (Integer 4)))))))))))))))
+	                                      (Const (Integer 1))))))))))))))
+	                          (Const (Integer 0))))))))))))))
+	              (Const (Integer 4))))))))))))))))
 
 inferred type:
 

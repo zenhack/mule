@@ -20,7 +20,7 @@ Desugared:
 	        (Lam (rank2 (App ((Var rank2) (Lam (x (Var x)))))))))))))
 	  (App
 	   ((Var rank3)
-	    (Lam (rank1 (App ((Var rank1) (App ((Var rank1) (Integer 4)))))))))))
+	    (Lam (rank1 (App ((Var rank1) (App ((Var rank1) (Const (Integer 4))))))))))))
 
 inferred type:
 

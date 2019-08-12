@@ -27,7 +27,7 @@ Desugared:
 	              (App
 	               ((App ((Update (Value tl)) EmptyRecord))
 	                (App ((Lam (x (Ctor (Nil (Var x))))) EmptyRecord))))))
-	            (Integer 4)))))))))))))
+	            (Const (Integer 4))))))))))))))
 
 inferred type:
 

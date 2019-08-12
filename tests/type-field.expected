@@ -12,7 +12,7 @@ Desugared:
 	         ((Update (Type t))
 	          (App
 	           ((App ((Update (Value x)) EmptyRecord))
-	            (App ((WithType (Var (() t))) (Integer 4)))))))
+	            (App ((WithType (Var (() t))) (Const (Integer 4))))))))
 	        (Witness (Var (() t)))))))))))
 
 inferred type:

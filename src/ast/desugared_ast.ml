@@ -113,8 +113,12 @@ module Expr = struct
     | Witness of 'i Type.t
     | Let of (Var.t * 'i t * 'i t)
     | LetType of ((Var.t * 'i Type.t) list * 'i t)
-    | Integer of Bigint.t
+    | Const of const
+  [@@deriving sexp]
+
+  and const =
     | Text of string
+    | Integer of Bigint.t
   [@@deriving sexp]
 
   let apply_to_kids e ~f = match e with
@@ -140,8 +144,7 @@ module Expr = struct
     | Update _
     | WithType _
     | Witness _
-    | Integer _
-    | Text _ -> e
+    | Const _ -> e
 
   let rec map e ~f =
     match e with
@@ -172,7 +175,6 @@ module Expr = struct
     | EmptyRecord -> EmptyRecord
     | GetField x -> GetField x
     | Update x -> Update x
-    | Integer x -> Integer x
-    | Text x -> Text x
+    | Const x -> Const x
 
 end

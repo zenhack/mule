@@ -3,7 +3,7 @@ Desugared:
 
 	(App
 	 ((WithType (Quant (() Exist t (Fn (() (Var (() t)) (Var (() t)))))))
-	  (Lam (x (Integer 4)))))
+	  (Lam (x (Const (Integer 4))))))
 
 inferred type:
 

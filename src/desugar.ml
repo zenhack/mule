@@ -200,8 +200,8 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
 and desugar = function
-  | S.Integer n -> D.Integer n
-  | S.Text s -> D.Text s
+  | S.Integer n -> D.Const (D.Integer n)
+  | S.Text s -> D.Const (D.Text s)
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var (v, None) :: pats, body) ->
@@ -271,8 +271,7 @@ and desugar_record fields =
   in
   let rec subst env expr = match expr with
     (* TODO: do stuff with type variables *)
-    | D.Integer n -> D.Integer n
-    | D.Text s -> D.Text s
+    | D.Const c -> D.Const c
     | D.Var v ->
         let lbl = var_to_lbl v in
         begin match Map.find env lbl with

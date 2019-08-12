@@ -15,5 +15,5 @@ Desugared:
 	            (() (Quant (() All a (Fn (() (Var (() a)) (Var (() a))))))
 	             (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))))))
 	        (Lam (rank1 (App ((Var rank1) EmptyRecord))))))))))
-	  (App ((Var rank2) (Lam ($0 (Integer 4)))))))
+	  (App ((Var rank2) (Lam ($0 (Const (Integer 4))))))))
 Type error: permission error during graft

@@ -10,17 +10,17 @@ Desugared:
 	      (Lam
 	       (n
 	        (App
-	         ((IntMatch (im_cases ((0 (Integer 1))))
-	           (im_default
+	         ((ConstMatch (cm_cases ((0 (Const (Integer 1)))))
+	           (cm_default
 	            (Lam
 	             (n
 	              (App
 	               ((App ((Var mul) (Var n)))
 	                (App
 	                 ((Var factorial)
-	                  (App ((App ((Var sub) (Var n))) (Integer 1)))))))))))
+	                  (App ((App ((Var sub) (Var n))) (Const (Integer 1))))))))))))
 	          (Var n)))))))))
-	  (App ((Var factorial) (Integer 5)))))
+	  (App ((Var factorial) (Const (Integer 5))))))
 
 inferred type:
 
@@ -37,8 +37,8 @@ Runtime term:
 	      (Lam
 	       (2 ()
 	        (App
-	         ((IntMatch (im_cases ((0 (Integer 1))))
-	           (im_default
+	         ((ConstMatch (cm_cases ((0 (Integer 1))))
+	           (cm_default
 	            (Lam
 	             (2 ()
 	              (App
