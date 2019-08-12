@@ -2,7 +2,7 @@ open Ast.Surface
 open Ast.Surface.Expr
 
 let rec collect_pat_vars = function
-  | Pattern.Integer _ -> VarSet.empty
+  | Pattern.Const _ -> VarSet.empty
   | Pattern.Wild -> VarSet.empty
   | Pattern.Var (v, _) -> VarSet.singleton v
   | Pattern.Ctor(_, p) -> collect_pat_vars p
@@ -17,7 +17,7 @@ let duplicate_fields dups =
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
   let rec go_expr typ term = function
-    | Integer _ | Text _ -> ()
+    | Const _ -> ()
     | Var v when Set.mem term v -> ()
     | Var v -> unboundVar v
     | Lam([], body) ->
@@ -77,7 +77,7 @@ let check_unbound_vars expr =
     let pat_new = collect_pat_vars pat in
     go_expr typ (Set.union term pat_new) e
   and go_pat typ = function
-    | Pattern.Integer _ -> ()
+    | Pattern.Const _ -> ()
     | Pattern.Wild -> ()
     | Pattern.Var (_, None) -> ()
     | Pattern.Var (_, Some ty ) -> go_type typ ty
@@ -139,7 +139,7 @@ let check_unbound_vars expr =
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
   let rec go_expr = function
-    | Integer _ | Text _ -> ()
+    | Const _ -> ()
     | Record fields ->
         go_fields fields
     | Update(e, fields) ->
@@ -182,7 +182,7 @@ let check_duplicate_record_fields =
       ) in
     go_labels labels
   and go_pat = function
-    | Pattern.Integer _ -> ()
+    | Pattern.Const _ -> ()
     | Pattern.Ctor(_, pat) -> go_pat pat
     | Pattern.Var (_, None) | Pattern.Wild -> ()
     | Pattern.Var (_, Some ty) -> go_type ty

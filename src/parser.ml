@@ -1,4 +1,5 @@
 open MParser
+open Ast
 open Ast.Surface
 
 module Let_syntax = struct
@@ -79,10 +80,10 @@ let var = token (
     if Set.mem keywords name then
       fail "reserved word"
     else
-      return (Ast.Var.of_string name)
+      return (Var.of_string name)
   )
 
-let int: (Z.t, unit) MParser.t = token (
+let int: (Const.t, unit) MParser.t = token (
     let%bind sign = option (char '+' <|> char '-') in
     let sign =
       begin match sign with
@@ -99,7 +100,7 @@ let int: (Z.t, unit) MParser.t = token (
     let str = sign ^ String.of_char d ^ ds in
     let z_str = String.filter str ~f:(fun c -> not (Char.equal c '_')) in
     try
-      return (Z.of_string z_str)
+      return (Const.Integer (Z.of_string z_str))
     with
       Invalid_argument _ ->
         fail ("Illegal integer literal: " ^ str)
@@ -118,12 +119,14 @@ let escaped =
   | 'r' -> return '\r'
   | c -> fail ("Illegal escape sequence: \\" ^ String.of_char c)
 
-let text: (Expr.t, unit) MParser.t = token (
+let text: (Const.t, unit) MParser.t = token (
     let%bind _ = char '"' in
     let%bind chars = many (text_legal <|> escaped) in
     let%map _ = char '"' in
-    Expr.Text (String.of_char_list chars)
+    Const.Text (String.of_char_list chars)
   )
+
+let constant : (Const.t, unit) MParser.t = text <|> int
 
 let label =
   var |>> Ast.var_to_label
@@ -131,7 +134,7 @@ let label =
 let ctor = token (
     let%bind c = uppercase in
     let%map cs = many_chars (letter <|> char '_' <|> digit) in
-    Ast.Label.of_string (String.make 1 c ^ cs)
+    Label.of_string (String.make 1 c ^ cs)
   ) <?> "constructor"
 
 let rec typ_term = lazy (
@@ -255,12 +258,11 @@ and ex3 = lazy (
     [ lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
-    ; text
     ; (var |>> fun v -> Expr.Var v)
     ; parens (lazy_p expr)
     ; lazy_p record
     ; (ctor |>> fun c -> Expr.Ctor c)
-    ; (int |>> fun n -> Expr.Integer n)
+    ; (constant |>> fun n -> Expr.Const n)
     ]
 )
 and lambda = lazy ((
@@ -306,7 +308,7 @@ and case = lazy (
 )
 and pattern = lazy ((
     choice
-      [ (int |>> fun n -> Pattern.Integer n)
+      [ (constant |>> fun n -> Pattern.Const n)
       ; parens (lazy_p pattern)
       ; (kwd "_" |>> fun _ -> Pattern.Wild)
       ; begin

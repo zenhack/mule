@@ -201,8 +201,7 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
 and desugar = function
-  | S.Integer n -> D.Const (C.Integer n)
-  | S.Text s -> D.Const (C.Text s)
+  | S.Const c -> D.Const c
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)
   | S.Lam (SP.Var (v, None) :: pats, body) ->
@@ -219,7 +218,7 @@ and desugar = function
             , desugar (S.Lam (pats, body))
             )
         )
-  | S.Lam ((SP.Integer _) as p :: _, _) ->
+  | S.Lam ((SP.Const _) as p :: _, _) ->
       incomplete_pattern p
   | S.Lam (pat :: pats, body) ->
       let var = Gensym.anon_var () in
@@ -374,7 +373,7 @@ and desugar_match cases =
   begin match cases with
     | ((SP.Ctor _, _) :: _) ->
         desugar_lbl_match LabelMap.empty cases
-    | ((SP.Integer _, _) :: _) ->
+    | ((SP.Const _, _) :: _) ->
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
         desugar (S.Lam([pat], body))
@@ -399,12 +398,12 @@ and desugar_const_match dict = function
         }
   | ((SP.Var _, _) :: _) ->
       unreachable_case SP.Wild
-  | ((SP.Integer n, body) :: rest) ->
-      begin match Map.find dict (C.Integer n) with
-        | Some _ -> unreachable_case (SP.Integer n)
+  | ((SP.Const c, body) :: rest) ->
+      begin match Map.find dict c with
+        | Some _ -> unreachable_case (SP.Const c)
         | None ->
             desugar_const_match
-              (Map.set dict ~key:(C.Integer n) ~data:(desugar body))
+              (Map.set dict ~key:c ~data:(desugar body))
               rest
       end
   | [] ->
@@ -413,7 +412,9 @@ and desugar_const_match dict = function
   | ((SP.Ctor _, _) :: _) ->
       error
         (MuleErr.TypeError
-           (MuleErr.MismatchedCtors (`Named "union", `Named "int")))
+            (* FIXME: "constant" isn't the name of a type; this will be
+             * confusing. *)
+           (MuleErr.MismatchedCtors (`Named "union", `Named "constant")))
 and desugar_lbl_match dict = function
   | [] -> D.Match
         { default = None
@@ -538,7 +539,7 @@ and simplify_bindings = function
       `Type t :: simplify_bindings bs
   | `BindVal (SP.Var (v, None), e) :: bs ->
       `Value(v, e) :: simplify_bindings bs
-  | `BindVal((SP.Integer _) as p, _) :: _ ->
+  | `BindVal((SP.Const _) as p, _) :: _ ->
       incomplete_pattern p
   | `BindVal(SP.Wild, e) :: bs  ->
       `Value(Gensym.anon_var (), e) :: simplify_bindings bs

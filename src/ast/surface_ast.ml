@@ -30,7 +30,7 @@ module Pattern = struct
     | Ctor of (Label.t * t)
     | Var of (Var.t * Type.t option)
     | Wild
-    | Integer of Bigint.t
+    | Const of Const.t
   [@@deriving sexp]
 end
 
@@ -46,8 +46,7 @@ module Expr = struct
     | Match of (t * (Pattern.t * t) list)
     | Let of (binding list * t)
     | WithType of (t * Type.t)
-    | Integer of Bigint.t
-    | Text of string
+    | Const of Const.t
   [@@deriving sexp]
   and binding =
     [ `BindType of Var.t * Var.t list * Type.t
