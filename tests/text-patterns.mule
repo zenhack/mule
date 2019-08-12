@@ -1,0 +1,6 @@
+match "hey!" with
+  | "hello" -> 1
+  | "hey!" -> 2
+  | "goodbye" -> 3
+  | _ -> 4
+end

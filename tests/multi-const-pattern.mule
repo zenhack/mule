@@ -1,0 +1,7 @@
+# This should fail to type check, because we have two kinds of
+# constants in the same match positions:
+fn x. match x with
+  | 1 -> x
+  | "Hey!" -> x
+  | _ -> x
+end

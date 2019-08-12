@@ -1,0 +1,28 @@
+
+Desugared:
+
+	(App
+	 ((ConstMatch
+	   (cm_cases
+	    (((Text goodbye) (Const (Integer 3))) ((Text hello) (Const (Integer 1)))
+	     ((Text hey!) (Const (Integer 2)))))
+	   (cm_default (Lam ($0 (Const (Integer 4))))))
+	  (Const (Text hey!))))
+
+inferred type:
+
+	(Named (() int))
+
+Runtime term:
+
+	(App
+	 ((ConstMatch
+	   (cm_cases
+	    (((Text goodbye) (Const (Integer 3))) ((Text hello) (Const (Integer 1)))
+	     ((Text hey!) (Const (Integer 2)))))
+	   (cm_default (Lam (0 () (Const (Integer 4))))))
+	  (Const (Text hey!))))
+
+Evaluated:
+
+	(Const (Integer 2))
