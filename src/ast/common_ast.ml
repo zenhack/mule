@@ -43,15 +43,18 @@ module Const = struct
     type t =
       | Text of string
       | Integer of Bigint.t
+      | Char of char
     [@@deriving sexp]
     let compare x y =
       let tag_no = function
         | Text _ -> 1
         | Integer _ -> 2
+        | Char _ -> 3
       in
       match x, y with
         | Text x, Text y -> String.compare x y
         | Integer x, Integer y -> Bigint.compare x y
+        | Char x, Char y -> Char.compare x y
         | _ -> Int.compare (tag_no x) (tag_no y)
   end
 

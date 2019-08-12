@@ -83,7 +83,7 @@ let var = token (
       return (Var.of_string name)
   )
 
-let int: (Const.t, unit) MParser.t = token (
+let int_const: (Const.t, unit) MParser.t = token (
     let%bind sign = option (char '+' <|> char '-') in
     let sign =
       begin match sign with
@@ -109,24 +109,39 @@ let int: (Const.t, unit) MParser.t = token (
 let text_legal =
   none_of "\"\\"
 
+let char_legal =
+  none_of "'\\"
+
 let escaped =
   let%bind _ = char '\\' in
   match%bind any_char with
   | '\\' -> return '\\'
   | '"' -> return '"'
+  | '\'' -> return '\''
   | 'n' -> return '\n'
   | 't' -> return '\t'
   | 'r' -> return '\r'
   | c -> fail ("Illegal escape sequence: \\" ^ String.of_char c)
 
-let text: (Const.t, unit) MParser.t = token (
+let text_const: (Const.t, unit) MParser.t = token (
     let%bind _ = char '"' in
     let%bind chars = many (text_legal <|> escaped) in
     let%map _ = char '"' in
     Const.Text (String.of_char_list chars)
   )
 
-let constant : (Const.t, unit) MParser.t = text <|> int
+let char_const: (Const.t, unit) MParser.t = token (
+    let%bind _ = char '\'' in
+    let%bind c = char_legal <|> escaped in
+    let%map _ = char '\'' in
+    Const.Char c
+)
+
+let constant : (Const.t, unit) MParser.t = choice
+  [ text_const
+  ; int_const
+  ; char_const
+  ]
 
 let label =
   var |>> Ast.var_to_label
@@ -198,14 +213,14 @@ and record_type = lazy (
   ) and type_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
     let%bind l = kwd "type" >> label in
     let%bind vars = many var in
-    let%bind () = optional text in
+    let%bind () = optional text_const in
     let%map ty = option (kwd "=" >> lazy_p typ)
     in
     Type.Type(l, vars, ty)
   ) and field_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
     let%bind l = label in
     let%bind ty = kwd ":" >> lazy_p typ in
-    let%map () = optional text in
+    let%map () = optional text_const in
     Type.Field (l, ty)
   ) and typ_fn = lazy (
     begin match%map sep_by1 (lazy_p typ_annotated) (kwd "->") with
@@ -334,14 +349,14 @@ and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
   let%bind l = kwd "type" >> label in
   let%bind params = many var in
-  let%bind () = optional text in
+  let%bind () = optional text_const in
   let%map ty = kwd "=" >> lazy_p typ in
   `Type (l, params, ty)
 )
 and value_field_def = lazy (
   let%bind l = label in
   let%bind ty = option (kwd ":" >> lazy_p typ) in
-  let%bind () = optional text in
+  let%bind () = optional text_const in
   let%map e = kwd "=" >> lazy_p expr in
   `Value (l, ty, e)
 )

@@ -22,9 +22,13 @@ let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
           )
       )
 
-let walk_const g = function
-  | Const.Integer _ -> UnionFind.make (int (gen_ty_var g))
-  | Const.Text _ -> UnionFind.make (text (gen_ty_var g))
+let walk_const g c =
+  let ty = match c with
+    | Const.Integer _ -> int
+    | Const.Text _ -> text
+    | Const.Char _ -> char
+  in
+  UnionFind.make (ty (gen_ty_var g))
 
 let rec walk ~cops ~env_types ~env_terms ~g = function
   | Expr.Const c -> walk_const g c
