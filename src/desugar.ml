@@ -412,8 +412,8 @@ and desugar_const_match dict = function
   | ((SP.Ctor _, _) :: _) ->
       error
         (MuleErr.TypeError
-            (* FIXME: "constant" isn't the name of a type; this will be
-             * confusing. *)
+           (* FIXME: "constant" isn't the name of a type; this will be
+            * confusing. *)
            (MuleErr.MismatchedCtors (`Named "union", `Named "constant")))
 and desugar_lbl_match dict = function
   | [] -> D.Match

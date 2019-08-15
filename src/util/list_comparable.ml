@@ -19,11 +19,11 @@ module Make(E:Pair.Elt) = struct
       | (_::_), [] -> 1
       | [], (_::_) -> -1
       | (x::xs), (y::ys) ->
-        let r = E.compare x y in
-        if r = 0 then
-          compare xs ys
-        else
-          r
+          let r = E.compare x y in
+          if r = 0 then
+            compare xs ys
+          else
+            r
   end
   include T
   include Comparator.Make(T)
