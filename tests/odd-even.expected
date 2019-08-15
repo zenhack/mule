@@ -1,182 +1,65 @@
 
 Desugared:
 
-	(App
-	 ((App
-	   ((GetField (Strict odd))
-	    (App
-	     ((Fix Record)
-	      (Lam
-	       ($0
-	        (App
-	         ((App
-	           ((Update (Value even))
-	            (App
-	             ((App ((Update (Value odd)) EmptyRecord))
-	              (App
-	               ((WithType
-	                 (Fn
-	                  (()
-	                   (Recur
-	                    (() n
-	                     (Union
-	                      (()
-	                       ((Z
-	                         (Record (r_info ()) (r_types (() () ()))
-	                          (r_values (() () ()))))
-	                        (S (Var (() n))))
-	                       ()))))
-	                   (Union
-	                    (()
-	                     ((True
-	                       (Record (r_info ()) (r_types (() () ()))
-	                        (r_values (() () ()))))
-	                      (False
-	                       (Record (r_info ()) (r_types (() () ()))
-	                        (r_values (() () ())))))
-	                     ())))))
-	                (Lam
-	                 (x
-	                  (App
-	                   ((Match
-	                     (cases
-	                      ((S
-	                        ($1
-	                         (App
-	                          ((Match (cases ())
-	                            (default
-	                             (((k)
-	                               (App
-	                                ((App
-	                                  ((WithType
-	                                    (Fn
-	                                     (()
-	                                      (Recur
-	                                       (() n
-	                                        (Union
-	                                         (()
-	                                          ((Z
-	                                            (Record (r_info ())
-	                                             (r_types (() () ()))
-	                                             (r_values (() () ()))))
-	                                           (S (Var (() n))))
-	                                          ()))))
-	                                      (Union
-	                                       (()
-	                                        ((True
-	                                          (Record (r_info ())
-	                                           (r_types (() () ()))
-	                                           (r_values (() () ()))))
-	                                         (False
-	                                          (Record (r_info ())
-	                                           (r_types (() () ()))
-	                                           (r_values (() () ())))))
-	                                        ())))))
-	                                   (App ((GetField (Lazy even)) (Var $0)))))
-	                                 (Var k)))))))
-	                           (Var $1)))))
-	                       (Z
-	                        ($2
-	                         (App
-	                          ((Match (cases ())
-	                            (default
-	                             ((()
-	                               (App
-	                                ((Lam (x (Ctor (False (Var x)))))
-	                                 EmptyRecord))))))
-	                           (Var $2)))))))
-	                     (default ()))
-	                    (Var x)))))))))))
-	          (App
-	           ((WithType
-	             (Fn
-	              (()
-	               (Recur
-	                (() n
-	                 (Union
-	                  (()
-	                   ((Z
-	                     (Record (r_info ()) (r_types (() () ()))
-	                      (r_values (() () ()))))
-	                    (S (Var (() n))))
-	                   ()))))
-	               (Union
-	                (()
-	                 ((True
-	                   (Record (r_info ()) (r_types (() () ()))
-	                    (r_values (() () ()))))
-	                  (False
-	                   (Record (r_info ()) (r_types (() () ()))
-	                    (r_values (() () ())))))
-	                 ())))))
-	            (Lam
-	             (x
-	              (App
-	               ((Match
-	                 (cases
-	                  ((S
-	                    ($3
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         (((k)
-	                           (App
-	                            ((App
-	                              ((WithType
-	                                (Fn
-	                                 (()
-	                                  (Recur
-	                                   (() n
-	                                    (Union
-	                                     (()
-	                                      ((Z
-	                                        (Record (r_info ())
-	                                         (r_types (() () ()))
-	                                         (r_values (() () ()))))
-	                                       (S (Var (() n))))
-	                                      ()))))
-	                                  (Union
-	                                   (()
-	                                    ((True
-	                                      (Record (r_info ())
-	                                       (r_types (() () ()))
-	                                       (r_values (() () ()))))
-	                                     (False
-	                                      (Record (r_info ())
-	                                       (r_types (() () ()))
-	                                       (r_values (() () ())))))
-	                                    ())))))
-	                               (App ((GetField (Lazy odd)) (Var $0)))))
-	                             (Var k)))))))
-	                       (Var $3)))))
-	                   (Z
-	                    ($4
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         ((()
-	                           (App
-	                            ((Lam (x (Ctor (True (Var x))))) EmptyRecord))))))
-	                       (Var $4)))))))
-	                 (default ()))
-	                (Var x)))))))))))))))
-	  (App
-	   ((Lam (x (Ctor (S (Var x)))))
-	    (App
-	     ((Lam (x (Ctor (S (Var x)))))
-	      (App
-	       ((Lam (x (Ctor (S (Var x)))))
-	        (App
-	         ((Lam (x (Ctor (S (Var x)))))
-	          (App ((Lam (x (Ctor (Z (Var x))))) EmptyRecord))))))))))))
+	(((. odd)
+	  (fix/record
+	   (fn $0
+	    (((.= even)
+	      (((.= odd) {})
+	       ((:
+	         ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	          (union
+	           ((True (record (types ()) (values ())))
+	            (False (record (types ()) (values ())))))))
+	        (fn x
+	         ((match
+	           ((S
+	             ($1
+	              ((match ()
+	                (k
+	                 (((:
+	                    ((rec n
+	                      (union ((Z (record (types ()) (values ()))) (S n))))
+	                     ->
+	                     (union
+	                      ((True (record (types ()) (values ())))
+	                       (False (record (types ()) (values ())))))))
+	                   ((. even) $0))
+	                  k)))
+	               $1)))
+	            (Z ($2 ((match () (_ ((fn x (False x)) {}))) $2)))))
+	          x)))))
+	     ((:
+	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	        (union
+	         ((True (record (types ()) (values ())))
+	          (False (record (types ()) (values ())))))))
+	      (fn x
+	       ((match
+	         ((S
+	           ($3
+	            ((match ()
+	              (k
+	               (((:
+	                  ((rec n
+	                    (union ((Z (record (types ()) (values ()))) (S n))))
+	                   ->
+	                   (union
+	                    ((True (record (types ()) (values ())))
+	                     (False (record (types ()) (values ())))))))
+	                 ((. odd) $0))
+	                k)))
+	             $3)))
+	          (Z ($4 ((match () (_ ((fn x (True x)) {}))) $4)))))
+	        x)))))))
+	 ((fn x (S x))
+	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
 
 inferred type:
 
-	(Union
-	 (()
-	  ((False (Record (r_info ()) (r_types (() () ())) (r_values (() () ()))))
-	   (True (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	  ()))
+	(union
+	 ((False (record (types ()) (values ())))
+	  (True (record (types ()) (values ())))))
 
 Runtime term:
 

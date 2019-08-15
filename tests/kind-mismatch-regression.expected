@@ -1,16 +1,7 @@
 
 Desugared:
 
-	(App
-	 ((WithType
-	   (Fn
-	    (()
-	     (Annotated
-	      (() e
-	       (Quant
-	        (() Exist $0
-	         (Record (r_info ()) (r_types (() ((t (Var (() $0)))) ()))
-	          (r_values (() () ())))))))
-	     (App (() (Path (() e (t))) (Var (() int)))))))
-	  (Const (Integer 4))))
+	((:
+	  ((e : (exist $0 (record (types ((t $0))) (values ())))) -> ((. e t) int)))
+	 (Integer 4))
 Type error: permission error during raise

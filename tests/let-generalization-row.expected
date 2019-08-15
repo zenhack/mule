@@ -1,63 +1,28 @@
 
 Desugared:
 
-	(Let
-	 (f
-	  (App ((Fix Let) (Lam (f (Lam (x (App ((GetField (Strict y)) (Var x)))))))))
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     ($0
-	      (App
-	       ((App
-	         ((Update (Value a))
-	          (App
-	           ((App ((Update (Value b)) EmptyRecord))
-	            (App
-	             ((Var f)
-	              (App
-	               ((Fix Record)
-	                (Lam
-	                 ($1
-	                  (App
-	                   ((App ((Update (Value y)) EmptyRecord))
-	                    (App
-	                     ((Fix Record)
-	                      (Lam
-	                       ($2
-	                        (App
-	                         ((App ((Update (Value z)) EmptyRecord)) EmptyRecord))))))))))))))))))
-	        (App
-	         ((Var f)
-	          (App
-	           ((Fix Record)
-	            (Lam
-	             ($3 (App ((App ((Update (Value y)) EmptyRecord)) EmptyRecord))))))))))))))))
+	(let (f (fix/let (fn f (fn x ((. y) x)))))
+	 (fix/record
+	  (fn $0
+	   (((.= a)
+	     (((.= b) {})
+	      (f
+	       (fix/record
+	        (fn $1 (((.= y) {}) (fix/record (fn $2 (((.= z) {}) {})))))))))
+	    (f (fix/record (fn $3 (((.= y) {}) {}))))))))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Quant
-	     (() All c
-	      (Quant
-	       (() All d
-	        (Record (r_info ()) (r_types (() () (d)))
-	         (r_values
-	          (()
-	           ((a
-	             (Record (r_info ()) (r_types (() () (c))) (r_values (() () ()))))
-	            (b
-	             (Record (r_info ()) (r_types (() () (b)))
-	              (r_values
-	               (()
-	                ((z
-	                  (Record (r_info ()) (r_types (() () (a)))
-	                   (r_values (() () ())))))
-	                ())))))
-	           ())))))))))))
+	(all a
+	 (all b
+	  (all c
+	   (all d
+	    (record (types (...d))
+	     (values
+	      ((a (record (types (...c)) (values ())))
+	       (b
+	        (record (types (...b))
+	         (values ((z (record (types (...a)) (values ()))))))))))))))
 
 Runtime term:
 

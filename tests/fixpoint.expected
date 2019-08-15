@@ -1,31 +1,11 @@
 
 Desugared:
 
-	(Lam
-	 (f
-	  (Let
-	   (g
-	    (App
-	     ((Fix Let)
-	      (Lam
-	       (g
-	        (Lam
-	         (x
-	          (App ((Var f) (Lam (v (App ((App ((Var x) (Var x))) (Var v)))))))))))))
-	    (App ((Var g) (Var g)))))))
+	(fn f (let (g (fix/let (fn g (fn x (f (fn v ((x x) v))))))) (g g)))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Fn
-	     (()
-	      (Fn
-	       (() (Fn (() (Var (() b)) (Var (() a))))
-	        (Fn (() (Var (() b)) (Var (() a))))))
-	      (Fn (() (Var (() b)) (Var (() a))))))))))
+	(all a (all b (((b -> a) -> (b -> a)) -> (b -> a))))
 
 Runtime term:
 

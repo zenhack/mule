@@ -1,13 +1,11 @@
 
 Desugared:
 
-	(Lam (x (App ((Var x) (Var x)))))
+	(fn x (x x))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Fn (() (Recur (() b (Fn (() (Var (() b)) (Var (() a)))))) (Var (() a))))))
+	(all a ((rec b (b -> a)) -> a))
 
 Runtime term:
 

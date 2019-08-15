@@ -1,21 +1,13 @@
 
 Desugared:
 
-	(App
-	 ((Fix Record)
-	  (Lam ($0 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))
+	(fix/record (fn $0 (((.= x) {}) {})))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Record (r_info ()) (r_types (() () (b)))
-	     (r_values
-	      (()
-	       ((x (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
-	       ())))))))
+	(all a
+	 (all b
+	  (record (types (...b)) (values ((x (record (types (...a)) (values ()))))))))
 
 Runtime term:
 

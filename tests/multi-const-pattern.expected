@@ -1,10 +1,5 @@
 
 Desugared:
 
-	(Lam
-	 (x
-	  (App
-	   ((ConstMatch (cm_cases (((Text Hey!) (Var x)) ((Integer 1) (Var x))))
-	     (cm_default (Lam ($0 (Var x)))))
-	    (Var x)))))
+	(fn x ((match/const (((Text Hey!) x) ((Integer 1) x)) (_ (fn $0 x))) x))
 Type error: mismatched type constructors: text and int

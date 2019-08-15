@@ -1,42 +1,20 @@
 
 Desugared:
 
-	(Let
-	 (f (App ((Fix Let) (Lam (f (Lam (x (Var x)))))))
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     ($0
-	      (App
-	       ((App
-	         ((Update (Value a))
-	          (App
-	           ((App ((Update (Value b)) EmptyRecord))
-	            (App ((Var f) (App ((Lam (x (Ctor (Ok (Var x))))) EmptyRecord))))))))
-	        (App ((Var f) (Lam (y (Var y)))))))))))))
+	(let (f (fix/let (fn f (fn x x))))
+	 (fix/record
+	  (fn $0 (((.= a) (((.= b) {}) (f ((fn x (Ok x)) {})))) (f (fn y y))))))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Quant
-	     (() All c
-	      (Quant
-	       (() All d
-	        (Record (r_info ()) (r_types (() () (d)))
-	         (r_values
-	          (()
-	           ((a (Fn (() (Var (() c)) (Var (() c)))))
-	            (b
-	             (Union
-	              (()
-	               ((Ok
-	                 (Record (r_info ()) (r_types (() () (b)))
-	                  (r_values (() () ())))))
-	               (a)))))
-	           ())))))))))))
+	(all a
+	 (all b
+	  (all c
+	   (all d
+	    (record (types (...d))
+	     (values
+	      ((a (c -> c))
+	       (b (union ((Ok (record (types (...b)) (values ()))) ...a))))))))))
 
 Runtime term:
 

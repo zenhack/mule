@@ -1,11 +1,11 @@
 
 Desugared:
 
-	(App ((WithType (Quant (() Exist t (Var (() t))))) (Const (Integer 4))))
+	((: (exist t t)) (Integer 4))
 
 inferred type:
 
-	(Quant (() Exist a (Var (() a))))
+	(exist a a)
 
 Runtime term:
 

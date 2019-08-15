@@ -1,20 +1,11 @@
 
 Desugared:
 
-	(Lam (x (App ((Var x) EmptyRecord))))
+	(fn x (x {}))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Fn
-	     (()
-	      (Fn
-	       (() (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))
-	        (Var (() b))))
-	      (Var (() b))))))))
+	(all a (all b (((record (types (...a)) (values ())) -> b) -> b)))
 
 Runtime term:
 

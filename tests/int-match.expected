@@ -1,14 +1,12 @@
 
 Desugared:
 
-	(App
-	 ((ConstMatch (cm_cases (((Integer 1) (Const (Integer 1)))))
-	   (cm_default (Lam ($0 (Const (Integer 0))))))
-	  (Const (Integer 1))))
+	((match/const (((Integer 1) (Integer 1))) (_ (fn $0 (Integer 0))))
+	 (Integer 1))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

@@ -1,18 +1,11 @@
 
 Desugared:
 
-	(App ((Lam (x (Ctor (Ok (Var x))))) EmptyRecord))
+	((fn x (Ok x)) {})
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Union
-	     (()
-	      ((Ok (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
-	      (b)))))))
+	(all a (all b (union ((Ok (record (types (...a)) (values ()))) ...b))))
 
 Runtime term:
 

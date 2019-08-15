@@ -1,10 +1,5 @@
 
 Desugared:
 
-	(App
-	 ((Match
-	   (cases
-	    ((Err ($0 (App ((Match (cases ()) (default (((x) (Var x))))) (Var $0)))))))
-	   (default ()))
-	  (App ((Lam (x (Ctor (Ok (Var x))))) EmptyRecord))))
+	((match ((Err ($0 ((match () (x x)) $0))))) ((fn x (Ok x)) {}))
 Type error: mismatched type constructors: <empty> and row containing Ok

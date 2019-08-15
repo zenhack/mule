@@ -1,40 +1,21 @@
 
 Desugared:
 
-	(App
-	 ((App
-	   ((Update (Value y))
-	    (App
-	     ((Fix Record)
-	      (Lam ($1 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))))
-	  (App
-	   ((Fix Record)
-	    (Lam ($0 (App ((App ((Update (Value z)) EmptyRecord)) EmptyRecord))))))))
+	(((.= y) (fix/record (fn $1 (((.= x) {}) {}))))
+	 (fix/record (fn $0 (((.= z) {}) {}))))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Quant
-	     (() All c
-	      (Quant
-	       (() All d
-	        (Record (r_info ()) (r_types (() () (d)))
-	         (r_values
-	          (()
-	           ((x
-	             (Record (r_info ()) (r_types (() () (c))) (r_values (() () ()))))
-	            (y
-	             (Record (r_info ()) (r_types (() () (b)))
-	              (r_values
-	               (()
-	                ((z
-	                  (Record (r_info ()) (r_types (() () (a)))
-	                   (r_values (() () ())))))
-	                ())))))
-	           ())))))))))))
+	(all a
+	 (all b
+	  (all c
+	   (all d
+	    (record (types (...d))
+	     (values
+	      ((x (record (types (...c)) (values ())))
+	       (y
+	        (record (types (...b))
+	         (values ((z (record (types (...a)) (values ()))))))))))))))
 
 Runtime term:
 

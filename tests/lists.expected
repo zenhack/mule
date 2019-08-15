@@ -1,101 +1,45 @@
 
 Desugared:
 
-	(LetType
-	 (((list
-	    (TypeLam
-	     (() a
-	      (Recur
-	       (() list
-	        (Union
-	         (()
-	          ((Cons
-	            (Record (r_info ()) (r_types (() () ()))
-	             (r_values (() ((tl (Var (() list))) (hd (Var (() a)))) ()))))
-	           (Nil
-	            (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	          ()))))))))
-	  (Let
-	   (length
-	    (App
-	     ((Fix Let)
-	      (Lam
-	       (length
-	        (App
-	         ((WithType
-	           (Quant
-	            (() All a
-	             (Fn (() (App (() (Var (() list)) (Var (() a)))) (Var (() int)))))))
-	          (Lam
-	           (lst
-	            (App
-	             ((Match
-	               (cases
-	                ((Cons
-	                  ($3
-	                   (App
-	                    ((Match (cases ())
-	                      (default
-	                       (((l)
-	                         (App
-	                          ((App ((Var add) (Const (Integer 1))))
-	                           (App
-	                            ((Var length)
-	                             (App ((GetField (Strict tl)) (Var l)))))))))))
-	                     (Var $3)))))
-	                 (Nil
-	                  ($4
-	                   (App
-	                    ((Match (cases ()) (default ((() (Const (Integer 0))))))
-	                     (Var $4)))))))
-	               (default ()))
-	              (Var lst)))))))))))
-	    (App
-	     ((Var length)
-	      (App
-	       ((Lam (x (Ctor (Cons (Var x)))))
-	        (App
-	         ((Fix Record)
-	          (Lam
-	           ($0
-	            (App
-	             ((App
-	               ((Update (Value hd))
-	                (App
-	                 ((App ((Update (Value tl)) EmptyRecord))
-	                  (App
-	                   ((Lam (x (Ctor (Cons (Var x)))))
-	                    (App
-	                     ((Fix Record)
-	                      (Lam
-	                       ($1
-	                        (App
-	                         ((App
-	                           ((Update (Value hd))
-	                            (App
-	                             ((App ((Update (Value tl)) EmptyRecord))
-	                              (App
-	                               ((Lam (x (Ctor (Cons (Var x)))))
-	                                (App
-	                                 ((Fix Record)
-	                                  (Lam
-	                                   ($2
-	                                    (App
-	                                     ((App
-	                                       ((Update (Value hd))
-	                                        (App
-	                                         ((App
-	                                           ((Update (Value tl)) EmptyRecord))
-	                                          (App
-	                                           ((Lam (x (Ctor (Nil (Var x)))))
-	                                            EmptyRecord))))))
-	                                      (Const (Integer 1))))))))))))))
-	                          (Const (Integer 0))))))))))))))
-	              (Const (Integer 4))))))))))))))))
+	(let-type
+	 ((list
+	   (lam a
+	    (rec list
+	     (union
+	      ((Cons (record (types ()) (values ((tl list) (hd a)))))
+	       (Nil (record (types ()) (values ())))))))))
+	 (let
+	  (length
+	   (fix/let
+	    (fn length
+	     ((: (all a ((list a) -> int)))
+	      (fn lst
+	       ((match
+	         ((Cons
+	           ($3 ((match () (l ((add (Integer 1)) (length ((. tl) l))))) $3)))
+	          (Nil ($4 ((match () (_ (Integer 0))) $4)))))
+	        lst))))))
+	  (length
+	   ((fn x (Cons x))
+	    (fix/record
+	     (fn $0
+	      (((.= hd)
+	        (((.= tl) {})
+	         ((fn x (Cons x))
+	          (fix/record
+	           (fn $1
+	            (((.= hd)
+	              (((.= tl) {})
+	               ((fn x (Cons x))
+	                (fix/record
+	                 (fn $2
+	                  (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 1)))))))
+	             (Integer 0)))))))
+	       (Integer 4))))))))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

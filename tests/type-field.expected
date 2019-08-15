@@ -1,26 +1,14 @@
 
 Desugared:
 
-	(App
-	 ((Fix Record)
-	  (Lam
-	   ($0
-	    (LetType
-	     (((t (Recur (() t (Var (() int))))))
-	      (App
-	       ((App
-	         ((Update (Type t))
-	          (App
-	           ((App ((Update (Value x)) EmptyRecord))
-	            (App ((WithType (Var (() t))) (Const (Integer 4))))))))
-	        (Witness (Var (() t)))))))))))
+	(fix/record
+	 (fn $0
+	  (let-type ((t (rec t int)))
+	   (((.type= t) (((.= x) {}) ((: t) (Integer 4)))) (type t)))))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Record (r_info ()) (r_types (() ((t (Named (() int)))) (a)))
-	   (r_values (() ((x (Named (() int)))) ())))))
+	(all a (record (types ((t int) ...a)) (values ((x int)))))
 
 Runtime term:
 

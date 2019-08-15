@@ -1,30 +1,16 @@
 
 Desugared:
 
-	(Let
+	(let
 	 (rank3
-	  (App
-	   ((Fix Let)
-	    (Lam
-	     (rank3
-	      (App
-	       ((WithType
-	         (Quant
-	          (() All b
-	           (Fn
-	            (()
-	             (Fn
-	              (() (Quant (() All a (Fn (() (Var (() a)) (Var (() a))))))
-	               (Var (() b))))
-	             (Var (() b)))))))
-	        (Lam (rank2 (App ((Var rank2) (Lam (x (Var x)))))))))))))
-	  (App
-	   ((Var rank3)
-	    (Lam (rank1 (App ((Var rank1) (App ((Var rank1) (Const (Integer 4))))))))))))
+	  (fix/let
+	   (fn rank3
+	    ((: (all b (((all a (a -> a)) -> b) -> b))) (fn rank2 (rank2 (fn x x)))))))
+	 (rank3 (fn rank1 (rank1 (rank1 (Integer 4))))))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

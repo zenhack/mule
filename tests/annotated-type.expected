@@ -1,20 +1,11 @@
 
 Desugared:
 
-	(App
-	 ((WithType
-	   (Fn
-	    (()
-	     (Annotated
-	      (() y (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	     (Var (() y)))))
-	  (Lam (x (Var x)))))
+	((: ((y : (record (types ()) (values ()))) -> y)) (fn x x))
 
 inferred type:
 
-	(Fn
-	 (() (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))
-	  (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
+	((record (types ()) (values ())) -> (record (types ()) (values ())))
 
 Runtime term:
 

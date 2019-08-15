@@ -1,20 +1,11 @@
 
 Desugared:
 
-	(App
-	 ((WithType
-	   (Quant
-	    (() Exist $0
-	     (Record (r_info ()) (r_types (() ((t (Var (() $0)))) ()))
-	      (r_values (() () ()))))))
-	  EmptyRecord))
+	((: (exist $0 (record (types ((t $0))) (values ())))) {})
 
 inferred type:
 
-	(Quant
-	 (() Exist a
-	  (Record (r_info ()) (r_types (() ((t (Var (() a)))) ()))
-	   (r_values (() () ())))))
+	(exist a (record (types ((t a))) (values ())))
 
 Runtime term:
 

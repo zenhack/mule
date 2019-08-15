@@ -1,21 +1,11 @@
 
 Desugared:
 
-	(Lam (x (App ((GetField (Strict y)) (Var x)))))
+	(fn x ((. y) x))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Quant
-	     (() All c
-	      (Fn
-	       (()
-	        (Record (r_info ()) (r_types (() () (b)))
-	         (r_values (() ((y (Var (() c)))) (a))))
-	        (Var (() c))))))))))
+	(all a (all b (all c ((record (types (...b)) (values ((y c) ...a))) -> c))))
 
 Runtime term:
 

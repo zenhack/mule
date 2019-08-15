@@ -1,11 +1,11 @@
 
 Desugared:
 
-	(App ((WithType (Var (() int))) (Const (Integer 4))))
+	((: int) (Integer 4))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

@@ -1,32 +1,17 @@
 
 Desugared:
 
-	(Lam
-	 (f
-	  (Lam
-	   (arg
-	    (App
-	     ((App ((Update (Value y)) (Var arg)))
-	      (App ((Var f) (App ((GetField (Strict z)) (Var arg)))))))))))
+	(fn f (fn arg (((.= y) arg) (f ((. z) arg)))))
 
 inferred type:
 
-	(Quant
-	 (() All a
-	  (Quant
-	   (() All b
-	    (Quant
-	     (() All c
-	      (Quant
-	       (() All d
-	        (Fn
-	         (() (Fn (() (Var (() c)) (Var (() a))))
-	          (Fn
-	           (()
-	            (Record (r_info ()) (r_types (() () (d)))
-	             (r_values (() ((z (Var (() c)))) (b))))
-	            (Record (r_info ()) (r_types (() () (d)))
-	             (r_values (() ((y (Var (() a))) (z (Var (() c)))) (b))))))))))))))))
+	(all a
+	 (all b
+	  (all c
+	   (all d
+	    ((c -> a) ->
+	     ((record (types (...d)) (values ((z c) ...b))) ->
+	      (record (types (...d)) (values ((y a) (z c) ...b)))))))))
 
 Runtime term:
 

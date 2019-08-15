@@ -1,17 +1,15 @@
 
 Desugared:
 
-	(App
-	 ((ConstMatch
-	   (cm_cases
-	    (((Text goodbye) (Const (Integer 3))) ((Text hello) (Const (Integer 1)))
-	     ((Text hey!) (Const (Integer 2)))))
-	   (cm_default (Lam ($0 (Const (Integer 4))))))
-	  (Const (Text hey!))))
+	((match/const
+	  (((Text goodbye) (Integer 3)) ((Text hello) (Integer 1))
+	   ((Text hey!) (Integer 2)))
+	  (_ (fn $0 (Integer 4))))
+	 (Text hey!))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

@@ -1,15 +1,11 @@
 
 Desugared:
 
-	(LetType
-	 (((t
-	    (Recur
-	     (() t (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))))
-	  (App ((WithType (Var (() t))) EmptyRecord))))
+	(let-type ((t (rec t (record (types ()) (values ()))))) ((: t) {}))
 
 inferred type:
 
-	(Record (r_info ()) (r_types (() () ())) (r_values (() () ())))
+	(record (types ()) (values ()))
 
 Runtime term:
 

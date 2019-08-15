@@ -1,45 +1,23 @@
 
 Desugared:
 
-	(LetType
-	 (((int-list
-	    (Recur
-	     (() int-list
-	      (Union
-	       (()
-	        ((Cons
-	          (Record (r_info ()) (r_types (() () ()))
-	           (r_values (() ((tl (Var (() int-list))) (hd (Var (() int)))) ()))))
-	         (Nil
-	          (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	        ()))))))
-	  (App
-	   ((WithType (Var (() int-list)))
-	    (App
-	     ((Lam (x (Ctor (Cons (Var x)))))
-	      (App
-	       ((Fix Record)
-	        (Lam
-	         ($0
-	          (App
-	           ((App
-	             ((Update (Value hd))
-	              (App
-	               ((App ((Update (Value tl)) EmptyRecord))
-	                (App ((Lam (x (Ctor (Nil (Var x))))) EmptyRecord))))))
-	            (Const (Integer 4))))))))))))))
+	(let-type
+	 ((int-list
+	   (rec int-list
+	    (union
+	     ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
+	      (Nil (record (types ()) (values ()))))))))
+	 ((: int-list)
+	  ((fn x (Cons x))
+	   (fix/record
+	    (fn $0 (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 4)))))))
 
 inferred type:
 
-	(Recur
-	 (() a
-	  (Union
-	   (()
-	    ((Cons
-	      (Record (r_info ()) (r_types (() () ()))
-	       (r_values (() ((hd (Named (() int))) (tl (Var (() a)))) ()))))
-	     (Nil (Record (r_info ()) (r_types (() () ())) (r_values (() () ())))))
-	    ()))))
+	(rec a
+	 (union
+	  ((Cons (record (types ()) (values ((hd int) (tl a)))))
+	   (Nil (record (types ()) (values ()))))))
 
 Runtime term:
 

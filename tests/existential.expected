@@ -1,13 +1,11 @@
 
 Desugared:
 
-	(App
-	 ((WithType (Quant (() Exist t (Fn (() (Var (() t)) (Var (() t)))))))
-	  (Lam (x (Const (Integer 4))))))
+	((: (exist t (t -> t))) (fn x (Integer 4)))
 
 inferred type:
 
-	(Quant (() Exist a (Fn (() (Var (() a)) (Var (() a))))))
+	(exist a (a -> a))
 
 Runtime term:
 

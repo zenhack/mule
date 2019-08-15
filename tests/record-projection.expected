@@ -1,16 +1,11 @@
 
 Desugared:
 
-	(App
-	 ((GetField (Strict x))
-	  (App
-	   ((Fix Record)
-	    (Lam ($0 (App ((App ((Update (Value x)) EmptyRecord)) EmptyRecord))))))))
+	((. x) (fix/record (fn $0 (((.= x) {}) {}))))
 
 inferred type:
 
-	(Quant
-	 (() All a (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
+	(all a (record (types (...a)) (values ())))
 
 Runtime term:
 

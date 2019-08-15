@@ -1,12 +1,11 @@
 
 Desugared:
 
-	EmptyRecord
+	{}
 
 inferred type:
 
-	(Quant
-	 (() All a (Record (r_info ()) (r_types (() () (a))) (r_values (() () ())))))
+	(all a (record (types (...a)) (values ())))
 
 Runtime term:
 

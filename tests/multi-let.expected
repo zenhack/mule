@@ -1,28 +1,16 @@
 
 Desugared:
 
-	(Let
+	(let
 	 ($1
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     ($0
-	      (App
-	       ((App
-	         ((Update (Value x))
-	          (App
-	           ((App ((Update (Value y)) EmptyRecord))
-	            (App
-	             ((App ((Var add) (App ((GetField (Lazy x)) (Var $0)))))
-	              (Const (Integer 2))))))))
-	        (Const (Integer 1))))))))
-	  (Let
-	   (y (App ((GetField (Strict y)) (Var $1)))
-	    (Let (x (App ((GetField (Strict x)) (Var $1))) (Var y)))))))
+	  (fix/record
+	   (fn $0
+	    (((.= x) (((.= y) {}) ((add ((. x) $0)) (Integer 2)))) (Integer 1)))))
+	 (let (y ((. y) $1)) (let (x ((. x) $1)) y)))
 
 inferred type:
 
-	(Named (() int))
+	int
 
 Runtime term:
 

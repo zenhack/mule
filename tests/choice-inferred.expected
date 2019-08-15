@@ -1,17 +1,8 @@
 
 Desugared:
 
-	(Lam
-	 (choice
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     ($0
-	      (App
-	       ((App
-	         ((Update (Value x))
-	          (App
-	           ((App ((Update (Value y)) EmptyRecord))
-	            (App ((App ((Var choice) (Lam (x (Var x))))) (Lam (x (Var x)))))))))
-	        (App ((App ((Var choice) EmptyRecord)) EmptyRecord))))))))))
+	(fn choice
+	 (fix/record
+	  (fn $0
+	   (((.= x) (((.= y) {}) ((choice (fn x x)) (fn x x)))) ((choice {}) {})))))
 Type error: mismatched type constructors: {...} and ->
