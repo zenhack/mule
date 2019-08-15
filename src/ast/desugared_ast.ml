@@ -7,19 +7,19 @@ module Kind = struct
     | `Row
     | `Arrow of maybe_kind * maybe_kind
     ]
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   type t =
     [ `Type
     | `Row
     | `Arrow of t * t
     ]
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 module Type = struct
   type quantifier = [ `All | `Exist ]
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   type 'i t =
     | Fn of ('i * Var.t option * 'i t * 'i t)
@@ -37,10 +37,10 @@ module Type = struct
     | Opaque of 'i
     | TypeLam of ('i * Var.t * 'i t)
     | App of ('i * 'i t * 'i t)
-  [@@deriving sexp]
+  [@@deriving sexp_of]
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   let get_info = function
     | Fn(x, _, _, _) -> x
@@ -111,7 +111,7 @@ module Expr = struct
     | Let of (Var.t * 'i t * 'i t)
     | LetType of ((Var.t * 'i Type.t) list * 'i t)
     | Const of Const.t
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   let apply_to_kids e ~f = match e with
     | Lam (v, body) -> Lam (v, f body)
