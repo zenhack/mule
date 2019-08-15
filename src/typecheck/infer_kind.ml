@@ -91,7 +91,7 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
          * labels, which also should have kind type.
          *
          * This whole business is weird because of the way records are mixed in...
-         *)
+        *)
         Type.Path(k, v, ls)
     | Type.Fn(_, (Type.Annotated(_, v, _) as l), r) ->
         let l' = walk_type env l in

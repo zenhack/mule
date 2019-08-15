@@ -2,6 +2,8 @@ open MParser
 open Ast
 open Ast.Surface
 
+type 'a parser_t = ('a, unit) MParser.t
+
 module Let_syntax = struct
   (* currently unused, but potentially used by the desugaring process.
      let return =
@@ -19,6 +21,12 @@ module Let_syntax = struct
 end
 
 let lazy_p p = return () >>= fun () -> Lazy.force p
+
+let located p =
+  let%bind start = get_pos in
+  let%bind value = p in
+  let%map stop = get_pos in
+  Located.at (Located.mk_range start stop) value
 
 (* Set of reserved keywords *)
 let keywords = Set.of_list (module String)
@@ -62,7 +70,7 @@ let comma_list1 p =
   sep_start_by1 p (kwd ",")
 
 (* An identifier. Does not check if the identifier is a reserved word. *)
-let identifier : (string, unit) MParser.t = (
+let identifier : string parser_t = (
   let id_start = lowercase <|> char '_' in
   let id_cont =
     letter
@@ -135,13 +143,13 @@ let char_const: (Const.t, unit) MParser.t = token (
     let%bind c = char_legal <|> escaped in
     let%map _ = char '\'' in
     Const.Char c
-)
+  )
 
 let constant : (Const.t, unit) MParser.t = choice
-  [ text_const
-  ; int_const
-  ; char_const
-  ]
+    [ text_const
+    ; int_const
+    ; char_const
+    ]
 
 let label =
   var |>> Ast.var_to_label
@@ -152,7 +160,7 @@ let ctor = token (
     Label.of_string (String.make 1 c ^ cs)
   ) <?> "constructor"
 
-let rec typ_term = lazy (
+let rec typ_term: Type.t parser_t Lazy.t = lazy (
   choice
     [ lazy_p typ_factor
     ; (ctor |>> fun c -> Type.Ctor c)
@@ -164,45 +172,52 @@ let rec typ_term = lazy (
     ]
 )
 and typ_factor = lazy (
-  let%bind v = var in
-  match%map many (kwd "." >> label) with
-  | [] -> Type.Var v
-  | parts -> Type.Path(v, parts)
+  let%bind lvar = located var in
+  match%map many (kwd "." >> located label) with
+  | [] -> Type.Var (Located.value lvar)
+  | parts -> Type.Path(lvar, parts)
 )
-and typ_app = lazy (
-  let%bind t = lazy_p typ_term in
-  many (lazy_p typ_term)
-  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
+and typ_app: Type.t parser_t Lazy.t = lazy (
+  let%bind t = located (lazy_p typ_term) in
+  let%map parts = many (located (lazy_p typ_term)) in
+  List.fold_left parts ~init:t ~f:(fun f x ->
+      Located.spaning f x (Type.App (f, x))
+    )
+  |> Located.value
 )
-and typ_annotated = lazy (
+and typ_annotated: Type.t parser_t Lazy.t = lazy (
   choice
     [ begin
-      let%bind v = attempt (var << kwd ":") in
+      let%bind v = located (attempt (var << kwd ":")) in
       (* TODO: attach the variable to the AST somewhere. *)
-      let%map ty = lazy_p typ_app in
+      let%map ty = located (lazy_p typ_app) in
       Type.Annotated(v, ty)
     end
     ; lazy_p typ_app
     ]
 )
-and recur_type = lazy (
+and recur_type: Type.t parser_t Lazy.t = lazy (
   kwd "rec" >>
-  let%bind v = var in
+  let%bind v = located var in
   kwd "." >>
-  let%map ty = lazy_p typ in
+  let%map ty = located (lazy_p typ) in
   Type.Recur(v, ty)
 )
 and quantified_type binder quantifier = lazy (
-  kwd binder >>
-  let%bind vs = many1 var in
+  let%bind lbinder = located (kwd binder) in
+  let%bind vs = many1 (located var) in
   kwd "." >>
-  let%map ty = lazy_p typ in
-  Type.Quant(quantifier, vs, ty)
+  let%map ty = located (lazy_p typ) in
+  Type.Quant
+    ( Located.at (Located.loc lbinder) quantifier
+    , vs
+    , ty
+    )
 )
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
-  let%map items = braces (comma_list (lazy_p record_item)) in
+  let%map items = braces (comma_list (located (lazy_p record_item))) in
   Type.Record items
 ) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
     choice
@@ -210,63 +225,78 @@ and record_type = lazy (
       ; lazy_p field_decl
       ; kwd "..." >> (var |>> fun v -> Type.Rest v)
       ]
-  ) and type_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
-    let%bind l = kwd "type" >> label in
-    let%bind vars = many var in
+  ) and type_decl: Type.record_item parser_t Lazy.t = lazy (
+    let%bind l = kwd "type" >> located label in
+    let%bind vars = many (located var) in
     let%bind () = optional text_const in
-    let%map ty = option (kwd "=" >> lazy_p typ)
+    let%map ty = option (kwd "=" >> located (lazy_p typ))
     in
     Type.Type(l, vars, ty)
   ) and field_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
-    let%bind l = label in
-    let%bind ty = kwd ":" >> lazy_p typ in
+    let%bind l = located label in
+    let%bind ty = kwd ":" >> located (lazy_p typ) in
     let%map () = optional text_const in
     Type.Field (l, ty)
-  ) and typ_fn = lazy (
-    begin match%map sep_by1 (lazy_p typ_annotated) (kwd "->") with
-      | [t] -> t
+  ) and typ_fn: Type.t parser_t Lazy.t = lazy (
+    begin match%map sep_by1 (located (lazy_p typ_annotated)) (kwd "->") with
+      | [t] ->
+          Located.value t
       | ts ->
           let ts = List.rev ts in
           begin match ts with
             | [] -> failwith "impossible"
-            | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn(l, r))
+            | (t::ts) ->
+                Located.value
+                  (List.fold_left ts ~init:t ~f:(fun r l ->
+                       Located.spaning l r (Type.Fn(l, r))
+                     )
+                  )
           end
     end
   ) and typ_sum = lazy (
     optional (kwd "|") >>
-    begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
+    begin match%map sep_by1 (located (lazy_p typ_fn)) (kwd "|") with
       | [] -> failwith "impossible"
       | (t::ts) ->
-          List.fold_right ts ~init:t ~f:(fun r l -> Type.Union(l, r))
+          Located.value
+            (List.fold_right ts ~init:t ~f:(fun r l ->
+                 Located.spaning l r (Type.Union(l, r))
+               )
+            )
     end
   ) and typ = lazy (lazy_p typ_sum)
 
 let rec expr = lazy ((
-    let%bind e = lazy_p ex0 in
-    begin match%map option (kwd ":" >> lazy_p typ) with
+    let%bind e = located (lazy_p ex0) in
+    begin match%map option (kwd ":" >> located (lazy_p typ)) with
       | Some ty -> Expr.WithType(e, ty)
-      | None -> e
+      | None -> Located.value e
     end
   ) <?> "expression")
 and ex0 = lazy (
-  let%bind t = lazy_p ex1 in
-  let%map ts = many (lazy_p ex1) in
-  List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
+  let%bind t = located (lazy_p ex1) in
+  let%map ts = many (located (lazy_p ex1)) in
+  List.fold_left ts ~init:t ~f:(fun f x -> Located.spaning f x (Expr.App (f, x)))
+  |> Located.value
 )
 and ex1 = lazy (
-  let%bind old = lazy_p ex2 in
+  let%bind old = located (lazy_p ex2) in
   choice
     [ begin
       let%map fields = kwd "where" >> lazy_p record_fields in
       Expr.Update (old, fields)
     end
-    ; return old
+    ; return (Located.value old)
     ]
 )
-and ex2 = lazy (
-  let%bind head = lazy_p ex3 in
-  many (kwd "." >> label)
-  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField(e, l))
+and ex2: Expr.t parser_t Lazy.t = lazy (
+  let%bind head = located (lazy_p ex3) in
+  let%map lbls = many (kwd "." >> located label) in
+  List.fold_left
+    lbls
+    ~init:head
+    ~f:(fun e l -> Located.spaning e l (Expr.GetField(e, l)))
+  |> Located.value
 )
 and ex3 = lazy (
   choice
@@ -281,44 +311,44 @@ and ex3 = lazy (
     ]
 )
 and lambda = lazy ((
-    let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
-    let%map body = kwd "." >> lazy_p expr in
+    let%bind params = kwd "fn" >> many1 (located (lazy_p pattern)) in
+    let%map body = kwd "." >> located (lazy_p expr) in
     Expr.Lam (params, body)
   ) <?> "lambda")
 and binding = lazy (
   choice
     [ begin
-      let%bind v = kwd "type" >> var in
-      let%bind params = many var in
-      let%map ty = kwd "=" >> lazy_p typ in
+      let%bind v = kwd "type" >> located var in
+      let%bind params = many (located var) in
+      let%map ty = kwd "=" >> located (lazy_p typ) in
       `BindType(v, params, ty)
     end
     ; begin
-      let%bind pat = lazy_p pattern in
-      let%map e    = kwd "=" >> lazy_p expr in
+      let%bind pat = located (lazy_p pattern) in
+      let%map e    = kwd "=" >> located (lazy_p expr) in
       `BindVal(pat, e)
     end
     ]
 )
 and let_expr = lazy ((
     let%bind _ = kwd "let" in
-    let%bind bindings = comma_list1 (lazy_p binding) in
-    let%map body = kwd "in" >> lazy_p expr in
+    let%bind bindings = comma_list1 (located (lazy_p binding)) in
+    let%map body = kwd "in" >> located (lazy_p expr) in
     Expr.Let(bindings, body)
   ) <?> "let expression")
 and match_expr = lazy ((
-    let%bind e = kwd "match" >> lazy_p expr in
+    let%bind e = kwd "match" >> located (lazy_p expr) in
     let%bind cases =
       kwd "with"
       >> optional (kwd "|")
-      >> sep_by1 (lazy_p case) (kwd "|")
+      >> sep_by1 (located (lazy_p case)) (kwd "|")
     in
     kwd "end"
     >>$ Expr.Match(e, cases)
   ) <?> "match expression")
 and case = lazy (
-  let%bind p = lazy_p pattern in
-  let%map e = kwd "->" >> lazy_p expr in
+  let%bind p = located (lazy_p pattern) in
+  let%map e = kwd "->" >> located (lazy_p expr) in
   (p, e)
 )
 and pattern = lazy ((
@@ -327,37 +357,37 @@ and pattern = lazy ((
       ; parens (lazy_p pattern)
       ; (kwd "_" |>> fun _ -> Pattern.Wild)
       ; begin
-        let%bind v = var in
-        match%map option (kwd ":" >> lazy_p typ) with
+        let%bind v = located var in
+        match%map option (kwd ":" >> located (lazy_p typ)) with
         | Some ty -> Pattern.Var (v, Some ty)
         | None -> Pattern.Var (v, None)
       end
       ; begin
-        let%bind lbl = ctor in
-        let%map p = lazy_p pattern in
+        let%bind lbl = located ctor in
+        let%map p = located (lazy_p pattern) in
         Pattern.Ctor (lbl, p)
       end
       ]
   ) <?> "pattern")
 and record_fields =
-  lazy (braces (comma_list (lazy_p field_def)) <?> "record")
+  lazy (braces (comma_list (located (lazy_p field_def))) <?> "record")
 and record = lazy (
   lazy_p record_fields
   |>> fun fields -> Expr.Record fields
 )
 and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
-  let%bind l = kwd "type" >> label in
-  let%bind params = many var in
+  let%bind l = kwd "type" >> located label in
+  let%bind params = many (located var) in
   let%bind () = optional text_const in
-  let%map ty = kwd "=" >> lazy_p typ in
+  let%map ty = kwd "=" >> located (lazy_p typ) in
   `Type (l, params, ty)
 )
 and value_field_def = lazy (
-  let%bind l = label in
-  let%bind ty = option (kwd ":" >> lazy_p typ) in
+  let%bind l = located label in
+  let%bind ty = option (kwd ":" >> located (lazy_p typ)) in
   let%bind () = optional text_const in
-  let%map e = kwd "=" >> lazy_p expr in
+  let%map e = kwd "=" >> located (lazy_p expr) in
   `Value (l, ty, e)
 )
 

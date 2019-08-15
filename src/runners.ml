@@ -3,12 +3,12 @@ module R = Ast.Runtime
 module C = Ast.Const
 
 let type_of_string_exn s =
-  match MParser.parse_string Parser.typ s () with
+  match MParser.parse_string (Parser.located Parser.typ) s () with
   | MParser.Failed (msg, _) -> failwith ("parse failed : " ^ msg)
   | MParser.Success ty -> ty
 
 type runner =
-  { want_type : Ast.Surface.Type.t
+  { want_type : Ast.Surface.Type.t Ast.Surface.Located.t
   ; run : R.Expr.t -> R.Expr.t Lwt.t
   }
 
@@ -44,8 +44,8 @@ let io_print =
   prim (fun s -> ignore_io (fun () -> Lwt_io.write Lwt_io.stdout (assert_text s)))
 
 let io_get_line = prim_io (fun () ->
-  Lwt_io.read_line Lwt_io.stdin
-  |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
+    Lwt_io.read_line Lwt_io.stdin
+    |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
   )
 
 let mk_record fields =
