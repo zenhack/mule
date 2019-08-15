@@ -107,7 +107,7 @@ let rec quantify_opaques = function
           }
       in
       List.fold !vars ~init ~f:(fun ty v ->
-          DT.Quant(`Type, `Exist, v, ty)
+          DT.Quant(`Unknown, `Exist, v, ty)
         )
   | DT.Opaque i -> DT.Opaque i
   | DT.Fn(i, param, ret) ->
