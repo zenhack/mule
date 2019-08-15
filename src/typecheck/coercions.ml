@@ -64,22 +64,20 @@ let rec gen_type
         | _ ->
             failwith "BUG: lambda had non-arrow kind."
       end
-  | Type.Annotated (_, _, t) ->
-      gen_type cops b_at env sign t
   | Type.Opaque _ ->
       failwith
         ("Opaque types should have been removed before generating " ^
          "the constraint graph.")
   | Type.Named (_, s) ->
       UnionFind.make (`Const(tv, `Named s, [], kvar_type))
-  | Type.Fn (_, param, ret) ->
+  | Type.Fn (_, maybe_v, param, ret) ->
       let param' =
         gen_type cops b_at env (flip_sign sign) param
       in
-      let env' = match param with
-        | Type.Annotated(_, v, _) ->
+      let env' = match maybe_v with
+        | Some v ->
             Map.set env ~key:v ~data:param'
-        | _ ->
+        | None ->
             env
       in
       let ret' =

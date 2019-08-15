@@ -322,6 +322,7 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
   | `Fn (i, param, ret) ->
       Type.Fn
         ( i
+        , None
         , finish_extract_t (invert_sign sign) param
         , finish_extract_t sign ret
         )

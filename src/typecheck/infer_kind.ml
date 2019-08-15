@@ -64,7 +64,6 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
           , param
           , body_t
           )
-    | Type.Annotated(_, _, t) -> walk_type env t
     | Type.Opaque k ->
         Type.Opaque k
     | Type.Named (k, s) ->
@@ -93,16 +92,12 @@ let rec walk_type: k_var VarMap.t -> k_var Type.t -> k_var Type.t =
          * This whole business is weird because of the way records are mixed in...
         *)
         Type.Path(k, v, ls)
-    | Type.Fn(_, (Type.Annotated(_, v, _) as l), r) ->
+    | Type.Fn(_, Some v, l, r) ->
         let l' = walk_type env l in
         let r' = walk_type (Map.set env ~key:v ~data:(to_kvar `Type)) r in
-        Type.Fn
-          ( to_kvar `Type
-          , Type.Annotated(to_kvar `Type, v, l')
-          , r'
-          )
-    | Type.Fn(_, l, r) ->
-        Type.Fn(to_kvar `Type, walk_type env l, walk_type env r)
+        Type.Fn(to_kvar `Type, Some v, l', r')
+    | Type.Fn(_, None, l, r) ->
+        Type.Fn(to_kvar `Type, None, walk_type env l, walk_type env r)
     | Type.Recur(_, var, body) ->
         let u_var = to_kvar `Type in
         let body_t = walk_type (Map.set env ~key:var ~data:u_var) body in

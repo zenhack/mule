@@ -24,6 +24,7 @@ type t =
   | EmptyMatch
   | MalformedType of string
   | IncompletePattern of Ast.Surface.Pattern.t
+  | IllegalAnnotatedType of Ast.Surface.Type.t
 
 exception MuleExn of t
 
@@ -72,6 +73,8 @@ let show = function
       "Empty match expression."
   | IncompletePattern _ ->
       "Incomplete pattern"
+  | IllegalAnnotatedType _ ->
+      "Illegal annotated type: only types of function parameters may be annotated."
 
 let throw e =
   if Config.always_print_stack_trace then

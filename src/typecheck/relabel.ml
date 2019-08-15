@@ -42,15 +42,13 @@ let relabel_type () =
     | TypeLam(i, v, t) ->
         let v = get v in
         TypeLam(i, v, go t)
-    | Annotated(i, v, t) ->
-        let v = get v in
-        Annotated(i, v, go t)
     | Opaque i -> Opaque i
     | Named(i, s) -> Named (i, s)
-    | Fn (i, l, r) ->
+    | Fn (i, v, l, r) ->
+        let v' = Option.map v ~f:get in
         let l' = go l in
         let r' = go r in
-        Fn (i, l', r')
+        Fn (i, v', l', r')
     | Recur (i, v, body) ->
         let v' = get v in
         let body' = go body in

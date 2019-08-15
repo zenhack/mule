@@ -86,8 +86,6 @@ let rec quantify_opaques = function
         )
   | DT.TypeLam(i, v, t) ->
       DT.TypeLam(i, v, quantify_opaques t)
-  | DT.Annotated(i, v, t) ->
-      DT.Annotated(i, v, quantify_opaques t)
   | DT.Record {r_info; r_types = (i, fields, rest); r_values} ->
       let vars = ref [] in
       let fields' = List.map fields ~f:(fun (lbl, ty) ->
@@ -110,8 +108,8 @@ let rec quantify_opaques = function
           DT.Quant(`Unknown, `Exist, v, ty)
         )
   | DT.Opaque i -> DT.Opaque i
-  | DT.Fn(i, param, ret) ->
-      DT.Fn(i, quantify_opaques param, quantify_opaques ret)
+  | DT.Fn(i, v, param, ret) ->
+      DT.Fn(i, v, quantify_opaques param, quantify_opaques ret)
   | DT.Recur (i, v, t) -> DT.Recur(i, v, quantify_opaques t)
   | DT.Var v -> DT.Var v
   | DT.Union row -> DT.Union(quantify_row_opaques row)
@@ -126,10 +124,31 @@ and quantify_row_opaques (i, fields, rest) =
   , rest
   )
 
+(*
+let rec unshadow_type env = function
+  | DT.App(i, f, x) -> DT.App(i, unshadow env f, unshadow env x)
+  | DT.TypeLam(i, v, t) ->
+      let v' = Gensym.anon_var () in
+      DT.TypeLam(i, v', unshadow (Map.set v v' env) t)
+  | DT.Fn(ifn, DT.Annotated(ia, v, param), ret) ->
+      let v' = Gensym.anon_var () in
+      DT.Fn
+        ( ifn
+        , DT.Annotated(ia, v', unshadow_type env param)
+        , unshadow_type (Map.set v v' env) ret
+        )
+  | DT.Var(i, v) ->
+      DT.Var(i, Map.find_exn v env)
+  | DT.Path(i, v, ls) ->
+      DT.Path(i, Map.find_exn v env, ls)
+   *)
+
 
 let rec desugar_type' = function
+  | ST.Fn(ST.Annotated(v, param), ret) ->
+      DT.Fn(`Type, Some v, desugar_type' param, desugar_type' ret)
   | ST.Fn(param, ret) ->
-      DT.Fn(`Type, desugar_type' param, desugar_type' ret)
+      DT.Fn(`Type, None, desugar_type' param, desugar_type' ret)
   | ST.Quant(q, vs, body) ->
       List.fold_right
         vs
@@ -147,8 +166,8 @@ let rec desugar_type' = function
       DT.Union(`Type, [(l, desugar_type' t)], None)
   | ST.RowRest v ->
       DT.Union(`Type, [], Some v)
-  | ST.Annotated(v, ty) ->
-      DT.Annotated(`Unknown, v, desugar_type' ty)
+  | (ST.Annotated _) as ty ->
+      MuleErr.(throw (IllegalAnnotatedType ty))
   | ST.Path(v, ls) ->
       DT.Path(`Unknown, v, ls)
   | ST.App(f, x) ->

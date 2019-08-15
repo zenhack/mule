@@ -8,7 +8,7 @@ open Typecheck_types
 
 let int_t = D.Type.Named(kvar_type, "int")
 let text_t = D.Type.Named(kvar_type, "text")
-let fn_t p r = D.Type.Fn (kvar_type, p, r)
+let fn_t p r = D.Type.Fn (kvar_type, None, p, r)
 
 let prim x = R.Expr.Prim x
 

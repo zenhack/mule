@@ -22,7 +22,7 @@ module Type = struct
   [@@deriving sexp]
 
   type 'i t =
-    | Fn of ('i * 'i t * 'i t)
+    | Fn of ('i * Var.t option * 'i t * 'i t)
     | Recur of ('i * Var.t * 'i t)
     | Var of ('i * Var.t)
     | Path of ('i * Var.t * Label.t list)
@@ -35,7 +35,6 @@ module Type = struct
     | Quant of ('i * quantifier * Var.t * 'i t)
     | Named of ('i * string)
     | Opaque of 'i
-    | Annotated of ('i * Var.t * 'i t)
     | TypeLam of ('i * Var.t * 'i t)
     | App of ('i * 'i t * 'i t)
   [@@deriving sexp]
@@ -44,7 +43,7 @@ module Type = struct
   [@@deriving sexp]
 
   let get_info = function
-    | Fn(x, _, _) -> x
+    | Fn(x, _, _, _) -> x
     | Recur(x, _, _) -> x
     | Var(x, _) -> x
     | Path(x, _, _) -> x
@@ -53,17 +52,15 @@ module Type = struct
     | Quant(x, _, _, _) -> x
     | Named(x, _) -> x
     | Opaque x -> x
-    | Annotated(x, _, _) -> x
     | TypeLam(x, _, _) -> x
     | App(x, _, _) -> x
 
   let rec map ty ~f = match ty with
-    | Annotated(x, v, t) -> Annotated(f x, v, map t ~f)
     | Opaque x -> Opaque (f x)
     | Named(x, s) ->
         Named(f x, s)
-    | Fn(x, l, r) ->
-        Fn(f x, map l ~f, map r ~f)
+    | Fn(x, v, l, r) ->
+        Fn(f x, v, map l ~f, map r ~f)
     | Recur(x, v, body) ->
         Recur(f x, v, map body ~f)
     | Path(x, v, ls) ->
