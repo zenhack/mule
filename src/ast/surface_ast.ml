@@ -21,6 +21,8 @@ module Located : sig
 
   val at : range -> 'a -> 'a t
   val spaning : 'a t -> 'b t -> 'c -> 'c t
+
+  val map : 'a t -> f:('a -> 'b) -> 'b t
 end = struct
   (* This is the same as [MParser.pos] but by inlining it
    * we can derive sexp. *)
@@ -46,6 +48,9 @@ end = struct
 
   let spaning: 'a t -> 'b t -> 'c -> 'c t =
     fun l r v -> ((start (loc l), stop (loc r)), v)
+
+  let map x ~f =
+    at (loc x) (f (value x))
 end
 
 module L = Located
