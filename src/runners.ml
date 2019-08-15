@@ -44,8 +44,8 @@ let io_print =
   prim (fun s -> ignore_io (fun () -> Lwt_io.write Lwt_io.stdout (assert_text s)))
 
 let io_get_line = prim_io (fun () ->
-  Lwt_io.read_line Lwt_io.stdin
-  |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
+    Lwt_io.read_line Lwt_io.stdin
+    |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
   )
 
 let mk_record fields =

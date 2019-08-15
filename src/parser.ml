@@ -135,13 +135,13 @@ let char_const: (Const.t, unit) MParser.t = token (
     let%bind c = char_legal <|> escaped in
     let%map _ = char '\'' in
     Const.Char c
-)
+  )
 
 let constant : (Const.t, unit) MParser.t = choice
-  [ text_const
-  ; int_const
-  ; char_const
-  ]
+    [ text_const
+    ; int_const
+    ; char_const
+    ]
 
 let label =
   var |>> Ast.var_to_label
