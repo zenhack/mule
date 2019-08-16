@@ -49,7 +49,7 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
         | ST.Union(l, r) -> ST.Union(go l, go r)
         | ST.Annotated(v, t) -> ST.Annotated(v, go t)
         | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
-        | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ -> ty
+        | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ | ST.Import _ -> ty
       end
   and go_record_item = function
     | ST.Field(l, t) -> ST.Field(l, go t)
@@ -69,7 +69,7 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
   in
   go
 
-let rec quantify_opaques = function
+let rec quantify_opaques t = match t with
   (* Transform opaque type members into existentials, e.g.
    *
    * { type t }
@@ -78,6 +78,7 @@ let rec quantify_opaques = function
    *
    * exist a. { type t = a }
   *)
+  | DT.Named _ | DT.Path _ | DT.Var _ -> t
   | DT.App(i, f, x) ->
       DT.App
         ( i
@@ -111,11 +112,8 @@ let rec quantify_opaques = function
   | DT.Fn(i, v, param, ret) ->
       DT.Fn(i, v, quantify_opaques param, quantify_opaques ret)
   | DT.Recur (i, v, t) -> DT.Recur(i, v, quantify_opaques t)
-  | DT.Var v -> DT.Var v
   | DT.Union row -> DT.Union(quantify_row_opaques row)
   | DT.Quant(i, q, v, t) -> DT.Quant(i, q, v, quantify_opaques t)
-  | DT.Named(i, s) -> DT.Named(i, s)
-  | DT.Path p -> DT.Path p
 and quantify_row_opaques (i, fields, rest) =
   ( i
   , List.map
@@ -124,27 +122,9 @@ and quantify_row_opaques (i, fields, rest) =
   , rest
   )
 
-(*
-let rec unshadow_type env = function
-  | DT.App(i, f, x) -> DT.App(i, unshadow env f, unshadow env x)
-  | DT.TypeLam(i, v, t) ->
-      let v' = Gensym.anon_var () in
-      DT.TypeLam(i, v', unshadow (Map.set v v' env) t)
-  | DT.Fn(ifn, DT.Annotated(ia, v, param), ret) ->
-      let v' = Gensym.anon_var () in
-      DT.Fn
-        ( ifn
-        , DT.Annotated(ia, v', unshadow_type env param)
-        , unshadow_type (Map.set v v' env) ret
-        )
-  | DT.Var(i, v) ->
-      DT.Var(i, Map.find_exn v env)
-  | DT.Path(i, v, ls) ->
-      DT.Path(i, Map.find_exn v env, ls)
-   *)
-
-
 let rec desugar_type' = function
+  | ST.Import _ ->
+      failwith "TODO: implememnt import type"
   | ST.Fn(ST.Annotated(v, param), ret) ->
       DT.Fn(`Type, Some v, desugar_type' param, desugar_type' ret)
   | ST.Fn(param, ret) ->
@@ -220,6 +200,8 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
 and desugar = function
+  | S.Import _ -> failwith "TODO: implement import"
+  | S.Embed _ -> failwith "TODO: implement embed"
   | S.Const c -> D.Const c
   | S.Var v -> D.Var v
   | S.App (f, x) -> D.App (desugar f, desugar x)

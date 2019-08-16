@@ -10,11 +10,20 @@ type kind =
   | `Unknown
   | `Arrow of kind * kind
   ]
-type type_error
-  = MismatchedCtors of (ctor * ctor)
+type type_error =
+  | MismatchedCtors of (ctor * ctor)
   | MismatchedKinds of (kind * kind)
   | OccursCheckKind
   | PermissionErr of op
+
+type path_error =  {
+  pe_path: string;
+  pe_problem :
+    [ `AbsoluteEmbed
+    | `IllegalChar of char
+    | `BadPathPart of string
+    ]
+}
 
 type t =
   | UnboundVar of Ast.Var.t
@@ -25,6 +34,7 @@ type t =
   | MalformedType of string
   | IncompletePattern of Ast.Surface.Pattern.t
   | IllegalAnnotatedType of Ast.Surface.Type.t
+  | PathError of path_error
 
 exception MuleExn of t
 
@@ -55,6 +65,17 @@ let show_type_error = function
   | PermissionErr op ->
       "permission error during " ^ show_op op
 
+let show_path_error {pe_path; pe_problem} =
+  let path = String.escaped pe_path in
+  match pe_problem with
+  | `AbsoluteEmbed ->
+      "Illegal embed path: " ^ path ^ "; embeds must use " ^
+      "relative paths."
+  | `IllegalChar c ->
+      "Illegal character " ^ Char.escaped c ^ " in path " ^ path
+  | `BadPathPart part ->
+      "Illegal path segment " ^ String.escaped part ^ " in path " ^ path
+
 let show = function
   | UnboundVar var ->
       "unbound variable: " ^ Ast.Var.to_string var
@@ -75,6 +96,8 @@ let show = function
       "Incomplete pattern"
   | IllegalAnnotatedType _ ->
       "Illegal annotated type: only types of function parameters may be annotated."
+  | PathError pe ->
+      show_path_error pe
 
 let throw e =
   if Config.always_print_stack_trace then

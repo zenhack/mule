@@ -1,14 +1,11 @@
 
-let slurp_file (path : string) : string Lwt.t =
-  Lwt_io.with_file ~mode:Lwt_io.Input path Lwt_io.read
-
 let each_file : f:(string -> 'a Lwt.t) -> unit Lwt.t =
   fun ~f ->
   let rec go i =
     if i < Array.length Sys.argv then
       begin
         let path = Array.get Sys.argv i in
-        let%lwt contents = slurp_file path in
+        let%lwt contents = Util.IO.slurp_file path in
         let%lwt () = f contents in
         go (i + 1)
       end
@@ -42,7 +39,7 @@ let main () =
                     let%lwt _ = Lwt_io.write Lwt_io.stderr "no such runner\n" in
                     Caml.exit 1
                 | Some runner ->
-                    let%lwt input = slurp_file file_name in
+                    let%lwt input = Util.IO.slurp_file file_name in
                     begin match MParser.parse_string Parser.expr_file input () with
                       | Failed(msg, _) ->
                           let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
