@@ -1,0 +1,33 @@
+let
+  , type errno =
+      | EACCES {}
+      | EBADF {}
+      | EIO {}
+      | EPERM {}
+  , type filesystem = {
+      , type cmd a
+      , then : all a b. cmd a -> (a -> cmd b) -> cmd b
+      , just : all a. a -> cmd a
+
+      , type fd m
+      , type dir
+
+      , type flags a
+
+      , rdonly : flags (R {})
+      , rdwr : flags (R {} | W {})
+      , wronly : flags (W {})
+
+      , openat : all m. dir -> text -> flags m -> cmd (Ok (fd m) | Err errno)
+      , close : all m. fd m -> cmd (Ok {} | Err errno)
+
+      , read : all r. fd (R {} | ...r) -> int -> cmd (Ok text | Err errno)
+      , write : all r. fd (W {} | ...r) -> text -> cmd (Ok {} | Err errno)
+    }
+  , main : all r. (fs : filesystem) -> fs.fd (W {} | ...r) -> fs.cmd {} =
+      fn fs out.
+        fs.then
+          (fs.write out "Hello, World!\n")
+          (fn _. fs.just {})
+in
+main
