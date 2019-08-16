@@ -34,6 +34,8 @@ let keywords = Set.of_list (module String)
     ; "_"
     ; "let"
     ; "in"
+    ; "import"
+    ; "embed"
     ]
 
 let sep_start_by p sep =
@@ -123,12 +125,16 @@ let escaped =
   | 'r' -> return '\r'
   | c -> fail ("Illegal escape sequence: \\" ^ String.of_char c)
 
-let text_const: (Const.t, unit) MParser.t = token (
+let text = token (
     let%bind _ = char '"' in
     let%bind chars = many (text_legal <|> escaped) in
     let%map _ = char '"' in
-    Const.Text (String.of_char_list chars)
+    String.of_char_list chars
   )
+
+let text_const: (Const.t, unit) MParser.t =
+  let%map str = text in
+  Const.Text str
 
 let char_const: (Const.t, unit) MParser.t = token (
     let%bind _ = char '\'' in
@@ -142,6 +148,12 @@ let constant : (Const.t, unit) MParser.t = choice
     ; int_const
     ; char_const
     ]
+
+let import =
+  kwd "import" >> text
+
+let embed =
+  kwd "embed" >> text
 
 let label =
   var |>> Ast.var_to_label
@@ -165,7 +177,8 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ begin
+    [ (import |>> fun path -> Type.Import path)
+    ; begin
         let%map v = attempt (kwd "...") >> var in
         Type.RowRest v
       end
@@ -275,7 +288,9 @@ and ex2 = lazy (
 )
 and ex3 = lazy (
   choice
-    [ lazy_p lambda
+    [ (import |>> fun s -> Expr.Import s)
+    ; (embed |>> fun s -> Expr.Embed s)
+    ; lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
     ; (var |>> fun v -> Expr.Var v)

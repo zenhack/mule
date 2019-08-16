@@ -17,7 +17,7 @@ let duplicate_fields dups =
 (* Check for unbound variables. *)
 let check_unbound_vars expr =
   let rec go_expr typ term = function
-    | Const _ -> ()
+    | Import _ | Embed _ | Const _ -> ()
     | Var v when Set.mem term v -> ()
     | Var v -> unboundVar v
     | Lam([], body) ->
@@ -83,6 +83,7 @@ let check_unbound_vars expr =
     | Pattern.Var (_, Some ty ) -> go_type typ ty
     | Pattern.Ctor(_, p) -> go_pat typ p
   and go_type typ = function
+    | Type.Import _ -> ()
     | Type.Var v | Type.Path(v, _) when Set.mem typ v -> ()
     | Type.Var v | Type.Path(v, _) -> unboundVar v
     | Type.Quant(_, vars, ty) ->
@@ -139,7 +140,7 @@ let check_unbound_vars expr =
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
   let rec go_expr = function
-    | Const _ -> ()
+    | Import _ | Embed _ | Const _ -> ()
     | Record fields ->
         go_fields fields
     | Update(e, fields) ->
@@ -187,6 +188,7 @@ let check_duplicate_record_fields =
     | Pattern.Var (_, None) | Pattern.Wild -> ()
     | Pattern.Var (_, Some ty) -> go_type ty
   and go_type = function
+    | Type.Import _
     | Type.Var _
     | Type.Path _
     | Type.Ctor _

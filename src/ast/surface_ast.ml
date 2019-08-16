@@ -16,6 +16,7 @@ module Type = struct
     | RowRest of Var.t
     | Annotated of (Var.t * t)
     | Path of (Var.t * Label.t list)
+    | Import of string
   [@@deriving sexp_of]
 
   and record_item =
@@ -47,6 +48,8 @@ module Expr = struct
     | Let of (binding list * t)
     | WithType of (t * Type.t)
     | Const of Const.t
+    | Import of string
+    | Embed of string
   [@@deriving sexp_of]
   and binding =
     [ `BindType of Var.t * Var.t list * Type.t
