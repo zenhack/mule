@@ -4,4 +4,4 @@ Desugared:
 	((:
 	  ((e : (exist $0 (record (types ((t $0))) (values ())))) -> ((. e t) int)))
 	 (Integer 4))
-Type error: permission error during raise
+Type error: mismatched type constructors: int and ->

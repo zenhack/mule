@@ -1,0 +1,17 @@
+
+Desugared:
+
+	((: ((e : (exist $0 (record (types ((t $0))) (values ((x t)))))) -> (. e t)))
+	 (fn y ((. x) y)))
+
+inferred type:
+
+	(all a ((record (types ((t a))) (values ((x a)))) -> a))
+
+Runtime term:
+
+	(Lam (0 () (App ((GetField (Strict x)) (Var 0)))))
+
+Evaluated:
+
+	(Lam (0 () (App ((GetField (Strict x)) (Var 0)))))
