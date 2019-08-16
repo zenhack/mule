@@ -303,9 +303,11 @@ let make_cops: unit ->
   ( constraint_ops
     * (unify_edge list) ref
     * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
+    * (k_var * k_var) list ref
   ) = fun () ->
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
+  let kcs = ref [] in (* kind constraints *)
   let cops =
     { constrain_unify   =
         (fun l r ->
@@ -317,13 +319,16 @@ let make_cops: unit ->
               | Some (_, ts) -> (g, (t :: ts))
             )
         end
+    ; constrain_kind =
+        (fun l r ->
+          kcs := (l, r) :: !kcs)
     }
-  in (cops, ucs, ics)
+  in (cops, ucs, ics, kcs)
 
 let build_constraints: k_var Expr.t -> built_constraints =
   fun expr ->
   let env_terms = Map.map ~f:fst Intrinsics.values in
-  let cops, ucs, ics = make_cops () in
+  let cops, ucs, ics, kcs = make_cops () in
   let (_, ty) = Util.fix
       (child_g None)
       (fun g ->
@@ -366,5 +371,6 @@ let build_constraints: k_var Expr.t -> built_constraints =
   in
   { unification = !ucs
   ; instantiation = !ics
+  ; kind = !kcs
   ; ty = ty
   }

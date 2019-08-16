@@ -171,9 +171,11 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
 let solve_constraints cs =
   let render_ucs = ref cs.unification in
   let render_ics = ref cs.instantiation in
+  let render_kcs = ref cs.kind in
   Debug.render_hook := (fun () -> Render.render_graph
                            { unification = !render_ucs
                            ; instantiation = !render_ics
+                           ; kind = !render_kcs
                            ; ty = cs.ty
                            }
                        );
@@ -190,7 +192,7 @@ let solve_constraints cs =
   top_sort_inst cs.instantiation
   |> List.iter ~f:(fun (g, ts) ->
       List.iter ts ~f:(fun t ->
-          let cops, ucs, _ = make_cops () in
+          let cops, ucs, _, _kcs = make_cops () in
           propagate cops g t;
           render_ucs := !ucs;
           !Debug.render_hook ();
