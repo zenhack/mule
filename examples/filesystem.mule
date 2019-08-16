@@ -1,10 +1,10 @@
 let
-  , type errno =
-      | EACCES {}
-      | EBADF {}
-      | EIO {}
-      | EPERM {}
   , type filesystem = {
+      , type errno =
+          | EACCES {}
+          | EBADF {}
+          | EIO {}
+          | EPERM {}
       , type cmd a
       , then : all a b. cmd a -> (a -> cmd b) -> cmd b
       , just : all a. a -> cmd a

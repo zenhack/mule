@@ -1,0 +1,7 @@
+# This doesn't work correctly because the types don't "see" each other; we
+# need to adjust this.
+let
+  , type a = int
+  , type b = a
+in
+0
