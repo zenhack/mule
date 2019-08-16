@@ -164,10 +164,16 @@ let rec typ_term = lazy (
     ]
 )
 and typ_factor = lazy (
-  let%bind v = var in
-  match%map many (kwd "." >> label) with
-  | [] -> Type.Var v
-  | parts -> Type.Path(v, parts)
+  choice
+    [ begin
+        let%map v = attempt (kwd "...") >> var in
+        Type.RowRest v
+      end
+    ; let%bind v = var in
+      match%map many (kwd "." >> label) with
+      | [] -> Type.Var v
+      | parts -> Type.Path(v, parts)
+    ]
 )
 and typ_app = lazy (
   let%bind t = lazy_p typ_term in
