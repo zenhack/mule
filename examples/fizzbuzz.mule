@@ -1,0 +1,20 @@
+fn io.
+  let go = fn n.
+    ~run io <|
+      ~if [
+        , (n >= 100),
+            io.just {}
+        , (mod n 15 == 0),
+            let _ = ~do io.println "FizzBuzz" in
+            go (n + 1)
+        , (mod n 3 == 0),
+            let _ = ~do io.println "Fizz" in
+            go (n + 1)
+        , (mod n 5 == 0),
+            let _ = ~do io.println "Buzz" in
+            go (n + 1)
+        ,
+            go (n + 1)
+      ]
+  in
+  go 0
