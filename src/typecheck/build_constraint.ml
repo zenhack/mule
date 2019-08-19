@@ -334,6 +334,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
       (fun g ->
          let g = Lazy.force g in
          let b_at = `G g in
+         let env_kinds = Map.map Intrinsics.types ~f:Type.get_info in
          let env_types = Map.map Intrinsics.types ~f:(fun ty ->
              UnionFind.make
                ( `Quant
@@ -343,7 +344,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
                        b_at
                        VarMap.empty
                        `Pos
-                       (Infer_kind.infer cops Intrinsics.kinds ty)
+                       (Infer_kind.infer cops env_kinds ty)
                    )
                )
            )
@@ -359,7 +360,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
                          b_at
                          env_types
                          `Pos
-                         (Infer_kind.infer cops Intrinsics.kinds ty)
+                         (Infer_kind.infer cops (Map.map env_types ~f:get_kind) ty)
                      )
                  )))
                )

@@ -83,8 +83,3 @@ let types = dict
     [ "int", int_t
     ; "text", text_t
     ]
-
-let kinds = dict
-    [ "int", kvar_type
-    ; "text", kvar_type
-    ]
