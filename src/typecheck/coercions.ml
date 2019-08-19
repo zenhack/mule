@@ -202,7 +202,7 @@ let make_coercion_type env g ty cops =
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
   *)
   let kind_env = Map.map env ~f:get_kind in
-  let kinded_ty = Infer_kind.infer kind_env ty in
+  let kinded_ty = Infer_kind.infer cops kind_env ty in
   fst (Util.fix
          (fun vars ->
             let (param_var, ret_var) = Lazy.force vars in

@@ -96,7 +96,7 @@ let rec walk ~cops ~env_types ~env_terms ~g = function
           `Pos
           (Map.mapi
              binds
-             ~f:(fun ~key:_ ~data -> Infer_kind.infer env_kinds data)
+             ~f:(fun ~key:_ ~data -> Infer_kind.infer cops env_kinds data)
           )
       in
       let env_new =
@@ -343,7 +343,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
                        b_at
                        VarMap.empty
                        `Pos
-                       (Infer_kind.infer Intrinsics.kinds ty)
+                       (Infer_kind.infer cops Intrinsics.kinds ty)
                    )
                )
            )
@@ -359,7 +359,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
                          b_at
                          env_types
                          `Pos
-                         (Infer_kind.infer Intrinsics.kinds ty)
+                         (Infer_kind.infer cops Intrinsics.kinds ty)
                      )
                  )))
                )
