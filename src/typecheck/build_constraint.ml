@@ -321,7 +321,7 @@ let make_cops: unit ->
         end
     ; constrain_kind =
         (fun l r ->
-          kcs := (l, r) :: !kcs)
+           kcs := (l, r) :: !kcs)
     }
   in (cops, ucs, ics, kcs)
 

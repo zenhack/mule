@@ -209,8 +209,8 @@ module Expr = struct
           [ Sexp.Atom "let-type"
           ; Sexp.List
               (List.map binds ~f:(fun (v, ty) ->
-                  Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-                )
+                   Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+                 )
               )
           ; sexp_of_t body
           ]

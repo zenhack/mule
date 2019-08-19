@@ -179,9 +179,9 @@ and typ_factor = lazy (
   choice
     [ (import |>> fun path -> Type.Import path)
     ; begin
-        let%map v = attempt (kwd "...") >> var in
-        Type.RowRest v
-      end
+      let%map v = attempt (kwd "...") >> var in
+      Type.RowRest v
+    end
     ; let%bind v = var in
       match%map many (kwd "." >> label) with
       | [] -> Type.Var v
