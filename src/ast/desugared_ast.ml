@@ -43,6 +43,56 @@ module Type = struct
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
 
+  let rec subst old new_ = function
+    | Fn (i, Some v, p, r) when Var.equal v old ->
+        Fn(i, Some v, (subst old new_ p), r)
+    | Fn (i, maybe_v, p, r) ->
+        Fn(i, maybe_v, (subst old new_ p), (subst old new_ r))
+    | Recur(i, v, body) ->
+        if Var.equal v old then
+          Recur(i, v, body)
+        else
+          Recur(i, v, subst old new_ body)
+    | Var(i, v) ->
+        if Var.equal v old then
+          new_
+        else
+          Var(i, v)
+    | Path(i, v, ls) ->
+        if Var.equal v old then
+          MuleErr.bug "TODO"
+        else
+          Path(i, v, ls)
+    | Record {r_info; r_types; r_values} ->
+        Record {
+          r_info;
+          r_types = subst_row old new_ r_types;
+          r_values = subst_row old new_ r_values;
+        }
+    | Union row ->
+        Union(subst_row old new_ row)
+    | Quant(i, q, v, body) ->
+        if Var.equal v old then
+          Quant(i, q, v, body)
+        else
+          Quant(i, q, v, subst old new_ body)
+    | Named(i, s) -> Named(i, s)
+    | Opaque i -> Opaque i
+    | TypeLam(i, v, body) ->
+        if Var.equal v old then
+          TypeLam(i, v, body)
+        else
+          TypeLam(i, v, subst old new_ body)
+    | App(i, f, x) ->
+        App(i, subst old new_ f, subst old new_ x)
+  and subst_row old new_ (i, ls, maybe_v) =
+    ( i
+    , List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
+    , match maybe_v with
+        | Some v when Var.equal v old -> MuleErr.bug "TODO"
+        | _ -> maybe_v
+    )
+
   let rec sexp_of_t: 'i t -> Sexp.t = function
     | Fn(_, None, param, ret) ->
         Sexp.List [sexp_of_t param; Sexp.Atom "->"; sexp_of_t ret]
@@ -242,6 +292,11 @@ module Expr = struct
     | Witness _
     | Const _ -> e
 
+  let rec subst_ty old new_ = function
+    | WithType ty -> WithType (Type.subst old new_ ty)
+    | Witness ty -> Witness (Type.subst old new_ ty)
+    | e -> apply_to_kids e ~f:(subst_ty old new_)
+
   let rec map e ~f =
     match e with
     | WithType ty -> WithType (Type.map ty ~f)
@@ -272,5 +327,4 @@ module Expr = struct
     | GetField x -> GetField x
     | Update x -> Update x
     | Const x -> Const x
-
 end

@@ -1,8 +1,9 @@
+open Common_ast
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor =
   [ `Named of string
-  | `Extend of Ast.Label.t
+  | `Extend of Label.t
   ]
 type kind =
   [ `Row
@@ -26,14 +27,14 @@ type path_error =  {
 }
 
 type t =
-  | UnboundVar of Ast.Var.t
+  | UnboundVar of Var.t
   | TypeError of type_error
-  | DuplicateFields of (Ast.Label.t list)
+  | DuplicateFields of (Label.t list)
   | UnreachableCases
   | EmptyMatch
   | MalformedType of string
-  | IncompletePattern of Ast.Surface.Pattern.t
-  | IllegalAnnotatedType of Ast.Surface.Type.t
+  | IncompletePattern of Surface_ast.Pattern.t
+  | IllegalAnnotatedType of Surface_ast.Type.t
   | PathError of path_error
   | Bug of string
 
@@ -41,7 +42,7 @@ exception MuleExn of t
 
 let show_ctor = function
   | `Named name -> name
-  | `Extend lbl -> "row containing " ^ Ast.Label.to_string lbl
+  | `Extend lbl -> "row containing " ^ Label.to_string lbl
 
 let show_op = function
   | `Graft -> "graft"
@@ -79,7 +80,7 @@ let show_path_error {pe_path; pe_problem} =
 
 let show = function
   | UnboundVar var ->
-      "unbound variable: " ^ Ast.Var.to_string var
+      "unbound variable: " ^ Var.to_string var
   | MalformedType msg ->
       "malformed_type: " ^ msg
   | TypeError e ->
@@ -89,7 +90,7 @@ let show = function
   | DuplicateFields fields ->
       "Duplicate fields:\n" ^
       (fields
-       |> List.map ~f:Ast.Label.to_string
+       |> List.map ~f:Label.to_string
        |> String.concat ~sep:",")
   | EmptyMatch ->
       "Empty match expression."

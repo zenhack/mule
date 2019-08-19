@@ -25,6 +25,8 @@ open Build_constraint_t
  * will invent a new constant type t and infer (t -> t).
 *)
 
+include Coercions_t
+
 let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
   fun env u ->
   match UnionFind.get u with
@@ -40,26 +42,33 @@ let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
       failwith "Illegal row"
 
 let rec gen_type
-  : constraint_ops
-    -> bound_target
-    -> u_var VarMap.t
+  : type_ctx
     -> sign
     -> k_var Type.t
     -> u_var
   =
-  fun cops b_at env sign ty ->
+  fun ({b_at; ctx = {cops; env_types; _}} as ctx) sign ty ->
   let tv = ty_var_at b_at in
   match ty with
   | Type.App(_, f, x) ->
-      let f' = gen_type cops b_at env sign f in
-      let x' = gen_type cops b_at env sign x in
+      let f' = gen_type ctx sign f in
+      let x' = gen_type ctx sign x in
       UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
   | Type.TypeLam(k, v, ty) ->
       begin match UnionFind.get k with
         | `Arrow(param, ret) ->
             let tv = ty_var_at b_at in
             Gen_t.lambda tv param ret (fun b_at p ->
-                gen_type cops b_at (Map.set env ~key:v ~data:p) sign ty
+                gen_type
+                  {
+                    b_at;
+                    ctx = {
+                      ctx.ctx
+                      with env_types = Map.set env_types ~key:v ~data:p
+                    }
+                  }
+                  sign
+                  ty
               )
         | _ ->
             failwith "BUG: lambda had non-arrow kind."
@@ -72,28 +81,38 @@ let rec gen_type
       UnionFind.make (`Const(tv, `Named s, [], kvar_type))
   | Type.Fn (_, maybe_v, param, ret) ->
       let param' =
-        gen_type cops b_at env (flip_sign sign) param
+        gen_type ctx (flip_sign sign) param
       in
       let env' = match maybe_v with
         | Some v ->
-            Map.set env ~key:v ~data:param'
+            Map.set env_types ~key:v ~data:param'
         | None ->
-            env
+            env_types
       in
       let ret' =
-        gen_type cops b_at env' sign ret
+        gen_type { ctx with ctx = { ctx.ctx with env_types = env' } } sign ret
       in
       UnionFind.make (fn tv param' ret')
   | Type.Recur(_, v, body) ->
       let ret = gen_u kvar_type b_at in
-      let ret' = gen_type cops b_at (Map.set env ~key:v ~data:ret) sign body in
+      let ret' =
+        gen_type
+          { ctx with
+            ctx = {
+              ctx.ctx
+              with env_types = Map.set env_types ~key:v ~data:ret
+            }
+          }
+          sign
+          body
+      in
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
   | Type.Var (_, v) ->
-      Map.find_exn env v
+      Map.find_exn env_types v
   | Type.Path(_, v, ls) ->
       begin match List.rev ls with
-        | [] -> Map.find_exn env v
+        | [] -> Map.find_exn env_types v
         | (l :: ls) ->
             let tv () = ty_var_at b_at in
             let ret = gen_u (gen_k ()) b_at in
@@ -111,19 +130,28 @@ let rec gen_type
                      (UnionFind.make (extend (tv ()) l acc (gen_u kvar_row b_at))))
               )
             in
-            cops.constrain_unify record_u (Map.find_exn env v);
+            cops.constrain_unify record_u (Map.find_exn env_types v);
             ret
       end
   | Type.Record {r_info = _; r_types; r_values} ->
-      let type_row = gen_row cops b_at env sign r_types in
-      let env = add_row_to_env env type_row in
+      let type_row = gen_row ctx sign r_types in
+      let env = add_row_to_env env_types type_row in
       UnionFind.make (
         record tv
           type_row
-          (gen_row cops b_at env sign r_values)
+          (gen_row
+             { ctx with
+               ctx = {
+                 ctx.ctx
+                 with env_types = env
+               }
+             }
+             sign
+             r_values
+          )
       )
   | Type.Union row ->
-      UnionFind.make (union tv (gen_row cops b_at env sign row))
+      UnionFind.make (union tv (gen_row ctx sign row))
   | Type.Quant(_, q, v, body) ->
       let ret = gen_u kvar_type b_at in
       let bound_v =
@@ -142,9 +170,12 @@ let rec gen_type
         UnionFind.make (`Quant
                           ( tv
                           , gen_type
-                              cops
-                              (`Ty (lazy ret))
-                              (Map.set env ~key:v ~data:bound_v)
+                              { b_at = `Ty (lazy ret);
+                                ctx = {
+                                  ctx.ctx
+                                  with env_types = Map.set env_types ~key:v ~data:bound_v
+                                }
+                              }
                               sign
                               body
                           )
@@ -153,10 +184,10 @@ let rec gen_type
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
 (* [gen_row] is like [gen_type], but for row variables. *)
-and gen_row cops b_at env sign (_, fields, rest) =
+and gen_row ({ctx = {env_types; _}; b_at} as ctx) sign (_, fields, rest) =
   let rest' =
     match rest with
-    | Some v -> Map.find_exn env v
+    | Some v -> Map.find_exn env_types v
     | None -> UnionFind.make (empty (ty_var_at b_at))
   in
   List.fold_right
@@ -167,23 +198,24 @@ and gen_row cops b_at env sign (_, fields, rest) =
           extend
             (ty_var_at b_at)
             lbl
-            (gen_type cops b_at env sign ty)
+            (gen_type ctx sign ty)
             tail
         )
       )
 
 let gen_types
-  : constraint_ops
-    -> bound_target
-    -> u_var VarMap.t
+  : type_ctx
     -> sign
     -> k_var Type.t VarMap.t
     -> u_var VarMap.t
   =
-  fun cops b_at env sign tys ->
+  fun ({ b_at; ctx = {env_types; _} } as ctx) sign tys ->
   let tmp_uvars = Map.map tys ~f:(fun t -> gen_u (Type.get_info t) b_at) in
-  let env' = Map.merge_skewed env tmp_uvars ~combine:(fun ~key:_ _ v -> v) in
-  let tys = Map.map tys ~f:(gen_type cops b_at env' sign) in
+  let env' = Map.merge_skewed env_types tmp_uvars ~combine:(fun ~key:_ _ v -> v) in
+  let tys = Map.map tys ~f:(
+      gen_type { ctx with ctx = { ctx.ctx with env_types = env' } } sign
+    )
+  in
   Map.iter2 tmp_uvars tys ~f:(fun ~key:_ ~data -> match data with
       | `Both(tmp, final) ->
           UnionFind.merge (fun _ v -> v) tmp final
@@ -192,7 +224,7 @@ let gen_types
     );
   tys
 
-let make_coercion_type env g ty cops =
+let make_coercion_type ({cops; env_types; g; _} as ctx) ty =
   (* General procedure:
    *
    * 1. Infer the kinds within the type.
@@ -201,7 +233,7 @@ let make_coercion_type env g ty cops =
    * 3. Generate a function node, and bound the two copies of the type to
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
   *)
-  let kind_env = Map.map env ~f:get_kind in
+  let kind_env = Map.map env_types ~f:get_kind in
   let kinded_ty = Infer_kind.infer cops kind_env ty in
   fst (Util.fix
          (fun vars ->
@@ -220,7 +252,7 @@ let make_coercion_type env g ty cops =
              * existentials.
             *)
             let gen sign =
-              gen_type cops (`Ty root) env sign kinded_ty
+              gen_type { ctx; b_at = `Ty root } sign kinded_ty
             in
             (gen `Neg, gen `Pos)
          )

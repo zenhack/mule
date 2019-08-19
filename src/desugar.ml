@@ -499,7 +499,10 @@ and desugar_let bs body = match simplify_bindings bs with
                   )
             | `Type t ->
                 let (v, ty) = desugar_type_binding t in
-                D.LetType([v, ty], accum)
+                D.LetType
+                  ( [v, DT.Path(DT.get_info ty, record_name, [var_to_lbl v])]
+                  , accum
+                  )
           )
       in
       D.Let(record_name, record, body)

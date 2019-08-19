@@ -12,3 +12,10 @@ type constraint_ops =
   ; constrain_inst  : g_node -> u_type UnionFind.var -> unit
   ; constrain_kind  : k_var -> k_var -> unit
   }
+
+type context = {
+  cops: constraint_ops;
+  env_types: u_var VarMap.t;
+  env_terms: [ `Ty of u_var | `G of g_node ] Lazy.t VarMap.t;
+  g: g_node;
+}

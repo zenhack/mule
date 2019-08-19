@@ -3,6 +3,8 @@ open Typecheck_types
 
 open Build_constraint_t
 
+include module type of Coercions_t
+
 (* Generate coercion types from type annotations.
  *
  * This is based on {MLF-Graph-Infer} section 6, but we do one important
@@ -42,9 +44,7 @@ open Build_constraint_t
  * well.
 *)
 val gen_type
-  : constraint_ops
-  -> bound_target
-  -> u_var VarMap.t
+  : type_ctx
   -> sign
   -> k_var Type.t
   -> u_var
@@ -52,17 +52,10 @@ val gen_type
 (* Like [gen_type], except that it takes multiple types at once, which may
  * be mutually recursive. *)
 val gen_types
-  : constraint_ops
-  -> bound_target
-  -> u_var VarMap.t
+  : type_ctx
   -> sign
   -> k_var Type.t VarMap.t
   -> u_var VarMap.t
 
 (* Actually make the coercion. *)
-val make_coercion_type
-  : u_var VarMap.t
-  -> g_node
-  -> k_var Type.t
-  -> constraint_ops
-  -> u_var
+val make_coercion_type: context -> k_var Type.t -> u_var
