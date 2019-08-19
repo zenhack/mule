@@ -76,9 +76,10 @@ let rec walk_type
               cops.constrain_kind k u_var;
               Type.Var(u_var, v)
           | None ->
-              failwith
-                ("BUG: unbound variable '" ^ Ast.Var.to_string v ^ "' when inferring kind."
-                 ^ " This should have been caught by the linter."
+              MuleErr.bug
+                ("unbound variable '" ^ Ast.Var.to_string v
+                 ^ "' when inferring kind. This should have been caught"
+                 ^ " by the linter."
                 )
         end
     | Type.Path(k, v, ls) ->

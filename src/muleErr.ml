@@ -35,6 +35,7 @@ type t =
   | IncompletePattern of Ast.Surface.Pattern.t
   | IllegalAnnotatedType of Ast.Surface.Type.t
   | PathError of path_error
+  | Bug of string
 
 exception MuleExn of t
 
@@ -98,6 +99,8 @@ let show = function
       "Illegal annotated type: only types of function parameters may be annotated."
   | PathError pe ->
       show_path_error pe
+  | Bug msg ->
+      "BUG: " ^ msg
 
 let throw e =
   if Config.always_print_stack_trace then
@@ -108,3 +111,6 @@ let throw e =
         (Caml.Printexc.get_callstack 25);
     end;
   raise (MuleExn e)
+
+let bug msg =
+  throw (Bug msg)

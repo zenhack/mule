@@ -87,14 +87,14 @@ let rec walk: context -> k_var Expr.t -> u_var =
           }
           body
     | Expr.LetType(binds, body) ->
-        let env_kinds = Map.map env_types ~f:get_kind in
         let binds = Map.of_alist_exn (module Ast.Var) binds in
-        let env_kinds =
+        let env_types =
           Map.merge_skewed
-            env_kinds
-            (Map.map binds ~f:Type.get_info)
+            env_types
+            (Map.map binds ~f:(fun _ -> gen_u (gen_k ()) (`G g)))
             ~combine:(fun ~key:_ _ v -> v)
         in
+        let env_kinds = Map.map env_types ~f:get_kind in
         let u_vars =
           Coercions.gen_types
             cops
@@ -107,7 +107,13 @@ let rec walk: context -> k_var Expr.t -> u_var =
             )
         in
         let env_new =
-          Map.merge_skewed env_types u_vars ~combine:(fun ~key:_ _ v -> v)
+          Map.merge_skewed
+            env_types
+            u_vars
+            ~combine:(fun ~key:_ l r ->
+                cops.constrain_kind (get_kind l) (get_kind r);
+                r
+              )
         in
         walk { ctx with env_types = env_new } body
     | Expr.App (f, arg) ->
