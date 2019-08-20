@@ -1,0 +1,25 @@
+
+Desugared:
+
+	(let
+	 (x
+	  (fix/let
+	   (fn x
+	    (fix/record
+	     (fn $0 (let-type ((t (rec t int))) (((.type= t) {}) (type t))))))))
+	 ((: (. x t)) (Integer 4)))
+
+inferred type:
+
+	int
+
+Runtime term:
+
+	(App
+	 ((Lam (0 () (Const (Integer 4))))
+	  (App
+	   ((Fix Let) (Lam (-1 () (App ((Fix Record) (Lam (0 () (Record ())))))))))))
+
+Evaluated:
+
+	(Const (Integer 4))

@@ -62,9 +62,14 @@ let top_sort_inst
 
 (* Expand an instantiation constraint rooted at a g_node. See
  * section 3.1 of {MLF-Graph-Infer}.
+ *
+ * There is one important deviation from the paper: we allow the
+ * target to be a non-g node. This can come up when referencing
+ * type members, which will sometimes be bound on a q-node instead
+ * of a g-node.
 *)
-let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
-  fun cops old_g new_g ->
+let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
+  fun cops old_g new_bound ->
   let old_root = Lazy.force old_g.g_child in
 
   (* The logic in this function involves doing a deep copy of a graph
@@ -86,7 +91,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             begin
               (* We've hit the frontier; replace it with a bottom node and
                * constrain it to be equal to the old thing. *)
-              let new_var = gen_u kind (`G new_g) in
+              let new_var = gen_u kind new_bound in
               cops.constrain_unify nv new_var;
               new_var
             end
@@ -95,7 +100,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
             let new_bound =
               ( if UnionFind.equal nv old_root then
                   { b_ty = `Flex
-                  ; b_at = `G new_g
+                  ; b_at = new_bound
                   }
                 else if Poly.equal old_bound.b_ty `Explicit then
                   begin match old_bound.b_at with
@@ -160,13 +165,9 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
 
 let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
-  begin match (get_u_bound (UnionFind.get var)).b_at with
-    | `G g' ->
-        let instance = expand cops g g' in
-        cops.constrain_unify instance var
-    | `Ty _ ->
-        MuleErr.bug "propagate: node not bound at g-node."
-  end
+  let bound = (get_u_bound (UnionFind.get var)).b_at in
+  let instance = expand cops g bound in
+  cops.constrain_unify instance var
 
 let solve_constraints cs =
   let render_ucs = ref cs.unification in
