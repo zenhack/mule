@@ -5,7 +5,8 @@ Desugared:
 	 ($1
 	  (fix/record
 	   (fn $0
-	    (((.= x) (((.= y) {}) ((add ((. x) $0)) (Integer 2)))) (Integer 1)))))
+	    (((.= x) (((.= y) {}) ((((. add) int) ((. x) $0)) (Integer 2))))
+	     (Integer 1)))))
 	 (let (y ((. y) $1)) (let (x ((. x) $1)) y)))
 
 inferred type:
@@ -30,7 +31,13 @@ Runtime term:
 	       ((x (Const (Integer 1)))
 	        (y
 	         (App
-	          ((App ((Prim <fun>) (App ((GetField (Lazy x)) (Var 0)))))
+	          ((App
+	            ((App
+	              ((GetField (Strict add))
+	               (Record
+	                ((add (Prim <fun>)) (div (Prim <fun>)) (mul (Prim <fun>))
+	                 (rem (Prim <fun>)) (sub (Prim <fun>))))))
+	             (App ((GetField (Lazy x)) (Var 0)))))
 	           (Const (Integer 2)))))))))))))
 
 Evaluated:

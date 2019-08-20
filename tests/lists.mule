@@ -5,7 +5,7 @@ in
 let length : all a. list a -> int =
       fn lst. match lst with
         | Nil _ -> 0
-        | Cons l -> add 1 (length l.tl)
+        | Cons l -> int.add 1 (length l.tl)
       end
 in
 length (Cons {hd = 4, tl = Cons { hd = 0, tl = Cons { hd = 1, tl = Nil {} } } })

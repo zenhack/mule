@@ -16,7 +16,9 @@ Desugared:
 	      (fn lst
 	       ((match
 	         ((Cons
-	           ($3 ((match () (l ((add (Integer 1)) (length ((. tl) l))))) $3)))
+	           ($3
+	            ((match () (l ((((. add) int) (Integer 1)) (length ((. tl) l)))))
+	             $3)))
 	          (Nil ($4 ((match () (_ (Integer 0))) $4)))))
 	        lst))))))
 	  (length
@@ -96,7 +98,14 @@ Runtime term:
 	                    ((Lam
 	                      (3 ()
 	                       (App
-	                        ((App ((Prim <fun>) (Const (Integer 1))))
+	                        ((App
+	                          ((App
+	                            ((GetField (Strict add))
+	                             (Record
+	                              ((add (Prim <fun>)) (div (Prim <fun>))
+	                               (mul (Prim <fun>)) (rem (Prim <fun>))
+	                               (sub (Prim <fun>))))))
+	                           (Const (Integer 1))))
 	                         (App
 	                          ((Var 3) (App ((GetField (Strict tl)) (Var 0))))))))))))
 	                  (Var 0))))))

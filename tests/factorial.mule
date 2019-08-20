@@ -1,7 +1,7 @@
 let factorial =
   fn n. match n with
   | 0 -> 1
-  | n -> mul n (factorial (sub n 1))
+  | n -> int.mul n (factorial (int.sub n 1))
   end
 in
 factorial 5

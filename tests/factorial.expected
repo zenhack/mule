@@ -7,7 +7,9 @@ Desugared:
 	   (fn factorial
 	    (fn n
 	     ((match/const (((Integer 0) (Integer 1)))
-	       (_ (fn n ((mul n) (factorial ((sub n) (Integer 1)))))))
+	       (_
+	        (fn n
+	         ((((. mul) int) n) (factorial ((((. sub) int) n) (Integer 1)))))))
 	      n)))))
 	 (factorial (Integer 5)))
 
@@ -31,10 +33,26 @@ Runtime term:
 	            (Lam
 	             (2 ()
 	              (App
-	               ((App ((Prim <fun>) (Var 0)))
+	               ((App
+	                 ((App
+	                   ((GetField (Strict mul))
+	                    (Record
+	                     ((add (Prim <fun>)) (div (Prim <fun>))
+	                      (mul (Prim <fun>)) (rem (Prim <fun>))
+	                      (sub (Prim <fun>))))))
+	                  (Var 0)))
 	                (App
 	                 ((Var 2)
-	                  (App ((App ((Prim <fun>) (Var 0))) (Const (Integer 1))))))))))))
+	                  (App
+	                   ((App
+	                     ((App
+	                       ((GetField (Strict sub))
+	                        (Record
+	                         ((add (Prim <fun>)) (div (Prim <fun>))
+	                          (mul (Prim <fun>)) (rem (Prim <fun>))
+	                          (sub (Prim <fun>))))))
+	                      (Var 0)))
+	                    (Const (Integer 1))))))))))))
 	          (Var 0)))))))))))
 
 Evaluated:

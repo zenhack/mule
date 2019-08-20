@@ -27,10 +27,10 @@ let assert_text e = match assert_const e with
   | C.Text s -> s
   | _ -> failwith "BUG: run-time type error."
 
-let int_binop f =
-  ( fn_t int_t (fn_t int_t int_t)
-  , prim (fun x -> prim (fun y -> R.Expr.Const (C.Integer (f (assert_int x) (assert_int y)))))
-  )
+let int_binop_t =
+  fn_t int_t (fn_t int_t int_t)
+let int_binop_v f =
+  prim (fun x -> prim (fun y -> R.Expr.Const (C.Integer (f (assert_int x) (assert_int y)))))
 
 let dict kvs =
   List.map kvs ~f:(fun (k, v) -> (Var.of_string k, v))
@@ -56,11 +56,23 @@ let recordVal kvs =
   )
 
 let values = dict
-    [ "add", int_binop Z.add
-    ; "sub", int_binop Z.sub
-    ; "mul", int_binop Z.mul
-    ; "div", int_binop Z.div
-    ; "rem", int_binop Z.rem
+    [ "int",
+      ( recordType
+          [ "t", int_t ]
+          [ "add", int_binop_t
+          ; "sub", int_binop_t
+          ; "mul", int_binop_t
+          ; "div", int_binop_t
+          ; "rem", int_binop_t
+          ]
+      , recordVal
+          [ "add", int_binop_v Z.add
+          ; "sub", int_binop_v Z.sub
+          ; "mul", int_binop_v Z.mul
+          ; "div", int_binop_v Z.div
+          ; "rem", int_binop_v Z.rem
+          ]
+      )
     ; "text",
       ( recordType
           [ "t", text_t ]
