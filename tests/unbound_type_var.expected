@@ -1,1 +1,5 @@
+
+Desugared:
+
+	(fn $0 (let (x ((: a) $0)) x))
 unbound variable: a

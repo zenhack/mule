@@ -128,7 +128,10 @@ let rec gen_type
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
   | Type.Var (_, v) ->
-      Map.find_exn env_types v
+      begin match Map.find env_types v with
+        | Some t -> t
+        | None -> MuleErr.(throw (UnboundVar v))
+      end
   | Type.Path(_, v, ls) ->
       begin match List.rev ls with
         | [] -> Map.find_exn env_types v

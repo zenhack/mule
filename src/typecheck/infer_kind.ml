@@ -70,17 +70,12 @@ let rec walk_type
     | Type.Named (k, s) ->
         Type.Named (k, s)
     | Type.Var(k, v) ->
-        (* TODO: proper exception *)
         begin match Map.find env v with
           | Some u_var ->
               cops.constrain_kind k u_var;
               Type.Var(u_var, v)
           | None ->
-              MuleErr.bug
-                ("unbound variable '" ^ Ast.Var.to_string v
-                 ^ "' when inferring kind. This should have been caught"
-                 ^ " by the linter."
-                )
+              MuleErr.(throw (UnboundVar v))
         end
     | Type.Path(k, v, ls) ->
         let kv = Map.find_exn env v in

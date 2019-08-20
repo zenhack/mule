@@ -1,1 +1,5 @@
+
+Desugared:
+
+	(let-type ((t (lam a (rec t int)))) ((: (t a)) (Integer 4)))
 unbound variable: a

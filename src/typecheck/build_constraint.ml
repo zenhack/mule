@@ -35,10 +35,12 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.Const c -> walk_const g c
     | Expr.Var v ->
         let tv = gen_u kvar_type (`G g) in
-        begin match Lazy.force (Map.find_exn env_terms v) with
-          | `Ty tv' ->
+        begin match Option.map ~f:Lazy.force (Map.find env_terms v) with
+          | None ->
+              MuleErr.(throw (UnboundVar v))
+          | Some (`Ty tv') ->
               cops.constrain_unify tv' tv
-          | `G g' ->
+          | Some (`G g') ->
               cops.constrain_inst g' tv
         end;
         tv
