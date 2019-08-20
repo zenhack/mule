@@ -1,16 +1,17 @@
 
 Desugared:
 
-	((: ((y : (record (types ()) (values ()))) -> y)) (fn x x))
+	((: ((y : (exist $0 (record (types ((t $0))) (values ((f t)))))) -> (. y t)))
+	 (fn x ((. f) x)))
 
 inferred type:
 
-	((record (types ()) (values ())) -> (record (types ()) (values ())))
+	(all a ((record (types ((t a))) (values ((f a)))) -> a))
 
 Runtime term:
 
-	(Lam (0 () (Var 0)))
+	(Lam (0 () (App ((GetField (Strict f)) (Var 0)))))
 
 Evaluated:
 
-	(Lam (0 () (Var 0)))
+	(Lam (0 () (App ((GetField (Strict f)) (Var 0)))))

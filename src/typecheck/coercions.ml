@@ -88,21 +88,11 @@ let rec gen_type
         gen_type ctx (flip_sign sign) param
       in
       cops.constrain_kind (get_kind param') kvar_type;
-      (* This is fiddly; we have to add the variable to both the
-       * type *and* term environments.
-       *
-       * The reason is that the variable could be used either directly
-       * as a type, or projected on to get a type member.
-       *
-       * TODO: It might be conceptually cleaner to only allow the latter;
-       * consider dropping support for the former. *)
-      let (env_terms', env_types') = match maybe_v with
+      let env_terms' = match maybe_v with
         | Some v ->
-            ( Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
-            , Map.set env_types ~key:v ~data:param'
-            )
+            Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
         | None ->
-            (env_terms, env_types)
+            env_terms
       in
       let ret' =
         gen_type
@@ -110,7 +100,6 @@ let rec gen_type
             ctx = {
               ctx.ctx with
               env_terms = env_terms';
-              env_types = env_types';
             }
           }
           sign

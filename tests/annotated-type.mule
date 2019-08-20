@@ -1,1 +1,1 @@
-(fn x. x) : (y : {}) -> y
+(fn x. x.f) : (y : { type t, f : t }) -> y.t
