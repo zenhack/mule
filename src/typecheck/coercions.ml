@@ -251,7 +251,7 @@ let gen_types
     );
   tys
 
-let make_coercion_type ({cops; env_types; g; _} as ctx) ty =
+let make_coercion_type ({g; _} as ctx) ty =
   (* General procedure:
    *
    * 1. Infer the kinds within the type.
@@ -260,8 +260,7 @@ let make_coercion_type ({cops; env_types; g; _} as ctx) ty =
    * 3. Generate a function node, and bound the two copies of the type to
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
   *)
-  let kind_env = Map.map env_types ~f:get_kind in
-  let kinded_ty = Infer_kind.infer cops kind_env ty in
+  let kinded_ty = Infer_kind.infer ctx ty in
   fst (Util.fix
          (fun vars ->
             let (param_var, ret_var) = Lazy.force vars in

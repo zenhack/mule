@@ -89,7 +89,6 @@ let rec walk: context -> k_var Expr.t -> u_var =
             (Map.map binds ~f:(fun _ -> gen_u (gen_k ()) (`G g)))
             ~combine:(fun ~key:_ _ v -> v)
         in
-        let env_kinds = Map.map env_types ~f:get_kind in
         let ctx = { ctx with env_types } in
         let u_vars =
           Coercions.gen_types
@@ -97,7 +96,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
             `Pos
             (Map.mapi
                binds
-               ~f:(fun ~key:_ ~data -> Infer_kind.infer cops env_kinds data)
+               ~f:(fun ~key:_ ~data -> Infer_kind.infer ctx data)
             )
         in
         let env_new =
@@ -333,19 +332,18 @@ let build_constraints: k_var Expr.t -> built_constraints =
       (fun g ->
          let g = Lazy.force g in
          let b_at = `G g in
-         let env_kinds = Map.map Intrinsics.types ~f:Type.get_info in
          let env_types = Map.map Intrinsics.types ~f:(fun ty ->
+             let ctx = {
+                cops; g; env_types = VarMap.empty; env_terms = VarMap.empty;
+              }
+             in
              UnionFind.make
                ( `Quant
                    ( ty_var_at b_at
                    , Coercions.gen_type
-                       { b_at;
-                         ctx = {
-                           cops; g; env_types = VarMap.empty; env_terms = VarMap.empty;
-                         }
-                       }
+                       { b_at; ctx }
                        `Pos
-                       (Infer_kind.infer cops env_kinds ty)
+                       (Infer_kind.infer ctx ty)
                    )
                )
            )
@@ -354,13 +352,14 @@ let build_constraints: k_var Expr.t -> built_constraints =
              lazy (`G (with_g g (fun g ->
                  let g = Lazy.force g in
                  let b_at = `G g in
+                 let ctx = { cops; g; env_types; env_terms = VarMap.empty } in
                  UnionFind.make (
                    `Quant
                      ( ty_var_at b_at
                      , Coercions.gen_type
                          { b_at; ctx = { cops; g; env_types; env_terms = VarMap.empty } }
                          `Pos
-                         (Infer_kind.infer cops (Map.map env_types ~f:get_kind) ty)
+                         (Infer_kind.infer ctx ty)
                      )
                  )))
                )
