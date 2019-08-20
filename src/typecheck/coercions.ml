@@ -47,7 +47,7 @@ let rec gen_type
     -> k_var Type.t
     -> u_var
   =
-  fun ({b_at; ctx = {cops; env_types; _}} as ctx) sign ty ->
+  fun ({b_at; ctx = {cops; env_types; env_terms; g = _}} as ctx) sign ty ->
   let tv = ty_var_at b_at in
   match ty with
   | Type.App(_, f, x) ->
@@ -83,14 +83,33 @@ let rec gen_type
       let param' =
         gen_type ctx (flip_sign sign) param
       in
-      let env' = match maybe_v with
+      (* This is fiddly; we have to add the variable to both the
+       * type *and* term environments.
+       *
+       * The reason is that the variable could be used either directly
+       * as a type, or projected on to get a type member.
+       *
+       * TODO: It might be conceptually cleaner to only allow the latter;
+       * consider dropping support for the former. *)
+      let (env_terms', env_types') = match maybe_v with
         | Some v ->
-            Map.set env_types ~key:v ~data:param'
+            ( Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
+            , Map.set env_types ~key:v ~data:param'
+            )
         | None ->
-            env_types
+            (env_terms, env_types)
       in
       let ret' =
-        gen_type { ctx with ctx = { ctx.ctx with env_types = env' } } sign ret
+        gen_type
+          { ctx with
+            ctx = {
+              ctx.ctx with
+              env_terms = env_terms';
+              env_types = env_types';
+            }
+          }
+          sign
+          ret
       in
       UnionFind.make (fn tv param' ret')
   | Type.Recur(_, v, body) ->
@@ -130,7 +149,12 @@ let rec gen_type
                      (UnionFind.make (extend (tv ()) l acc (gen_u kvar_row b_at))))
               )
             in
-            cops.constrain_unify record_u (Map.find_exn env_types v);
+            begin match Lazy.force (Map.find_exn env_terms v) with
+              | `Ty ty ->
+                  cops.constrain_unify ty record_u
+              | `G g ->
+                  cops.constrain_inst g record_u
+            end;
             ret
       end
   | Type.Record {r_info = _; r_types; r_values} ->
