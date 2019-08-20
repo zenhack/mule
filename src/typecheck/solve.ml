@@ -193,7 +193,7 @@ let solve_constraints cs =
   top_sort_inst cs.instantiation
   |> List.iter ~f:(fun (g, ts) ->
       List.iter ts ~f:(fun t ->
-          let cops, ucs, _, _kcs = make_cops () in
+          let cops, ucs, _ics, _kcs = make_cops () in
           propagate cops g t;
           render_ucs := !ucs;
           !Debug.render_hook ();
