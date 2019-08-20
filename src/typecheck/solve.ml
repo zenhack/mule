@@ -55,7 +55,7 @@ let top_sort_inst
     in
     begin match Topological_sort.sort (module Int) nodes edges with
       | Error _ ->
-          failwith "Topological sort failed"
+          MuleErr.bug "Topological sort failed"
       | Ok nodes_sorted ->
           List.filter_map nodes_sorted ~f:(Map.find d)
     end
@@ -99,7 +99,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                   }
                 else if Poly.equal old_bound.b_ty `Explicit then
                   begin match old_bound.b_at with
-                    | `G _ -> failwith "BUG: explicit binding points at g-node"
+                    | `G _ -> MuleErr.bug "explicit binding points at g-node"
                     | `Ty at ->
                         let {ty_id = old_parent_id; _} =
                           Lazy.force at
@@ -107,7 +107,7 @@ let expand: constraint_ops -> g_node -> g_node -> u_type UnionFind.var =
                           |> get_tyvar
                         in
                         begin match Map.find !visited old_parent_id with
-                          | None -> failwith "BUG: node for parent not in map."
+                          | None -> MuleErr.bug "node for parent not in map."
                           | Some new_parent_node ->
                               { b_ty = `Explicit
                               ; b_at = `Ty (lazy new_parent_node)
@@ -165,7 +165,7 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
         let instance = expand cops g g' in
         cops.constrain_unify instance var
     | `Ty _ ->
-        failwith "propagate: node not bound at g-node."
+        MuleErr.bug "propagate: node not bound at g-node."
   end
 
 let solve_constraints cs =
@@ -198,7 +198,7 @@ let solve_constraints cs =
           render_ucs := !ucs;
           !Debug.render_hook ();
           render_ics := Map.update !render_ics g.g_id ~f:(function
-              | None -> failwith "impossible"
+              | None -> MuleErr.bug "impossible"
               | Some (g, xs) -> (g, List.tl_exn xs)
             );
           solve_unify !ucs;

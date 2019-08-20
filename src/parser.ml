@@ -246,14 +246,14 @@ and record_type = lazy (
       | ts ->
           let ts = List.rev ts in
           begin match ts with
-            | [] -> failwith "impossible"
+            | [] -> MuleErr.bug "impossible"
             | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn(l, r))
           end
     end
   ) and typ_sum = lazy (
     optional (kwd "|") >>
     begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
-      | [] -> failwith "impossible"
+      | [] -> MuleErr.bug "impossible"
       | (t::ts) ->
           List.fold_right ts ~init:t ~f:(fun r l -> Type.Union(l, r))
     end

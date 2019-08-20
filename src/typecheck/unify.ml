@@ -19,8 +19,8 @@ let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
         begin match go bs with
           | F -> F
           | R | L -> L
-          | E -> failwith
-                ("BUG: explicit nodes should never have other nodes bound " ^
+          | E -> MuleErr.bug
+                ("explicit nodes should never have other nodes bound " ^
                  "on them.")
         end
   in go (Sequence.Generator.run p)
@@ -89,12 +89,12 @@ let rec bound_lca: bound_target bound -> bound_target bound -> bound_target boun
       | _ when lid < rid ->
           begin match raised_bound r with
             | Some b -> bound_lca l b
-            | None -> failwith "No LCA!"
+            | None -> MuleErr.bug "No LCA!"
           end
       | _ ->
           begin match raised_bound l with
             | Some b -> bound_lca b r
-            | None -> failwith "No LCA!"
+            | None -> MuleErr.bug "No LCA!"
           end
     end
 

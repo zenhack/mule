@@ -4,7 +4,7 @@ module Var = Ast.Var
 module Label = Ast.Label
 
 let bug msg term =
-  failwith ("BUG: " ^ msg ^ ": " ^ Pretty.runtime_expr term)
+  MuleErr.bug (msg ^ ": " ^ Pretty.runtime_expr term)
 
 let report step expr =
   if Config.print_eval_steps then
