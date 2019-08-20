@@ -53,36 +53,41 @@ let rec gen_type
   | Type.App(_, f, x) ->
       let f' = gen_type ctx sign f in
       let x' = gen_type ctx sign x in
-      UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
+      let ret =
+        UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
+      in
+      cops.constrain_kind
+        (get_kind f')
+        (UnionFind.make (`Arrow(get_kind x', get_kind ret)));
+      ret
   | Type.TypeLam(k, v, ty) ->
-      begin match UnionFind.get k with
-        | `Arrow(param, ret) ->
-            let tv = ty_var_at b_at in
-            Gen_t.lambda tv param ret (fun b_at p ->
-                gen_type
-                  {
-                    b_at;
-                    ctx = {
-                      ctx.ctx
-                      with env_types = Map.set env_types ~key:v ~data:p
-                    }
-                  }
-                  sign
-                  ty
-              )
-        | _ ->
-            failwith "BUG: lambda had non-arrow kind."
-      end
+      let tv = ty_var_at b_at in
+      let lam = Gen_t.lambda tv (gen_k ()) (gen_k ()) (fun b_at p ->
+          gen_type
+            {
+              b_at;
+              ctx = {
+                ctx.ctx
+                with env_types = Map.set env_types ~key:v ~data:p
+              }
+            }
+            sign
+            ty
+        )
+      in
+      cops.constrain_kind (get_kind lam) k;
+      lam
   | Type.Opaque _ ->
       failwith
         ("Opaque types should have been removed before generating " ^
          "the constraint graph.")
-  | Type.Named (_, s) ->
-      UnionFind.make (`Const(tv, `Named s, [], kvar_type))
+  | Type.Named (k, s) ->
+      UnionFind.make (`Const(tv, `Named s, [], k))
   | Type.Fn (_, maybe_v, param, ret) ->
       let param' =
         gen_type ctx (flip_sign sign) param
       in
+      cops.constrain_kind (get_kind param') kvar_type;
       (* This is fiddly; we have to add the variable to both the
        * type *and* term environments.
        *
@@ -111,6 +116,7 @@ let rec gen_type
           sign
           ret
       in
+      cops.constrain_kind (get_kind ret') kvar_type;
       UnionFind.make (fn tv param' ret')
   | Type.Recur(_, v, body) ->
       let ret = gen_u kvar_type b_at in
@@ -126,6 +132,7 @@ let rec gen_type
           body
       in
       UnionFind.merge (fun _ r -> r) ret ret';
+      cops.constrain_kind (get_kind ret') kvar_type;
       ret
   | Type.Var (_, v) ->
       begin match Map.find env_types v with
@@ -194,29 +201,32 @@ let rec gen_type
              ))
       in
       let ret' =
-        UnionFind.make (`Quant
-                          ( tv
-                          , gen_type
-                              { b_at = `Ty (lazy ret);
-                                ctx = {
-                                  ctx.ctx
-                                  with env_types = Map.set env_types ~key:v ~data:bound_v
-                                }
-                              }
-                              sign
-                              body
-                          )
-                       )
+        UnionFind.make
+          (`Quant
+            ( tv
+            , gen_type
+                { b_at = `Ty (lazy ret);
+                  ctx = {
+                    ctx.ctx
+                    with env_types = Map.set env_types ~key:v ~data:bound_v
+                  }
+                }
+                sign
+                body
+            )
+          )
       in
+      cops.constrain_kind (get_kind ret') kvar_type;
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
 (* [gen_row] is like [gen_type], but for row variables. *)
-and gen_row ({ctx = {env_types; _}; b_at} as ctx) sign (_, fields, rest) =
+and gen_row ({ctx = {cops; env_types; _}; b_at} as ctx) sign (_, fields, rest) =
   let rest' =
     match rest with
     | Some v -> Map.find_exn env_types v
     | None -> UnionFind.make (empty (ty_var_at b_at))
   in
+  cops.constrain_kind (get_kind rest') kvar_row;
   List.fold_right
     fields
     ~init:rest'
@@ -254,13 +264,11 @@ let gen_types
 let make_coercion_type ({g; _} as ctx) ty =
   (* General procedure:
    *
-   * 1. Infer the kinds within the type.
-   * 2. Call [gen_type] twice on ty, with different values for [new_exist];
+   * 1. Call [gen_type] twice on ty, with different values for [new_exist];
    *    see the discussion at the top of the file.
-   * 3. Generate a function node, and bound the two copies of the type to
+   * 2. Generate a function node, and bound the two copies of the type to
    *    it, with the parameter rigid, as described in {MLF-Graph-Infer}.
   *)
-  let kinded_ty = Infer_kind.infer ctx ty in
   fst (Util.fix
          (fun vars ->
             let (param_var, ret_var) = Lazy.force vars in
@@ -278,7 +286,7 @@ let make_coercion_type ({g; _} as ctx) ty =
              * existentials.
             *)
             let gen sign =
-              gen_type { ctx; b_at = `Ty root } sign kinded_ty
+              gen_type { ctx; b_at = `Ty root } sign ty
             in
             (gen `Neg, gen `Pos)
          )

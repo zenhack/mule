@@ -90,15 +90,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
             ~combine:(fun ~key:_ _ v -> v)
         in
         let ctx = { ctx with env_types } in
-        let u_vars =
-          Coercions.gen_types
-            { ctx; b_at = `G g }
-            `Pos
-            (Map.mapi
-               binds
-               ~f:(fun ~key:_ ~data -> Infer_kind.infer ctx data)
-            )
-        in
+        let u_vars = Coercions.gen_types { ctx; b_at = `G g } `Pos binds in
         let env_new =
           Map.merge_skewed
             env_types
@@ -340,10 +332,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
              UnionFind.make
                ( `Quant
                    ( ty_var_at b_at
-                   , Coercions.gen_type
-                       { b_at; ctx }
-                       `Pos
-                       (Infer_kind.infer ctx ty)
+                   , Coercions.gen_type { b_at; ctx } `Pos ty
                    )
                )
            )
@@ -356,10 +345,7 @@ let build_constraints: k_var Expr.t -> built_constraints =
                  UnionFind.make (
                    `Quant
                      ( ty_var_at b_at
-                     , Coercions.gen_type
-                         { b_at; ctx = { cops; g; env_types; env_terms = VarMap.empty } }
-                         `Pos
-                         (Infer_kind.infer ctx ty)
+                     , Coercions.gen_type { b_at; ctx } `Pos ty
                      )
                  )))
                )
