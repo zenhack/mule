@@ -89,8 +89,8 @@ module Type = struct
     ( i
     , List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
     , match maybe_v with
-        | Some v when Var.equal v old -> MuleErr.bug "TODO"
-        | _ -> maybe_v
+    | Some v when Var.equal v old -> MuleErr.bug "TODO"
+    | _ -> maybe_v
     )
 
   let rec sexp_of_t: 'i t -> Sexp.t = function

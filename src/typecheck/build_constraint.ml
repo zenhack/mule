@@ -326,8 +326,8 @@ let build_constraints: k_var Expr.t -> built_constraints =
          let b_at = `G g in
          let env_types = Map.map Intrinsics.types ~f:(fun ty ->
              let ctx = {
-                cops; g; env_types = VarMap.empty; env_terms = VarMap.empty;
-              }
+               cops; g; env_types = VarMap.empty; env_terms = VarMap.empty;
+             }
              in
              UnionFind.make
                ( `Quant

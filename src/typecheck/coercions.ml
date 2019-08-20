@@ -192,17 +192,17 @@ let rec gen_type
       let ret' =
         UnionFind.make
           (`Quant
-            ( tv
-            , gen_type
-                { b_at = `Ty (lazy ret);
-                  ctx = {
-                    ctx.ctx
-                    with env_types = Map.set env_types ~key:v ~data:bound_v
-                  }
-                }
-                sign
-                body
-            )
+             ( tv
+             , gen_type
+                 { b_at = `Ty (lazy ret);
+                   ctx = {
+                     ctx.ctx
+                     with env_types = Map.set env_types ~key:v ~data:bound_v
+                   }
+                 }
+                 sign
+                 body
+             )
           )
       in
       cops.constrain_kind (get_kind ret') kvar_type;

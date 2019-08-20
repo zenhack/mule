@@ -97,4 +97,4 @@ let check_duplicate_record_fields =
 
 let check expr =
   check_duplicate_record_fields expr
-  (* TODO: check for duplicate bound variables (in recursive lets). *)
+(* TODO: check for duplicate bound variables (in recursive lets). *)
