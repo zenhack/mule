@@ -10,7 +10,10 @@ module Type = struct
     | Recur of (Var.t * t)
     | Var of Var.t
     | Record of (record_item list)
-    | Ctor of Label.t
+    | Ctor of {
+        c_lbl : Label.t;
+        c_loc : Loc.t;
+      }
     | App of (t * t)
     | Union of (t * t)
     | RowRest of Var.t

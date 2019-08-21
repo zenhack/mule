@@ -147,8 +147,8 @@ let rec desugar_type' = function
       DT.Union (desugar_union_type None u)
   | ST.Record r ->
       desugar_record_type [] [] r
-  | ST.App(ST.Ctor l, t) ->
-      DT.Union(`Type, [(l, desugar_type' t)], None)
+  | ST.App(ST.Ctor{c_lbl; _}, t) ->
+      DT.Union(`Type, [(c_lbl, desugar_type' t)], None)
   | ST.RowRest v ->
       DT.Union(`Type, [], Some v)
   | (ST.Annotated _) as ty ->

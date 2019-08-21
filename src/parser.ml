@@ -180,7 +180,7 @@ let ctor = token (
 let rec typ_term = lazy (
   choice
     [ lazy_p typ_factor
-    ; (ctor |>> fun c -> Type.Ctor c)
+    ; with_loc (ctor |>> fun c_lbl c_loc -> Type.Ctor {c_lbl; c_loc})
     ; lazy_p record_type
     ; lazy_p recur_type
     ; lazy_p all_type
