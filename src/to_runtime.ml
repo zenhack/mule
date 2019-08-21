@@ -22,10 +22,11 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
           translate (depth + 1) (Map.set env ~key:param ~data:(`Index (depth + 1))) body
         in
         (ncap, R.Lam(ncap, [], body'))
-    | D.App(D.Fix `Record, f) ->
+    | D.App{ app_fn = D.Fix `Record; app_arg = f } ->
         translate_fix_rec depth env f
-    | D.App(D.WithType _, e) -> translate depth env e
-    | D.App(f, x) ->
+    | D.App { app_fn = D.WithType _; app_arg = e } ->
+        translate depth env e
+    | D.App {app_fn = f; app_arg = x} ->
         let (fcap, f') = translate depth env f in
         let (xcap, x') = translate depth env x in
         (max fcap xcap, R.App(f', x'))
@@ -86,7 +87,10 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             }
         )
     | D.Let (v, e, body) ->
-        translate depth env (D.App (D.Lam (v, body), e))
+        translate depth env (D.App {
+            app_fn = D.Lam (v, body);
+            app_arg = e;
+          })
     | D.LetType(_, body) ->
         translate depth env body
 and translate_fix_rec depth env = function
@@ -108,11 +112,11 @@ and translate_fix_rec depth env = function
 and translate_record_body depth env = function
   | D.EmptyRecord ->
       (0, LabelMap.empty)
-  | D.App(D.App(D.Update(`Value, lbl), old), field) ->
+  | D.App{ app_fn = D.App{ app_fn = D.Update(`Value, lbl); app_arg = old}; app_arg = field } ->
       let (n, head) = translate depth env field in
       let (m, tail) = translate_record_body depth env old in
       (max n m, Map.set tail ~key:lbl ~data:head)
-  | D.App(D.App(D.Update(`Type, _lbl), old), _type) ->
+  | D.App{ app_fn = D.App { app_fn = D.Update(`Type, _lbl); app_arg = old}; app_arg = _type } ->
       translate_record_body depth env old
   | D.LetType(_, body) ->
       translate_record_body depth env body

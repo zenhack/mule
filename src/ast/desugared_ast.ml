@@ -188,7 +188,10 @@ module Expr = struct
   type 'i t =
     | Var of Var.t
     | Lam of (Var.t * 'i t)
-    | App of ('i t * 'i t)
+    | App of {
+        app_fn : 'i t;
+        app_arg : 'i t;
+      }
     | Fix of [ `Let | `Record ]
     | EmptyRecord
     | GetField of ([`Lazy|`Strict] * Label.t)
@@ -212,8 +215,8 @@ module Expr = struct
     | Var v -> Sexp.Atom (Var.to_string v)
     | Lam(v, body) ->
         Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
-    | App(f, x) ->
-        Sexp.List [sexp_of_t f; sexp_of_t x]
+    | App{app_fn; app_arg} ->
+        Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
     | Fix `Let -> Sexp.Atom "fix/let"
     | Fix `Record -> Sexp.Atom "fix/record"
     | EmptyRecord -> Sexp.Atom "{}"
@@ -272,7 +275,10 @@ module Expr = struct
 
   let apply_to_kids e ~f = match e with
     | Lam (v, body) -> Lam (v, f body)
-    | App(x, y) -> App(f x, f y)
+    | App{app_fn; app_arg} -> App {
+        app_fn = f app_fn;
+        app_arg = f app_arg;
+      }
     | Ctor(l, arg) -> Ctor(l, f arg)
     | Match {cases; default} ->
         Match
@@ -310,7 +316,10 @@ module Expr = struct
           , map body ~f
           )
     | Lam(v, body) -> Lam(v, map body ~f)
-    | App(x, y) -> App(map x ~f, map y ~f)
+    | App{app_fn; app_arg}-> App {
+        app_fn = map app_fn ~f;
+        app_arg = map app_arg ~f;
+      }
     | Ctor(l, arg) -> Ctor(l, map arg ~f)
     | Match {cases; default} ->
         let f' (k, v) = (k, map v ~f) in

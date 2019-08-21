@@ -101,7 +101,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
               )
         in
         walk { ctx with env_types = env_new } body
-    | Expr.App (f, arg) ->
+    | Expr.App {app_fn = f; app_arg = arg} ->
         let param_var = gen_u kvar_type (`G g) in
         let ret_var = gen_u kvar_type (`G g) in
         let f_var = UnionFind.make(fn (gen_ty_var g) param_var ret_var) in
