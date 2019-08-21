@@ -156,7 +156,7 @@ let rec gen_type
             end;
             ret
       end
-  | Type.Record {r_info = _; r_types; r_values} ->
+  | Type.Record {r_src = _; r_info = _; r_types; r_values} ->
       let type_row = gen_row ctx sign r_types in
       let env = add_row_to_env env_types type_row in
       UnionFind.make (

@@ -33,6 +33,7 @@ module Type = struct
         { r_info : 'i
         ; r_types : 'i row
         ; r_values : 'i row
+        ; r_src : Surface_ast.Type.t;
         }
     | Union of 'i row
     | Quant of ('i * quantifier * Var.t * 'i t)
@@ -63,9 +64,10 @@ module Type = struct
           MuleErr.bug "TODO"
         else
           Path(i, v, ls)
-    | Record {r_info; r_types; r_values} ->
+    | Record {r_info; r_types; r_values; r_src} ->
         Record {
           r_info;
+          r_src;
           r_types = subst_row old new_ r_types;
           r_values = subst_row old new_ r_values;
         }
@@ -109,7 +111,7 @@ module Type = struct
     | Path(_, v, ls) -> Sexp.(
         List ([Atom "."; Var.sexp_of_t v] @ List.map ls ~f:Label.sexp_of_t)
       )
-    | Record { r_info = _; r_types; r_values } -> Sexp.(
+    | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
         List
           [ Atom "record"
           ; List [Atom "types"; sexp_of_row r_types]
@@ -160,9 +162,10 @@ module Type = struct
         Path(f x, v, ls)
     | Var (x, v) ->
         Var(f x, v)
-    | Record {r_info; r_types; r_values} ->
+    | Record {r_info; r_types; r_values; r_src} ->
         Record
           { r_info = f r_info
+          ; r_src
           ; r_types = map_row r_types ~f
           ; r_values = map_row r_values ~f
           }

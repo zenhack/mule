@@ -92,7 +92,7 @@ let rec quantify_opaques t = match t with
         )
   | DT.TypeLam(i, v, t) ->
       DT.TypeLam(i, v, quantify_opaques t)
-  | DT.Record {r_info; r_types = (i, fields, rest); r_values} ->
+  | DT.Record {r_src; r_info; r_types = (i, fields, rest); r_values} ->
       let vars = ref [] in
       let fields' = List.map fields ~f:(fun (lbl, ty) ->
           match quantify_opaques ty with
@@ -106,6 +106,7 @@ let rec quantify_opaques t = match t with
       let init =
         DT.Record
           { r_info
+          ; r_src
           ; r_types = (i, fields', rest)
           ; r_values = quantify_row_opaques r_values
           }
@@ -171,36 +172,42 @@ and desugar_union_type tail (l, r) =
         (MuleErr.MuleExn
            (MuleErr.MalformedType
               "Unions must be composed of ctors and at most one ...r"))
-and desugar_record_type types fields = function
-  (* TODO: how do we have variable fields for the type row? *)
-  | (ST.Type(lbl, params, Some t) :: fs) ->
-      let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, t) in
-      desugar_record_type ((lbl, ty)::types) fields fs
-  | (ST.Type(lbl, params, None) :: fs) ->
-      let kind =
-        List.fold
-          params
-          ~init:`Unknown
-          ~f:(fun k _ -> `Arrow(`Unknown, k))
-      in
-      desugar_record_type ((lbl, DT.Opaque kind)::types) fields fs
-  | [] ->
-      DT.Record
-        { r_info = `Type
-        ; r_types = (`Row, types, None)
-        ; r_values = (`Row, fields, None)
-        }
-  | [ST.Rest v] ->
-      DT.Record
-        { r_info = `Type
-        ; r_types = (`Row, types, None)
-        ; r_values = (`Row, fields, Some v)
-        }
-  | (ST.Field (l, t) :: rest) ->
-      desugar_record_type types ((l, desugar_type' t)::fields) rest
-  | (ST.Rest _ :: _) -> raise
-        (MuleErr.MuleExn
-           (MuleErr.MalformedType "row variable before the end of a record type."))
+and desugar_record_type types fields r =
+  let r_src = ST.Record r in
+  let rec go types fields = function
+    (* TODO: how do we have variable fields for the type row? *)
+    | (ST.Type(lbl, params, Some t) :: fs) ->
+        let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, t) in
+        go ((lbl, ty)::types) fields fs
+    | (ST.Type(lbl, params, None) :: fs) ->
+        let kind =
+          List.fold
+            params
+            ~init:`Unknown
+            ~f:(fun k _ -> `Arrow(`Unknown, k))
+        in
+        go ((lbl, DT.Opaque kind)::types) fields fs
+    | [] ->
+        DT.Record
+          { r_src
+          ; r_info = `Type
+          ; r_types = (`Row, types, None)
+          ; r_values = (`Row, fields, None)
+          }
+    | [ST.Rest v] ->
+        DT.Record
+          { r_src
+          ; r_info = `Type
+          ; r_types = (`Row, types, None)
+          ; r_values = (`Row, fields, Some v)
+          }
+    | (ST.Field (l, t) :: rest) ->
+        go types ((l, desugar_type' t)::fields) rest
+    | (ST.Rest _ :: _) -> raise
+          (MuleErr.MuleExn
+             (MuleErr.MalformedType "row variable before the end of a record type."))
+  in
+  go types fields r
 and desugar_type t =
   desugar_type' t
   |> quantify_opaques

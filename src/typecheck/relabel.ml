@@ -54,10 +54,10 @@ let relabel_type () =
         let body' = go body in
         Recur (i, v', body')
     | Var (i, v) -> Var (i, get v)
-    | Record {r_info; r_types; r_values} ->
+    | Record {r_info; r_types; r_values; r_src} ->
         let r_types = go_row r_types in
         let r_values = go_row r_values in
-        Record { r_info; r_types; r_values }
+        Record { r_src; r_info; r_types; r_values }
     | Union row -> Union (go_row row)
     | Quant (i, q, v, body) ->
         let v' = get v in

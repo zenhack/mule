@@ -3,6 +3,7 @@ open Ast
 module C = Const
 module D = Desugared
 module R = Runtime
+module S = Surface
 
 open Typecheck_types
 
@@ -44,7 +45,8 @@ let row kvs =
 
 let recordType tys vals =
   D.Type.Record
-    { r_info = kvar_type
+    { r_src = S.Type.Var (Var.of_string "<intrinsic>")
+    ; r_info = kvar_type
     ; r_types = row tys
     ; r_values = row vals
     }
