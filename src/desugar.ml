@@ -47,7 +47,12 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
         | ST.Fn(p, r) -> ST.Fn(go p, go r)
         | ST.App(f, x) -> ST.App(go f, go x)
         | ST.Union(l, r) -> ST.Union(go l, go r)
-        | ST.Annotated(v, t) -> ST.Annotated(v, go t)
+        | ST.Annotated{anno_var; anno_ty; anno_loc} ->
+            ST.Annotated {
+              anno_var;
+              anno_loc;
+              anno_ty = go anno_ty;
+            }
         | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
         | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ | ST.Import _ -> ty
       end
@@ -125,8 +130,8 @@ and quantify_row_opaques (i, fields, rest) =
 let rec desugar_type' = function
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
-  | ST.Fn(ST.Annotated(v, param), ret) ->
-      DT.Fn(`Type, Some v, desugar_type' param, desugar_type' ret)
+  | ST.Fn(ST.Annotated{anno_var; anno_ty = param; _}, ret) ->
+      DT.Fn(`Type, Some anno_var, desugar_type' param, desugar_type' ret)
   | ST.Fn(param, ret) ->
       DT.Fn(`Type, None, desugar_type' param, desugar_type' ret)
   | ST.Quant(q, vs, body) ->

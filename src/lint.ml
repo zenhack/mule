@@ -79,7 +79,8 @@ let check_duplicate_record_fields =
         |> go_labels
     | Type.Union(l, r) -> go_type l; go_type r
     | Type.App(f, x) -> go_type f; go_type x
-    | Type.Annotated(_, ty) -> go_type ty
+    | Type.Annotated{anno_ty; anno_var = _; anno_loc = _} ->
+        go_type anno_ty
   and go_labels =
     let rec go all dups = function
       | (l :: ls) when Set.mem all l ->
