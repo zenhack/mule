@@ -195,10 +195,16 @@ and typ_factor = lazy (
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest v
     end
-    ; let%bind v = var in
-      match%map many (kwd "." >> label) with
-      | [] -> Type.Var v
-      | parts -> Type.Path(v, parts)
+    ; with_loc (
+        let%bind v = var in
+        match%map many (kwd "." >> label) with
+        | [] -> fun _loc -> Type.Var v
+        | p_lbls -> fun p_loc -> Type.Path {
+            p_var = v;
+            p_lbls;
+            p_loc;
+          }
+      )
     ]
 )
 and typ_app = lazy (

@@ -148,8 +148,8 @@ let rec desugar_type' = function
       DT.Union(`Type, [], Some v)
   | (ST.Annotated _) as ty ->
       MuleErr.(throw (IllegalAnnotatedType ty))
-  | ST.Path(v, ls) ->
-      DT.Path(`Unknown, v, ls)
+  | ST.Path{p_var; p_lbls; _} ->
+      DT.Path(`Unknown, p_var, p_lbls)
   | ST.App(f, x) ->
       DT.App(`Unknown, desugar_type' f, desugar_type' x)
   | ST.Ctor _ ->

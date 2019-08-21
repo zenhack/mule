@@ -15,7 +15,11 @@ module Type = struct
     | Union of (t * t)
     | RowRest of Var.t
     | Annotated of (Var.t * t)
-    | Path of (Var.t * Label.t list)
+    | Path of {
+        p_var : Var.t;
+        p_lbls : Label.t list;
+        p_loc : Loc.t;
+      }
     | Import of {
         i_path : string;
         i_loc : Loc.t;
