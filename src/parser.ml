@@ -187,7 +187,7 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ (import (fun _loc path -> Type.Import path))
+    [ import (fun i_loc i_path -> Type.Import {i_loc; i_path})
     ; begin
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest v

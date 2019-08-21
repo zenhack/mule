@@ -16,7 +16,10 @@ module Type = struct
     | RowRest of Var.t
     | Annotated of (Var.t * t)
     | Path of (Var.t * Label.t list)
-    | Import of string
+    | Import of {
+        i_path : string;
+        i_loc : Loc.t;
+      }
   [@@deriving sexp_of]
 
   and record_item =
