@@ -163,7 +163,10 @@ let import: (Loc.t -> string -> 'a) -> ('a, unit) MParser.t
       )
 
 let embed =
-  kwd "embed" >> text
+  with_loc (
+    let%map e_path = kwd "embed" >> text in
+    (fun e_loc -> Expr.Embed {e_path; e_loc})
+  )
 
 let label =
   var |>> Ast.var_to_label
@@ -299,7 +302,7 @@ and ex2 = lazy (
 and ex3 = lazy (
   choice
     [ (import (fun i_loc i_path -> Expr.Import {i_loc; i_path}))
-    ; (embed |>> fun s -> Expr.Embed s)
+    ; embed
     ; lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr

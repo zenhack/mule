@@ -55,7 +55,10 @@ module Expr = struct
         { i_path : string
         ; i_loc : Loc.t
         }
-    | Embed of string
+    | Embed of {
+        e_path : string;
+        e_loc : Loc.t;
+      }
   [@@deriving sexp_of]
   and binding =
     [ `BindType of Var.t * Var.t list * Type.t
