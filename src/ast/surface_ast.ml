@@ -48,7 +48,10 @@ module Expr = struct
     | Let of (binding list * t)
     | WithType of (t * Type.t)
     | Const of Const.t
-    | Import of string
+    | Import of
+        { i_path : string
+        ; i_loc : Loc.t
+        }
     | Embed of string
   [@@deriving sexp_of]
   and binding =

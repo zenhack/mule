@@ -61,3 +61,21 @@ module Const = struct
   include T
   include Comparator.Make(T)
 end
+
+module Loc = struct
+  (* This is the same as MParser.pos, but by defining it inline,
+   * we can get the deriving magic to work correctly: *)
+  type pos = (int * int * int)
+  [@@deriving sexp]
+
+  type t = {
+    start: pos;
+    stop: pos;
+  }
+  [@@deriving sexp]
+
+  let spanning l r = {
+    start = l.start;
+    stop = r.stop;
+  }
+end

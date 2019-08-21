@@ -38,6 +38,12 @@ let keywords = Set.of_list (module String)
     ; "embed"
     ]
 
+let with_loc p =
+  let%bind start = MParser.get_pos in
+  let%bind f = p in
+  let%map stop = MParser.get_pos in
+  f Loc.{start; stop}
+
 let sep_start_by p sep =
   optional sep >> sep_by p sep
 
@@ -149,8 +155,12 @@ let constant : (Const.t, unit) MParser.t = choice
     ; char_const
     ]
 
-let import =
-  kwd "import" >> text
+let import: (Loc.t -> string -> 'a) -> ('a, unit) MParser.t
+   = fun f ->
+      with_loc (
+        let%map path = kwd "import" >> text in
+        (fun loc -> f loc path)
+      )
 
 let embed =
   kwd "embed" >> text
@@ -177,7 +187,7 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ (import |>> fun path -> Type.Import path)
+    [ (import (fun _loc path -> Type.Import path))
     ; begin
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest v
@@ -288,7 +298,7 @@ and ex2 = lazy (
 )
 and ex3 = lazy (
   choice
-    [ (import |>> fun s -> Expr.Import s)
+    [ (import (fun i_loc i_path -> Expr.Import {i_loc; i_path}))
     ; (embed |>> fun s -> Expr.Embed s)
     ; lazy_p lambda
     ; lazy_p match_expr
