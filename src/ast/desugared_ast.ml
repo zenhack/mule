@@ -299,11 +299,20 @@ module Expr = struct
         { cm_cases : 'i t ConstMap.t
         ; cm_default: 'i t
         }
-    | WithType of 'i Type.t
-    | Witness of 'i Type.t
-    | Let of (Var.t * 'i t * 'i t)
-    | LetType of ((Var.t * 'i Type.t) list * 'i t)
-    | Const of Const.t
+    | WithType of { wt_type : 'i Type.t }
+    | Witness of { wi_type : 'i Type.t }
+    | Let of {
+        let_v : Var.t;
+        let_e : 'i t;
+        let_body : 'i t;
+      }
+    | LetType of {
+        letty_binds : (Var.t * 'i Type.t) list;
+        letty_body : 'i t;
+      }
+    | Const of {
+        const_val : Const.t;
+      }
 
   let rec sexp_of_t = function
     | Var { v_var = v } -> Sexp.Atom (Var.to_string v)
@@ -356,17 +365,17 @@ module Expr = struct
           ; Map.sexp_of_m__t (module Const) sexp_of_t cm_cases
           ; Sexp.List [Sexp.Atom "_"; sexp_of_t cm_default]
           ]
-    | WithType ty ->
+    | WithType {wt_type = ty} ->
         Sexp.List [Sexp.Atom ":"; Type.sexp_of_t ty]
-    | Witness ty ->
+    | Witness {wi_type = ty} ->
         Sexp.List [Sexp.Atom "type"; Type.sexp_of_t ty]
-    | Let(v, e, body) ->
+    | Let{let_v = v; let_e = e; let_body = body} ->
         Sexp.List
           [ Sexp.Atom "let"
           ; Sexp.List [Var.sexp_of_t v; sexp_of_t e]
           ; sexp_of_t body
           ]
-    | LetType(binds, body) ->
+    | LetType{letty_binds = binds; letty_body = body} ->
         Sexp.List
           [ Sexp.Atom "let-type"
           ; Sexp.List
@@ -376,7 +385,7 @@ module Expr = struct
               )
           ; sexp_of_t body
           ]
-    | Const c ->
+    | Const {const_val = c} ->
         Const.sexp_of_t c
 
   let apply_to_kids e ~f = match e with
@@ -399,8 +408,15 @@ module Expr = struct
           { cm_cases = Map.map cm_cases ~f
           ; cm_default = f cm_default
           }
-    | Let(v, e, body) -> Let(v, f e, f body)
-    | LetType(binds, body) -> LetType(binds, f body)
+    | Let{let_v; let_e; let_body} -> Let {
+        let_v;
+        let_e = f let_e;
+        let_body = f let_body
+      }
+    | LetType{letty_binds; letty_body} -> LetType {
+        letty_binds;
+        letty_body = f letty_body;
+      }
     | Var _
     | Fix _
     | EmptyRecord
@@ -411,19 +427,19 @@ module Expr = struct
     | Const _ -> e
 
   let rec subst_ty old new_ = function
-    | WithType ty -> WithType (Type.subst old new_ ty)
-    | Witness ty -> Witness (Type.subst old new_ ty)
+    | WithType {wt_type = ty} -> WithType {wt_type = Type.subst old new_ ty}
+    | Witness {wi_type = ty} -> Witness {wi_type = Type.subst old new_ ty}
     | e -> apply_to_kids e ~f:(subst_ty old new_)
 
   let rec map e ~f =
     match e with
-    | WithType ty -> WithType (Type.map ty ~f)
-    | Witness ty -> Witness (Type.map ty ~f)
-    | LetType(binds, body) ->
-        LetType
-          ( List.map binds ~f:(fun (k, v) -> (k, Type.map v ~f))
-          , map body ~f
-          )
+    | WithType {wt_type = ty} -> WithType {wt_type = Type.map ty ~f}
+    | Witness {wi_type = ty} -> Witness {wi_type = Type.map ty ~f}
+    | LetType{letty_binds = binds; letty_body = body} ->
+        LetType {
+          letty_binds = List.map binds ~f:(fun (k, v) -> (k, Type.map v ~f));
+          letty_body = map body ~f;
+        }
     | Lam{l_param; l_body} ->
         Lam{l_param; l_body = map l_body ~f}
     | App{app_fn; app_arg}-> App {
@@ -442,7 +458,11 @@ module Expr = struct
           { cm_cases = Map.map cm_cases ~f:(map ~f)
           ; cm_default = map cm_default ~f
           }
-    | Let(v, e, body) -> Let(v, map e ~f, map body ~f)
+    | Let{let_v; let_e; let_body} -> Let{
+        let_v;
+        let_e = map let_e ~f;
+        let_body = map let_body ~f;
+      }
     | Var x -> Var x
     | Fix x -> Fix x
     | EmptyRecord -> EmptyRecord

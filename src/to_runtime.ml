@@ -7,7 +7,7 @@ type binding = [ `Index of int | `Term of R.t ]
 
 let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
-    | D.Const c -> (0, R.Const c)
+    | D.Const {const_val = c} -> (0, R.Const c)
     | D.Var {v_var = v} ->
         begin match Map.find_exn env v with
           | `Index m ->
@@ -91,7 +91,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             ; default = default'
             }
         )
-    | D.Let (v, e, body) ->
+    | D.Let {let_v = v; let_e = e; let_body = body} ->
         translate depth env (D.App {
             app_fn = D.Lam {
                 l_param = v;
@@ -99,7 +99,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
               };
             app_arg = e;
           })
-    | D.LetType(_, body) ->
+    | D.LetType{letty_body = body; _} ->
         translate depth env body
 and translate_fix_rec depth env = function
   | D.Lam{l_param = v; l_body = body} ->
@@ -138,7 +138,7 @@ and translate_record_body depth env = function
       app_arg = _type
     } ->
       translate_record_body depth env old
-  | D.LetType(_, body) ->
+  | D.LetType{letty_body = body; _} ->
       translate_record_body depth env body
   | _ ->
       failwith "BUG"

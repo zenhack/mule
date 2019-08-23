@@ -32,7 +32,7 @@ let walk_const g c =
 
 let rec walk: context -> k_var Expr.t -> u_var =
   fun ({cops; env_types; env_terms; g} as ctx) -> function
-    | Expr.Const c -> walk_const g c
+    | Expr.Const {const_val = c} -> walk_const g c
     | Expr.Var {v_var = v} ->
         let tv = gen_u kvar_type (`G g) in
         begin match Option.map ~f:Lazy.force (Map.find env_terms v) with
@@ -72,7 +72,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         in
         cops.constrain_inst g_body ret_var;
         f_var
-    | Expr.Let(v, e, body) ->
+    | Expr.Let{let_v = v; let_e = e; let_body = body} ->
         let g_e =
           with_g g (fun g -> walk { ctx with g = Lazy.force g } e)
         in
@@ -81,7 +81,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
                        Map.set env_terms ~key:v ~data:(lazy (`G g_e))
           }
           body
-    | Expr.LetType(binds, body) ->
+    | Expr.LetType{letty_binds = binds; letty_body = body} ->
         let binds = Map.of_alist_exn (module Ast.Var) binds in
         let env_types =
           Map.merge_skewed
@@ -271,9 +271,9 @@ let rec walk: context -> k_var Expr.t -> u_var =
              (gen_ty_var g)
              (UnionFind.make (union tv rowVar))
              bodyVar)
-    | Expr.WithType ty ->
+    | Expr.WithType {wt_type = ty} ->
         Coercions.make_coercion_type ctx ty
-    | Expr.Witness ty ->
+    | Expr.Witness {wi_type = ty} ->
         let uty = Coercions.gen_type { ctx; b_at = `G g } `Pos ty in
         UnionFind.make (witness (ty_var_at (`G g)) (Type.get_info ty) uty)
 and walk_match ({cops; env_types = _; env_terms; g} as ctx) final =
