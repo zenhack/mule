@@ -33,7 +33,7 @@ let walk_const g c =
 let rec walk: context -> k_var Expr.t -> u_var =
   fun ({cops; env_types; env_terms; g} as ctx) -> function
     | Expr.Const c -> walk_const g c
-    | Expr.Var v ->
+    | Expr.Var {v_var = v} ->
         let tv = gen_u kvar_type (`G g) in
         begin match Option.map ~f:Lazy.force (Map.find env_terms v) with
           | None ->
@@ -57,7 +57,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
             )
         ) in
         Lazy.force ret
-    | Expr.Lam (param, body) ->
+    | Expr.Lam {l_param = param; l_body = body} ->
         let param_var = gen_u kvar_type (`G g) in
         let ret_var = gen_u kvar_type (`G g) in
         let f_var = UnionFind.make (fn (gen_ty_var g) param_var ret_var) in
@@ -230,10 +230,13 @@ let rec walk: context -> k_var Expr.t -> u_var =
         let term =
           match default with
           | None -> raise (MuleErr.MuleExn EmptyMatch)
-          | Some (Some paramVar, body) ->
-              Expr.Lam (paramVar, body)
-          | Some (None, body) ->
-              Expr.Lam (Ast.Var.of_string "_", body)
+          | Some (Some l_param, l_body) ->
+              Expr.Lam{l_param; l_body}
+          | Some (None, l_body) ->
+              Expr.Lam {
+                l_param = Ast.Var.of_string "_";
+                l_body;
+              }
         in
         walk ctx term
     | Expr.ConstMatch {cm_cases; cm_default} ->

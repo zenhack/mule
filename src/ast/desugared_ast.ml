@@ -271,13 +271,13 @@ end
 
 module Expr = struct
   type 'i t =
-    | Var of Var.t
-    | Lam of (Var.t * 'i t)
+    | Var of { v_var : Var.t }
+    | Lam of { l_param : Var.t; l_body : 'i t }
     | App of {
         app_fn : 'i t;
         app_arg : 'i t;
       }
-    | Fix of [ `Let | `Record ]
+    | Fix of { fix_type : [ `Let | `Record ] }
     | EmptyRecord
     | GetField of ([`Lazy|`Strict] * Label.t)
     | Update of ([`Value | `Type] * Label.t)
@@ -297,13 +297,13 @@ module Expr = struct
     | Const of Const.t
 
   let rec sexp_of_t = function
-    | Var v -> Sexp.Atom (Var.to_string v)
-    | Lam(v, body) ->
+    | Var { v_var = v } -> Sexp.Atom (Var.to_string v)
+    | Lam{ l_param = v; l_body = body } ->
         Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
     | App{app_fn; app_arg} ->
         Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
-    | Fix `Let -> Sexp.Atom "fix/let"
-    | Fix `Record -> Sexp.Atom "fix/record"
+    | Fix { fix_type = `Let } -> Sexp.Atom "fix/let"
+    | Fix { fix_type = `Record } -> Sexp.Atom "fix/record"
     | EmptyRecord -> Sexp.Atom "{}"
     | GetField(_, l) -> Sexp.List [Sexp.Atom "."; Label.sexp_of_t l]
     | Update(`Value, l) -> Sexp.List [Sexp.Atom ".="; Label.sexp_of_t l]
@@ -359,7 +359,10 @@ module Expr = struct
         Const.sexp_of_t c
 
   let apply_to_kids e ~f = match e with
-    | Lam (v, body) -> Lam (v, f body)
+    | Lam {l_param; l_body} -> Lam {
+        l_param;
+        l_body = f l_body
+      }
     | App{app_fn; app_arg} -> App {
         app_fn = f app_fn;
         app_arg = f app_arg;
@@ -400,7 +403,8 @@ module Expr = struct
           ( List.map binds ~f:(fun (k, v) -> (k, Type.map v ~f))
           , map body ~f
           )
-    | Lam(v, body) -> Lam(v, map body ~f)
+    | Lam{l_param; l_body} ->
+        Lam{l_param; l_body = map l_body ~f}
     | App{app_fn; app_arg}-> App {
         app_fn = map app_fn ~f;
         app_arg = map app_arg ~f;

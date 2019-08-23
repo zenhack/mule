@@ -8,21 +8,21 @@ type binding = [ `Index of int | `Term of R.t ]
 let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
     | D.Const c -> (0, R.Const c)
-    | D.Var v ->
+    | D.Var {v_var = v} ->
         begin match Map.find_exn env v with
           | `Index m ->
               let n = depth - m in
               (n, R.Var n)
           | `Term t -> (0, t)
         end
-    | D.Fix flag ->
+    | D.Fix {fix_type = flag} ->
         (0, R.Fix flag)
-    | D.Lam (param, body) ->
+    | D.Lam {l_param; l_body} ->
         let (ncap, body') =
-          translate (depth + 1) (Map.set env ~key:param ~data:(`Index (depth + 1))) body
+          translate (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
         in
         (ncap, R.Lam(ncap, [], body'))
-    | D.App{ app_fn = D.Fix `Record; app_arg = f } ->
+    | D.App{ app_fn = D.Fix {fix_type = `Record}; app_arg = f } ->
         translate_fix_rec depth env f
     | D.App { app_fn = D.WithType _; app_arg = e } ->
         translate depth env e
@@ -64,15 +64,20 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Match{cases; default} ->
         let cases' = Map.map
             cases
-            ~f:(fun (param, body) -> translate depth env (D.Lam(param, body)))
+            ~f:(fun (l_param, l_body) -> translate depth env (D.Lam{l_param; l_body}))
         in
         let (defcaps, default') = match default with
           | None -> (0, None)
           | Some (None, body) ->
-              let (ncaps, body') = translate depth env (D.Lam(Gensym.anon_var(), body)) in
+              let (ncaps, body') =
+                translate depth env (D.Lam {
+                    l_param = Gensym.anon_var();
+                    l_body = body;
+                  })
+              in
               (ncaps, Some body')
-          | Some(Some param, body) ->
-              let (ncaps, body') = translate depth env (D.Lam(param, body)) in
+          | Some(Some l_param, l_body) ->
+              let (ncaps, body') = translate depth env (D.Lam{l_param; l_body}) in
               (ncaps, Some body')
         in
         let ncaps = Map.fold
@@ -88,13 +93,16 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         )
     | D.Let (v, e, body) ->
         translate depth env (D.App {
-            app_fn = D.Lam (v, body);
+            app_fn = D.Lam {
+                l_param = v;
+                l_body = body;
+              };
             app_arg = e;
           })
     | D.LetType(_, body) ->
         translate depth env body
 and translate_fix_rec depth env = function
-  | D.Lam(v, body) ->
+  | D.Lam{l_param = v; l_body = body} ->
       let (n, lblmap) =
         translate_record_body
           (depth + 1)
