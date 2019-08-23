@@ -167,7 +167,7 @@ let rec desugar_type' = function
             q_var = v;
             q_body = body;
           }
-      )
+          )
   | ST.Recur(v, body) ->
       DT.Recur {
         mu_info = `Type;
@@ -442,9 +442,9 @@ and desugar_record fields =
               | `Type (lbl, _, _) ->
                   D.App {
                     app_fn = D.App {
-                          app_fn = D.Update(`Type, lbl);
-                          app_arg = old;
-                        };
+                        app_fn = D.Update(`Type, lbl);
+                        app_arg = old;
+                      };
                     app_arg = D.Witness (DT.Var {
                         v_info = `Unknown;
                         v_var = Ast.var_of_label lbl;

@@ -156,11 +156,11 @@ let constant : (Const.t, unit) MParser.t = choice
     ]
 
 let import: (Loc.t -> string -> 'a) -> ('a, unit) MParser.t
-   = fun f ->
-      with_loc (
-        let%map path = kwd "import" >> text in
-        (fun loc -> f loc path)
-      )
+  = fun f ->
+    with_loc (
+      let%map path = kwd "import" >> text in
+      (fun loc -> f loc path)
+    )
 
 let embed =
   with_loc (
