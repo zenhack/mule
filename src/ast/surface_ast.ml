@@ -62,10 +62,18 @@ end
 
 module Pattern = struct
   type t =
-    | Ctor of (Label.t * t)
-    | Var of (Var.t * Type.t option)
+    | Ctor of {
+        c_lbl : Label.t;
+        c_arg : t;
+      }
+    | Var of {
+        v_var : Var.t;
+        v_type : Type.t option;
+      }
     | Wild
-    | Const of Const.t
+    | Const of {
+        const_val : Const.t;
+      }
   [@@deriving sexp_of]
 end
 

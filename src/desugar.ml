@@ -268,14 +268,14 @@ and desugar = function
       app_fn = desugar f;
       app_arg = desugar x;
     }
-  | S.Lam (SP.Var (v, None) :: pats, body) ->
+  | S.Lam (SP.Var {v_var = v; v_type = None} :: pats, body) ->
       D.Lam {l_param = v; l_body = desugar (S.Lam (pats, body))}
   | S.Lam (SP.Wild :: pats, body) ->
       D.Lam {
         l_param = Gensym.anon_var ();
         l_body = desugar (S.Lam (pats, body));
       }
-  | S.Lam ((SP.Var (v, Some ty) :: pats), body) ->
+  | S.Lam ((SP.Var {v_var = v; v_type = Some ty} :: pats), body) ->
       let v' = Gensym.anon_var () in
       D.Lam {
         l_param = v';
@@ -539,9 +539,9 @@ and desugar_const_match dict = function
         }
   | ((SP.Var _, _) :: _) ->
       unreachable_case SP.Wild
-  | ((SP.Const c, body) :: rest) ->
+  | ((SP.Const {const_val = c}, body) :: rest) ->
       begin match Map.find dict c with
-        | Some _ -> unreachable_case (SP.Const c)
+        | Some _ -> unreachable_case (SP.Const {const_val = c})
         | None ->
             desugar_const_match
               (Map.set dict ~key:c ~data:(desugar body))
@@ -565,12 +565,12 @@ and desugar_lbl_match dict = function
         { default = Some (None, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var (v, None), body] ->
+  | [SP.Var {v_var = v; v_type = None}, body] ->
       D.Match
         { default = Some (Some v, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var (v, Some ty), body] ->
+  | [SP.Var {v_var = v; v_type = Some ty}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let
           { let_v = v
@@ -585,7 +585,7 @@ and desugar_lbl_match dict = function
         { default = Some(Some v', let_)
         ; cases = finalize_dict dict
         }
-  | (SP.Ctor (lbl, p), body) :: cases ->
+  | (SP.Ctor {c_lbl = lbl; c_arg = p}, body) :: cases ->
       let dict' =
         Map.update dict lbl ~f:(function
             | None -> [(p, body)]
@@ -714,18 +714,28 @@ and simplify_bindings = function
   | [] -> []
   | `BindType t :: bs ->
       `Type t :: simplify_bindings bs
-  | `BindVal (SP.Var (v, None), e) :: bs ->
+  | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
       `Value(v, e) :: simplify_bindings bs
   | `BindVal((SP.Const _) as p, _) :: _ ->
       incomplete_pattern p
   | `BindVal(SP.Wild, e) :: bs  ->
       `Value(Gensym.anon_var (), e) :: simplify_bindings bs
-  | `BindVal(SP.Var(v, Some ty), e) :: bs ->
+  | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
       `Value(v, S.WithType(e, ty)) :: simplify_bindings bs
-  | `BindVal(SP.Ctor(lbl, pat), e) :: bs ->
+  | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
       let bind_var = Gensym.anon_var () in
       let match_var = Gensym.anon_var () in
-      `Value(bind_var, S.Match(e, [(SP.Ctor(lbl, SP.Var(match_var, None)), S.Var match_var)]))
+      `Value
+        ( bind_var
+        , S.Match
+            ( e
+            , [
+              ( SP.Ctor{c_lbl = lbl; c_arg = SP.Var {v_var = match_var; v_type = None}}
+              , S.Var match_var
+              )
+            ]
+            )
+        )
       :: simplify_bindings (`BindVal(pat, S.Var bind_var) :: bs)
 
 
