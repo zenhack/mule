@@ -234,17 +234,18 @@ and recur_type = lazy (
   let%map ty = lazy_p typ in
   Type.Recur{ recur_var = v; recur_body = ty }
 )
-and quantified_type binder quantifier = lazy (
-  kwd binder >>
-  let%bind vs = many1 var in
-  kwd "." >>
-  let%map ty = lazy_p typ in
-  Type.Quant {
-    q_quant = quantifier;
-    q_vars = vs;
-    q_body = ty;
-  }
-)
+and quantified_type binder quantifier = lazy (with_loc (
+    kwd binder >>
+    let%bind vs = many1 var in
+    kwd "." >>
+    let%map ty = lazy_p typ in
+    fun q_loc -> Type.Quant {
+        q_quant = quantifier;
+        q_vars = vs;
+        q_body = ty;
+        q_loc;
+      }
+  ))
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (

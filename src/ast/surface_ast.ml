@@ -13,6 +13,7 @@ module Type = struct
         q_quant : quantifier;
         q_vars : Var.t list;
         q_body : t;
+        q_loc : Loc.t;
       }
     | Recur of {
         recur_var : Var.t;
