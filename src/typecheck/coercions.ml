@@ -152,11 +152,11 @@ let rec gen_type
               | `Ty ty ->
                   cops.constrain_unify
                     ( `TypePath
-                      (object
-                        method bind_type = `Lambda;
-                        method var = v;
-                        method lbls = List.rev (l :: ls);
-                      end)
+                        (object
+                          method bind_type = `Lambda;
+                          method var = v;
+                          method lbls = List.rev (l :: ls);
+                        end)
                     )
                     ty record_u
               | `G g ->

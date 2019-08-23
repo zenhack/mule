@@ -41,10 +41,10 @@ let rec walk: context -> k_var Expr.t -> u_var =
           | Some (`Ty tv') ->
               cops.constrain_unify
                 (`VarUse
-                  (object
-                    method bind_type = `Lambda
-                    method var = v
-                  end)
+                   (object
+                     method bind_type = `Lambda
+                     method var = v
+                   end)
                 )
                 tv' tv
           | Some (`G g') ->

@@ -689,10 +689,10 @@ and desugar_type_binding (v, params, ty) =
     ST.Recur
       { recur_var = v
       ; recur_body = substitue_type_apps
-          target
-          (ST.Var {v_var = v})
-          (Set.of_list (module Ast.Var) params)
-          ty
+            target
+            (ST.Var {v_var = v})
+            (Set.of_list (module Ast.Var) params)
+            ty
       }
   in
   let ty =
