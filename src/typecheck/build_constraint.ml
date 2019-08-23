@@ -121,7 +121,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
              (gen_u kvar_row (`G g))
              (UnionFind.make (empty (ty_var_at (`G g))))
           )
-    | Expr.GetField (_, lbl) ->
+    | Expr.GetField {gf_lbl; _} ->
         (* Field accesses have the type:
          *
          * all a r. {lbl: a, ...r} -> a
@@ -139,7 +139,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
                      (UnionFind.make
                         (extend
                            (ty_var_at b_at)
-                           lbl
+                           gf_lbl
                            head_var
                            (gen_u kvar_row b_at)
                         ))))
@@ -147,7 +147,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         )
         in
         Lazy.force ret
-    | Expr.Update (`Value, lbl) ->
+    | Expr.Update { up_level = `Value; up_lbl } ->
         (* Record updates have the type:
          *
          * all a r. {...r} -> a -> {lbl: a, ...r}
@@ -176,13 +176,16 @@ let rec walk: context -> k_var Expr.t -> u_var =
                            (UnionFind.make
                               (extend
                                  (ty_var_at b_at)
-                                 lbl
+                                 up_lbl
                                  head_var
                                  tail_var
                               )))))))
         ) in
         Lazy.force ret
-    | Expr.Update(`Type, lbl) ->
+    | Expr.Update {
+        up_level = `Type;
+        up_lbl = lbl;
+      } ->
         let rec ret = lazy (
           let b_at = `Ty ret in
           let kvar = gen_k () in
@@ -213,7 +216,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
                            vals_row_var)))))
         ) in
         Lazy.force ret
-    | Expr.Ctor (lbl, param) ->
+    | Expr.Ctor {c_lbl = lbl; c_arg = param} ->
         let param_var = walk ctx param in
         UnionFind.make
           (union

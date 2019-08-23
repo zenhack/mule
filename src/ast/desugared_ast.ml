@@ -279,9 +279,18 @@ module Expr = struct
       }
     | Fix of { fix_type : [ `Let | `Record ] }
     | EmptyRecord
-    | GetField of ([`Lazy|`Strict] * Label.t)
-    | Update of ([`Value | `Type] * Label.t)
-    | Ctor of (Label.t * 'i t)
+    | GetField of {
+        gf_strategy : [`Lazy|`Strict];
+        gf_lbl : Label.t;
+      }
+    | Update of {
+        up_level : [`Value | `Type];
+        up_lbl : Label.t;
+      }
+    | Ctor of {
+        c_lbl : Label.t;
+        c_arg : 'i t;
+      }
     | Match of {
         cases: (Var.t * 'i t) LabelMap.t;
         default: (Var.t option * 'i t) option;
@@ -305,10 +314,22 @@ module Expr = struct
     | Fix { fix_type = `Let } -> Sexp.Atom "fix/let"
     | Fix { fix_type = `Record } -> Sexp.Atom "fix/record"
     | EmptyRecord -> Sexp.Atom "{}"
-    | GetField(_, l) -> Sexp.List [Sexp.Atom "."; Label.sexp_of_t l]
-    | Update(`Value, l) -> Sexp.List [Sexp.Atom ".="; Label.sexp_of_t l]
-    | Update(`Type, l) -> Sexp.List [Sexp.Atom ".type="; Label.sexp_of_t l]
-    | Ctor(l, arg) -> Sexp.List [Label.sexp_of_t l; sexp_of_t arg]
+    | GetField{gf_lbl; _} -> Sexp.List [
+        Sexp.Atom ".";
+        Label.sexp_of_t gf_lbl;
+      ]
+    | Update {up_level = `Value; up_lbl} -> Sexp.List [
+        Sexp.Atom ".=";
+        Label.sexp_of_t up_lbl;
+      ]
+    | Update {up_level = `Type; up_lbl} -> Sexp.List [
+        Sexp.Atom ".type=";
+        Label.sexp_of_t up_lbl;
+      ]
+    | Ctor{c_lbl; c_arg} -> Sexp.List [
+        Label.sexp_of_t c_lbl;
+        sexp_of_t c_arg;
+      ]
     | Match {cases; default} ->
         let cs =
           [ Sexp.Atom "match"
@@ -367,7 +388,7 @@ module Expr = struct
         app_fn = f app_fn;
         app_arg = f app_arg;
       }
-    | Ctor(l, arg) -> Ctor(l, f arg)
+    | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
     | Match {cases; default} ->
         Match
           { cases = Map.map cases ~f:(fun (k, v) -> (k, f v))
@@ -409,7 +430,7 @@ module Expr = struct
         app_fn = map app_fn ~f;
         app_arg = map app_arg ~f;
       }
-    | Ctor(l, arg) -> Ctor(l, map arg ~f)
+    | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
     | Match {cases; default} ->
         let f' (k, v) = (k, map v ~f) in
         Match

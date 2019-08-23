@@ -302,7 +302,10 @@ and desugar = function
   | S.Update(e, (`Value (l, _, v)::fs)) ->
       D.App {
         app_fn = D.App {
-            app_fn = D.Update(`Value, l);
+            app_fn = D.Update {
+                up_level = `Value;
+                up_lbl = l;
+              };
             app_arg = desugar (S.Update(e, fs));
           };
         app_arg = desugar v;
@@ -311,14 +314,20 @@ and desugar = function
       let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
       D.App {
         app_fn = D.App {
-            app_fn = D.Update(`Type, lbl);
+            app_fn = D.Update {
+                up_level = `Type;
+                up_lbl = lbl;
+              };
             app_arg = desugar (S.Update(e, fs));
           };
         app_arg = D.Witness ty;
       }
   | S.GetField (e, l) ->
       D.App {
-        app_fn = D.GetField(`Strict, l);
+        app_fn = D.GetField {
+            gf_strategy = `Strict;
+            gf_lbl = l;
+          };
         app_arg =  desugar e;
       }
   | S.Ctor label ->
@@ -327,7 +336,10 @@ and desugar = function
       let l_param = Ast.Var.of_string "x" in
       D.Lam {
         l_param;
-        l_body = D.Ctor (label, D.Var {v_var = l_param });
+        l_body = D.Ctor {
+            c_lbl = label;
+            c_arg = D.Var {v_var = l_param };
+          };
       }
   | S.Match (e, cases) ->
       D.App {
@@ -345,7 +357,10 @@ and desugar_record fields =
   let record_var = Gensym.anon_var () in
   let get_record_field lbl =
     D.App {
-      app_fn = D.GetField(`Lazy, lbl);
+      app_fn = D.GetField {
+          gf_strategy = `Lazy;
+          gf_lbl = lbl;
+        };
       app_arg = D.Var {v_var = record_var};
     }
   in
@@ -370,8 +385,8 @@ and desugar_record fields =
                 app_arg = get_record_field lbl;
               }
         end
-    | D.Ctor(lbl, body) ->
-        D.Ctor(lbl, subst env body)
+    | D.Ctor{ c_lbl; c_arg } ->
+        D.Ctor{ c_lbl; c_arg = subst env c_arg }
     | D.Lam {l_param; l_body} ->
         D.Lam {
           l_param;
@@ -442,7 +457,10 @@ and desugar_record fields =
               | `Type (lbl, _, _) ->
                   D.App {
                     app_fn = D.App {
-                        app_fn = D.Update(`Type, lbl);
+                        app_fn = D.Update {
+                            up_level = `Type;
+                            up_lbl = lbl;
+                          };
                         app_arg = old;
                       };
                     app_arg = D.Witness (DT.Var {
@@ -457,10 +475,16 @@ and desugar_record fields =
                       | Some ty' -> S.WithType(v, ty')
                     end
                   in
-                  D.App
-                    { app_fn = D.App { app_fn = D.Update (`Value, l); app_arg = old }
-                    ; app_arg = subst label_map (desugar v')
-                    }
+                  D.App {
+                    app_fn = D.App {
+                        app_fn = D.Update {
+                            up_level = `Value;
+                            up_lbl = l;
+                          };
+                        app_arg = old;
+                      };
+                    app_arg = subst label_map (desugar v');
+                  }
             )
       )
   in
@@ -608,10 +632,13 @@ and desugar_let bs body = match simplify_bindings bs with
             | `Value(v, _) ->
                 D.Let
                   ( v
-                  , D.App
-                      { app_fn = D.GetField(`Strict, Ast.var_to_label v)
-                      ; app_arg = D.Var {v_var = record_name}
-                      }
+                  , D.App {
+                      app_fn = D.GetField {
+                          gf_strategy = `Strict;
+                          gf_lbl = Ast.var_to_label v;
+                        };
+                      app_arg = D.Var {v_var = record_name};
+                    }
                   , accum
                   )
             | `Type t ->
