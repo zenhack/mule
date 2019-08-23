@@ -76,7 +76,7 @@ let render_graph cs =
     Debug.start_graph ();
     emit_all_nodes_ty cs.ty visited;
     List.iter cs.unification
-      ~f:(fun (Unify(l, r)) ->
+      ~f:(fun (Unify(_, l, r)) ->
           let id n = (get_tyvar (UnionFind.get n)).ty_id in
           Debug.show_edge `Unify (id l) (id r);
           emit_all_nodes_ty l visited;

@@ -118,8 +118,26 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
 
 type permission = F | R | L | E
 
+type reason =
+  [ `AppParamArg
+  | `MatchSiblingsBody
+  | `MatchSiblingsPattern
+  | `MatchDefault
+  | `VarUse of <
+      bind_type : [ `Lambda | `Let ];
+      var : Ast.Var.t
+    >
+  | `TypePath of <
+      bind_type : [ `Lambda | `Let ];
+      var : Ast.Var.t;
+      lbls : Ast.Label.t list;
+    >
+  | `Frontier
+  | `Propagate
+  ]
+
 type unify_edge =
-  | Unify of (u_type UnionFind.var * u_type UnionFind.var)
+  | Unify of (reason * u_type UnionFind.var * u_type UnionFind.var)
 
 type inst_edge =
   { ie_g_node: g_node

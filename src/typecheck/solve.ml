@@ -92,7 +92,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
               (* We've hit the frontier; replace it with a bottom node and
                * constrain it to be equal to the old thing. *)
               let new_var = gen_u kind new_bound in
-              cops.constrain_unify nv new_var;
+              cops.constrain_unify `Frontier nv new_var;
               new_var
             end
           else
@@ -167,7 +167,7 @@ let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
   fun cops g var ->
   let bound = (get_u_bound (UnionFind.get var)).b_at in
   let instance = expand cops g bound in
-  cops.constrain_unify instance var
+  cops.constrain_unify `Propagate instance var
 
 let solve_constraints cs =
   let render_ucs = ref cs.unification in
@@ -183,9 +183,9 @@ let solve_constraints cs =
   List.iter cs.kind ~f:(fun (x, y) -> UnionFind.merge Infer_kind.unify x y);
   let solve_unify vars =
     render_ucs := vars;
-    List.iter vars ~f:(fun (Unify (l, r)) ->
+    List.iter vars ~f:(fun (Unify (reason, l, r)) ->
         !Debug.render_hook ();
-        Unify.normalize_unify l r;
+        Unify.normalize_unify reason l r;
         render_ucs := List.tl_exn !render_ucs;
       );
     !Debug.render_hook ()

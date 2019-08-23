@@ -39,7 +39,14 @@ let rec walk: context -> k_var Expr.t -> u_var =
           | None ->
               MuleErr.(throw (UnboundVar v))
           | Some (`Ty tv') ->
-              cops.constrain_unify tv' tv
+              cops.constrain_unify
+                (`VarUse
+                  (object
+                    method bind_type = `Lambda
+                    method var = v
+                  end)
+                )
+                tv' tv
           | Some (`G g') ->
               cops.constrain_inst g' tv
         end;
@@ -247,14 +254,14 @@ let rec walk: context -> k_var Expr.t -> u_var =
         let arg_ty = gen_u kvar_type (`G g) in
         Map.iteri cm_cases ~f:(fun ~key:c ~data:body ->
             let ty = walk ctx body in
-            cops.constrain_unify ty body_ty;
-            cops.constrain_unify (walk_const g c) arg_ty
+            cops.constrain_unify `MatchSiblingsBody ty body_ty;
+            cops.constrain_unify `MatchSiblingsPattern (walk_const g c) arg_ty
           );
         let f_ty =
           UnionFind.make (fn (gen_ty_var g) arg_ty body_ty)
         in
         let default_ty = walk ctx cm_default in
-        cops.constrain_unify f_ty default_ty;
+        cops.constrain_unify `MatchDefault f_ty default_ty;
         f_ty
     | Expr.Match {cases; default} ->
         let final = match default with
@@ -288,7 +295,7 @@ and walk_match ({cops; env_types = _; env_terms; g} as ctx) final =
             }
             body
         in
-        cops.constrain_unify bodyVar body';
+        cops.constrain_unify `MatchSiblingsBody bodyVar body';
         ( UnionFind.make (extend (gen_ty_var g) lbl ty row)
         , bodyVar
         )
@@ -306,8 +313,8 @@ let make_cops: unit ->
   let kcs = ref [] in (* kind constraints *)
   let cops =
     { constrain_unify   =
-        (fun l r ->
-           ucs := Unify(l, r) :: !ucs)
+        (fun reason l r ->
+           ucs := Unify(reason, l, r) :: !ucs)
     ; constrain_inst =
         begin fun g t ->
           ics := Map.update !ics g.g_id ~f:(function

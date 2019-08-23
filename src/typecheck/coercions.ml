@@ -150,7 +150,15 @@ let rec gen_type
             in
             begin match Lazy.force (Map.find_exn env_terms v) with
               | `Ty ty ->
-                  cops.constrain_unify ty record_u
+                  cops.constrain_unify
+                    ( `TypePath
+                      (object
+                        method bind_type = `Lambda;
+                        method var = v;
+                        method lbls = List.rev (l :: ls);
+                      end)
+                    )
+                    ty record_u
               | `G g ->
                   cops.constrain_inst g record_u
             end;
