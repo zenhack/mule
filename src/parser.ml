@@ -249,7 +249,7 @@ and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
   let%map items = braces (comma_list (lazy_p record_item)) in
-  Type.Record {record_items = items}
+  Type.Record {r_items = items}
 ) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
     choice
       [ lazy_p type_decl

@@ -20,7 +20,7 @@ module Type = struct
       }
     | Var of {v_var : Var.t}
     | Record of {
-        record_items : record_item list;
+        r_items : record_item list;
       }
     | Ctor of {
         c_lbl : Label.t;

@@ -60,9 +60,9 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
               anno_loc;
               anno_ty = go anno_ty;
             }
-        | ST.Record {record_items = items} ->
+        | ST.Record {r_items = items} ->
             ST.Record {
-              record_items = List.map items ~f:go_record_item;
+              r_items = List.map items ~f:go_record_item;
             }
         | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ | ST.Import _ -> ty
       end
@@ -188,7 +188,7 @@ let rec desugar_type' = function
       DT.Var{v_info = `Unknown; v_var = v}
   | ST.Union {u_l; u_r} ->
       DT.Union {u_row = desugar_union_type None (u_l, u_r) }
-  | ST.Record {record_items = r} ->
+  | ST.Record {r_items = r} ->
       desugar_record_type [] [] r
   | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t} ->
       DT.Union {
@@ -221,7 +221,7 @@ and desugar_union_type tail (l, r) =
            (MuleErr.MalformedType
               "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type types fields r =
-  let r_src = ST.Record {record_items = r} in
+  let r_src = ST.Record {r_items = r} in
   let rec go types fields = function
     (* TODO: how do we have variable fields for the type row? *)
     | (ST.Type(lbl, params, Some t) :: fs) ->

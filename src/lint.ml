@@ -65,7 +65,7 @@ let check_duplicate_record_fields =
     | Type.Quant{q_body; _} -> go_type q_body
     | Type.Recur{recur_body = ty; _} -> go_type ty
     | Type.Fn{fn_param; fn_ret} -> go_type fn_param; go_type fn_ret
-    | Type.Record {record_items = fields} ->
+    | Type.Record {r_items = fields} ->
         List.map fields ~f:(function
             | Type.Rest _ -> []
             | Type.Field(lbl, ty)
