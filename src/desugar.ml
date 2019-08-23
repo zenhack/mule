@@ -99,7 +99,7 @@ let rec quantify_opaques t = match t with
           | DT.Opaque i ->
               let var = Gensym.anon_var () in
               vars := var :: !vars;
-              (lbl, DT.Var (i, var))
+              (lbl, DT.Var { v_info = i; v_var = var })
           | ty' -> (lbl, ty')
         )
       in
@@ -112,14 +112,26 @@ let rec quantify_opaques t = match t with
           }
       in
       List.fold !vars ~init ~f:(fun ty v ->
-          DT.Quant(`Unknown, `Exist, v, ty)
+          DT.Quant {
+            q_info = `Unknown;
+            q_quant = `Exist;
+            q_var = v;
+            q_body = ty;
+          }
         )
   | DT.Opaque i -> DT.Opaque i
-  | DT.Fn(i, v, param, ret) ->
-      DT.Fn(i, v, quantify_opaques param, quantify_opaques ret)
-  | DT.Recur (i, v, t) -> DT.Recur(i, v, quantify_opaques t)
-  | DT.Union row -> DT.Union(quantify_row_opaques row)
-  | DT.Quant(i, q, v, t) -> DT.Quant(i, q, v, quantify_opaques t)
+  | DT.Fn {fn_info; fn_pvar; fn_param; fn_ret} ->
+      DT.Fn {
+        fn_info;
+        fn_pvar;
+        fn_param = quantify_opaques fn_param;
+        fn_ret = quantify_opaques fn_ret;
+      }
+  | DT.Recur {mu_info; mu_var; mu_body} ->
+      DT.Recur{mu_info; mu_var; mu_body = quantify_opaques mu_body}
+  | DT.Union {u_row} -> DT.Union { u_row = quantify_row_opaques u_row }
+  | DT.Quant{q_info; q_quant; q_var; q_body} ->
+      DT.Quant{q_info; q_quant; q_var; q_body = quantify_opaques q_body}
 and quantify_row_opaques (i, fields, rest) =
   ( i
   , List.map
@@ -132,41 +144,63 @@ let rec desugar_type' = function
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
   | ST.Fn(ST.Annotated{anno_var; anno_ty = param; _}, ret) ->
-      DT.Fn(`Type, Some anno_var, desugar_type' param, desugar_type' ret)
+      DT.Fn {
+        fn_info = `Type;
+        fn_pvar = Some anno_var;
+        fn_param = desugar_type' param;
+        fn_ret = desugar_type' ret;
+      }
   | ST.Fn(param, ret) ->
-      DT.Fn(`Type, None, desugar_type' param, desugar_type' ret)
+      DT.Fn {
+        fn_info = `Type;
+        fn_pvar = None;
+        fn_param = desugar_type' param;
+        fn_ret = desugar_type' ret;
+      }
   | ST.Quant(q, vs, body) ->
       List.fold_right
         vs
         ~init:(desugar_type' body)
-        ~f:(fun v body -> DT.Quant(`Type, q, v, body))
+        ~f:(fun v body -> DT.Quant {
+            q_info = `Type;
+            q_quant = q;
+            q_var = v;
+            q_body = body;
+          }
+      )
   | ST.Recur(v, body) ->
-      DT.Recur(`Type, v, desugar_type' body)
+      DT.Recur {
+        mu_info = `Type;
+        mu_var = v;
+        mu_body = desugar_type' body;
+      }
   | ST.Var v ->
-      DT.Var(`Unknown, v)
+      DT.Var{v_info = `Unknown; v_var = v}
   | ST.Union u ->
-      DT.Union (desugar_union_type None u)
+      DT.Union {u_row = desugar_union_type None u }
   | ST.Record r ->
       desugar_record_type [] [] r
   | ST.App(ST.Ctor{c_lbl; _}, t) ->
-      DT.Union(`Type, [(c_lbl, desugar_type' t)], None)
+      DT.Union {
+        u_row = (`Type, [(c_lbl, desugar_type' t)], None);
+      }
   | ST.RowRest v ->
-      DT.Union(`Type, [], Some v)
+      DT.Union { u_row = (`Type, [], Some v) }
   | (ST.Annotated _) as ty ->
       MuleErr.(throw (IllegalAnnotatedType ty))
   | ST.Path{p_var; p_lbls; _} ->
-      DT.Path(`Unknown, p_var, p_lbls)
+      DT.Path {p_info = `Unknown; p_var; p_lbls}
   | ST.App(f, x) ->
       DT.App(`Unknown, desugar_type' f, desugar_type' x)
   | ST.Ctor _ ->
       failwith "BUG: ctors should be applied."
 and desugar_union_type tail (l, r) =
   match desugar_type' l, desugar_type' r, tail with
-  | DT.Union(_, lbls_l, None), DT.Union(_, lbls_r, None), (Some v)
-  | DT.Union(_, lbls_l, None), DT.Union(_, lbls_r, Some v), None
-  | DT.Union(_, lbls_l, Some v), DT.Union(_, lbls_r, None), None ->
+  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, (Some v)
+  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, Some v)}, None
+  | DT.Union{u_row = (_, lbls_l, Some v)}, DT.Union{u_row = (_, lbls_r, None)}, None ->
       (`Type, lbls_l @ lbls_r, Some v)
-  | DT.Union(_, lbls_l, None), DT.Union(_, lbls_r, None), None ->
+  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, None ->
       (`Type, lbls_l @ lbls_r, None)
   | _ -> raise
         (MuleErr.MuleExn
@@ -401,7 +435,10 @@ and desugar_record fields =
                           app_fn = D.Update(`Type, lbl);
                           app_arg = old;
                         };
-                    app_arg = D.Witness (DT.Var (`Unknown, Ast.var_of_label lbl));
+                    app_arg = D.Witness (DT.Var {
+                        v_info = `Unknown;
+                        v_var = Ast.var_of_label lbl;
+                      });
                   }
               | `Value(l, ty, v) ->
                   let v' =
@@ -555,7 +592,13 @@ and desugar_let bs body = match simplify_bindings bs with
             | `Type t ->
                 let (v, ty) = desugar_type_binding t in
                 D.LetType
-                  ( [v, DT.Path(DT.get_info ty, record_name, [var_to_lbl v])]
+                  ( [ v
+                    , DT.Path {
+                        p_info = DT.get_info ty;
+                        p_var = record_name;
+                        p_lbls = [var_to_lbl v];
+                      }
+                    ]
                   , accum
                   )
           )

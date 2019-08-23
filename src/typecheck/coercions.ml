@@ -83,12 +83,12 @@ let rec gen_type
          "the constraint graph.")
   | Type.Named (k, s) ->
       UnionFind.make (`Const(tv, `Named s, [], k))
-  | Type.Fn (_, maybe_v, param, ret) ->
+  | Type.Fn {fn_pvar; fn_param; fn_ret; _} ->
       let param' =
-        gen_type ctx (flip_sign sign) param
+        gen_type ctx (flip_sign sign) fn_param
       in
       cops.constrain_kind (get_kind param') kvar_type;
-      let env_terms' = match maybe_v with
+      let env_terms' = match fn_pvar with
         | Some v ->
             Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
         | None ->
@@ -103,32 +103,32 @@ let rec gen_type
             }
           }
           sign
-          ret
+          fn_ret
       in
       cops.constrain_kind (get_kind ret') kvar_type;
       UnionFind.make (fn tv param' ret')
-  | Type.Recur(_, v, body) ->
+  | Type.Recur{mu_var; mu_body; _} ->
       let ret = gen_u kvar_type b_at in
       let ret' =
         gen_type
           { ctx with
             ctx = {
               ctx.ctx
-              with env_types = Map.set env_types ~key:v ~data:ret
+              with env_types = Map.set env_types ~key:mu_var ~data:ret
             }
           }
           sign
-          body
+          mu_body
       in
       UnionFind.merge (fun _ r -> r) ret ret';
       cops.constrain_kind (get_kind ret') kvar_type;
       ret
-  | Type.Var (_, v) ->
-      begin match Map.find env_types v with
+  | Type.Var {v_var; _} ->
+      begin match Map.find env_types v_var with
         | Some t -> t
-        | None -> MuleErr.(throw (UnboundVar v))
+        | None -> MuleErr.(throw (UnboundVar v_var))
       end
-  | Type.Path(_, v, ls) ->
+  | Type.Path{p_var = v; p_lbls = ls; _} ->
       begin match List.rev ls with
         | [] -> Map.find_exn env_types v
         | (l :: ls) ->
@@ -173,9 +173,9 @@ let rec gen_type
              r_values
           )
       )
-  | Type.Union row ->
-      UnionFind.make (union tv (gen_row ctx sign row))
-  | Type.Quant(_, q, v, body) ->
+  | Type.Union {u_row} ->
+      UnionFind.make (union tv (gen_row ctx sign u_row))
+  | Type.Quant{q_quant = q; q_var = v; q_body = body; _} ->
       let ret = gen_u kvar_type b_at in
       let bound_v =
         UnionFind.make

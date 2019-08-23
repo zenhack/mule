@@ -44,26 +44,30 @@ let relabel_type () =
         TypeLam(i, v, go t)
     | Opaque i -> Opaque i
     | Named(i, s) -> Named (i, s)
-    | Fn (i, v, l, r) ->
+    | Fn {fn_info; fn_pvar = v; fn_param = l; fn_ret = r} ->
         let v' = Option.map v ~f:get in
         let l' = go l in
         let r' = go r in
-        Fn (i, v', l', r')
-    | Recur (i, v, body) ->
-        let v' = get v in
-        let body' = go body in
-        Recur (i, v', body')
-    | Var (i, v) -> Var (i, get v)
+        Fn {fn_info; fn_pvar = v'; fn_param = l'; fn_ret = r'}
+    | Recur {mu_info; mu_var; mu_body} ->
+        let v' = get mu_var in
+        let body' = go mu_body in
+        Recur {mu_info; mu_var = v'; mu_body = body'}
+    | Var {v_info; v_var} -> Var{v_info; v_var = get v_var}
     | Record {r_info; r_types; r_values; r_src} ->
         let r_types = go_row r_types in
         let r_values = go_row r_values in
         Record { r_src; r_info; r_types; r_values }
-    | Union row -> Union (go_row row)
-    | Quant (i, q, v, body) ->
+    | Union {u_row} -> Union {u_row = go_row u_row}
+    | Quant {q_info; q_quant; q_var = v; q_body} ->
         let v' = get v in
-        let body' = go body in
-        Quant (i, q, v', body')
-    | Path(i, v, ls) -> Path(i, get v, ls)
+        let body' = go q_body in
+        Quant {q_info; q_quant; q_var = v'; q_body = body'}
+    | Path{p_info; p_var; p_lbls} -> Path {
+        p_info;
+        p_var = get p_var;
+        p_lbls;
+      }
   and go_row (i, fields, rest) =
     let fields' = List.map fields ~f:(fun (l, ty) -> (l, go ty)) in
     let rest' = Option.map rest ~f:get in

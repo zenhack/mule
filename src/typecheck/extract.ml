@@ -309,25 +309,29 @@ let sign_flag_to_q sign flag = match sign, flag with
            *)
 
 let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
-  | `Var v -> Type.Var(v.v_var_id, ivar v.v_var_id)
-  | `Visited v -> Type.Var(v, ivar v)
-  | `Recur(v, arg) -> Type.Recur(v, ivar v, finish_extract_t sign arg)
+  | `Var v -> Type.Var{ v_info = v.v_var_id; v_var = ivar v.v_var_id }
+  | `Visited v -> Type.Var{ v_info = v; v_var = ivar v }
+  | `Recur(v, arg) -> Type.Recur {
+      mu_info = v;
+      mu_var = ivar v;
+      mu_body = finish_extract_t sign arg;
+    }
   | `Lambda(i, param, body) ->
       Type.TypeLam(i, ivar param.v_var_id, finish_extract_t sign body)
   | `Quant q ->
       Type.Quant
-        ( q.q_id
-        , sign_flag_to_q sign q.q_flag
-        , ivar q.q_var
-        , finish_extract_t sign q.q_arg
-        )
+        { q_info = q.q_id
+        ; q_quant = sign_flag_to_q sign q.q_flag
+        ; q_var = ivar q.q_var
+        ; q_body = finish_extract_t sign q.q_arg
+        }
   | `Fn (i, param, ret) ->
       Type.Fn
-        ( i
-        , None
-        , finish_extract_t (invert_sign sign) param
-        , finish_extract_t sign ret
-        )
+        { fn_info = i
+        ; fn_pvar = None
+        ; fn_param = finish_extract_t (invert_sign sign) param
+        ; fn_ret = finish_extract_t sign ret
+        }
   | `Named(i, name, []) ->
       Type.Named (i, name)
   | `App(i, f, x) ->
@@ -335,7 +339,7 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
   | `Named (_i, _name, _params) ->
       failwith "BUG: can't use Named with arguments in desugared ast."
   | `Union(_, row) ->
-      Type.Union (finish_extract_row sign row)
+      Type.Union {u_row = finish_extract_row sign row}
   | `Record(i, rowl, rowr) ->
       Type.Record
         { r_src = ST.Var (Var.of_string "<unknown>")

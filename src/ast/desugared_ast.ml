@@ -25,18 +25,41 @@ module Type = struct
     | `Exist -> Sexp.Atom "exist"
 
   type 'i t =
-    | Fn of ('i * Var.t option * 'i t * 'i t)
-    | Recur of ('i * Var.t * 'i t)
-    | Var of ('i * Var.t)
-    | Path of ('i * Var.t * Label.t list)
+    | Fn of {
+        fn_info : 'i;
+        fn_pvar : Var.t option;
+        fn_param : 'i t;
+        fn_ret : 'i t;
+      }
+    | Recur of {
+        mu_info : 'i;
+        mu_var : Var.t;
+        mu_body : 'i t;
+      }
+    | Var of {
+        v_info : 'i;
+        v_var : Var.t;
+      }
+    | Path of {
+        p_info : 'i;
+        p_var : Var.t;
+        p_lbls : Label.t list;
+      }
     | Record of
         { r_info : 'i
         ; r_types : 'i row
         ; r_values : 'i row
         ; r_src : Surface_ast.Type.t;
         }
-    | Union of 'i row
-    | Quant of ('i * quantifier * Var.t * 'i t)
+    | Union of {
+        u_row : 'i row;
+      }
+    | Quant of {
+        q_info : 'i;
+        q_quant : quantifier;
+        q_var : Var.t;
+        q_body : 'i t;
+      }
     | Named of ('i * string)
     | Opaque of 'i
     | TypeLam of ('i * Var.t * 'i t)
@@ -45,25 +68,35 @@ module Type = struct
     ('i * (Label.t * 'i t) list * Var.t option)
 
   let rec subst old new_ = function
-    | Fn (i, Some v, p, r) when Var.equal v old ->
-        Fn(i, Some v, (subst old new_ p), r)
-    | Fn (i, maybe_v, p, r) ->
-        Fn(i, maybe_v, (subst old new_ p), (subst old new_ r))
-    | Recur(i, v, body) ->
-        if Var.equal v old then
-          Recur(i, v, body)
+    | Fn {fn_info; fn_pvar = Some v; fn_param; fn_ret} when Var.equal v old ->
+        Fn {
+          fn_info;
+          fn_pvar = Some v;
+          fn_param = subst old new_ fn_param;
+          fn_ret;
+        }
+    | Fn {fn_info; fn_pvar; fn_param; fn_ret} ->
+        Fn {
+          fn_info;
+          fn_pvar;
+          fn_param = subst old new_ fn_param;
+          fn_ret = subst old new_ fn_ret;
+        }
+    | Recur{mu_info; mu_var; mu_body} ->
+        if Var.equal mu_var old then
+          Recur{mu_info; mu_var; mu_body}
         else
-          Recur(i, v, subst old new_ body)
-    | Var(i, v) ->
-        if Var.equal v old then
+          Recur{mu_info; mu_var; mu_body = subst old new_ mu_body}
+    | Var{v_info; v_var} ->
+        if Var.equal v_var old then
           new_
         else
-          Var(i, v)
-    | Path(i, v, ls) ->
-        if Var.equal v old then
+          Var{v_info; v_var}
+    | Path{p_info; p_var; p_lbls} ->
+        if Var.equal p_var old then
           MuleErr.bug "TODO"
         else
-          Path(i, v, ls)
+          Path{p_info; p_var; p_lbls}
     | Record {r_info; r_types; r_values; r_src} ->
         Record {
           r_info;
@@ -71,13 +104,13 @@ module Type = struct
           r_types = subst_row old new_ r_types;
           r_values = subst_row old new_ r_values;
         }
-    | Union row ->
-        Union(subst_row old new_ row)
-    | Quant(i, q, v, body) ->
-        if Var.equal v old then
-          Quant(i, q, v, body)
+    | Union {u_row} ->
+        Union { u_row = subst_row old new_ u_row }
+    | Quant{q_info; q_quant; q_var; q_body} ->
+        if Var.equal q_var old then
+          Quant {q_info; q_quant; q_var; q_body}
         else
-          Quant(i, q, v, subst old new_ body)
+          Quant{q_info; q_quant; q_var; q_body = subst old new_ q_body}
     | Named(i, s) -> Named(i, s)
     | Opaque i -> Opaque i
     | TypeLam(i, v, body) ->
@@ -96,20 +129,20 @@ module Type = struct
     )
 
   let rec sexp_of_t: 'i t -> Sexp.t = function
-    | Fn(_, None, param, ret) ->
-        Sexp.List [sexp_of_t param; Sexp.Atom "->"; sexp_of_t ret]
-    | Fn(_, Some v, param, ret) ->
+    | Fn{fn_pvar = None; fn_param; fn_ret; _} ->
+        Sexp.List [sexp_of_t fn_param; Sexp.Atom "->"; sexp_of_t fn_ret]
+    | Fn{fn_pvar = Some v; fn_param; fn_ret; _} ->
         Sexp.List
-          [ Sexp.List [ Var.sexp_of_t v; Sexp.Atom ":"; sexp_of_t param ]
+          [ Sexp.List [ Var.sexp_of_t v; Sexp.Atom ":"; sexp_of_t fn_param ]
           ; Sexp.Atom "->"
-          ; sexp_of_t ret
+          ; sexp_of_t fn_ret
           ]
-    | Recur(_, v, body) ->
+    | Recur{mu_var = v; mu_body = body; _} ->
         Sexp.List [Sexp.Atom "rec"; Var.sexp_of_t v; sexp_of_t body]
-    | Var(_, v) ->
-        Var.sexp_of_t v
-    | Path(_, v, ls) -> Sexp.(
-        List ([Atom "."; Var.sexp_of_t v] @ List.map ls ~f:Label.sexp_of_t)
+    | Var{v_var; _} ->
+        Var.sexp_of_t v_var
+    | Path{p_var; p_lbls; _} -> Sexp.(
+        List ([Atom "."; Var.sexp_of_t p_var] @ List.map p_lbls ~f:Label.sexp_of_t)
       )
     | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
         List
@@ -118,10 +151,14 @@ module Type = struct
           ; List [Atom "values"; sexp_of_row r_values]
           ]
       )
-    | Union row ->
-        Sexp.(List [Atom "union"; sexp_of_row row])
-    | Quant (_, q, v, t) ->
-        Sexp.List [sexp_of_quantifier q; Sexp.Atom(Var.to_string v); sexp_of_t t]
+    | Union {u_row} ->
+        Sexp.(List [Atom "union"; sexp_of_row u_row])
+    | Quant {q_quant; q_var; q_body; _} ->
+        Sexp.List
+          [ sexp_of_quantifier q_quant
+          ; Sexp.Atom(Var.to_string q_var)
+          ; sexp_of_t q_body
+          ]
     | TypeLam(_, v, body) ->
         Sexp.List [Sexp.Atom "lam"; Sexp.Atom(Var.to_string v); sexp_of_t body]
     | Named(_, name) -> Sexp.Atom name
@@ -138,13 +175,13 @@ module Type = struct
     | None -> Sexp.List fields
 
   let get_info = function
-    | Fn(x, _, _, _) -> x
-    | Recur(x, _, _) -> x
-    | Var(x, _) -> x
-    | Path(x, _, _) -> x
-    | Record {r_info; _} -> r_info
-    | Union(x, _, _) -> x
-    | Quant(x, _, _, _) -> x
+    | Fn{fn_info; _} -> fn_info
+    | Recur{mu_info; _} -> mu_info
+    | Var{v_info; _} -> v_info
+    | Path{p_info; _} -> p_info
+    | Record{r_info; _} -> r_info
+    | Union{u_row = (x, _, _)} -> x
+    | Quant{q_info; _} -> q_info
     | Named(x, _) -> x
     | Opaque x -> x
     | TypeLam(x, _, _) -> x
@@ -154,14 +191,27 @@ module Type = struct
     | Opaque x -> Opaque (f x)
     | Named(x, s) ->
         Named(f x, s)
-    | Fn(x, v, l, r) ->
-        Fn(f x, v, map l ~f, map r ~f)
-    | Recur(x, v, body) ->
-        Recur(f x, v, map body ~f)
-    | Path(x, v, ls) ->
-        Path(f x, v, ls)
-    | Var (x, v) ->
-        Var(f x, v)
+    | Fn{fn_info; fn_pvar; fn_param; fn_ret} ->
+        Fn {
+          fn_info = f fn_info;
+          fn_pvar;
+          fn_param = map fn_param ~f;
+          fn_ret = map fn_ret ~f;
+        }
+    | Recur{ mu_info; mu_var; mu_body } ->
+        Recur {
+          mu_info = f mu_info;
+          mu_var;
+          mu_body = map mu_body ~f;
+        }
+    | Path{p_info; p_var; p_lbls} ->
+        Path{
+          p_info = f p_info;
+          p_var;
+          p_lbls;
+        }
+    | Var {v_info; v_var} ->
+        Var{v_info = f v_info; v_var}
     | Record {r_info; r_types; r_values; r_src} ->
         Record
           { r_info = f r_info
@@ -169,10 +219,15 @@ module Type = struct
           ; r_types = map_row r_types ~f
           ; r_values = map_row r_values ~f
           }
-    | Union row ->
-        Union(map_row row ~f)
-    | Quant(x, q, v, body) ->
-        Quant(f x, q, v, map body ~f)
+    | Union {u_row} ->
+        Union {u_row = map_row u_row ~f}
+    | Quant {q_info; q_quant; q_var; q_body} ->
+        Quant {
+          q_info = f q_info;
+          q_quant;
+          q_var;
+          q_body = map q_body ~f;
+        }
     | TypeLam(x, v, body) ->
         TypeLam(f x, v, map body ~f)
     | App(x, fn, arg) ->
