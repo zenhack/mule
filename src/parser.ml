@@ -293,21 +293,27 @@ and record_type = lazy (
 let rec expr = lazy ((
     let%bind e = lazy_p ex0 in
     begin match%map option (kwd ":" >> lazy_p typ) with
-      | Some ty -> Expr.WithType(e, ty)
+      | Some ty -> Expr.WithType{ wt_term = e; wt_type = ty }
       | None -> e
     end
   ) <?> "expression")
 and ex0 = lazy (
   let%bind t = lazy_p ex1 in
   let%map ts = many (lazy_p ex1) in
-  List.fold_left ts ~init:t ~f:(fun f x -> Expr.App (f, x))
+  List.fold_left ts ~init:t ~f:(fun f x -> Expr.App {
+      app_fn = f;
+      app_arg = x;
+    })
 )
 and ex1 = lazy (
   let%bind old = lazy_p ex2 in
   choice
     [ begin
       let%map fields = kwd "where" >> lazy_p record_fields in
-      Expr.Update (old, fields)
+      Expr.Update {
+        up_arg = old;
+        up_fields = fields;
+      }
     end
     ; return old
     ]
@@ -315,7 +321,10 @@ and ex1 = lazy (
 and ex2 = lazy (
   let%bind head = lazy_p ex3 in
   many (kwd "." >> label)
-  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField(e, l))
+  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField {
+      gf_arg = e;
+      gf_lbl = l;
+    })
 )
 and ex3 = lazy (
   choice
@@ -324,17 +333,20 @@ and ex3 = lazy (
     ; lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
-    ; (var |>> fun v -> Expr.Var v)
+    ; (var |>> fun v -> Expr.Var {v_var = v})
     ; parens (lazy_p expr)
     ; lazy_p record
-    ; (ctor |>> fun c -> Expr.Ctor c)
-    ; (constant |>> fun n -> Expr.Const n)
+    ; (ctor |>> fun c -> Expr.Ctor {c_lbl = c})
+    ; (constant |>> fun n -> Expr.Const {const_val = n})
     ]
 )
 and lambda = lazy ((
     let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
     let%map body = kwd "." >> lazy_p expr in
-    Expr.Lam (params, body)
+    Expr.Lam {
+      lam_params = params;
+      lam_body = body;
+    }
   ) <?> "lambda")
 and binding = lazy (
   choice
@@ -355,7 +367,10 @@ and let_expr = lazy ((
     let%bind _ = kwd "let" in
     let%bind bindings = comma_list1 (lazy_p binding) in
     let%map body = kwd "in" >> lazy_p expr in
-    Expr.Let(bindings, body)
+    Expr.Let {
+      let_binds = bindings;
+      let_body = body;
+    }
   ) <?> "let expression")
 and match_expr = lazy ((
     let%bind e = kwd "match" >> lazy_p expr in
@@ -365,7 +380,10 @@ and match_expr = lazy ((
       >> sep_by1 (lazy_p case) (kwd "|")
     in
     kwd "end"
-    >>$ Expr.Match(e, cases)
+    >>$ Expr.Match {
+      match_arg = e;
+      match_cases = cases;
+    }
   ) <?> "match expression")
 and case = lazy (
   let%bind p = lazy_p pattern in
@@ -394,7 +412,7 @@ and record_fields =
   lazy (braces (comma_list (lazy_p field_def)) <?> "record")
 and record = lazy (
   lazy_p record_fields
-  |>> fun fields -> Expr.Record fields
+  |>> fun fields -> Expr.Record {r_fields = fields}
 )
 and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (

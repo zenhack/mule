@@ -262,20 +262,35 @@ and desugar_type t =
 and desugar = function
   | S.Import _ -> failwith "TODO: implement import"
   | S.Embed _ -> failwith "TODO: implement embed"
-  | S.Const c -> D.Const {const_val = c}
-  | S.Var v -> D.Var {v_var = v}
-  | S.App(f, x) -> D.App {
+  | S.Const {const_val = c} -> D.Const {const_val = c}
+  | S.Var {v_var = v} -> D.Var {v_var = v}
+  | S.App{app_fn = f; app_arg = x} -> D.App {
       app_fn = desugar f;
       app_arg = desugar x;
     }
-  | S.Lam (SP.Var {v_var = v; v_type = None} :: pats, body) ->
-      D.Lam {l_param = v; l_body = desugar (S.Lam (pats, body))}
-  | S.Lam (SP.Wild :: pats, body) ->
+  | S.Lam {
+      lam_params = SP.Var {v_var = v; v_type = None} :: pats;
+      lam_body = body;
+    } ->
+      D.Lam {l_param = v; l_body = desugar (S.Lam {
+          lam_params = pats;
+          lam_body = body;
+        })}
+  | S.Lam {
+      lam_params = SP.Wild :: pats;
+      lam_body =  body;
+    } ->
       D.Lam {
         l_param = Gensym.anon_var ();
-        l_body = desugar (S.Lam (pats, body));
+        l_body = desugar (S.Lam {
+            lam_params = pats;
+            lam_body = body;
+          });
       }
-  | S.Lam ((SP.Var {v_var = v; v_type = Some ty} :: pats), body) ->
+  | S.Lam {
+      lam_params = SP.Var {v_var = v; v_type = Some ty} :: pats;
+      lam_body = body;
+    } ->
       let v' = Gensym.anon_var () in
       D.Lam {
         l_param = v';
@@ -285,42 +300,61 @@ and desugar = function
                 app_fn = D.WithType {wt_type = desugar_type ty};
                 app_arg = D.Var { v_var = v'};
               };
-            let_body = desugar (S.Lam (pats, body));
+            let_body = desugar (S.Lam {
+                lam_params = pats;
+                lam_body = body;
+              });
           }
       }
-  | S.Lam ((SP.Const _) as p :: _, _) ->
+  | S.Lam {lam_params = (SP.Const _) as p :: _; _} ->
       incomplete_pattern p
-  | S.Lam (pat :: pats, body) ->
+  | S.Lam {
+      lam_params = pat :: pats;
+      lam_body = body;
+    } ->
       let var = Gensym.anon_var () in
       D.Lam {
         l_param = var;
         l_body = desugar
-            (S.Match
-               ( S.Var var
-               , [ (pat
-                   , S.Lam (pats, body)
-                   )
-                 ]
-               )
+            (S.Match {
+                match_arg = S.Var {v_var = var};
+                match_cases =
+                  [ ( pat
+                    , S.Lam {
+                        lam_params = pats;
+                        lam_body = body;
+                      }
+                    )
+                  ]
+              }
             );
       }
-  | S.Lam ([], body) -> desugar body
-  | S.Record [] -> D.EmptyRecord
-  | S.Record fields -> desugar_record fields
-  | S.Update(e, []) ->
+  | S.Lam {
+      lam_params = [];
+      lam_body = body;
+    } -> desugar body
+  | S.Record {r_fields = []} -> D.EmptyRecord
+  | S.Record {r_fields = fields} -> desugar_record fields
+  | S.Update{up_arg = e; up_fields = []} ->
       desugar e
-  | S.Update(e, (`Value (l, _, v)::fs)) ->
+  | S.Update{up_arg = e; up_fields = `Value (l, _, v) :: fs} ->
       D.App {
         app_fn = D.App {
             app_fn = D.Update {
                 up_level = `Value;
                 up_lbl = l;
               };
-            app_arg = desugar (S.Update(e, fs));
+            app_arg = desugar (S.Update {
+                up_arg = e;
+                up_fields = fs;
+              });
           };
         app_arg = desugar v;
       }
-  | S.Update(e, (`Type (lbl, params, ty) :: fs)) ->
+  | S.Update {
+      up_arg = e;
+      up_fields = `Type (lbl, params, ty) :: fs;
+    } ->
       let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
       D.App {
         app_fn = D.App {
@@ -328,11 +362,14 @@ and desugar = function
                 up_level = `Type;
                 up_lbl = lbl;
               };
-            app_arg = desugar (S.Update(e, fs));
+            app_arg = desugar (S.Update {
+                up_arg = e;
+                up_fields = fs;
+              });
           };
         app_arg = D.Witness {wi_type = ty};
       }
-  | S.GetField (e, l) ->
+  | S.GetField {gf_arg = e; gf_lbl = l} ->
       D.App {
         app_fn = D.GetField {
             gf_strategy = `Strict;
@@ -340,7 +377,7 @@ and desugar = function
           };
         app_arg =  desugar e;
       }
-  | S.Ctor label ->
+  | S.Ctor {c_lbl = label} ->
       (* The choice of variable name here doesn't matter, since
        * there's nothing we need to worry about shadowing. *)
       let l_param = Ast.Var.of_string "x" in
@@ -351,17 +388,20 @@ and desugar = function
             c_arg = D.Var {v_var = l_param };
           };
       }
-  | S.Match (e, cases) ->
+  | S.Match {match_arg = e; match_cases = cases} ->
       D.App {
         app_fn = desugar_match cases;
         app_arg = desugar e;
       }
-  | S.WithType(e, ty) ->
+  | S.WithType{wt_term = e; wt_type = ty} ->
       D.App {
         app_fn = D.WithType {wt_type = desugar_type ty};
         app_arg = desugar e;
       }
-  | S.Let(bindings, body) ->
+  | S.Let {
+      let_binds = bindings;
+      let_body = body;
+    } ->
       desugar_let bindings body
 and desugar_record fields =
   let record_var = Gensym.anon_var () in
@@ -484,7 +524,10 @@ and desugar_record fields =
                     let v' =
                       begin match ty with
                         | None -> v
-                        | Some ty' -> S.WithType(v, ty')
+                        | Some ty' -> S.WithType {
+                            wt_term = v;
+                            wt_type = ty';
+                          }
                       end
                     in
                     D.App {
@@ -514,7 +557,10 @@ and desugar_match cases =
     | ((SP.Const _, _) :: _) ->
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
-        desugar (S.Lam([pat], body))
+        desugar (S.Lam {
+            lam_params = [pat];
+            lam_body =  body;
+          })
     | [] -> D.Match
           { cases = LabelMap.empty
           ; default = None
@@ -534,7 +580,10 @@ and desugar_const_match dict = function
       unreachable_case SP.Wild
   | [(SP.Var _) as p, body] ->
       D.ConstMatch
-        { cm_default = desugar (S.Lam([p], body))
+        { cm_default = desugar (S.Lam{
+              lam_params = [p];
+              lam_body =  body;
+            })
         ; cm_cases = dict
         }
   | ((SP.Var _, _) :: _) ->
@@ -631,7 +680,7 @@ and desugar_let bs body = match simplify_bindings bs with
   | bindings ->
       let record =
         List.map bindings ~f:(function
-            | `Value(v, S.WithType(e, ty)) ->
+            | `Value(v, S.WithType{wt_term = e; wt_type = ty}) ->
                 `Value(Ast.var_to_label v, Some ty, e)
             | `Value (v, e) ->
                 `Value(Ast.var_to_label v, None, e)
@@ -721,22 +770,22 @@ and simplify_bindings = function
   | `BindVal(SP.Wild, e) :: bs  ->
       `Value(Gensym.anon_var (), e) :: simplify_bindings bs
   | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
-      `Value(v, S.WithType(e, ty)) :: simplify_bindings bs
+      `Value(v, S.WithType{wt_term = e; wt_type = ty}) :: simplify_bindings bs
   | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
       let bind_var = Gensym.anon_var () in
       let match_var = Gensym.anon_var () in
       `Value
         ( bind_var
         , S.Match
-            ( e
-            , [
-              ( SP.Ctor{c_lbl = lbl; c_arg = SP.Var {v_var = match_var; v_type = None}}
-              , S.Var match_var
-              )
-            ]
-            )
+            { match_arg = e
+            ; match_cases =
+                [ ( SP.Ctor{c_lbl = lbl; c_arg = SP.Var {v_var = match_var; v_type = None}}
+                  , S.Var {v_var = match_var}
+                  )
+                ]
+            }
         )
-      :: simplify_bindings (`BindVal(pat, S.Var bind_var) :: bs)
+      :: simplify_bindings (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
 
 
 let desugar e =

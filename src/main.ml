@@ -46,7 +46,11 @@ let main () =
                           Caml.exit 1
                       | Success expr ->
                           begin try%lwt
-                              let expr = Ast.Surface.Expr.WithType(expr, runner.Runners.want_type) in
+                              let expr = Ast.Surface.Expr.WithType {
+                                  wt_term = expr;
+                                  wt_type = runner.Runners.want_type;
+                                }
+                              in
                               let _ = Lint.check expr in
                               let dexp = Desugar.desugar expr in
                               let _ = Typecheck.typecheck dexp in

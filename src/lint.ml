@@ -10,25 +10,25 @@ let duplicate_fields dups =
 let check_duplicate_record_fields =
   let rec go_expr = function
     | Import _ | Embed _ | Const _ -> ()
-    | Record fields ->
+    | Record {r_fields = fields} ->
         go_fields fields
-    | Update(e, fields) ->
+    | Update{up_arg = e; up_fields = fields} ->
         go_expr e; go_fields fields
 
-    | Lam (pats, body) ->
+    | Lam {lam_params = pats; lam_body = body} ->
         List.iter pats ~f:go_pat;
         go_expr body
-    | Match(e, cases) ->
+    | Match{match_arg = e; match_cases = cases} ->
         go_expr e;
         List.iter cases ~f:go_case
-    | App (f, x) -> go_expr f; go_expr x
-    | GetField(e, _) -> go_expr e
-    | Let(bindings, body) ->
+    | App {app_fn = f; app_arg = x} -> go_expr f; go_expr x
+    | GetField{gf_arg = e; _} -> go_expr e
+    | Let{let_binds = bindings; let_body = body} ->
         go_let bindings;
         go_expr body
     | Var _ -> ()
     | Ctor _ -> ()
-    | WithType(e, ty) ->
+    | WithType{wt_term = e; wt_type = ty} ->
         go_expr e;
         go_type ty
   and go_let =

@@ -79,17 +79,38 @@ end
 
 module Expr = struct
   type t =
-    | App of (t * t)
-    | Lam of (Pattern.t list * t)
-    | Var of Var.t
-    | Record of field list
-    | GetField of (t * Label.t)
-    | Ctor of Label.t
-    | Update of (t * field list)
-    | Match of (t * (Pattern.t * t) list)
-    | Let of (binding list * t)
-    | WithType of (t * Type.t)
-    | Const of Const.t
+    | App of {
+        app_fn : t;
+        app_arg : t;
+      }
+    | Lam of {
+        lam_params : Pattern.t list;
+        lam_body : t;
+      }
+    | Var of {v_var : Var.t}
+    | Record of {r_fields : field list}
+    | GetField of {
+        gf_arg : t;
+        gf_lbl : Label.t;
+      }
+    | Ctor of {c_lbl : Label.t}
+    | Update of {
+        up_arg : t;
+        up_fields : field list;
+      }
+    | Match of {
+        match_arg : t;
+        match_cases : (Pattern.t * t) list;
+      }
+    | Let of {
+        let_binds : binding list;
+        let_body : t;
+      }
+    | WithType of {
+        wt_term : t;
+        wt_type : Type.t;
+      }
+    | Const of {const_val : Const.t}
     | Import of
         { i_path : string
         ; i_loc : Loc.t
@@ -110,7 +131,11 @@ module Expr = struct
           * Type.t option
           * t
         )
-    | `Type of (Label.t * Var.t list * Type.t)
+    | `Type of
+        ( Label.t
+          * Var.t list
+          * Type.t
+        )
     ]
   [@@deriving sexp_of]
 end
