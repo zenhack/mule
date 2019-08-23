@@ -50,7 +50,7 @@ let row kvs =
 
 let recordType tys vals =
   D.Type.Record
-    { r_src = S.Type.Var (Var.of_string "<intrinsic>")
+    { r_src = S.Type.Var {v_var = Var.of_string "<intrinsic>"}
     ; r_info = kvar_type
     ; r_types = row tys
     ; r_values = row vals

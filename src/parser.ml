@@ -193,12 +193,12 @@ and typ_factor = lazy (
     [ import (fun i_loc i_path -> Type.Import {i_loc; i_path})
     ; begin
       let%map v = attempt (kwd "...") >> var in
-      Type.RowRest v
+      Type.RowRest {rr_var = v}
     end
     ; with_loc (
         let%bind v = var in
         match%map many (kwd "." >> label) with
-        | [] -> fun _loc -> Type.Var v
+        | [] -> fun _loc -> Type.Var {v_var = v}
         | p_lbls -> fun p_loc -> Type.Path {
             p_var = v;
             p_lbls;
@@ -210,7 +210,7 @@ and typ_factor = lazy (
 and typ_app = lazy (
   let%bind t = lazy_p typ_term in
   many (lazy_p typ_term)
-  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App (f, x))
+  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App {app_fn = f; app_arg = x})
 )
 and typ_annotated = lazy (
   choice
@@ -232,7 +232,7 @@ and recur_type = lazy (
   let%bind v = var in
   kwd "." >>
   let%map ty = lazy_p typ in
-  Type.Recur(v, ty)
+  Type.Recur{ recur_var = v; recur_body = ty }
 )
 and quantified_type binder quantifier = lazy (
   kwd binder >>
@@ -249,7 +249,7 @@ and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
   let%map items = braces (comma_list (lazy_p record_item)) in
-  Type.Record items
+  Type.Record {record_items = items}
 ) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
     choice
       [ lazy_p type_decl
@@ -286,7 +286,7 @@ and record_type = lazy (
     begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
       | [] -> MuleErr.bug "impossible"
       | (t::ts) ->
-          List.fold_right ts ~init:t ~f:(fun r l -> Type.Union(l, r))
+          List.fold_right ts ~init:t ~f:(fun r l -> Type.Union{u_l = l; u_r = r})
     end
   ) and typ = lazy (lazy_p typ_sum)
 

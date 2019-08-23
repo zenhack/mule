@@ -350,7 +350,7 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
       Type.Union {u_row = finish_extract_row sign row}
   | `Record(i, rowl, rowr) ->
       Type.Record
-        { r_src = ST.Var (Var.of_string "<unknown>")
+        { r_src = ST.Var {v_var = Var.of_string "<unknown>"}
         ; r_info = i
         ; r_types = finish_extract_row sign rowl
         ; r_values = finish_extract_row sign rowr

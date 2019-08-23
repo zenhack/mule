@@ -14,16 +14,29 @@ module Type = struct
         q_vars : Var.t list;
         q_body : t;
       }
-    | Recur of (Var.t * t)
-    | Var of Var.t
-    | Record of (record_item list)
+    | Recur of {
+        recur_var : Var.t;
+        recur_body : t;
+      }
+    | Var of {v_var : Var.t}
+    | Record of {
+        record_items : record_item list;
+      }
     | Ctor of {
         c_lbl : Label.t;
         c_loc : Loc.t;
       }
-    | App of (t * t)
-    | Union of (t * t)
-    | RowRest of Var.t
+    | App of {
+        app_fn : t;
+        app_arg : t;
+      }
+    | Union of {
+        u_l : t;
+        u_r : t;
+      }
+    | RowRest of {
+        rr_var : Var.t;
+      }
     | Annotated of {
         anno_var : Var.t;
         anno_ty : t;

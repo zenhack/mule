@@ -43,24 +43,27 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
                 q_vars = vs;
                 q_body = go q_body;
               }
-        | ST.Recur(v, body) ->
+        | ST.Recur{recur_var = v; recur_body = body} ->
             if Set.mem vars v then
               ty
             else
-              ST.Recur(v, go body)
+              ST.Recur{recur_var = v; recur_body = go body}
         | ST.Fn{fn_param = p; fn_ret = r} -> ST.Fn{
             fn_param = go p;
             fn_ret = go r;
           }
-        | ST.App(f, x) -> ST.App(go f, go x)
-        | ST.Union(l, r) -> ST.Union(go l, go r)
+        | ST.App{app_fn = f; app_arg = x} -> ST.App{app_fn = go f; app_arg = go x}
+        | ST.Union{u_l = l; u_r = r} -> ST.Union{u_l = go l; u_r = go r}
         | ST.Annotated{anno_var; anno_ty; anno_loc} ->
             ST.Annotated {
               anno_var;
               anno_loc;
               anno_ty = go anno_ty;
             }
-        | ST.Record items -> ST.Record(List.map items ~f:go_record_item)
+        | ST.Record {record_items = items} ->
+            ST.Record {
+              record_items = List.map items ~f:go_record_item;
+            }
         | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ | ST.Import _ -> ty
       end
   and go_record_item = function
@@ -175,29 +178,29 @@ let rec desugar_type' = function
             q_body = body;
           }
           )
-  | ST.Recur(v, body) ->
+  | ST.Recur{recur_var = v; recur_body = body} ->
       DT.Recur {
         mu_info = `Type;
         mu_var = v;
         mu_body = desugar_type' body;
       }
-  | ST.Var v ->
+  | ST.Var {v_var = v} ->
       DT.Var{v_info = `Unknown; v_var = v}
-  | ST.Union u ->
-      DT.Union {u_row = desugar_union_type None u }
-  | ST.Record r ->
+  | ST.Union {u_l; u_r} ->
+      DT.Union {u_row = desugar_union_type None (u_l, u_r) }
+  | ST.Record {record_items = r} ->
       desugar_record_type [] [] r
-  | ST.App(ST.Ctor{c_lbl; _}, t) ->
+  | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t} ->
       DT.Union {
         u_row = (`Type, [(c_lbl, desugar_type' t)], None);
       }
-  | ST.RowRest v ->
+  | ST.RowRest {rr_var = v} ->
       DT.Union { u_row = (`Type, [], Some v) }
   | (ST.Annotated _) as ty ->
       MuleErr.(throw (IllegalAnnotatedType ty))
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {p_info = `Unknown; p_var; p_lbls}
-  | ST.App(f, x) ->
+  | ST.App{app_fn = f; app_arg = x} ->
       DT.App {
         app_info = `Unknown;
         app_fn = desugar_type' f;
@@ -218,7 +221,7 @@ and desugar_union_type tail (l, r) =
            (MuleErr.MalformedType
               "Unions must be composed of ctors and at most one ...r"))
 and desugar_record_type types fields r =
-  let r_src = ST.Record r in
+  let r_src = ST.Record {record_items = r} in
   let rec go types fields = function
     (* TODO: how do we have variable fields for the type row? *)
     | (ST.Type(lbl, params, Some t) :: fs) ->
@@ -676,18 +679,21 @@ and desugar_type_binding (v, params, ty) =
   let target =
     List.fold_left
       params
-      ~init:(ST.Var v)
-      ~f:(fun f x -> ST.App(f, ST.Var x))
+      ~init:(ST.Var {v_var = v})
+      ~f:(fun f x -> ST.App {
+          app_fn = f;
+          app_arg = ST.Var {v_var = x};
+        })
   in
   let ty =
     ST.Recur
-      ( v
-      , substitue_type_apps
+      { recur_var = v
+      ; recur_body = substitue_type_apps
           target
-          (ST.Var v)
+          (ST.Var {v_var = v})
           (Set.of_list (module Ast.Var) params)
           ty
-      )
+      }
   in
   let ty =
     List.fold_right
