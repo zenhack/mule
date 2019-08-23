@@ -5,8 +5,15 @@ module Type = struct
   [@@deriving sexp_of]
 
   type t =
-    | Fn of (t * t)
-    | Quant of (quantifier * Var.t list * t)
+    | Fn of  {
+        fn_param : t;
+        fn_ret : t;
+      }
+    | Quant of {
+        q_quant : quantifier;
+        q_vars : Var.t list;
+        q_body : t;
+      }
     | Recur of (Var.t * t)
     | Var of Var.t
     | Record of (record_item list)

@@ -28,7 +28,7 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
       new_
     else
       begin match ty with
-        | ST.Quant (q, vs, body) ->
+        | ST.Quant{q_quant = q; q_vars = vs; q_body} ->
             let shadowed =
               List.fold
                 vs
@@ -38,13 +38,20 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
             if shadowed then
               ty
             else
-              ST.Quant(q, vs, go body)
+              ST.Quant{
+                q_quant = q;
+                q_vars = vs;
+                q_body = go q_body;
+              }
         | ST.Recur(v, body) ->
             if Set.mem vars v then
               ty
             else
               ST.Recur(v, go body)
-        | ST.Fn(p, r) -> ST.Fn(go p, go r)
+        | ST.Fn{fn_param = p; fn_ret = r} -> ST.Fn{
+            fn_param = go p;
+            fn_ret = go r;
+          }
         | ST.App(f, x) -> ST.App(go f, go x)
         | ST.Union(l, r) -> ST.Union(go l, go r)
         | ST.Annotated{anno_var; anno_ty; anno_loc} ->
@@ -143,21 +150,21 @@ and quantify_row_opaques (i, fields, rest) =
 let rec desugar_type' = function
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
-  | ST.Fn(ST.Annotated{anno_var; anno_ty = param; _}, ret) ->
+  | ST.Fn{fn_param = ST.Annotated{anno_var; anno_ty = param; _}; fn_ret = ret} ->
       DT.Fn {
         fn_info = `Type;
         fn_pvar = Some anno_var;
         fn_param = desugar_type' param;
         fn_ret = desugar_type' ret;
       }
-  | ST.Fn(param, ret) ->
+  | ST.Fn{fn_param = param; fn_ret = ret} ->
       DT.Fn {
         fn_info = `Type;
         fn_pvar = None;
         fn_param = desugar_type' param;
         fn_ret = desugar_type' ret;
       }
-  | ST.Quant(q, vs, body) ->
+  | ST.Quant{q_quant = q; q_vars = vs; q_body = body} ->
       List.fold_right
         vs
         ~init:(desugar_type' body)

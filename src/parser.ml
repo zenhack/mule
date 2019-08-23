@@ -239,7 +239,11 @@ and quantified_type binder quantifier = lazy (
   let%bind vs = many1 var in
   kwd "." >>
   let%map ty = lazy_p typ in
-  Type.Quant(quantifier, vs, ty)
+  Type.Quant {
+    q_quant = quantifier;
+    q_vars = vs;
+    q_body = ty;
+  }
 )
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
@@ -271,7 +275,10 @@ and record_type = lazy (
           let ts = List.rev ts in
           begin match ts with
             | [] -> MuleErr.bug "impossible"
-            | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn(l, r))
+            | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn {
+                fn_param = l;
+                fn_ret = r;
+              })
           end
     end
   ) and typ_sum = lazy (

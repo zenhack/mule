@@ -62,9 +62,9 @@ let check_duplicate_record_fields =
     | Type.Path _
     | Type.Ctor _
     | Type.RowRest _ -> ()
-    | Type.Quant(_, _, ty) -> go_type ty
+    | Type.Quant{q_body; _} -> go_type q_body
     | Type.Recur(_, ty) -> go_type ty
-    | Type.Fn(param, ret) -> go_type param; go_type ret
+    | Type.Fn{fn_param; fn_ret} -> go_type fn_param; go_type fn_ret
     | Type.Record fields ->
         List.map fields ~f:(function
             | Type.Rest _ -> []
