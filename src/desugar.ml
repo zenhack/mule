@@ -84,22 +84,22 @@ let rec quantify_opaques t = match t with
    * exist a. { type t = a }
   *)
   | DT.Named _ | DT.Path _ | DT.Var _ -> t
-  | DT.App(i, f, x) ->
-      DT.App
-        ( i
-        , quantify_opaques f
-        , quantify_opaques x
-        )
-  | DT.TypeLam(i, v, t) ->
-      DT.TypeLam(i, v, quantify_opaques t)
+  | DT.App{app_info; app_fn; app_arg} ->
+      DT.App {
+        app_info;
+        app_fn = quantify_opaques app_fn;
+        app_arg = quantify_opaques app_arg;
+      }
+  | DT.TypeLam{tl_info; tl_param; tl_body} ->
+      DT.TypeLam{tl_info; tl_param; tl_body = quantify_opaques tl_body}
   | DT.Record {r_src; r_info; r_types = (i, fields, rest); r_values} ->
       let vars = ref [] in
       let fields' = List.map fields ~f:(fun (lbl, ty) ->
           match quantify_opaques ty with
-          | DT.Opaque i ->
+          | DT.Opaque {o_info} ->
               let var = Gensym.anon_var () in
               vars := var :: !vars;
-              (lbl, DT.Var { v_info = i; v_var = var })
+              (lbl, DT.Var { v_info = o_info; v_var = var })
           | ty' -> (lbl, ty')
         )
       in
@@ -191,7 +191,11 @@ let rec desugar_type' = function
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {p_info = `Unknown; p_var; p_lbls}
   | ST.App(f, x) ->
-      DT.App(`Unknown, desugar_type' f, desugar_type' x)
+      DT.App {
+        app_info = `Unknown;
+        app_fn = desugar_type' f;
+        app_arg = desugar_type' x;
+      }
   | ST.Ctor _ ->
       failwith "BUG: ctors should be applied."
 and desugar_union_type tail (l, r) =
@@ -220,7 +224,7 @@ and desugar_record_type types fields r =
             ~init:`Unknown
             ~f:(fun k _ -> `Arrow(`Unknown, k))
         in
-        go ((lbl, DT.Opaque kind)::types) fields fs
+        go ((lbl, DT.Opaque {o_info = kind})::types) fields fs
     | [] ->
         DT.Record
           { r_src
@@ -629,7 +633,11 @@ and desugar_type_binding (v, params, ty) =
       params
       ~init:(desugar_type ty)
       ~f:(fun param tybody ->
-          DT.TypeLam(`Arrow(`Unknown, `Unknown), param, tybody)
+          DT.TypeLam {
+            tl_info = `Arrow(`Unknown, `Unknown);
+            tl_param = param;
+            tl_body = tybody;
+          }
         )
   in
   (v, ty)

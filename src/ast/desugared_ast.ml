@@ -60,14 +60,25 @@ module Type = struct
         q_var : Var.t;
         q_body : 'i t;
       }
-    | Named of ('i * string)
-    | Opaque of 'i
-    | TypeLam of ('i * Var.t * 'i t)
-    | App of ('i * 'i t * 'i t)
+    | Named of {
+        n_info : 'i;
+        n_name : string;
+      }
+    | Opaque of { o_info : 'i }
+    | TypeLam of {
+        tl_info : 'i;
+        tl_param : Var.t;
+        tl_body : 'i t;
+      }
+    | App of {
+        app_info : 'i;
+        app_fn : 'i t;
+        app_arg : 'i t;
+      }
   and 'i row =
     ('i * (Label.t * 'i t) list * Var.t option)
 
-  let rec subst old new_ = function
+  let rec subst old new_ ty = match ty with
     | Fn {fn_info; fn_pvar = Some v; fn_param; fn_ret} when Var.equal v old ->
         Fn {
           fn_info;
@@ -111,15 +122,19 @@ module Type = struct
           Quant {q_info; q_quant; q_var; q_body}
         else
           Quant{q_info; q_quant; q_var; q_body = subst old new_ q_body}
-    | Named(i, s) -> Named(i, s)
-    | Opaque i -> Opaque i
-    | TypeLam(i, v, body) ->
-        if Var.equal v old then
-          TypeLam(i, v, body)
+    | Named _ -> ty
+    | Opaque _ -> ty
+    | TypeLam{tl_info; tl_param; tl_body} ->
+        if Var.equal tl_param old then
+          TypeLam{tl_info; tl_param; tl_body}
         else
-          TypeLam(i, v, subst old new_ body)
-    | App(i, f, x) ->
-        App(i, subst old new_ f, subst old new_ x)
+          TypeLam{tl_info; tl_param; tl_body = subst old new_ tl_body}
+    | App{app_info; app_fn; app_arg} ->
+        App {
+          app_info;
+          app_fn = subst old new_ app_fn;
+          app_arg = subst old new_ app_arg;
+        }
   and subst_row old new_ (i, ls, maybe_v) =
     ( i
     , List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
@@ -159,11 +174,18 @@ module Type = struct
           ; Sexp.Atom(Var.to_string q_var)
           ; sexp_of_t q_body
           ]
-    | TypeLam(_, v, body) ->
-        Sexp.List [Sexp.Atom "lam"; Sexp.Atom(Var.to_string v); sexp_of_t body]
-    | Named(_, name) -> Sexp.Atom name
+    | TypeLam{tl_param; tl_body; _} ->
+        Sexp.List [
+          Sexp.Atom "lam";
+          Sexp.Atom(Var.to_string tl_param);
+          sexp_of_t tl_body;
+        ]
+    | Named{n_name; _} -> Sexp.Atom n_name
     | Opaque _ -> Sexp.Atom "<opaque>"
-    | App(_, f, x) -> Sexp.List [sexp_of_t f; sexp_of_t x]
+    | App{app_fn; app_arg; _} -> Sexp.List [
+        sexp_of_t app_fn;
+        sexp_of_t app_arg;
+      ]
   and sexp_of_row (_, fields, rest) =
     let fields =
       List.map fields ~f:(fun (l, t) ->
@@ -182,15 +204,15 @@ module Type = struct
     | Record{r_info; _} -> r_info
     | Union{u_row = (x, _, _)} -> x
     | Quant{q_info; _} -> q_info
-    | Named(x, _) -> x
-    | Opaque x -> x
-    | TypeLam(x, _, _) -> x
-    | App(x, _, _) -> x
+    | Named{n_info; _} -> n_info
+    | Opaque {o_info; _} -> o_info
+    | TypeLam{tl_info; _} -> tl_info
+    | App{app_info; _} -> app_info
 
   let rec map ty ~f = match ty with
-    | Opaque x -> Opaque (f x)
-    | Named(x, s) ->
-        Named(f x, s)
+    | Opaque {o_info} -> Opaque { o_info = f o_info }
+    | Named{n_info; n_name} ->
+        Named{n_info = f n_info; n_name}
     | Fn{fn_info; fn_pvar; fn_param; fn_ret} ->
         Fn {
           fn_info = f fn_info;
@@ -228,10 +250,18 @@ module Type = struct
           q_var;
           q_body = map q_body ~f;
         }
-    | TypeLam(x, v, body) ->
-        TypeLam(f x, v, map body ~f)
-    | App(x, fn, arg) ->
-        App(f x, map fn ~f, map arg ~f)
+    | TypeLam{tl_info; tl_param; tl_body} ->
+        TypeLam {
+          tl_info = f tl_info;
+          tl_param;
+          tl_body = map tl_body ~f;
+        }
+    | App{app_info; app_fn; app_arg} ->
+        App {
+          app_info = f app_info;
+          app_fn = map app_fn ~f;
+          app_arg = map app_arg ~f;
+        }
   and map_row (x, fields, rest) ~f =
     ( f x
     , List.map fields ~f:(fun(l, t) -> (l, map t ~f))

@@ -50,17 +50,17 @@ let rec gen_type
   fun ({b_at; ctx = {cops; env_types; env_terms; g = _}} as ctx) sign ty ->
   let tv = ty_var_at b_at in
   match ty with
-  | Type.App(_, f, x) ->
-      let f' = gen_type ctx sign f in
-      let x' = gen_type ctx sign x in
+  | Type.App{app_fn; app_arg; _} ->
+      let fn' = gen_type ctx sign app_fn in
+      let arg' = gen_type ctx sign app_arg in
       let ret =
-        UnionFind.make(apply tv f' (Type.get_info f) x' (Type.get_info x))
+        UnionFind.make(apply tv fn' (Type.get_info app_fn) arg' (Type.get_info app_arg))
       in
       cops.constrain_kind
-        (get_kind f')
-        (UnionFind.make (`Arrow(get_kind x', get_kind ret)));
+        (get_kind fn')
+        (UnionFind.make (`Arrow(get_kind arg', get_kind ret)));
       ret
-  | Type.TypeLam(k, v, ty) ->
+  | Type.TypeLam{tl_info = k; tl_param = v; tl_body = ty} ->
       let tv = ty_var_at b_at in
       let lam = Gen_t.lambda tv (gen_k ()) (gen_k ()) (fun b_at p ->
           gen_type
@@ -81,7 +81,7 @@ let rec gen_type
       failwith
         ("Opaque types should have been removed before generating " ^
          "the constraint graph.")
-  | Type.Named (k, s) ->
+  | Type.Named {n_info = k; n_name = s} ->
       UnionFind.make (`Const(tv, `Named s, [], k))
   | Type.Fn {fn_pvar; fn_param; fn_ret; _} ->
       let param' =

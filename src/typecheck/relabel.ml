@@ -28,22 +28,21 @@ let new_get () =
   in
   Memoize.memoize (fun _ -> seq_next ())
 
-let relabel_type () =
+let relabel_type: unit -> 'a Desugared.Type.t -> 'a Desugared.Type.t = fun () ->
   (* We're careful about the order in which we walk the tree, so
    * variables are always left to right. *)
-  let open Ast.Desugared.Type in
+  let open Desugared.Type in
   let get = new_get () in
   let get v = Var.of_string (get v) in
-  let rec go = function
-    | App(i, f, x) ->
+  let rec go typ = match typ with
+    | App{app_info; app_fn = f; app_arg = x} ->
         let f' = go f in
         let x' = go x in
-        App(i, f', x')
-    | TypeLam(i, v, t) ->
+        App{app_info; app_fn = f'; app_arg = x'}
+    | TypeLam{tl_info; tl_param = v; tl_body = t} ->
         let v = get v in
-        TypeLam(i, v, go t)
-    | Opaque i -> Opaque i
-    | Named(i, s) -> Named (i, s)
+        TypeLam{tl_info; tl_param = v; tl_body = go t}
+    | Opaque _ | Named _ -> typ
     | Fn {fn_info; fn_pvar = v; fn_param = l; fn_ret = r} ->
         let v' = Option.map v ~f:get in
         let l' = go l in

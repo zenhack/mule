@@ -7,8 +7,8 @@ module S = Surface
 
 open Typecheck_types
 
-let int_t = D.Type.Named(kvar_type, "int")
-let text_t = D.Type.Named(kvar_type, "text")
+let int_t = D.Type.Named{n_info = kvar_type; n_name = "int"}
+let text_t = D.Type.Named{n_info = kvar_type; n_name = "text"}
 let fn_t p r = D.Type.Fn {
     fn_info = kvar_type;
     fn_pvar = None;

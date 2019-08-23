@@ -317,7 +317,11 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
       mu_body = finish_extract_t sign arg;
     }
   | `Lambda(i, param, body) ->
-      Type.TypeLam(i, ivar param.v_var_id, finish_extract_t sign body)
+      Type.TypeLam {
+        tl_info = i;
+        tl_param = ivar param.v_var_id;
+        tl_body = finish_extract_t sign body;
+      }
   | `Quant q ->
       Type.Quant
         { q_info = q.q_id
@@ -333,9 +337,13 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
         ; fn_ret = finish_extract_t sign ret
         }
   | `Named(i, name, []) ->
-      Type.Named (i, name)
+      Type.Named {n_info = i; n_name = name}
   | `App(i, f, x) ->
-      Type.App(i, finish_extract_t sign f, finish_extract_t sign x)
+      Type.App {
+        app_info = i;
+        app_fn = finish_extract_t sign f;
+        app_arg = finish_extract_t sign x;
+      }
   | `Named (_i, _name, _params) ->
       failwith "BUG: can't use Named with arguments in desugared ast."
   | `Union(_, row) ->
