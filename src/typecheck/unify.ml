@@ -2,7 +2,7 @@ open Typecheck_types
 open Gensym
 
 (* Helpers for signaling type errors *)
-let typeErr e = raise (MuleErr.MuleExn (MuleErr.TypeError e))
+let typeErr e = MuleErr.(throw (TypeError e))
 let permErr op = typeErr (MuleErr.PermissionErr op)
 let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
 

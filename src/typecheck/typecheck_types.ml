@@ -103,17 +103,17 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
         UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
         `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
     | k ->
-        raise MuleErr.(
-            MuleExn
-              (TypeError (MismatchedKinds
-                            ( `Arrow(`Type, `Type)
-                            , match k with
-                            | `Type -> `Type
-                            | `Row -> `Row
-                            | _ -> failwith "impossible"
-                            )
-                         ))
-          )
+        MuleErr.(
+          throw
+            (TypeError (MismatchedKinds
+                          ( `Arrow(`Type, `Type)
+                          , match k with
+                          | `Type -> `Type
+                          | `Row -> `Row
+                          | _ -> failwith "impossible"
+                          )
+                       ))
+        )
   end
 
 type permission = F | R | L | E
