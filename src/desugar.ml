@@ -6,14 +6,11 @@ module C = Ast.Const
 module DT = Ast.Desugared.Type
 module DK = Ast.Desugared.Kind
 
-let error e =
-  raise (MuleErr.MuleExn e)
-
 let incomplete_pattern p =
-  error (MuleErr.IncompletePattern p)
+  MuleErr.throw (`IncompletePattern p)
 
 let unreachable_case (_p:SP.t) =
-  error MuleErr.UnreachableCases
+  MuleErr.throw `UnreachableCases
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
@@ -198,7 +195,7 @@ let rec desugar_type' = function
   | ST.RowRest {rr_var = v} ->
       DT.Union { u_row = (`Type, [], Some v) }
   | (ST.Annotated _) as ty ->
-      MuleErr.(throw (IllegalAnnotatedType ty))
+      MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {p_info = `Unknown; p_var; p_lbls}
   | ST.App{app_fn = f; app_arg = x} ->
@@ -217,10 +214,10 @@ and desugar_union_type tail (l, r) =
       (`Type, lbls_l @ lbls_r, Some v)
   | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, None ->
       (`Type, lbls_l @ lbls_r, None)
-  | _ -> raise
-        (MuleErr.MuleExn
-           (MuleErr.MalformedType
-              "Unions must be composed of ctors and at most one ...r"))
+  | _ ->
+      MuleErr.throw
+           (`MalformedType
+              "Unions must be composed of ctors and at most one ...r")
 and desugar_record_type types fields r =
   let r_src = ST.Record {r_items = r} in
   let rec go types fields = function
@@ -252,9 +249,9 @@ and desugar_record_type types fields r =
           }
     | (ST.Field (l, t) :: rest) ->
         go types ((l, desugar_type' t)::fields) rest
-    | (ST.Rest _ :: _) -> raise
-          (MuleErr.MuleExn
-             (MuleErr.MalformedType "row variable before the end of a record type."))
+    | (ST.Rest _ :: _) ->
+        MuleErr.throw
+             (`MalformedType "row variable before the end of a record type.")
   in
   go types fields r
 and desugar_type t =
@@ -601,11 +598,11 @@ and desugar_const_match dict = function
       (* TODO: what should the argument actually be here? *)
       incomplete_pattern SP.Wild
   | ((SP.Ctor _, _) :: _) ->
-      error
-        (MuleErr.TypeError
+      MuleErr.throw
+        (`TypeError
            (* FIXME: "constant" isn't the name of a type; this will be
             * confusing. *)
-           (MuleErr.MismatchedCtors (`Named "union", `Named "constant")))
+           (`MismatchedCtors (`Named "union", `Named "constant")))
 and desugar_lbl_match dict = function
   | [] -> D.Match
         { default = None
@@ -644,7 +641,7 @@ and desugar_lbl_match dict = function
       in
       desugar_lbl_match dict' cases
   | (_ :: _) ->
-      raise MuleErr.(MuleExn UnreachableCases)
+      MuleErr.throw `UnreachableCases
 and finalize_dict dict =
   Map.map dict
     ~f:( fun cases ->

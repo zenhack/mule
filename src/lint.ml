@@ -1,10 +1,8 @@
 open Ast.Surface
 open Ast.Surface.Expr
 
-let err e =
-  raise (MuleErr.MuleExn e)
 let duplicate_fields dups =
-  err (MuleErr.DuplicateFields dups)
+  MuleErr.throw (`DuplicateFields dups)
 
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =

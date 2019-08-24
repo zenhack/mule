@@ -37,7 +37,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         let tv = gen_u kvar_type (`G g) in
         begin match Option.map ~f:Lazy.force (Map.find env_terms v) with
           | None ->
-              MuleErr.(throw (UnboundVar v))
+              MuleErr.throw (`UnboundVar v)
           | Some (`Ty tv') ->
               cops.constrain_unify
                 (`VarUse
@@ -239,7 +239,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.Match {cases; default} when Map.is_empty cases ->
         let term =
           match default with
-          | None -> raise (MuleErr.MuleExn EmptyMatch)
+          | None -> MuleErr.throw `EmptyMatch
           | Some (Some l_param, l_body) ->
               Expr.Lam{l_param; l_body}
           | Some (None, l_body) ->

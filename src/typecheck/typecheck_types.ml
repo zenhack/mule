@@ -105,7 +105,7 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
     | k ->
         MuleErr.(
           throw
-            (TypeError (MismatchedKinds
+            (`TypeError (`MismatchedKinds
                           ( `Arrow(`Type, `Type)
                           , match k with
                           | `Type -> `Type

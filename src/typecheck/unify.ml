@@ -2,9 +2,9 @@ open Typecheck_types
 open Gensym
 
 (* Helpers for signaling type errors *)
-let typeErr e = MuleErr.(throw (TypeError e))
-let permErr op = typeErr (MuleErr.PermissionErr op)
-let ctorErr l r = typeErr (MuleErr.MismatchedCtors (l, r))
+let typeErr e = MuleErr.throw (`TypeError e)
+let permErr op = typeErr (`PermissionErr op)
+let ctorErr l r = typeErr (`MismatchedCtors (l, r))
 
 (* Get the "permission" of a node, based on the node's binding path
  * (starting from the node and working up the tree). See section 3.1

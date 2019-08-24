@@ -126,7 +126,7 @@ let rec gen_type
   | Type.Var {v_var; _} ->
       begin match Map.find env_types v_var with
         | Some t -> t
-        | None -> MuleErr.(throw (UnboundVar v_var))
+        | None -> MuleErr.throw (`UnboundVar v_var)
       end
   | Type.Path{p_var = v; p_lbls = ls; _} ->
       begin match List.rev ls with

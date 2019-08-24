@@ -14,7 +14,7 @@ let rec extract: u_kind -> Kind.maybe_kind = function
 let rec occurs_check: int -> u_kind -> unit =
   fun n -> function
     | `Free m when n = m ->
-        MuleErr.(throw (TypeError OccursCheckKind))
+        MuleErr.throw (`TypeError `OccursCheckKind)
     | `Free _ | `Type | `Row -> ()
     | `Arrow(x, y) ->
         occurs_check n (UnionFind.get x);
@@ -31,6 +31,4 @@ let rec unify l r = match l, r with
       `Arrow(x, y)
 
   | _ ->
-      MuleErr.(
-        throw (TypeError (MismatchedKinds(extract l, extract r)))
-      )
+      MuleErr.throw (`TypeError (`MismatchedKinds(extract l, extract r)))

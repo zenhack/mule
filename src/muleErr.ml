@@ -12,10 +12,11 @@ type kind =
   | `Arrow of kind * kind
   ]
 type type_error =
-  | MismatchedCtors of (ctor * ctor)
-  | MismatchedKinds of (kind * kind)
-  | OccursCheckKind
-  | PermissionErr of op
+  [ `MismatchedCtors of (ctor * ctor)
+  | `MismatchedKinds of (kind * kind)
+  | `OccursCheckKind
+  | `PermissionErr of op
+  ]
 
 type path_error =  {
   pe_path: string;
@@ -27,16 +28,17 @@ type path_error =  {
 }
 
 type t =
-  | UnboundVar of Var.t
-  | TypeError of type_error
-  | DuplicateFields of (Label.t list)
-  | UnreachableCases
-  | EmptyMatch
-  | MalformedType of string
-  | IncompletePattern of Surface_ast.Pattern.t
-  | IllegalAnnotatedType of Surface_ast.Type.t
-  | PathError of path_error
-  | Bug of string
+  [ `UnboundVar of Var.t
+  | `TypeError of type_error
+  | `DuplicateFields of (Label.t list)
+  | `UnreachableCases
+  | `EmptyMatch
+  | `MalformedType of string
+  | `IncompletePattern of Surface_ast.Pattern.t
+  | `IllegalAnnotatedType of Surface_ast.Type.t
+  | `PathError of path_error
+  | `Bug of string
+  ]
 
 exception MuleExn of t
 
@@ -58,13 +60,13 @@ let rec show_kind = function
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
 let show_type_error = function
-  | MismatchedCtors (l, r) ->
+  | `MismatchedCtors (l, r) ->
       "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
-  | MismatchedKinds (l, r) ->
+  | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
-  | OccursCheckKind ->
+  | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | PermissionErr op ->
+  | `PermissionErr op ->
       "permission error during " ^ show_op op
 
 let show_path_error {pe_path; pe_problem} =
@@ -79,28 +81,28 @@ let show_path_error {pe_path; pe_problem} =
       "Illegal path segment " ^ String.escaped part ^ " in path " ^ path
 
 let show = function
-  | UnboundVar var ->
+  | `UnboundVar var ->
       "unbound variable: " ^ Var.to_string var
-  | MalformedType msg ->
+  | `MalformedType msg ->
       "malformed_type: " ^ msg
-  | TypeError e ->
+  | `TypeError e ->
       "Type error: " ^ show_type_error e
-  | UnreachableCases ->
+  | `UnreachableCases ->
       "Unreachable cases in match"
-  | DuplicateFields fields ->
+  | `DuplicateFields fields ->
       "Duplicate fields:\n" ^
       (fields
        |> List.map ~f:Label.to_string
        |> String.concat ~sep:",")
-  | EmptyMatch ->
+  | `EmptyMatch ->
       "Empty match expression."
-  | IncompletePattern _ ->
+  | `IncompletePattern _ ->
       "Incomplete pattern"
-  | IllegalAnnotatedType _ ->
+  | `IllegalAnnotatedType _ ->
       "Illegal annotated type: only types of function parameters may be annotated."
-  | PathError pe ->
+  | `PathError pe ->
       show_path_error pe
-  | Bug msg ->
+  | `Bug msg ->
       "BUG: " ^ msg
 
 let throw e =
@@ -114,4 +116,4 @@ let throw e =
   raise (MuleExn e)
 
 let bug msg =
-  throw (Bug msg)
+  throw (`Bug msg)
