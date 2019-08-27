@@ -216,8 +216,8 @@ and desugar_union_type tail (l, r) =
       (`Type, lbls_l @ lbls_r, None)
   | _ ->
       MuleErr.throw
-           (`MalformedType
-              "Unions must be composed of ctors and at most one ...r")
+        (`MalformedType
+           "Unions must be composed of ctors and at most one ...r")
 and desugar_record_type types fields r =
   let r_src = ST.Record {r_items = r} in
   let rec go types fields = function
@@ -251,7 +251,7 @@ and desugar_record_type types fields r =
         go types ((l, desugar_type' t)::fields) rest
     | (ST.Rest _ :: _) ->
         MuleErr.throw
-             (`MalformedType "row variable before the end of a record type.")
+          (`MalformedType "row variable before the end of a record type.")
   in
   go types fields r
 and desugar_type t =

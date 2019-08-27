@@ -109,19 +109,19 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
           throw
             (`TypeError
                ( `AppParamArg
-                 (* FIXME: if presented in an error message this may be confusing, as
-                  * we don't actually need type -> type, but just some arrow kind.
-                  *
-                  * We should find a way to not over-specify the kind.
-                  *)
+               (* FIXME: if presented in an error message this may be confusing, as
+                * we don't actually need type -> type, but just some arrow kind.
+                *
+                * We should find a way to not over-specify the kind.
+               *)
                , (`MismatchedKinds
-                          ( `Arrow(`Type, `Type)
-                          , match k with
-                          | `Type -> `Type
-                          | `Row -> `Row
-                          | _ -> failwith "impossible"
-                          )
-                       )
+                    ( `Arrow(`Type, `Type)
+                    , match k with
+                    | `Type -> `Type
+                    | `Row -> `Row
+                    | _ -> failwith "impossible"
+                    )
+                 )
                )
             )
         )

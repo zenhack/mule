@@ -105,10 +105,10 @@ let rec walk: context -> k_var Expr.t -> u_var =
             ~combine:(fun ~key:var l r ->
                 cops.constrain_kind
                   (`VarUse
-                    (object
-                      method bind_type = `LetType;
-                      method var = var;
-                    end))
+                     (object
+                       method bind_type = `LetType;
+                       method var = var;
+                     end))
                   (get_kind l)
                   (get_kind r);
                 r
