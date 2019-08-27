@@ -15,11 +15,13 @@ let fn_t p r = D.Type.Fn {
     fn_param = p;
     fn_ret = r;
   }
+let char_t = D.Type.Named{n_info = kvar_type; n_name = "char"}
 
 let prim x = R.Expr.Prim x
 
 let int n = R.Expr.Const (C.Integer n)
 let text s = R.Expr.Const (C.Text s)
+let char c = R.Expr.Const (C.Char c)
 
 let assert_const = function
   | R.Expr.Const c -> c
@@ -62,6 +64,12 @@ let recordVal kvs =
     |> Map.of_alist_exn (module Label)
   )
 
+let unionType r = D.Type.Union { u_row = row r }
+
+let unionVal c v = R.Expr.Ctor(Label.of_string c, v)
+
+let maybe t = unionType [ "Some", t; "None", (recordType [] []) ]
+
 let values = dict
     [ "int",
       ( recordType
@@ -86,6 +94,7 @@ let values = dict
           [ "append", fn_t text_t (fn_t text_t text_t)
           ; "from-int", fn_t int_t text_t
           ; "length", fn_t text_t int_t
+          ; "uncons", fn_t text_t (maybe (recordType [] ["head", char_t; "tail", text_t]))
           ]
       , recordVal
           [ "append",
@@ -94,6 +103,17 @@ let values = dict
             prim (fun x -> text (Z.to_string (assert_int x)))
           ; "length",
             prim (fun s -> int (Z.of_int (String.length (assert_text s))))
+          ; "uncons",
+            prim (fun s ->
+                match assert_text s with
+                | "" -> unionVal "None" (recordVal [])
+                | txt -> unionVal "Some"
+                      (recordVal
+                         [ "head", char (txt.[0])
+                         ; "tail", text (String.drop_prefix txt 1)
+                         ]
+                      )
+              )
           ]
       )
     ]
