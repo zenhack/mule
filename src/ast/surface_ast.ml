@@ -1,5 +1,14 @@
 open Common_ast
 
+(* During desugaring, we construct some "intermediate" surface-level nodes.
+ * These don't always correspond to exact source locations, so we have a more
+ * general datatype that we use to describe the "origin" of a source level
+ * ast node. *)
+type origin =
+  [ `SrcLoc of Loc.t
+  ]
+  [@@deriving sexp_of]
+
 module Type = struct
   type quantifier = [ `All | `Exist ]
   [@@deriving sexp_of]
@@ -13,7 +22,7 @@ module Type = struct
         q_quant : quantifier;
         q_vars : Var.t list;
         q_body : t;
-        q_loc : Loc.t;
+        q_loc : origin;
       }
     | Recur of {
         recur_var : Var.t;
@@ -25,7 +34,7 @@ module Type = struct
       }
     | Ctor of {
         c_lbl : Label.t;
-        c_loc : Loc.t;
+        c_loc : origin;
       }
     | App of {
         app_fn : t;
@@ -41,16 +50,16 @@ module Type = struct
     | Annotated of {
         anno_var : Var.t;
         anno_ty : t;
-        anno_loc : Loc.t;
+        anno_loc : origin;
       }
     | Path of {
         p_var : Var.t;
         p_lbls : Label.t list;
-        p_loc : Loc.t;
+        p_loc : origin;
       }
     | Import of {
         i_path : string;
-        i_loc : Loc.t;
+        i_loc : origin;
       }
   [@@deriving sexp_of]
 
@@ -114,11 +123,11 @@ module Expr = struct
     | Const of {const_val : Const.t}
     | Import of
         { i_path : string
-        ; i_loc : Loc.t
+        ; i_loc : origin;
         }
     | Embed of {
         e_path : string;
-        e_loc : Loc.t;
+        e_loc : origin;
       }
   [@@deriving sexp_of]
   and binding =

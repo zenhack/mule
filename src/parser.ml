@@ -42,7 +42,7 @@ let with_loc p =
   let%bind start = MParser.get_pos in
   let%bind f = p in
   let%map stop = MParser.get_pos in
-  f Loc.{start; stop}
+  f (`SrcLoc (Loc.{start; stop}))
 
 let sep_start_by p sep =
   optional sep >> sep_by p sep
@@ -155,7 +155,7 @@ let constant : (Const.t, unit) MParser.t = choice
     ; char_const
     ]
 
-let import: (Loc.t -> string -> 'a) -> ('a, unit) MParser.t
+let import: (origin -> string -> 'a) -> ('a, unit) MParser.t
   = fun f ->
     with_loc (
       let%map path = kwd "import" >> text in
