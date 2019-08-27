@@ -598,11 +598,7 @@ and desugar_const_match dict = function
       (* TODO: what should the argument actually be here? *)
       incomplete_pattern SP.Wild
   | ((SP.Ctor _, _) :: _) ->
-      MuleErr.throw
-        (`TypeError
-           (* FIXME: "constant" isn't the name of a type; this will be
-            * confusing. *)
-           (`MismatchedCtors (`Named "union", `Named "constant")))
+      MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
   | [] -> D.Match
         { default = None

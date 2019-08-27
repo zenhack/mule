@@ -1,3 +1,3 @@
 open Typecheck_types
 
-val unify : u_kind -> u_kind -> u_kind
+val unify : Types.reason -> u_kind -> u_kind -> u_kind

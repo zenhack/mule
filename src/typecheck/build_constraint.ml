@@ -102,8 +102,15 @@ let rec walk: context -> k_var Expr.t -> u_var =
           Map.merge_skewed
             env_types
             u_vars
-            ~combine:(fun ~key:_ l r ->
-                cops.constrain_kind (get_kind l) (get_kind r);
+            ~combine:(fun ~key:var l r ->
+                cops.constrain_kind
+                  (`VarUse
+                    (object
+                      method bind_type = `LetType;
+                      method var = var;
+                    end))
+                  (get_kind l)
+                  (get_kind r);
                 r
               )
         in
@@ -306,7 +313,7 @@ let make_cops: unit ->
   ( constraint_ops
     * (unify_edge list) ref
     * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
-    * (k_var * k_var) list ref
+    * (Types.reason * k_var * k_var) list ref
   ) = fun () ->
   let ucs = ref [] in (* unification constraints *)
   let ics = ref IntMap.empty in (* instantiation constraints *)
@@ -323,8 +330,8 @@ let make_cops: unit ->
             )
         end
     ; constrain_kind =
-        (fun l r ->
-           kcs := (l, r) :: !kcs)
+        (fun rsn l r ->
+           kcs := (rsn, l, r) :: !kcs)
     }
   in (cops, ucs, ics, kcs)
 

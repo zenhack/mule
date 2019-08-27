@@ -180,7 +180,7 @@ let solve_constraints cs =
                            ; ty = cs.ty
                            }
                        );
-  List.iter cs.kind ~f:(fun (x, y) -> UnionFind.merge Infer_kind.unify x y);
+  List.iter cs.kind ~f:(fun (rsn, x, y) -> UnionFind.merge (Infer_kind.unify rsn) x y);
   let solve_unify vars =
     render_ucs := vars;
     List.iter vars ~f:(fun (Unify (reason, l, r)) ->

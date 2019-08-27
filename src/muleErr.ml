@@ -1,3 +1,4 @@
+open Types
 open Common_ast
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
@@ -29,7 +30,14 @@ type path_error =  {
 
 type t =
   [ `UnboundVar of Var.t
-  | `TypeError of type_error
+
+  (* We hit int/text etc. literals in the same match expression as patterns
+   * that match sum types. This is conceptually a type error, but it's easier
+   * to have a separate variant for it since it's caught earlier in the
+   * pipeline. *)
+  | `MatchDesugarMismatch
+
+  | `TypeError of (reason * type_error)
   | `DuplicateFields of (Label.t list)
   | `UnreachableCases
   | `EmptyMatch
@@ -59,7 +67,7 @@ let rec show_kind = function
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
-let show_type_error = function
+let show_type_error (_rsn, err) = match err with
   | `MismatchedCtors (l, r) ->
       "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
   | `MismatchedKinds (l, r) ->
@@ -85,6 +93,8 @@ let show = function
       "unbound variable: " ^ Var.to_string var
   | `MalformedType msg ->
       "malformed_type: " ^ msg
+  | `MatchDesugarMismatch ->
+      "Type error: constant and union patterns in the same match expression."
   | `TypeError e ->
       "Type error: " ^ show_type_error e
   | `UnreachableCases ->

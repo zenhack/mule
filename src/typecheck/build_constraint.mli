@@ -8,5 +8,5 @@ val make_cops: unit ->
   ( constraint_ops
     * (unify_edge list) ref
     * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
-    * (k_var * k_var) list ref
+    * (Types.reason * k_var * k_var) list ref
   )

@@ -1,5 +1,7 @@
 (* types used by the type checker *)
 
+open Types
+
 type u_kind =
   [ `Free of int
   | `Row
@@ -105,36 +107,27 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
     | k ->
         MuleErr.(
           throw
-            (`TypeError (`MismatchedKinds
+            (`TypeError
+               ( `AppParamArg
+                 (* FIXME: if presented in an error message this may be confusing, as
+                  * we don't actually need type -> type, but just some arrow kind.
+                  *
+                  * We should find a way to not over-specify the kind.
+                  *)
+               , (`MismatchedKinds
                           ( `Arrow(`Type, `Type)
                           , match k with
                           | `Type -> `Type
                           | `Row -> `Row
                           | _ -> failwith "impossible"
                           )
-                       ))
+                       )
+               )
+            )
         )
   end
 
 type permission = F | R | L | E
-
-type reason =
-  [ `AppParamArg
-  | `MatchSiblingsBody
-  | `MatchSiblingsPattern
-  | `MatchDefault
-  | `VarUse of <
-      bind_type : [ `Lambda | `Let ];
-      var : Ast.Var.t
-    >
-  | `TypePath of <
-      bind_type : [ `Lambda | `Let ];
-      var : Ast.Var.t;
-      lbls : Ast.Label.t list;
-    >
-  | `Frontier
-  | `Propagate
-  ]
 
 type unify_edge =
   | Unify of (reason * u_type UnionFind.var * u_type UnionFind.var)

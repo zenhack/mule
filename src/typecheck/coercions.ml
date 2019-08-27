@@ -57,6 +57,7 @@ let rec gen_type
         UnionFind.make(apply tv fn' (Type.get_info app_fn) arg' (Type.get_info app_arg))
       in
       cops.constrain_kind
+        `AppParamArg
         (get_kind fn')
         (UnionFind.make (`Arrow(get_kind arg', get_kind ret)));
       ret
@@ -75,10 +76,10 @@ let rec gen_type
             ty
         )
       in
-      cops.constrain_kind (get_kind lam) k;
+      cops.constrain_kind `Lambda (get_kind lam) k;
       lam
   | Type.Opaque _ ->
-      failwith
+      MuleErr.bug
         ("Opaque types should have been removed before generating " ^
          "the constraint graph.")
   | Type.Named {n_info = k; n_name = s} ->
@@ -87,7 +88,7 @@ let rec gen_type
       let param' =
         gen_type ctx (flip_sign sign) fn_param
       in
-      cops.constrain_kind (get_kind param') kvar_type;
+      cops.constrain_kind (`KnownKind `Fn) (get_kind param') kvar_type;
       let env_terms' = match fn_pvar with
         | Some v ->
             Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
@@ -105,7 +106,10 @@ let rec gen_type
           sign
           fn_ret
       in
-      cops.constrain_kind (get_kind ret') kvar_type;
+      cops.constrain_kind
+        (`Cascade(`KnownKind `Fn, 2))
+        (get_kind ret')
+        kvar_type;
       UnionFind.make (fn tv param' ret')
   | Type.Recur{mu_var; mu_body; _} ->
       let ret = gen_u kvar_type b_at in
@@ -121,7 +125,7 @@ let rec gen_type
           mu_body
       in
       UnionFind.merge (fun _ r -> r) ret ret';
-      cops.constrain_kind (get_kind ret') kvar_type;
+      cops.constrain_kind (`KnownKind `Recur) (get_kind ret') kvar_type;
       ret
   | Type.Var {v_var; _} ->
       begin match Map.find env_types v_var with
@@ -213,7 +217,7 @@ let rec gen_type
              )
           )
       in
-      cops.constrain_kind (get_kind ret') kvar_type;
+      cops.constrain_kind (`KnownKind `Quant) (get_kind ret') kvar_type;
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
 (* [gen_row] is like [gen_type], but for row variables. *)
@@ -223,7 +227,7 @@ and gen_row ({ctx = {cops; env_types; _}; b_at} as ctx) sign (_, fields, rest) =
     | Some v -> Map.find_exn env_types v
     | None -> UnionFind.make (empty (ty_var_at b_at))
   in
-  cops.constrain_kind (get_kind rest') kvar_row;
+  cops.constrain_kind (`KnownKind `Row) (get_kind rest') kvar_row;
   List.fold_right
     fields
     ~init:rest'
