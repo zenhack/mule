@@ -205,7 +205,7 @@ let rec desugar_type' = function
         app_arg = desugar_type' x;
       }
   | ST.Ctor _ ->
-      failwith "BUG: ctors should be applied."
+      MuleErr.bug "ctors should be applied."
 and desugar_union_type tail (l, r) =
   match desugar_type' l, desugar_type' r, tail with
   | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, (Some v)
