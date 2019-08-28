@@ -116,9 +116,14 @@ let values = dict
               )
           ]
       )
+    ; "char",
+      ( recordType [ "t", char_t ] []
+      , recordVal []
+      )
     ]
 
 let types = dict
     [ "int", int_t
     ; "text", text_t
+    ; "char", char_t
     ]
