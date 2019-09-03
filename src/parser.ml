@@ -38,11 +38,13 @@ let keywords = Set.of_list (module String)
     ; "embed"
     ]
 
+(*
 let with_loc p =
   let%bind start = MParser.get_pos in
   let%bind f = p in
   let%map stop = MParser.get_pos in
   f (`SrcLoc (Loc.{start; stop}))
+   *)
 
 let sep_start_by p sep =
   optional sep >> sep_by p sep
@@ -155,18 +157,14 @@ let constant : (Const.t, unit) MParser.t = choice
     ; char_const
     ]
 
-let import: (origin -> string -> 'a) -> ('a, unit) MParser.t
+let import: (string -> 'a) -> ('a, unit) MParser.t
   = fun f ->
-    with_loc (
-      let%map path = kwd "import" >> text in
-      (fun loc -> f loc path)
-    )
+    let%map path = kwd "import" >> text in
+    f path
 
 let embed =
-  with_loc (
-    let%map e_path = kwd "embed" >> text in
-    (fun e_loc -> Expr.Embed {e_path; e_loc})
-  )
+  let%map e_path = kwd "embed" >> text in
+  Expr.Embed {e_path}
 
 let label =
   var |>> Ast.var_to_label
@@ -180,7 +178,7 @@ let ctor = token (
 let rec typ_term = lazy (
   choice
     [ lazy_p typ_factor
-    ; with_loc (ctor |>> fun c_lbl c_loc -> Type.Ctor {c_lbl; c_loc})
+    ; (ctor |>> fun c_lbl -> Type.Ctor {c_lbl})
     ; lazy_p record_type
     ; lazy_p recur_type
     ; lazy_p all_type
@@ -190,21 +188,20 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ import (fun i_loc i_path -> Type.Import {i_loc; i_path})
+    [ import (fun i_path -> Type.Import {i_path})
     ; begin
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest {rr_var = v}
     end
-    ; with_loc (
-        let%bind v = var in
-        match%map many (kwd "." >> label) with
-        | [] -> fun _loc -> Type.Var {v_var = v}
-        | p_lbls -> fun p_loc -> Type.Path {
-            p_var = v;
-            p_lbls;
-            p_loc;
-          }
-      )
+    ; begin
+      let%bind v = var in
+      match%map many (kwd "." >> label) with
+      | [] -> Type.Var {v_var = v}
+      | p_lbls -> Type.Path {
+          p_var = v;
+          p_lbls;
+        }
+    end
     ]
 )
 and typ_app = lazy (
@@ -214,16 +211,14 @@ and typ_app = lazy (
 )
 and typ_annotated = lazy (
   choice
-    [ with_loc
-        begin
-          let%bind anno_var = attempt (var << kwd ":") in
-          let%map anno_ty = lazy_p typ_app in
-          fun anno_loc -> Type.Annotated {
-              anno_var;
-              anno_ty;
-              anno_loc;
-            }
-        end
+    [ begin
+      let%bind anno_var = attempt (var << kwd ":") in
+      let%map anno_ty = lazy_p typ_app in
+      Type.Annotated {
+        anno_var;
+        anno_ty;
+      }
+    end
     ; lazy_p typ_app
     ]
 )
@@ -234,18 +229,17 @@ and recur_type = lazy (
   let%map ty = lazy_p typ in
   Type.Recur{ recur_var = v; recur_body = ty }
 )
-and quantified_type binder quantifier = lazy (with_loc (
-    kwd binder >>
-    let%bind vs = many1 var in
-    kwd "." >>
-    let%map ty = lazy_p typ in
-    fun q_loc -> Type.Quant {
-        q_quant = quantifier;
-        q_vars = vs;
-        q_body = ty;
-        q_loc;
-      }
-  ))
+and quantified_type binder quantifier = lazy (
+  kwd binder >>
+  let%bind vs = many1 var in
+  kwd "." >>
+  let%map ty = lazy_p typ in
+  Type.Quant {
+    q_quant = quantifier;
+    q_vars = vs;
+    q_body = ty;
+  }
+)
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
@@ -329,7 +323,7 @@ and ex2 = lazy (
 )
 and ex3 = lazy (
   choice
-    [ (import (fun i_loc i_path -> Expr.Import {i_loc; i_path}))
+    [ (import (fun i_path -> Expr.Import {i_path}))
     ; embed
     ; lazy_p lambda
     ; lazy_p match_expr

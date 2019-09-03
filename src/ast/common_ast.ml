@@ -78,4 +78,9 @@ module Loc = struct
     start = l.start;
     stop = r.stop;
   }
+
+  type 'a located = {
+    l_value : 'a;
+    l_loc : t;
+  }
 end

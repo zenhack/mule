@@ -25,7 +25,7 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
       new_
     else
       begin match ty with
-        | ST.Quant{q_quant = q; q_vars = vs; q_body; q_loc} ->
+        | ST.Quant{q_quant = q; q_vars = vs; q_body} ->
             let shadowed =
               List.fold
                 vs
@@ -39,7 +39,6 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
                 q_quant = q;
                 q_vars = vs;
                 q_body = go q_body;
-                q_loc;
               }
         | ST.Recur{recur_var = v; recur_body = body} ->
             if Set.mem vars v then
@@ -52,10 +51,9 @@ let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
           }
         | ST.App{app_fn = f; app_arg = x} -> ST.App{app_fn = go f; app_arg = go x}
         | ST.Union{u_l = l; u_r = r} -> ST.Union{u_l = go l; u_r = go r}
-        | ST.Annotated{anno_var; anno_ty; anno_loc} ->
+        | ST.Annotated{anno_var; anno_ty} ->
             ST.Annotated {
               anno_var;
-              anno_loc;
               anno_ty = go anno_ty;
             }
         | ST.Record {r_items = items} ->
@@ -165,7 +163,7 @@ let rec desugar_type' = function
         fn_param = desugar_type' param;
         fn_ret = desugar_type' ret;
       }
-  | ST.Quant{q_quant = q; q_vars = vs; q_body = body; q_loc = _} ->
+  | ST.Quant{q_quant = q; q_vars = vs; q_body = body} ->
       List.fold_right
         vs
         ~init:(desugar_type' body)
