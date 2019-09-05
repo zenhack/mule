@@ -1,0 +1,7 @@
+let
+  # These two types should be equivalent, and both assignable
+  # to the given expression:
+  , a : { y : int } -> { y : int } = fn x. x where { y = 2 }
+  , b : {         } -> { y : int } = fn x. x where { y = 2 }
+in
+{}
