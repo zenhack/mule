@@ -21,6 +21,28 @@ let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
   | `Quant(tv, arg) ->
       UnionFind.set (`Quant(tv, nf arg)) uvar;
       uvar
+  | `Const(tv, `Extend lbl, [h, hk; t, tk], k) ->
+      let t = nf_row (LabelSet.singleton lbl) t in
+      UnionFind.set
+        (`Const(tv, `Extend lbl, [nf h, hk; t, tk], k))
+        uvar;
+      uvar
+  | _ ->
+      uvar
+and nf_row: LabelSet.t -> u_type UnionFind.var -> u_type UnionFind.var =
+  fun lbls uvar ->
+  match UnionFind.get uvar with
+  | `Const(tv, `Extend lbl, [h, hk; t, tk], k) ->
+      if Set.mem lbls lbl then
+        nf_row lbls t
+      else
+        begin
+          let t' = nf_row (Set.add lbls lbl) t in
+          let ret = UnionFind.make (`Const(Gen_t.clone_ty_var tv, `Extend lbl, [nf h, hk; t', tk], k)) in
+          (if UnionFind.equal t t' then
+            UnionFind.merge (fun _ r -> r) uvar ret);
+          ret
+        end
   | _ ->
       uvar
 and apply appvar f x =

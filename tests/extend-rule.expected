@@ -1,0 +1,65 @@
+
+Desugared:
+
+	(let
+	 ($1
+	  (fix/record
+	   (fn $0
+	    (((.= a)
+	      (((.= b) {})
+	       ((:
+	         ((record (types ()) (values ())) ->
+	          (record (types ()) (values ((y int))))))
+	        (fn x (((.= y) x) (Integer 2))))))
+	     ((:
+	       ((record (types ()) (values ((y int)))) ->
+	        (record (types ()) (values ((y int))))))
+	      (fn x (((.= y) x) (Integer 2))))))))
+	 (let (b ((. b) $1)) (let (a ((. a) $1)) {})))
+
+inferred type:
+
+	(all a (record (types (...a)) (values ())))
+
+Runtime term:
+
+	(App
+	 ((Lam
+	   (1 ()
+	    (App
+	     ((Lam
+	       (1 ()
+	        (App
+	         ((Lam (0 () (Record ()))) (App ((GetField (Strict a)) (Var 1)))))))
+	      (App ((GetField (Strict b)) (Var 0)))))))
+	  (App
+	   ((Fix Record)
+	    (Lam
+	     (0 ()
+	      (Record
+	       ((a
+	         (Lam
+	          (0 ()
+	           (App
+	            ((App
+	              ((Lam
+	                (0 ()
+	                 (Lam
+	                  (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	               (Var 0)))
+	             (Const (Integer 2)))))))
+	        (b
+	         (Lam
+	          (0 ()
+	           (App
+	            ((App
+	              ((Lam
+	                (0 ()
+	                 (Lam
+	                  (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	               (Var 0)))
+	             (Const (Integer 2)))))))))))))))
+
+Evaluated:
+
+	(Record ())

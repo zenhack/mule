@@ -20,6 +20,12 @@ let gen_u: k_var -> bound_target -> u_type UnionFind.var =
          , kind
          ))
 
+let clone_ty_var: tyvar -> tyvar =
+  fun tv ->
+    { ty_id = gensym ()
+    ; ty_bound = ref (!(tv.ty_bound))
+    }
+
 let lambda: tyvar -> k_var -> k_var -> (bound_target -> u_var -> u_var) -> u_var =
   fun tv kparam kret f ->
   fst (
