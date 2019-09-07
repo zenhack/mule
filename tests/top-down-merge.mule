@@ -1,0 +1,5 @@
+# The type inference algorithm requires merging types in a "top down"
+# manner. If you do bottom up instead (which is eaiser), you get something
+# that is sound, but incomplete. This test checks that merges are being
+# done top-down, as required.
+{ type t a = {} } : exist b. { type t a = b }
