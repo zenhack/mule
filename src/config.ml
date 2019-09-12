@@ -7,3 +7,8 @@ let flag: string -> bool =
 let render_constraints = flag "RENDER_CONSTRAINTS"
 let print_eval_steps   = flag "PRINT_EVAL_STEPS"
 let always_print_stack_trace = flag "ALWAYS_PRINT_STACK_TRACE"
+
+let browser: string =
+  match Caml.Sys.getenv_opt "BROWSER" with
+  | Some b -> b
+  | None -> "firefox"
