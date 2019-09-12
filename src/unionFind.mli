@@ -31,6 +31,8 @@ val equal : 'a var -> 'a var -> bool
  * variable to merge that is in use by an existing call to merge (higher up
  * in the stack), but note that the final value will follow a "last update
  * wins" rule. It is *not* concurrency safe.
+ *
+ * If the merge function throws an exception, the variables are not unified.
 *)
 val merge
   : ('a -> 'a -> 'a)

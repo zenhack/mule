@@ -174,6 +174,58 @@ let graft: Types.reason -> u_type -> tyvar -> u_type = fun rsn t v ->
   ignore (unify_tyvar rsn (get_tyvar t) v);
   t
 
+let check_merge_graphs: u_type -> u_type -> unit =
+  fun l r ->
+    (* Two maps for keeping track of which nodes from the sub
+     * graphs correspond to one another: *)
+    let l2r = ref IntMap.empty in
+    let r2l = ref IntMap.empty in
+
+    let rec go l r =
+      let tvl = get_tyvar l in
+      let tvr = get_tyvar r in
+      let check_bounds () =
+        (* If these are empty it's because we're the root; nothing
+         * to do: *)
+        if not (Map.is_empty !l2r) then
+          begin
+            let get_tgt_id tv =
+              let {b_at; _} = !(tv.ty_bound) in
+              match b_at with
+              | `G _ -> failwith "Condition 4: bound on g-node"
+              | `Ty t -> (get_tyvar (UnionFind.get (Lazy.force t))).ty_id
+            in
+            (* make sure these are bound somewhere higher up in the tree. *)
+            let lparent = get_tgt_id tvl in
+            let rparent = get_tgt_id tvr in
+            if not (Map.mem !l2r lparent && Map.mem !r2l rparent) then
+              failwith "Condition 4 failed"
+          end
+      in
+      if tvl.ty_id = tvr.ty_id then
+        (* Same node, we're good. *)
+        ()
+      else
+        begin match l, r with
+        | `Const(_, cl, argsl, _), `Const(_, cr, argsr, _) ->
+            if not (typeconst_eq cl cr) then
+              failwith "not iso: mismatched ctors";
+            let arg_pairs = List.zip_exn argsl argsr in
+            List.iter arg_pairs
+              ~f:(fun ((l, _), (r, _)) ->
+                  go (UnionFind.get l) (UnionFind.get r)
+                )
+        | `Quant(_, argl), `Quant(_, argr) ->
+            check_bounds ();
+            go (UnionFind.get argl) (UnionFind.get argr)
+        | `Free _, `Free _ ->
+            check_bounds ()
+        | _ ->
+            failwith "not iso: mismatched tags"
+        end
+    in
+    go l r
+
 let rec unify already_merged rsn l r =
   !Debug.render_hook ();
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
@@ -195,17 +247,46 @@ let rec unify already_merged rsn l r =
      * could get spurrious permission errors. *)
     | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft rsn t v
     | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft rsn t v
+
+    (* Can't graft, but if they're both free we should see if we can do a
+     * merge: *)
+    | `Free (_, kl), `Free _ -> `Free (merge_tv (), kl)
+
     | (`Free _), _ | _, (`Free _) -> permErr rsn `Graft
 
     (* Neither side of these is a type variable, so we need to do a merge.
      * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
     | `Quant(_, argl), `Quant(_, argr) ->
-        normalize_unify
-          already_merged
-          (`Cascade(rsn, 1))
-          argl
-          argr;
-        `Quant(merge_tv (), argl)
+        begin
+          try
+            normalize_unify
+              already_merged
+              (`Cascade(rsn, 1))
+              argl
+              argr;
+            `Quant(merge_tv (), argl)
+          with MuleErr.MuleExn _ ->
+            begin
+              (* We couldn't do the merge in a bottom-up fashion, as described
+               * in the comments for the Const,Const case below. Instead, we
+               * check the remaining invariants and do the merge directly.
+               * In particular:
+               *
+               * - check_merge_graphs verfies 1 & 4.
+               * - 2 is satisified by definition.
+               * - 3 is checked by merge_tv, as in the bottom up case.
+               *
+               * It doesn't make sense to do this on `Const nodes; being
+               * inert means that any failure in the bottom up strategy
+               * would also affect the top-down strategy.
+               *
+               * On `Free nodes there is no subgraph to check; we handle
+               * the `Free, `Free case above.
+               *)
+              check_merge_graphs l r;
+              `Quant(merge_tv (), argl)
+            end
+        end
 
     | `Quant _, `Const _ | `Const _, `Quant _ ->
         MuleErr.bug "normalization left quant & const paired."
@@ -226,17 +307,35 @@ let rec unify already_merged rsn l r =
            * the merge of the roots not to have "started" until the subgraphs
            * are fully merged -- so we must be careful not to violate this
            * invariant.
+           *
+           * The above by itself is *sound*, but not *complete* -- there are
+           * cases that it will reject that should be accepted. Instead of
+           * just doing the above, if we hit an error in one branch we try
+           * to keep going in the others, and then re-raise the error at the
+           * end. Then, the Quant,Quant case handles the remaining cases.
           *)
           begin
             let args_i_l = List.mapi argsl ~f:(fun i v -> (i, v)) in
+            let subgraph_error = ref None in
             List.iter2_exn args_i_l argsr
               ~f:(fun (i, (l, _)) (r, _) ->
-                  normalize_unify
-                    already_merged
-                    (`Cascade(rsn, i+1))
-                    l
-                    r
+                  try
+                    normalize_unify
+                      already_merged
+                      (`Cascade(rsn, i+1))
+                      l
+                      r
+                  with MuleErr.MuleExn e ->
+                    (* Save the error and keep trying to unify the other branches. *)
+                    begin match !subgraph_error with
+                      | Some _ -> () (* don't overwrite the first error. *)
+                      | None -> subgraph_error := Some e
+                    end
                 );
+            begin match !subgraph_error with
+              | Some e -> raise (MuleErr.MuleExn e)
+              | None -> ()
+            end;
             `Const(merge_tv (), cl, argsl, k)
           end
         else
