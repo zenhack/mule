@@ -15,6 +15,7 @@ let rec is_bound_above {ty_bound; _} parent =
 (* Reduce the contents of the unification variable to normal form. *)
 let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
   fun uvar ->
+  !Debug.render_hook ();
   match UnionFind.get uvar with
   | `Const(_, `Named "<apply>", [f, _; x, _], _) ->
       apply uvar (nf f) (nf x)
@@ -125,6 +126,7 @@ and copy_subgraph appvar (tv, p, r) =
 
 let pair: u_var -> u_var -> (u_var * u_var) =
   let rec go l r =
+    !Debug.render_hook ();
     match UnionFind.get l, UnionFind.get r with
     | `Quant _, `Quant _ -> (l, r)
     | `Quant _, t ->
