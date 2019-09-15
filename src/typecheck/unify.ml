@@ -19,9 +19,7 @@ let get_permission: (unit, bound_ty) Sequence.Generator.t -> permission =
         begin match go bs with
           | F -> F
           | R | L -> L
-          | E -> MuleErr.bug
-                ("explicit nodes should never have other nodes bound " ^
-                 "on them.")
+          | E -> E
         end
   in go (Sequence.Generator.run p)
 
