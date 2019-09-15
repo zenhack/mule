@@ -1,0 +1,20 @@
+
+Desugared:
+
+	((: (exist b (record (types ((t (lam a (rec t b))))) (values ()))))
+	 (fix/record
+	  (fn $0
+	   (let-type ((t (lam a (rec t (record (types ()) (values ()))))))
+	    (((.type= t) {}) (type t))))))
+
+inferred type:
+
+	(exist a (record (types ((t (lam b a)))) (values ())))
+
+Runtime term:
+
+	(App ((Fix Record) (Lam (0 () (Record ())))))
+
+Evaluated:
+
+	(Record ())

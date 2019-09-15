@@ -174,8 +174,14 @@ let graft: Types.reason -> u_type -> tyvar -> u_type = fun rsn t v ->
   ignore (unify_tyvar rsn (get_tyvar t) v);
   t
 
-let check_merge_graphs: u_type -> u_type -> unit =
-  fun l r ->
+(* Check if two subgraphs are safe to merge. If not, raise the given error.
+ *
+ * TODO: it would be better to wrap the error in something that explained the
+ * problem. The error should explain why a bottom-up merge attempt didn't work,
+ * but we should add extra info for why top-down wasn't good enough either.
+ *)
+let check_merge_graphs: MuleErr.t -> u_type -> u_type -> unit =
+  fun e l r ->
     (* Two maps for keeping track of which nodes from the sub
      * graphs correspond to one another: *)
     let l2r = ref IntMap.empty in
@@ -192,14 +198,19 @@ let check_merge_graphs: u_type -> u_type -> unit =
             let get_tgt_id tv =
               let {b_at; _} = !(tv.ty_bound) in
               match b_at with
-              | `G _ -> failwith "Condition 4: bound on g-node"
+              | `G _ ->
+                  (* Condition 4: bound on g-node, which is therefore above
+                   * our root. *)
+                  raise (MuleErr.MuleExn e)
               | `Ty t -> (get_tyvar (UnionFind.get (Lazy.force t))).ty_id
             in
             (* make sure these are bound somewhere higher up in the tree. *)
             let lparent = get_tgt_id tvl in
             let rparent = get_tgt_id tvr in
             if not (Map.mem !l2r lparent && Map.mem !r2l rparent) then
-              failwith "Condition 4 failed"
+              (* Condition 4 failed; one of the nodes is bound above our
+               * root. *)
+              raise (MuleErr.MuleExn e)
           end
       in
       if tvl.ty_id = tvr.ty_id then
@@ -209,7 +220,9 @@ let check_merge_graphs: u_type -> u_type -> unit =
         begin match l, r with
         | `Const(_, cl, argsl, _), `Const(_, cr, argsr, _) ->
             if not (typeconst_eq cl cr) then
-              failwith "not iso: mismatched ctors";
+              (* The graphs are not isomorphic; if this didn't get fixed during
+               * the bottom up attempt then we're out of luck. *)
+              raise (MuleErr.MuleExn e);
             let arg_pairs = List.zip_exn argsl argsr in
             List.iter arg_pairs
               ~f:(fun ((l, _), (r, _)) ->
@@ -221,7 +234,8 @@ let check_merge_graphs: u_type -> u_type -> unit =
         | `Free _, `Free _ ->
             check_bounds ()
         | _ ->
-            failwith "not iso: mismatched tags"
+          (* Graphs are not isomorphic. *)
+          raise (MuleErr.MuleExn e)
         end
     in
     go l r
@@ -265,7 +279,7 @@ let rec unify already_merged rsn l r =
               argl
               argr;
             `Quant(merge_tv (), argl)
-          with MuleErr.MuleExn _ ->
+          with MuleErr.MuleExn e ->
             begin
               (* We couldn't do the merge in a bottom-up fashion, as described
                * in the comments for the Const,Const case below. Instead, we
@@ -283,7 +297,7 @@ let rec unify already_merged rsn l r =
                * On `Free nodes there is no subgraph to check; we handle
                * the `Free, `Free case above.
                *)
-              check_merge_graphs l r;
+              check_merge_graphs e l r;
               `Quant(merge_tv (), argl)
             end
         end
