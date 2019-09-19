@@ -4,6 +4,8 @@ open Gensym
 type unify_ctx = {
   c_already_merged: IntPairSet.t;
   c_rsn: Types.reason;
+  c_root_l: u_var;
+  c_root_r: u_var;
 }
 
 (* Helpers for signaling type errors *)
@@ -401,4 +403,11 @@ and normalize_unify ctx l r =
   let l, r = Normalize.pair l r in
   UnionFind.merge (unify ctx) l r
 
-let normalize_unify rsn = normalize_unify { c_already_merged = IntPairSet.empty; c_rsn = rsn }
+let normalize_unify rsn l r =
+  normalize_unify {
+    c_already_merged = IntPairSet.empty;
+    c_rsn = rsn;
+    c_root_l = l;
+    c_root_r = r;
+  }
+  l r
