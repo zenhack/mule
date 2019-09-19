@@ -401,5 +401,4 @@ and normalize_unify ctx l r =
   let l, r = Normalize.pair l r in
   UnionFind.merge (unify ctx) l r
 
-let unify rsn = unify { c_already_merged = IntPairSet.empty; c_rsn = rsn }
 let normalize_unify rsn = normalize_unify { c_already_merged = IntPairSet.empty; c_rsn = rsn }
