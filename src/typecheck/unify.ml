@@ -1,6 +1,11 @@
 open Typecheck_types
 open Gensym
 
+type unify_ctx = {
+  c_already_merged: IntPairSet.t;
+  c_rsn: Types.reason;
+}
+
 (* Helpers for signaling type errors *)
 let typeErr e = MuleErr.throw (`TypeError e)
 let permErr rsn op = typeErr (rsn, `PermissionErr op)
@@ -157,7 +162,7 @@ let rec raise_bounds: Types.reason -> bound_target bound -> IntSet.t -> IntSet.t
               raise_bounds rsn bound new_above visited (UnionFind.get ty))
   end
 
-let graft: Types.reason -> u_type -> tyvar -> u_type = fun rsn t v ->
+let graft: unify_ctx -> u_type -> tyvar -> u_type = fun {c_rsn; _} t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a
    * flexible bottom node with another type. However, we only call this
    * in places where we're actually looking to merge the two graphs, so
@@ -168,8 +173,8 @@ let graft: Types.reason -> u_type -> tyvar -> u_type = fun rsn t v ->
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
   *)
-  raise_bounds rsn !(v.ty_bound) IntSet.empty (ref IntSet.empty) t;
-  ignore (unify_tyvar rsn (get_tyvar t) v);
+  raise_bounds c_rsn !(v.ty_bound) IntSet.empty (ref IntSet.empty) t;
+  ignore (unify_tyvar c_rsn (get_tyvar t) v);
   t
 
 (* Check if two subgraphs are safe to merge. If not, raise the given error.
@@ -238,18 +243,19 @@ let check_merge_graphs: MuleErr.t -> u_type -> u_type -> unit =
     in
     go l r
 
-let rec unify already_merged rsn l r =
+let rec unify (ctx: unify_ctx) l r =
   !Debug.render_hook ();
   let lid, rid = (get_tyvar l).ty_id, (get_tyvar r).ty_id in
-  if lid = rid || Set.mem already_merged (lid, rid) then
+  if lid = rid || Set.mem ctx.c_already_merged (lid, rid) then
     l
   else begin
-    let already_merged = Set.add already_merged (lid, rid) in
-
+    let ctx =
+      { ctx with c_already_merged = Set.add ctx.c_already_merged (lid, rid) }
+    in
     let merge_tv () =
-      let tv = unify_tyvar rsn (get_tyvar l) (get_tyvar r) in
+      let tv = unify_tyvar ctx.c_rsn (get_tyvar l) (get_tyvar r) in
       if perm_eq (tyvar_permission tv) L then
-        permErr rsn `Merge
+        permErr ctx.c_rsn `Merge
       else
         tv
     in
@@ -257,14 +263,14 @@ let rec unify already_merged rsn l r =
     (* It is important that we do the graft permission checks *before*
      * any raisings/weakenings to get the bounds to match -- otherwise we
      * could get spurrious permission errors. *)
-    | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft rsn t v
-    | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft rsn t v
+    | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft ctx t v
+    | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft ctx t v
 
     (* Can't graft, but if they're both free we should see if we can do a
      * merge: *)
     | `Free (_, kl), `Free _ -> `Free (merge_tv (), kl)
 
-    | (`Free _), _ | _, (`Free _) -> permErr rsn `Graft
+    | (`Free _), _ | _, (`Free _) -> permErr ctx.c_rsn `Graft
 
     (* Neither side of these is a type variable, so we need to do a merge.
      * See the definition in section 3.2.2 of {MLF-Graph-Unify}. *)
@@ -272,8 +278,7 @@ let rec unify already_merged rsn l r =
         begin
           try
             normalize_unify
-              already_merged
-              (`Cascade(rsn, 1))
+              { ctx with c_rsn = `Cascade(ctx.c_rsn, 1) }
               argl
               argr;
             `Quant(merge_tv (), argl)
@@ -333,8 +338,7 @@ let rec unify already_merged rsn l r =
               ~f:(fun (i, (l, _)) (r, _) ->
                   try
                     normalize_unify
-                      already_merged
-                      (`Cascade(rsn, i+1))
+                      { ctx with c_rsn = `Cascade(ctx.c_rsn, i+1) }
                       l
                       r
                   with MuleErr.MuleExn e ->
@@ -376,12 +380,12 @@ let rec unify already_merged rsn l r =
                     ; ty_bound = (get_tyvar l).ty_bound
                     }
                   in
-                  normalize_unify already_merged
-                    (`ExtendTail (rsn, `L))
+                  normalize_unify
+                    { ctx with c_rsn = `ExtendTail (ctx.c_rsn, `L) }
                     r_rest
                     (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
-                  normalize_unify already_merged
-                    (`ExtendTail (rsn, `R))
+                  normalize_unify
+                    { ctx with c_rsn = `ExtendTail (ctx.c_rsn, `R) }
                     l_rest
                     (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
                 end;
@@ -389,13 +393,13 @@ let rec unify already_merged rsn l r =
             | _ ->
                 (* Top level type constructors that _do not_ match. In this case
                  * unfication fails. *)
-                ctorErr rsn cl cr
+                ctorErr ctx.c_rsn cl cr
           end
   end
 (* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
-and normalize_unify already_merged rsn l r =
+and normalize_unify ctx l r =
   let l, r = Normalize.pair l r in
-  UnionFind.merge (unify already_merged rsn) l r
+  UnionFind.merge (unify ctx) l r
 
-let unify = unify IntPairSet.empty
-let normalize_unify = normalize_unify IntPairSet.empty
+let unify rsn = unify { c_already_merged = IntPairSet.empty; c_rsn = rsn }
+let normalize_unify rsn = normalize_unify { c_already_merged = IntPairSet.empty; c_rsn = rsn }
