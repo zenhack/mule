@@ -164,9 +164,9 @@ let rec raise_bounds: Types.reason -> bound_target bound -> IntSet.t -> IntSet.t
               raise_bounds rsn bound new_above visited (UnionFind.get ty))
   end
 
-let graft: unify_ctx -> u_type -> tyvar -> u_type = fun {c_rsn; _} t v ->
+let graft_and_unify: unify_ctx -> u_type -> tyvar -> u_type = fun {c_rsn; _} t v ->
   (* {MLF-Graph} describes grafting as the process of replacing a
-   * flexible bottom node with another type. However, we only call this
+   * flexible bottom node with another type. However, we only graft
    * in places where we're actually looking to merge the two graphs, so
    * it seems wasteful to actually do a copy first, since we're just
    * going to end up unifying them. Instead, we raise the binding edges
@@ -265,8 +265,8 @@ let rec unify (ctx: unify_ctx) l r =
     (* It is important that we do the graft permission checks *before*
      * any raisings/weakenings to get the bounds to match -- otherwise we
      * could get spurrious permission errors. *)
-    | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft ctx t v
-    | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft ctx t v
+    | (`Free (v, _)), t when perm_eq (tyvar_permission v) F -> graft_and_unify ctx t v
+    | t, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft_and_unify ctx t v
 
     (* Can't graft, but if they're both free we should see if we can do a
      * merge: *)
