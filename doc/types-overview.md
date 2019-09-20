@@ -56,5 +56,22 @@ This has a couple nice benefits:
   guarantee that constructor nodes (functions, etc). Are always inert,
   which makes some things easier to reason about.
 
+## Recursive types
+
+Mule allows equi-recursive types. A recursive type is really just a
+cycle in the graph. Algorithmically, this basically amounts to:
+
+1. skipping the occurs check
+2. accounting for the possibility of cycles in other code manipulating
+   the graph.
+
+This may actually endanger principality, since the original argument as
+to why the graph based MLF presentation has principal types depends on
+the graphs being acyclic. It would be good to explore this and better
+understand the consequences.
+
+Note that we do not allow polymorphic recursion; recursive types are
+required to be of kind `type`.
+
 [1]: http://gallium.inria.fr/~remy/work/mlf/
 [2]: http://gallium.inria.fr/~remy/mlf/scherer@master2010:mlfomega.pdf
