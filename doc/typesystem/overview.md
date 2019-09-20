@@ -8,6 +8,10 @@ explain ideas drawn from elsewhere, and directly describes our own
 additions. It would be nice to have a condensed description of the type
 system, but this will have to do for the short term.
 
+The reader is assumed to have some basic understanding of type theory;
+if the topic is new to you we recommend [Types and Programming
+Languages][4] by Ben Pierce.
+
 # MLF
 
 The backbone of Mule's type system is [MLF][1], specifically the graph
@@ -73,6 +77,47 @@ understand the consequences.
 Note that we do not allow polymorphic recursion; recursive types are
 required to be of kind `type`.
 
+# Modules
+
+Mule has functionality equivalent to ML modules, but unifies the module
+system and the core language. Mule's type system is close to system
+F-omega in power, and the semantics of "modules" are inspired by the
+[F-ing modules][5] work in the literature, though they differ in detail.
+[later work][6] by the same authors discussed combining the module and
+core languages, but our approach to this is somewhat different.
+
+Very briefly:
+
+* Mule records are based on row polymorphism, discussed further in a
+  section below.
+* A module with an abstract type t, like:
+
+    {
+        , type t
+        , x : t
+        , f : t -> t
+    }
+
+  is equivalent to:
+
+    exist a. {
+        , type t = a
+        , x : a
+        , f : a -> a
+    }
+
+* Transparent types are essentially passing around "witness" values,
+  which act as a hint to the type checker but do not exist at run time.
+* "functors" are functions, universally quantified over the opaque types
+  in their arguments, and existentially quantified in the opaque types
+  of their results. so the type:
+
+    (m : { type t, x : t }) -> { type u, y : m.t }
+
+  is equivalent to:
+
+    all a. { type t = a, x : a } -> exist b. { type u = b, y : a }
+
 # Rows
 
 Mule has row-polymorphic records and sums. They are based on [this
@@ -87,8 +132,32 @@ The paper does not talk about row-polymorphic sums, but they are a
 fairly straightforward application of the same notion of rows.
 
 The way we do records is slightly different to account for associated
-types (TODO: discuss).
+types. Specifically, a record at the surface level can actually be seen
+as a *pair* of records, one with normal values and one consisting of
+type witnesses. So conceptually record has kind `row -> row -> type`,
+and a value like this:
+
+    {
+        , type t = int
+        , type u = text
+        , x = 4
+        , y = 'c'
+    }
+
+is conceptually a pair like:
+
+    ( { t = witness[int], u = witness[text] }
+    , { x = 4, y = 'c' }
+    )
+
+The row for type witnesses is universally quantified in the row's tail,
+so `{}` maybe be used where a value of type `{ type t = int }` is
+required, since `{}` conceptually has the type `(all r. {...r}, {})`.
+This allows associated types to be inferred in some cases.
 
 [1]: http://gallium.inria.fr/~remy/work/mlf/
 [2]: http://gallium.inria.fr/~remy/mlf/scherer@master2010:mlfomega.pdf
 [3]: https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
+[4]: https://www.cis.upenn.edu/~bcpierce/tapl/
+[5]: https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf
+[6]: https://people.mpi-sws.org/~rossberg/papers/Rossberg%20-%201ML%20--%20Core%20and%20modules%20united.pdf
