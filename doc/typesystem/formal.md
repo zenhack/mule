@@ -1,5 +1,5 @@
-This document is the beginning of an attempt to document & formalize
-mule's type system. It is very much a WIP.
+This document is the beginning of an attempt to centrally document &
+formalize mule's type system. It is very much a WIP.
 
 The notation is an adjustment of the usual notation used in the type
 theory literature, adapted to be reasonable to write in ascii.

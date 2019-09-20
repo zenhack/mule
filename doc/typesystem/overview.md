@@ -73,5 +73,22 @@ understand the consequences.
 Note that we do not allow polymorphic recursion; recursive types are
 required to be of kind `type`.
 
+# Rows
+
+Mule has row-polymorphic records and sums. They are based on [this
+paper][3]. The biggest deviations from the original are:
+
+1. We do not treat duplicate labels as significant. {l : a, l : b} is the
+   same type as {l : a}.
+2. We do not allow field deletion (which is obviously required for (1)
+   to be sound).
+
+The paper does not talk about row-polymorphic sums, but they are a
+fairly straightforward application of the same notion of rows.
+
+The way we do records is slightly different to account for associated
+types (TODO: discuss).
+
 [1]: http://gallium.inria.fr/~remy/work/mlf/
 [2]: http://gallium.inria.fr/~remy/mlf/scherer@master2010:mlfomega.pdf
+[3]: https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
