@@ -37,3 +37,10 @@ Please keep this list sorted alphabetically by the {citation} tag.
     Daan Leijen
     TFP '05
     https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
+
+{F-ing}
+
+    F-ing Modules
+    Andreas Rossberg, Claudio V. Russo, and Derek Dreyer
+    TLDI '10
+    https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf
