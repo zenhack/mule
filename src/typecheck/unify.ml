@@ -164,7 +164,14 @@ let rec raise_bounds: Types.reason -> bound_target bound -> IntSet.t -> IntSet.t
               raise_bounds rsn bound new_above visited (UnionFind.get ty))
   end
 
-let graft_and_unify: unify_ctx -> u_var -> u_var -> unit = fun {c_rsn; _} t uv ->
+
+type graft_args = {
+  ga_bottom_node: u_var;
+  ga_other_node: u_var;
+  ga_bottom_root: u_var;
+}
+
+let graft_and_unify: unify_ctx -> graft_args -> unit = fun {c_rsn; _} ga ->
   (* {MLF-Graph} describes grafting as the process of replacing a
    * flexible bottom node with another type. However, we only graft
    * in places where we're actually looking to merge the two graphs, so
@@ -175,10 +182,11 @@ let graft_and_unify: unify_ctx -> u_var -> u_var -> unit = fun {c_rsn; _} t uv -
    * mirror in the grafted tree. From here, the result of grafting and then
    * merging is the same as just unifying.
   *)
-  let v = get_tyvar (UnionFind.get uv) in
-  raise_bounds c_rsn !(v.ty_bound) IntSet.empty (ref IntSet.empty) (UnionFind.get t);
-  ignore (unify_tyvar c_rsn (get_tyvar (UnionFind.get t)) v);
-  UnionFind.merge (fun l _ -> l) t uv
+  let bot_tv = get_tyvar (UnionFind.get ga.ga_bottom_node) in
+  let other_uv = ga.ga_other_node in
+  raise_bounds c_rsn !(bot_tv.ty_bound) IntSet.empty (ref IntSet.empty) (UnionFind.get other_uv);
+  ignore (unify_tyvar c_rsn (get_tyvar (UnionFind.get other_uv)) bot_tv);
+  UnionFind.merge (fun _ r -> r) ga.ga_bottom_node ga.ga_other_node
 
 (* Check if two subgraphs are safe to merge. If not, raise the given error.
  *
@@ -268,9 +276,16 @@ let rec unify: unify_ctx -> u_var -> u_var -> unit = fun ctx l' r' ->
     (* It is important that we do the graft permission checks *before*
      * any raisings/weakenings to get the bounds to match -- otherwise we
      * could get spurrious permission errors. *)
-    | (`Free (v, _)), _ when perm_eq (tyvar_permission v) F -> graft_and_unify ctx r' l'
-    | _, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft_and_unify ctx l' r'
-
+    | (`Free (v, _)), _ when perm_eq (tyvar_permission v) F -> graft_and_unify ctx {
+        ga_bottom_node = l';
+        ga_bottom_root = ctx.c_root_l;
+        ga_other_node = r';
+      }
+    | _, (`Free (v, _)) when perm_eq (tyvar_permission v) F -> graft_and_unify ctx {
+        ga_bottom_node = r';
+        ga_bottom_root = ctx.c_root_r;
+        ga_other_node = l';
+      }
     (* Can't graft, but if they're both free we should see if we can do a
      * merge: *)
     | `Free (_, kl), `Free _ -> finish (`Free (merge_tv (), kl))
