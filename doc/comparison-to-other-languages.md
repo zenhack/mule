@@ -75,7 +75,7 @@ from some or all of them in that:
   overloading mechanism. We may add something later on, but type classes
   would not fit into the language (due to its structural nature). For
   now, the abstractions you might build with type classes in Haskell or
-  Purescript can be build by explicitly passing around records. I do not
+  Purescript can be built by explicitly passing around records. I do not
   believe this approach has been seriously tried in a language designed
   around it, so we should gain some experience before deciding that we
   need to add an additional mechanism to the language.
