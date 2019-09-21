@@ -23,7 +23,7 @@ Mule is designed for being able to run untrusted code. Accordingly:
 * Mule is referentially transparent (sometimes called "purely
   functional"). This means that most code can't do IO, or even behave
   non-deterministically. The latter provides a useful defense against
-  spectre-style vulnerabilities, as it means most code has no way
+  Spectre-style vulnerabilities, as it means most code has no way
   to actually observe timing effects.
 * (Planned) Mule's standard libraries are [ocap][ocap] friendly, so
   even when code needs to do some amount of IO to do its job, it is
@@ -34,9 +34,9 @@ Mule is designed for being able to run untrusted code. Accordingly:
 makes it great for writing applications that need "plugins", and for
 doing neat things like sending code to a network peer for them to run.
 
-Mule is very much a "one way to do it language;" we strive for
+Mule is very much a "one way to do it language"; we strive for
 features to be orthogonal, and therefore have only one product type
-(records) one kind of union/sum/variant, one type of function, one
+(records), one kind of union/sum/variant, one type of function, one
 way to derive boilerplate, to do syntactic abstraction, etc.
 
 # ML family
@@ -68,7 +68,7 @@ from some or all of them in that:
   to do things that in other MLs have dedicated syntactic sugar (like
   Haskell's do-notation), or require external preprocessors (like
   OCaml's PPX). This will be like Template Haskell in some ways, but
-  should be more ergonmic, and macros will not have the ability to do
+  should be more ergonomic, and macros will not have the ability to do
   arbitrary IO. They will be subject to the same safety constraints as
   the rest of the language.
 * Mule does not have type classes, or any other kind of implicit
