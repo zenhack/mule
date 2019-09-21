@@ -128,42 +128,6 @@ let unify_tyvar: Types.reason -> tyvar -> tyvar -> tyvar =
   r.ty_bound := new_bound;
   l
 
-let raise_tv: Types.reason -> bound_target bound -> tyvar -> unit = fun rsn b tv ->
-  let new_bound = unify_bound rsn !(tv.ty_bound) b in
-  tv.ty_bound := new_bound
-
-(* Raise the bounds for an entire subtree. *)
-let rec raise_bounds: Types.reason -> bound_target bound -> IntSet.t -> IntSet.t ref -> u_type -> unit =
-  fun rsn bound above visited t ->
-  let tv = get_tyvar t in
-  let bound_tgt_id =
-    match (!(tv.ty_bound)).b_at with
-    | `G {g_id; _} -> g_id
-    | `Ty at ->
-        let {ty_id; _} =
-          Lazy.force at
-          |> UnionFind.get
-          |> get_tyvar
-        in
-        ty_id
-  in
-  if not (Set.mem !visited tv.ty_id) then begin
-    visited := Set.add !visited tv.ty_id;
-    if not (Set.mem above bound_tgt_id) then begin
-      raise_tv rsn bound tv
-    end;
-    let new_above = Set.add above tv.ty_id in
-    match t with
-    | `Free _ -> ()
-    | `Quant(_, arg) ->
-        raise_bounds rsn bound new_above visited (UnionFind.get arg)
-    | `Const(_, _, args, _) ->
-        List.iter
-          args
-          ~f:(fun (ty, _) ->
-              raise_bounds rsn bound new_above visited (UnionFind.get ty))
-  end
-
 
 type graft_args = {
   ga_bottom_node: u_var;
@@ -171,22 +135,70 @@ type graft_args = {
   ga_bottom_root: u_var;
 }
 
-let graft_and_unify: unify_ctx -> graft_args -> unit = fun {c_rsn; _} ga ->
-  (* {MLF-Graph} describes grafting as the process of replacing a
-   * flexible bottom node with another type. However, we only graft
-   * in places where we're actually looking to merge the two graphs, so
-   * it seems wasteful to actually do a copy first, since we're just
-   * going to end up unifying them. Instead, we raise the binding edges
-   * as needed until they meet that of the bottom node; this brings them
-   * to the point where they would have to be to be merged with a hypothetical
-   * mirror in the grafted tree. From here, the result of grafting and then
-   * merging is the same as just unifying.
-  *)
-  let bot_tv = get_tyvar (UnionFind.get ga.ga_bottom_node) in
-  let other_uv = ga.ga_other_node in
-  raise_bounds c_rsn !(bot_tv.ty_bound) IntSet.empty (ref IntSet.empty) (UnionFind.get other_uv);
-  ignore (unify_tyvar c_rsn (get_tyvar (UnionFind.get other_uv)) bot_tv);
-  UnionFind.merge (fun _ r -> r) ga.ga_bottom_node ga.ga_other_node
+(* Make a copy of a sub graph, with all nodes bound somewhere under a given
+ * root. For nodes in the subgraph that point above it, the copies will point
+ * to the root directly.
+ *
+ * This is meant as a helper for grafting.
+ *)
+let copy_under: u_var -> u_type -> u_var = fun root ty ->
+  (* TODO: make sure the root stays inert if it's not a q node. *)
+  let seen = ref IntMap.empty in
+  let get_b_at tv =
+    match (!(tv.ty_bound)).b_at with
+    | `G _ -> `Ty (lazy root);
+    | `Ty luv ->
+        let bound_tv =
+          Lazy.force luv
+          |> UnionFind.get
+          |> get_tyvar
+        in
+        begin match Map.find !seen bound_tv.ty_id with
+          | Some _ -> `Ty luv
+          | None -> `Ty (lazy root)
+        end
+  in
+  let get_bound tv = {
+      b_at = get_b_at tv;
+      b_ty = (!(tv.ty_bound)).b_ty;
+    }
+  in
+  let copy_tv tv = {
+    ty_id = gensym ();
+    ty_bound = ref (get_bound tv);
+  }
+  in
+  let rec go ty =
+    let tv = get_tyvar ty in
+    begin match Map.find !seen tv.ty_id with
+      | Some uv -> uv
+      | None ->
+          let new_tv = copy_tv tv in
+
+          (* XXX: this is super gross; get_kind really should just take a
+           * u_type, but it takes a u_var so we wrap the type momentarily in order
+           * to use it. TODO: clean this up. *)
+          let k = get_kind (UnionFind.make ty) in
+
+          let ret = UnionFind.make (`Free (new_tv, k)) in
+          seen := Map.set ~key:tv.ty_id ~data:ret !seen;
+          begin match ty with
+          | `Free _ ->
+              (* Already done; the free node we just made is actually the same here. *)
+              ()
+          | `Quant(_, arg) ->
+              let new_arg = go (UnionFind.get arg) in
+              UnionFind.set (`Quant(new_tv, new_arg)) ret
+          | `Const(_, c, args, k) ->
+              let new_args =
+                List.map args ~f:(fun (t, k) -> (go (UnionFind.get t), k))
+              in
+              UnionFind.set (`Const(new_tv, c, new_args, k)) ret
+          end;
+          ret
+    end
+  in
+  go ty
 
 (* Check if two subgraphs are safe to merge. If not, raise the given error.
  *
@@ -273,9 +285,13 @@ let rec unify: unify_ctx -> u_var -> u_var -> unit = fun ctx l' r' ->
         tv
     in
     match l, r with
-    (* It is important that we do the graft permission checks *before*
-     * any raisings/weakenings to get the bounds to match -- otherwise we
-     * could get spurrious permission errors. *)
+    (* If they're both free we should see if we can do a
+     * merge: *)
+    | `Free (_, kl), `Free _ -> finish (`Free (merge_tv (), kl))
+
+    (* Otherwise, try grafting first. It is important that we do the graft
+     * permission checks *before* any raisings/weakenings to get the bounds to
+     * match -- otherwise we could get spurrious permission errors. *)
     | (`Free (v, _)), _ when perm_eq (tyvar_permission v) F -> graft_and_unify ctx {
         ga_bottom_node = l';
         ga_bottom_root = ctx.c_root_l;
@@ -286,9 +302,6 @@ let rec unify: unify_ctx -> u_var -> u_var -> unit = fun ctx l' r' ->
         ga_bottom_root = ctx.c_root_r;
         ga_other_node = l';
       }
-    (* Can't graft, but if they're both free we should see if we can do a
-     * merge: *)
-    | `Free (_, kl), `Free _ -> finish (`Free (merge_tv (), kl))
     | (`Free _), _ | _, (`Free _) -> permErr ctx.c_rsn `Graft
 
     (* Neither side of these is a type variable, so we need to do a merge.
@@ -419,6 +432,23 @@ let rec unify: unify_ctx -> u_var -> u_var -> unit = fun ctx l' r' ->
 and normalize_unify ctx l r =
   let l, r = Normalize.pair l r in
   unify ctx l r
+and graft_and_unify: unify_ctx -> graft_args -> unit = fun ctx ga ->
+  (* {MLF-Graph} describes grafting as the process of replacing a
+   * flexible bottom node with another type. However, we only graft
+   * in places where we're actually looking to merge the two graphs, so
+   * we combine the two into one function. First, we make a copy of the
+   * subgraph rooted at the non-bottom node. If the subgraph includes nodes
+   * bound above it, the copies are bound on the root of the merge on the
+   * bottom node's side (handled by copy_under)
+   *
+   * Then, after doing the graft, we try merging. If this fails then we'll
+   * end up raising an exception, and when a top-down merge is attempted,
+   * we'll have at least gotten the sub-graph into the shape it needs to be
+   * in.
+  *)
+  let copy = copy_under ga.ga_bottom_root (UnionFind.get ga.ga_other_node) in
+  UnionFind.merge (fun l _ -> l) copy ga.ga_bottom_node;
+  normalize_unify ctx copy ga.ga_other_node
 
 let normalize_unify rsn l r =
   normalize_unify {
