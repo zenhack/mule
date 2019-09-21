@@ -34,8 +34,8 @@ Mule is designed for being able to run untrusted code. Accordingly:
 makes it great for writing applications that need "plugins", and for
 doing neat things like sending code to a network peer for them to run.
 
-Mule is very much a "one way to do it language"; we strive for
-features to be orthogonal, and therefore have only one product type
+Mule is very much a "one way to do it" language. We strive for
+features to be orthogonal and therefore have only one product type
 (records), one kind of union/sum/variant, one type of function, one
 way to derive boilerplate, to do syntactic abstraction, etc.
 
