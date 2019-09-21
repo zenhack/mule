@@ -83,3 +83,5 @@ from some or all of them in that:
 ---
 
 TODO: other comparisons, probably start with lisp dialects...
+
+[ocap]: http://habitatchronicles.com/2017/05/what-are-capabilities/
