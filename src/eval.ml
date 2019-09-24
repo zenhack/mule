@@ -91,14 +91,14 @@ and apply stack f arg =
     | GetField (`Strict, label) ->
         begin match eval stack arg with
           | Record r ->
-              Map.find_exn r label
+              Util.find_exn r label
           | e ->
               bug "Tried to get field of non-record" e
         end
     | GetField (`Lazy, label) ->
         begin match whnf stack arg with
           | Record r ->
-              Map.find_exn r label
+              Util.find_exn r label
           | e ->
               bug "Tried to (lazily) get field of non-record" e
         end

@@ -85,7 +85,7 @@ and copy_subgraph appvar (tv, p, r) =
                 Lazy.force parent_u
                 |> UnionFind.get
                 |> get_tyvar
-                |> (fun {ty_id; _} -> Map.find_exn !copied ty_id)
+                |> (fun {ty_id; _} -> Util.find_exn !copied ty_id)
               in
               let new_tv =
                 { ty_id = Gensym.gensym ()

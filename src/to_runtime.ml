@@ -9,7 +9,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
     | D.Const {const_val = c} -> (0, R.Const c)
     | D.Var {v_var = v} ->
-        begin match Map.find_exn env v with
+        begin match Util.find_exn env v with
           | `Index m ->
               let n = depth - m in
               (n, R.Var n)

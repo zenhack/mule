@@ -134,7 +134,7 @@ let rec gen_type
       end
   | Type.Path{p_var = v; p_lbls = ls; _} ->
       begin match List.rev ls with
-        | [] -> Map.find_exn env_types v
+        | [] -> Util.find_exn env_types v
         | (l :: ls) ->
             let tv () = ty_var_at b_at in
             let ret = gen_u (gen_k ()) b_at in
@@ -152,7 +152,7 @@ let rec gen_type
                      (UnionFind.make (extend (tv ()) l acc (gen_u kvar_row b_at))))
               )
             in
-            begin match Lazy.force (Map.find_exn env_terms v) with
+            begin match Lazy.force (Util.find_exn env_terms v) with
               | `Ty ty ->
                   cops.constrain_unify
                     ( `TypePath
@@ -224,7 +224,7 @@ let rec gen_type
 and gen_row ({ctx = {cops; env_types; _}; b_at} as ctx) sign (_, fields, rest) =
   let rest' =
     match rest with
-    | Some v -> Map.find_exn env_types v
+    | Some v -> Util.find_exn env_types v
     | None -> UnionFind.make (empty (ty_var_at b_at))
   in
   cops.constrain_kind (`KnownKind `Row) (get_kind rest') kvar_row;

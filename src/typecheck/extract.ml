@@ -230,7 +230,7 @@ let rec fix_quantifiers: semi_t -> (semi_t * fix_q_ctx) = function
         | Some vars ->
             let vars = Set.to_list vars in
             ( List.fold vars ~init:arg' ~f:(fun arg v ->
-                  let {v_flag; _} = Map.find_exn arg_ctx.fq_vars_by_id v in
+                  let {v_flag; _} = Util.find_exn arg_ctx.fq_vars_by_id v in
                   `Quant
                     { q with
                       q_var = v
