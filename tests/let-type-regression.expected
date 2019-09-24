@@ -2,12 +2,12 @@
 Desugared:
 
 	(let
-	 ($1
+	 ($3
 	  (fix/record
 	   (fn $0
-	    (let-type ((a (rec a int)) (b (rec b a)))
+	    (let-type ((a ((lam $1 (rec a $1)) int)) (b ((lam $2 (rec b $2)) a)))
 	     (((.type= a) (((.type= b) {}) (type b))) (type a))))))
-	 (let-type ((b (. $1 b))) (let-type ((a (. $1 a))) (Integer 0))))
+	 (let-type ((b (. $3 b))) (let-type ((a (. $3 a))) (Integer 0))))
 
 inferred type:
 

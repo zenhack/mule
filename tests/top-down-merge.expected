@@ -1,7 +1,9 @@
 
 Desugared:
 
-	((: (exist b (record (types ((t (lam a (rec t b))))) (values ()))))
+	((:
+	  (exist b
+	   (record (types ((t ((lam $1 (lam a (rec t $1))) b)))) (values ()))))
 	 (fix/record
 	  (fn $0
 	   (let-type ((t (lam a (rec t (record (types ()) (values ()))))))
@@ -9,7 +11,7 @@ Desugared:
 
 inferred type:
 
-	(exist a (record (types ((t (lam b a)))) (values ())))
+	(exist a (all b (record (types ((t ((lam b (lam c b)) a)))) (values ()))))
 
 Runtime term:
 

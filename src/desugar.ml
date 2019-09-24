@@ -748,6 +748,171 @@ and desugar_type_binding (v, params, ty) =
           }
         )
   in
+  let merge_maps =
+    Map.merge_skewed ~combine:(fun ~key:_ _ v -> v)
+  in
+  let rec factor_out_free bound t =
+    match t with
+    (* The body of a lambda shouldn't directly contain any variables other than
+     * its parameters and its own (recursively bound) name, because otherwise
+     * we may expand types that have constraints on them (notably paths) underneath
+     * a lambda, which will fail during unification. Instead, we factor these out
+     * into extra parameters, and then apply the resulting lambda to the original
+     * types. This way, after beta reduction the types will be bound above the
+     * lambda, and unification can proceed.
+     *
+     * This function returns a pair, (new_type, env), where [new_type] is the
+     * original type with fresh variables standing in for the old free ones,
+     * and [env] is a map from new variable names to the old terms. Below, we
+     * use this information to construct the final type.
+     *)
+    | DT.Var {v_var; _} ->
+        if Set.mem bound v_var then
+          (t, VarMap.empty)
+        else
+          let new_var = Gensym.anon_var () in
+          ( DT.Var {
+              v_info = DT.get_info t;
+              v_var = new_var;
+            }
+          , VarMap.singleton new_var t
+          )
+    | DT.Path {p_info; p_var; p_lbls} ->
+        let new_var = Gensym.anon_var () in
+        ( DT.Path {p_info; p_lbls; p_var = new_var }
+        , VarMap.singleton new_var (DT.Var {
+              v_var = p_var;
+              v_info = `Type;
+            })
+        )
+    | DT.Opaque _ | DT.Named _  -> (t, VarMap.empty)
+    | DT.Fn{fn_info; fn_pvar; fn_param; fn_ret} ->
+        let (new_param, param_map) = factor_out_free bound fn_param in
+        let ret_bound =
+          match fn_pvar with
+          | None -> bound
+          | Some v -> Set.add bound v
+        in
+        let (new_ret, ret_map) = factor_out_free ret_bound fn_ret in
+        ( DT.Fn {
+              fn_info;
+              fn_pvar;
+              fn_param = new_param;
+              fn_ret = new_ret;
+            }
+        , merge_maps param_map ret_map
+        )
+    | DT.Recur {mu_info; mu_var; mu_body} ->
+      let (new_body, body_map) =
+        factor_out_free (Set.add bound mu_var) mu_body
+      in
+      ( DT.Recur {mu_info; mu_var; mu_body = new_body}
+      , body_map
+      )
+    | DT.Record{r_info; r_src; r_types; r_values} ->
+        let (_, type_lbls, _) = r_types in
+        let bound =
+          type_lbls
+          |> List.map ~f:(fun (l, _) -> Ast.var_of_label l)
+          |> List.fold ~init:bound ~f:Set.add
+        in
+        let (new_types, types_map) = factor_out_free_row bound r_types in
+        let (new_values, values_map) = factor_out_free_row bound r_values in
+        ( DT.Record {
+              r_info;
+              r_src;
+              r_types = new_types;
+              r_values = new_values;
+            }
+        , merge_maps types_map values_map
+        )
+    | DT.Union {u_row} ->
+        let (new_row, row_map) = factor_out_free_row bound u_row in
+        ( DT.Union{u_row = new_row}
+        , row_map
+        )
+    | DT.Quant{q_info; q_quant; q_var; q_body} ->
+        let (new_body, body_map) =
+          factor_out_free (Set.add bound q_var) q_body
+        in
+        ( DT.Quant{q_info; q_quant; q_var; q_body = new_body}
+        , body_map
+        )
+    | DT.TypeLam{tl_info; tl_param; tl_body} ->
+        let (new_body, body_map) =
+          factor_out_free (Set.add bound tl_param) tl_body
+        in
+        ( DT.TypeLam{tl_info; tl_param; tl_body = new_body}
+        , body_map
+        )
+    | DT.App{app_info; app_fn; app_arg} ->
+        let (new_fn, fn_map) = factor_out_free bound app_fn in
+        let (new_arg, arg_map) = factor_out_free bound app_arg in
+        ( DT.App{app_info; app_fn = new_fn; app_arg = new_arg}
+        , merge_maps fn_map arg_map
+        )
+  and factor_out_free_row bound (info, lbls, v) =
+    let (new_v, v_map) = match v with
+      | None -> (None, VarMap.empty)
+      | Some var ->
+          if Set.mem bound var then
+            (Some var, VarMap.empty)
+          else
+            let new_var = Gensym.anon_var () in
+            ( Some new_var
+            , VarMap.singleton
+                new_var
+                (DT.Var {
+                    v_var = var;
+                    v_info = `Row;
+                  }
+                )
+            )
+    in
+    let (fields, fields_map) =
+      List.map lbls ~f:(fun (l, t) -> (l, factor_out_free bound t))
+      |> List.fold_right
+        ~init:([], VarMap.empty)
+        ~f:(fun (l, (new_t, t_map)) (acc_list, acc_map) ->
+            ( (l, new_t) :: acc_list
+            , merge_maps t_map acc_map
+            )
+          )
+    in
+    ( (info, fields, new_v)
+    , merge_maps fields_map v_map
+    )
+  in
+  let (ty, map) =
+    factor_out_free
+      (Set.of_list (module Ast.Var) (v :: params))
+      ty
+  in
+  let extra_params =
+    Map.to_alist map
+  in
+  let ty =
+    List.fold_left
+      extra_params
+      ~init:ty
+      ~f:(fun ty (v, _) ->
+          DT.TypeLam {
+            tl_info = `Unknown;
+            tl_param = v;
+            tl_body = ty;
+          }
+        )
+  in
+  let ty =
+    List.fold_left
+      extra_params
+      ~init:ty
+      ~f:(fun ty (_, v) -> DT.App {
+          app_info = `Unknown;
+          app_fn = ty;
+          app_arg = v;
+        })
+  in
   (v, ty)
 and simplify_bindings = function
   (* Simplify a list of bindings, such that there are no "complex" patterns;

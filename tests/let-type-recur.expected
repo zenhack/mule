@@ -3,14 +3,16 @@ Desugared:
 
 	(let-type
 	 ((int-list
-	   (rec int-list
-	    (union
-	     ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
-	      (Nil (record (types ()) (values ()))))))))
+	   ((lam $0
+	     (rec int-list
+	      (union
+	       ((Cons (record (types ()) (values ((tl int-list) (hd $0)))))
+	        (Nil (record (types ()) (values ())))))))
+	    int)))
 	 ((: int-list)
 	  ((fn x (Cons x))
 	   (fix/record
-	    (fn $0 (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 4)))))))
+	    (fn $1 (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 4)))))))
 
 inferred type:
 
