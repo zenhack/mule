@@ -23,7 +23,7 @@ Mule is designed for being able to run untrusted code. Accordingly:
 * Mule is referentially transparent (sometimes called "purely
   functional"). This means that most code can't do IO, or even behave
   non-deterministically. The latter provides a useful defense against
-  [Spectre](https://en.wikipedia.org/wiki/Spectre_(security_vulnerability))-style vulnerabilities, as it means most code has no way
+  [Spectre][spectre]-style vulnerabilities, as it means most code has no way
   to actually observe timing effects.
 * (Planned) Mule's standard libraries are [ocap][ocap] friendly, so
   even when code needs to do some amount of IO to do its job, it is
@@ -85,3 +85,4 @@ from some or all of them in that:
 TODO: other comparisons, probably start with lisp dialects...
 
 [ocap]: http://habitatchronicles.com/2017/05/what-are-capabilities/
+[spectre]: https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)
