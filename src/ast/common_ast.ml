@@ -1,15 +1,12 @@
 module Name = struct
   module type S = sig
-    include Comparator.S
+    include Comparable.S
 
-    val compare : t -> t -> int
     val sexp_of_t : t -> Sexp.t
     val t_of_sexp : Sexp.t -> t
 
     val of_string : string -> t
     val to_string : t -> string
-
-    val equal : t -> t -> bool
   end
 
   module Impl : S = struct
@@ -21,7 +18,7 @@ module Name = struct
     end
 
     include T
-    include Comparator.Make(T)
+    include Comparable.Make(T)
 
     let of_string s = s
     let to_string s = s
