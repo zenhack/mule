@@ -1,0 +1,18 @@
+# This tests for a regression. The original bug was that the below would
+# erroneously fail to type check, because in the return value of
+# from-order, the constraint graph ends up with an equality constraint
+# on something bound inside the body of the type lambda, which fails
+# due to explicit binding permissions.
+#
+# We want references like ord.t inside the body of lambdas to be bound
+# outside of it.
+let
+  , type sig k = {
+      , type t v
+    }
+  , from-order : all a. { type t = a } -> sig a = fn ord.
+    {
+      , type t v = ord.t
+    }
+in
+0
