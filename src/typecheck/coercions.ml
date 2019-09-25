@@ -136,6 +136,18 @@ let rec gen_type
       begin match List.rev ls with
         | [] -> Util.find_exn env_types v
         | (l :: ls) ->
+            let term = Lazy.force (Util.find_exn env_terms v) in
+            let b_at =
+              match term with
+              | `Ty ty ->
+                  !((get_tyvar (UnionFind.get ty)).ty_bound).b_at
+              | `G {g_bound = Some bnd; _} ->
+                  `G bnd.b_at
+              | `G g ->
+                  (* I(isd) don't _think_ this should be possible, but in any case
+                   * if it is there's only one option: *)
+                  `G g
+            in
             let tv () = ty_var_at b_at in
             let ret = gen_u (gen_k ()) b_at in
             let init =
@@ -152,7 +164,7 @@ let rec gen_type
                      (UnionFind.make (extend (tv ()) l acc (gen_u kvar_row b_at))))
               )
             in
-            begin match Lazy.force (Util.find_exn env_terms v) with
+            begin match term with
               | `Ty ty ->
                   cops.constrain_unify
                     ( `TypePath
