@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(let-type ((t ((lam $0 (lam a (rec t $0))) int)))
+	(let-type ((t (lam a (rec t int))))
 	 ((: (t (record (types ()) (values ())))) (Integer 4)))
 
 inferred type:

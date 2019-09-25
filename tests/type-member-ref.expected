@@ -6,8 +6,7 @@ Desugared:
 	  (fix/let
 	   (fn x
 	    (fix/record
-	     (fn $0
-	      (let-type ((t ((lam $1 (rec t $1)) int))) (((.type= t) {}) (type t))))))))
+	     (fn $0 (let-type ((t (rec t int))) (((.type= t) {}) (type t))))))))
 	 ((: (. x t)) (Integer 4)))
 
 inferred type:

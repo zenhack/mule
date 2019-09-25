@@ -3,7 +3,7 @@ Desugared:
 
 	(fix/record
 	 (fn $0
-	  (let-type ((t ((lam $1 (rec t $1)) int)))
+	  (let-type ((t (rec t int)))
 	   (((.= x) (((.type= t) {}) (type t))) ((: t) (Integer 4))))))
 
 inferred type:
