@@ -3,7 +3,7 @@ open Typecheck_types
 let rec is_bound_above {ty_bound; _} parent =
   let {ty_id; _} = get_tyvar (UnionFind.get parent) in
   match (!ty_bound).b_at with
-  | `G _ -> false
+  | `G _ -> true
   | `Ty uv ->
       let uv = Lazy.force uv in
       let tv = get_tyvar (UnionFind.get uv) in
@@ -71,12 +71,13 @@ and apply appvar f x =
       appvar
 and copy_subgraph appvar (tv, p, r) =
   let copied: u_var Lazy.t IntMap.t ref = ref IntMap.empty in
+  let original_tv = tv in
   let rec go uv =
     let ty = UnionFind.get uv in
     let tv = get_tyvar ty in
     match Map.find !copied tv.ty_id with
     | Some n -> Lazy.force n
-    | None when is_bound_above tv appvar -> uv
+    | None when is_bound_above original_tv appvar -> uv
     | None ->
         begin match (!(tv.ty_bound)).b_at with
           | `G _ -> MuleErr.bug "impossible"
