@@ -9,8 +9,8 @@ module DK = Ast.Desugared.Kind
 let incomplete_pattern p =
   MuleErr.throw (`IncompletePattern p)
 
-let unreachable_case (_p:SP.t) =
-  MuleErr.throw `UnreachableCases
+let unreachable_cases cases =
+  MuleErr.throw (`UnreachableCases cases)
 
 let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
 
@@ -557,8 +557,8 @@ and desugar_match cases =
           { cases = LabelMap.empty
           ; default = None
           }
-    | ((SP.Wild, _) :: _) | ((SP.Var _, _) :: _) ->
-        unreachable_case SP.Wild
+    | ((SP.Wild, _) :: cs) | ((SP.Var _, _) :: cs) ->
+        unreachable_cases cs
   end
 and desugar_const_match dict = function
   | [(SP.Wild, body)] -> D.ConstMatch
@@ -568,18 +568,19 @@ and desugar_const_match dict = function
             }
         ; cm_cases = dict
         }
-  | ((SP.Wild, _) :: _) ->
-      unreachable_case SP.Wild
+  | ((SP.Wild, _) :: cs) ->
+      unreachable_cases cs
   | [(SP.Var _) as p, body] ->
       D.ConstMatch
         { cm_default = desugar_lambda [p] body
         ; cm_cases = dict
         }
-  | ((SP.Var _, _) :: _) ->
-      unreachable_case SP.Wild
-  | ((SP.Const {const_val = c}, body) :: rest) ->
+  | ((SP.Var _, _) :: cs) ->
+      unreachable_cases cs
+  | ((SP.Const {const_val = c}, body) as case :: rest) ->
       begin match Map.find dict c with
-        | Some _ -> unreachable_case (SP.Const {const_val = c})
+        | Some _ ->
+            unreachable_cases [case]
         | None ->
             desugar_const_match
               (Map.set dict ~key:c ~data:(desugar body))
@@ -627,8 +628,8 @@ and desugar_lbl_match dict = function
           )
       in
       desugar_lbl_match dict' cases
-  | (_ :: _) ->
-      MuleErr.throw `UnreachableCases
+  | (_ :: cs) ->
+      unreachable_cases cs
 and finalize_dict dict =
   Map.map dict
     ~f:( fun cases ->

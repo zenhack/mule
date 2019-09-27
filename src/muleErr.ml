@@ -39,7 +39,7 @@ type t =
 
   | `TypeError of (reason * type_error)
   | `DuplicateFields of (Label.t list)
-  | `UnreachableCases
+  | `UnreachableCases of (Surface_ast.Pattern.t * Surface_ast.Expr.t) list
   | `EmptyMatch
   | `MalformedType of string
   | `IncompletePattern of Surface_ast.Pattern.t
@@ -97,7 +97,7 @@ let show = function
       "Type error: constant and union patterns in the same match expression."
   | `TypeError e ->
       "Type error: " ^ show_type_error e
-  | `UnreachableCases ->
+  | `UnreachableCases _ ->
       "Unreachable cases in match"
   | `DuplicateFields fields ->
       "Duplicate fields:\n" ^
