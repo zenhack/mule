@@ -70,7 +70,7 @@ and apply appvar f x =
   | _ ->
       appvar
 and copy_subgraph appvar (tv, p, r) =
-  let copied: u_type UnionFind.var Lazy.t IntMap.t ref = ref IntMap.empty in
+  let copied: u_var Lazy.t IntMap.t ref = ref IntMap.empty in
   let rec go uv =
     let ty = UnionFind.get uv in
     let tv = get_tyvar ty in
