@@ -298,71 +298,7 @@ and desugar = function
       app_fn = desugar f;
       app_arg = desugar x;
     }
-  | S.Lam {
-      lam_params = SP.Var {v_var = v; v_type = None} :: pats;
-      lam_body = body;
-    } ->
-      D.Lam {l_param = v; l_body = desugar (S.Lam {
-          lam_params = pats;
-          lam_body = body;
-        })}
-  | S.Lam {
-      lam_params = SP.Wild :: pats;
-      lam_body =  body;
-    } ->
-      D.Lam {
-        l_param = Gensym.anon_var ();
-        l_body = desugar (S.Lam {
-            lam_params = pats;
-            lam_body = body;
-          });
-      }
-  | S.Lam {
-      lam_params = SP.Var {v_var = v; v_type = Some ty} :: pats;
-      lam_body = body;
-    } ->
-      let v' = Gensym.anon_var () in
-      D.Lam {
-        l_param = v';
-        l_body = D.Let {
-            let_v = v;
-            let_e = D.App {
-                app_fn = D.WithType {wt_type = desugar_type ty};
-                app_arg = D.Var { v_var = v'};
-              };
-            let_body = desugar (S.Lam {
-                lam_params = pats;
-                lam_body = body;
-              });
-          }
-      }
-  | S.Lam {lam_params = (SP.Const _) as p :: _; _} ->
-      incomplete_pattern p
-  | S.Lam {
-      lam_params = pat :: pats;
-      lam_body = body;
-    } ->
-      let var = Gensym.anon_var () in
-      D.Lam {
-        l_param = var;
-        l_body = desugar
-            (S.Match {
-                match_arg = S.Var {v_var = var};
-                match_cases =
-                  [ ( pat
-                    , S.Lam {
-                        lam_params = pats;
-                        lam_body = body;
-                      }
-                    )
-                  ]
-              }
-            );
-      }
-  | S.Lam {
-      lam_params = [];
-      lam_body = body;
-    } -> desugar body
+  | S.Lam{lam_params; lam_body} -> desugar_lambda lam_params lam_body
   | S.Record {r_fields = []} -> D.EmptyRecord
   | S.Record {r_fields = fields} -> desugar_record fields
   | S.Update{up_arg = e; up_fields = []} ->
@@ -433,6 +369,42 @@ and desugar = function
       let_body = body;
     } ->
       desugar_let bindings body
+and desugar_lambda ps body =
+  match ps with
+  | [] -> desugar body
+  | (SP.Var {v_var; v_type = None} :: pats) ->
+      D.Lam {l_param = v_var; l_body = desugar_lambda pats body}
+  | (SP.Wild :: pats) ->
+      D.Lam {
+        l_param = Gensym.anon_var ();
+        l_body = desugar_lambda pats body;
+      }
+  | (SP.Var {v_var; v_type = Some ty} :: pats) ->
+      D.Lam {
+        l_param = v_var;
+        l_body = D.Let {
+            let_v = v_var;
+            let_e = D.App {
+                app_fn = D.WithType {wt_type = desugar_type ty};
+                app_arg = D.Var {v_var};
+              };
+            let_body = desugar_lambda pats body;
+          }
+      }
+  | ((SP.Const _) as p :: _) -> incomplete_pattern p
+  | (SP.Ctor{c_lbl; c_arg} :: pats) ->
+      let v = Gensym.anon_var () in
+      D.Match {
+        default = None;
+        cases = LabelMap.singleton
+            c_lbl
+            ( v
+            , D.App {
+                app_fn = desugar_lambda (c_arg :: pats) body;
+                app_arg = D.Var {v_var = v}
+              }
+            )
+      }
 and desugar_record fields =
   let record_var = Gensym.anon_var () in
   let get_record_field lbl =

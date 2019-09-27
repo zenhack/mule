@@ -1,5 +1,5 @@
 
 Desugared:
 
-	(fn $0 (let (x ((: a) $0)) x))
+	(fn x (let (x ((: a) x)) x))
 unbound variable: a

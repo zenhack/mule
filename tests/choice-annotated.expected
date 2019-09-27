@@ -1,10 +1,10 @@
 
 Desugared:
 
-	(fn $0
-	 (let (choice ((: (all a (a -> (a -> a)))) $0))
+	(fn choice
+	 (let (choice ((: (all a (a -> (a -> a)))) choice))
 	  (fix/record
-	   (fn $1
+	   (fn $0
 	    (((.= x) (((.= y) {}) ((choice (fn x x)) (fn x x)))) ((choice {}) {}))))))
 
 inferred type:
