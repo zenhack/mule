@@ -301,47 +301,14 @@ and desugar = function
   | S.Lam{lam_params; lam_body} -> desugar_lambda lam_params lam_body
   | S.Record {r_fields = []} -> D.EmptyRecord
   | S.Record {r_fields = fields} -> desugar_record fields
-  | S.Update{up_arg = e; up_fields = []} ->
-      desugar e
-  | S.Update{up_arg = e; up_fields = `Value (l, _, v) :: fs} ->
-      D.App {
-        app_fn = D.App {
-            app_fn = D.Update {
-                up_level = `Value;
-                up_lbl = l;
-              };
-            app_arg = desugar (S.Update {
-                up_arg = e;
-                up_fields = fs;
-              });
-          };
-        app_arg = desugar v;
-      }
-  | S.Update {
-      up_arg = e;
-      up_fields = `Type (lbl, params, ty) :: fs;
-    } ->
-      let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
-      D.App {
-        app_fn = D.App {
-            app_fn = D.Update {
-                up_level = `Type;
-                up_lbl = lbl;
-              };
-            app_arg = desugar (S.Update {
-                up_arg = e;
-                up_fields = fs;
-              });
-          };
-        app_arg = D.Witness {wi_type = ty};
-      }
+  | S.Update{up_arg; up_fields} -> desugar_update up_arg up_fields
   | S.GetField {gf_arg = e; gf_lbl = l} ->
       D.App {
         app_fn = D.GetField {
             gf_strategy = `Strict;
             gf_lbl = l;
           };
-        app_arg =  desugar e;
+        app_arg = desugar e;
       }
   | S.Ctor {c_lbl = label} ->
       (* The choice of variable name here doesn't matter, since
@@ -369,6 +336,32 @@ and desugar = function
       let_body = body;
     } ->
       desugar_let bindings body
+and desugar_update e fields =
+  match fields with
+  | [] -> desugar e
+  | `Value (l, _, v) :: fs ->
+      D.App {
+        app_fn = D.App {
+            app_fn = D.Update {
+                up_level = `Value;
+                up_lbl = l;
+              };
+            app_arg = desugar_update e fs
+          };
+        app_arg = desugar v;
+      }
+  | `Type (lbl, params, ty) :: fs ->
+      let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
+      D.App {
+        app_fn = D.App {
+            app_fn = D.Update {
+                up_level = `Type;
+                up_lbl = lbl;
+              };
+            app_arg = desugar_update e fs
+          };
+        app_arg = D.Witness {wi_type = ty};
+      }
 and desugar_lambda ps body =
   match ps with
   | [] -> desugar body
