@@ -552,10 +552,7 @@ and desugar_match cases =
     | ((SP.Const _, _) :: _) ->
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
-        desugar (S.Lam {
-            lam_params = [pat];
-            lam_body =  body;
-          })
+        desugar_lambda [pat] body
     | [] -> D.Match
           { cases = LabelMap.empty
           ; default = None
@@ -575,10 +572,7 @@ and desugar_const_match dict = function
       unreachable_case SP.Wild
   | [(SP.Var _) as p, body] ->
       D.ConstMatch
-        { cm_default = desugar (S.Lam{
-              lam_params = [p];
-              lam_body =  body;
-            })
+        { cm_default = desugar_lambda [p] body
         ; cm_cases = dict
         }
   | ((SP.Var _, _) :: _) ->
