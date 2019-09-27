@@ -2,7 +2,7 @@ open Typecheck_types
 open Build_constraint
 
 (* TODO: why are we using a map to unit here, rather than a set? *)
-let rec emit_all_nodes_ty: u_type UnionFind.var -> unit IntMap.t ref -> unit =
+let rec emit_all_nodes_ty: u_var -> unit IntMap.t ref -> unit =
   fun v dict ->
   let t = UnionFind.get v in
   let {ty_id = n; ty_bound} = get_tyvar t in

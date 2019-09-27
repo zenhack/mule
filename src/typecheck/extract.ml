@@ -112,7 +112,7 @@ let add_rec_binders ty =
   snd (add_rec_binders ty)
 
 
-let rec semi_extract_t: IntSet.t -> u_type UnionFind.var -> semi_t =
+let rec semi_extract_t: IntSet.t -> u_var -> semi_t =
   fun visited uvar ->
   let t = UnionFind.get uvar in
   let {ty_id; _} = get_tyvar t in

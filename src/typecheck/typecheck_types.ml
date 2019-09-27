@@ -25,8 +25,8 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * k_var)
-  | `Quant of (tyvar * u_type UnionFind.var)
-  | `Const of (tyvar * u_typeconst * (u_type UnionFind.var * k_var) list * k_var)
+  | `Quant of (tyvar * u_var)
+  | `Const of (tyvar * u_typeconst * (u_var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex | `Explicit ]
 and 'a bound =
@@ -40,14 +40,13 @@ and tyvar =
 and g_node =
   { g_id: int
   ; g_bound: (g_node bound) option
-  ; g_child: u_type UnionFind.var Lazy.t
+  ; g_child: u_var Lazy.t
   }
 and bound_target =
-  [ `Ty of u_type UnionFind.var Lazy.t
+  [ `Ty of u_var Lazy.t
   | `G of g_node
   ]
-
-type u_var = u_type UnionFind.var
+and u_var = u_type UnionFind.var
 
 type sign = [ `Pos | `Neg ]
 
@@ -130,11 +129,11 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
 type permission = F | R | L | E
 
 type unify_edge =
-  | Unify of (reason * u_type UnionFind.var * u_type UnionFind.var)
+  | Unify of (reason * u_var * u_var)
 
 type inst_edge =
   { ie_g_node: g_node
-  ; ie_ty_node: u_type UnionFind.var
+  ; ie_ty_node: u_var
   }
 
 let typeconst_eq: u_typeconst -> u_typeconst -> bool = Poly.equal

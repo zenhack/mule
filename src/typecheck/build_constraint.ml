@@ -12,7 +12,7 @@ let child_g parent child =
   ; g_child = child
   }
 
-let with_g: g_node -> (g_node Lazy.t -> u_type UnionFind.var) -> g_node =
+let with_g: g_node -> (g_node Lazy.t -> u_var) -> g_node =
   fun parent f -> fst
       ( Util.fix
           (child_g (Some{b_ty = `Flex; b_at = parent}))
@@ -312,7 +312,7 @@ and walk_match ({cops; env_types = _; env_terms; g} as ctx) final =
 let make_cops: unit ->
   ( constraint_ops
     * (unify_edge list) ref
-    * ((g_node * (u_type UnionFind.var) list) IntMap.t) ref
+    * ((g_node * u_var list) IntMap.t) ref
     * (Types.reason * k_var * k_var) list ref
   ) = fun () ->
   let ucs = ref [] in (* unification constraints *)

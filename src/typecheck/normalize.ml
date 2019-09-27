@@ -13,7 +13,7 @@ let rec is_bound_above {ty_bound; _} parent =
         is_bound_above tv parent
 
 (* Reduce the contents of the unification variable to normal form. *)
-let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
+let rec nf: u_var -> u_var =
   fun uvar ->
   !Debug.render_hook ();
   match UnionFind.get uvar with
@@ -30,7 +30,7 @@ let rec nf: u_type UnionFind.var -> u_type UnionFind.var =
       uvar
   | _ ->
       uvar
-and nf_row: LabelSet.t -> u_type UnionFind.var -> u_type UnionFind.var =
+and nf_row: LabelSet.t -> u_var -> u_var =
   fun lbls uvar ->
   match UnionFind.get uvar with
   | `Const(tv, `Extend lbl, [h, hk; t, tk], k) ->

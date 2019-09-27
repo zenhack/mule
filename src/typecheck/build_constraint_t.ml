@@ -3,14 +3,14 @@ open Typecheck_types
 
 type built_constraints =
   { unification: unify_edge list
-  ; instantiation: (g_node * (u_type UnionFind.var) list) IntMap.t
+  ; instantiation: (g_node * u_var list) IntMap.t
   ; kind: (reason * k_var * k_var) list
-  ; ty: u_type UnionFind.var
+  ; ty: u_var
   }
 
 type constraint_ops =
-  { constrain_unify : reason -> u_type UnionFind.var -> u_type UnionFind.var -> unit
-  ; constrain_inst  : g_node -> u_type UnionFind.var -> unit
+  { constrain_unify : reason -> u_var -> u_var -> unit
+  ; constrain_inst  : g_node -> u_var -> unit
   ; constrain_kind  : reason -> k_var -> k_var -> unit
   }
 

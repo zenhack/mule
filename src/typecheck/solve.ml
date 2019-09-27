@@ -30,8 +30,8 @@ let inst_bound: inst_edge -> g_node =
   go ie_ty_node
 
 let top_sort_inst
-  : (g_node * (u_type UnionFind.var list)) IntMap.t
-    -> (g_node * u_type UnionFind.var list) list
+  : (g_node * (u_var list)) IntMap.t
+    -> (g_node * u_var list) list
   = fun d ->
     let nodes = Map.keys d in
 
@@ -68,7 +68,7 @@ let top_sort_inst
  * type members, which will sometimes be bound on a q-node instead
  * of a g-node.
 *)
-let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
+let expand: constraint_ops -> g_node -> bound_target -> u_var =
   fun cops old_g new_bound ->
   let old_root = Lazy.force old_g.g_child in
 
@@ -163,7 +163,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_type UnionFind.var =
   let rec new_root = lazy (go kvar_type old_root new_root) in
   Lazy.force new_root
 
-let propagate: constraint_ops -> g_node -> u_type UnionFind.var -> unit =
+let propagate: constraint_ops -> g_node -> u_var -> unit =
   fun cops g var ->
   let bound = (get_u_bound (UnionFind.get var)).b_at in
   let instance = expand cops g bound in
