@@ -60,8 +60,6 @@ and apply appvar f x =
       in
       let new_bound = !((get_tyvar (UnionFind.get appvar)).ty_bound) in
       tv.ty_bound := new_bound;
-      let x_tv = get_tyvar (UnionFind.get x) in
-      x_tv.ty_bound := new_bound;
       let r_tv = get_tyvar (UnionFind.get r) in
       r_tv.ty_bound := new_bound;
       UnionFind.merge (fun _ r -> r) p x;
