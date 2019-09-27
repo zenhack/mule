@@ -1,0 +1,19 @@
+
+Desugared:
+
+	(fix/record
+	 (fn $0
+	  (let-type ((t (lam a (rec t ((t : t) -> int)))))
+	   (((.type= t) {}) (type t)))))
+
+inferred type:
+
+	(all a (record (types ((t (lam b (rec c (c -> int)))) ...a)) (values ())))
+
+Runtime term:
+
+	(App ((Fix Record) (Lam (0 () (Record ())))))
+
+Evaluated:
+
+	(Record ())

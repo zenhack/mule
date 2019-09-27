@@ -18,65 +18,99 @@ let rec prune e = match e with
   | D.LetType{letty_binds = []; letty_body} -> prune letty_body
   | _ -> D.apply_to_kids e ~f:prune
 
-let substitue_type_apps: ST.t -> ST.t -> VarSet.t -> ST.t -> ST.t =
-  fun old new_ vars ->
-  let rec go ty =
-    if Poly.equal ty old then
-      new_
+let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK.maybe_kind DT.t =
+  fun fvar params ->
+  let vars = Set.of_list (module Ast.Var) (fvar :: params) in
+  let rec make_var_list acc = function
+    | DT.App {
+        app_fn;
+        app_arg = DT.Var {v_var; _};
+        _;
+      } -> make_var_list (v_var :: acc) app_fn
+    | DT.Var{v_var; _} -> Some (v_var :: acc)
+    | _ -> None
+  in
+  let make_var_list = make_var_list [] in
+  let bound_var = function
+    (* If the argument would bound a variable inside it, return [Some var], otherwise [None]. *)
+    | DT.Quant{q_var; _} -> Some q_var
+    | DT.Recur{mu_var; _} -> Some mu_var
+    | DT.Fn{fn_pvar = Some v; _} -> Some v
+    | DT.TypeLam {tl_param; _} -> Some tl_param
+    | DT.Fn _
+    | DT.App _
+    | DT.Opaque _
+    | DT.Var _
+    | DT.Record _
+    | DT.Union _
+    | DT.Path _
+    | DT.Named _
+        -> None
+  in
+  (* Return whether one of the variables in [vars] would be shadowed in part of [ty]. *)
+  let shadows_var ty =
+    match bound_var ty with
+    | None -> false
+    | Some v -> Set.mem vars v
+  in
+  let rec go: DK.maybe_kind DT.t -> DK.maybe_kind DT.t = fun ty ->
+    if Poly.equal (Some (fvar::params)) (make_var_list ty) then
+      DT.Var {v_var = fvar; v_info = `Unknown}
+    else if shadows_var ty then
+      begin match ty with
+        (* If any of the variables are shadowed, we can return immediately.
+         *
+         * _HOWEVER_, we need to treat functions specially, since they if they
+         * shadow a variable they *only* shadow it in the return value; we still
+         * need to recurse on the parameter. This is a little gross.
+         *)
+        | DT.Fn{fn_info; fn_pvar; fn_param; fn_ret} ->
+            DT.Fn {fn_info; fn_pvar; fn_param = go fn_param; fn_ret}
+        | _ ->
+            ty
+      end
     else
       begin match ty with
-        | ST.Quant{q_quant = q; q_vars = vs; q_body} ->
-            let shadowed =
-              List.fold
-                vs
-                ~init:false
-                ~f:(fun ret var -> ret || Set.mem vars var)
-            in
-            if shadowed then
-              ty
-            else
-              ST.Quant{
-                q_quant = q;
-                q_vars = vs;
-                q_body = go q_body;
-              }
-        | ST.Recur{recur_var = v; recur_body = body} ->
-            if Set.mem vars v then
-              ty
-            else
-              ST.Recur{recur_var = v; recur_body = go body}
-        | ST.Fn{fn_param = p; fn_ret = r} -> ST.Fn{
-            fn_param = go p;
-            fn_ret = go r;
-          }
-        | ST.App{app_fn = f; app_arg = x} -> ST.App{app_fn = go f; app_arg = go x}
-        | ST.Union{u_l = l; u_r = r} -> ST.Union{u_l = go l; u_r = go r}
-        | ST.Annotated{anno_var; anno_ty} ->
-            ST.Annotated {
-              anno_var;
-              anno_ty = go anno_ty;
+        | DT.Quant{q_info; q_quant; q_var; q_body} ->
+            DT.Quant{
+              q_info;
+              q_quant;
+              q_var;
+              q_body = go q_body;
             }
-        | ST.Record {r_items = items} ->
-            ST.Record {
-              r_items = List.map items ~f:go_record_item;
+        | DT.Recur{mu_info; mu_var = v; mu_body = body} ->
+            DT.Recur{mu_info; mu_var = v; mu_body = go body}
+        | DT.Fn{fn_info; fn_pvar; fn_param = p; fn_ret = r} ->
+            DT.Fn {
+              fn_info;
+              fn_pvar;
+              fn_param = go p;
+              fn_ret = go r;
             }
-        | ST.RowRest _ | ST.Var _ | ST.Ctor _ | ST.Path _ | ST.Import _ -> ty
+        | DT.App{app_info; app_fn = f; app_arg = x} ->
+            DT.App{app_info; app_fn = go f; app_arg = go x}
+        | DT.Union{u_row} ->
+            DT.Union{u_row = go_row u_row}
+        | DT.Record{r_info; r_types; r_values; r_src} ->
+            DT.Record {
+              r_info;
+              r_types = go_row r_types;
+              r_values = go_row r_values;
+              r_src;
+            }
+        | DT.Opaque _ | DT.Named _ | DT.Var _ | DT.Path _ -> ty
+        | DT.TypeLam{tl_info; tl_param; tl_body} ->
+            DT.TypeLam {
+              tl_info;
+              tl_param;
+              tl_body = go tl_body;
+            }
       end
-  and go_record_item = function
-    | ST.Field(l, t) -> ST.Field(l, go t)
-    | ST.Type(_, _, None) as ty -> ty
-    | ST.Type(lbl, vs, Some ty) ->
-        let shadowed =
-          List.fold
-            (Ast.var_of_label lbl :: vs)
-            ~init:false
-            ~f:(fun ret var -> ret || Set.mem vars var)
-        in
-        if shadowed then
-          ST.Type(lbl, vs, Some ty)
-        else
-          ST.Type(lbl, vs, Some (go ty))
-    | ST.Rest v -> ST.Rest v
+  and go_row (info, fields, var) =
+    ( info
+    , List.map fields ~f:(fun (lbl, t) -> (lbl, go t))
+    , var
+    )
   in
   go
 
@@ -717,29 +751,19 @@ and desugar_type_binding (v, params, ty) =
   (* Here, we convert things like `type t a b = ... (t a b) ...` to
    * `lam a b. rec t. ... t ...`.
   *)
-  let target =
-    List.fold_left
-      params
-      ~init:(ST.Var {v_var = v})
-      ~f:(fun f x -> ST.App {
-          app_fn = f;
-          app_arg = ST.Var {v_var = x};
-        })
-  in
-  let ty =
-    ST.Recur
-      { recur_var = v
-      ; recur_body = substitue_type_apps
-            target
-            (ST.Var {v_var = v})
-            (Set.of_list (module Ast.Var) params)
-            ty
-      }
+  let ty = DT.Recur {
+      mu_info = `Unknown;
+      mu_var = v;
+      mu_body = substitue_type_apps
+          v
+          params
+          (desugar_type ty);
+    }
   in
   let ty =
     List.fold_right
       params
-      ~init:(desugar_type ty)
+      ~init:ty
       ~f:(fun param tybody ->
           DT.TypeLam {
             tl_info = `Arrow(`Unknown, `Unknown);
