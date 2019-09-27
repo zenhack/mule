@@ -79,7 +79,7 @@ and copy_subgraph appvar (tv, p, r) =
     | None when is_bound_above tv appvar -> uv
     | None ->
         begin match (!(tv.ty_bound)).b_at with
-          | `G _ -> failwith "impossible"
+          | `G _ -> MuleErr.bug "impossible"
           | `Ty parent_u ->
               let new_parent =
                 Lazy.force parent_u
