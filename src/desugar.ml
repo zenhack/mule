@@ -12,8 +12,6 @@ let incomplete_pattern p =
 let unreachable_cases cases =
   MuleErr.throw (`UnreachableCases cases)
 
-let var_to_lbl v = Ast.Var.to_string v |> Ast.Label.of_string
-
 let rec prune e = match e with
   | D.LetType{letty_binds = []; letty_body} -> prune letty_body
   | _ -> D.apply_to_kids e ~f:prune
@@ -411,74 +409,17 @@ and desugar_record fields =
       app_arg = D.Var {v_var = record_var};
     }
   in
-  let label_map =
+  let var_map =
     List.filter_map fields ~f:(function
-        | `Value (l, ty, _) ->
-            Some (l, ty)
+        | `Value (l, None, _) ->
+            Some (Ast.var_of_label l, get_record_field l)
+        | `Value (l, Some ty, _) ->
+            Some (Ast.var_of_label l, D.App {
+              app_fn = D.WithType {wt_type = desugar_type ty};
+              app_arg = get_record_field l;
+            })
         | `Type _ -> None)
-    |> Map.of_alist_exn (module Ast.Label)
-  in
-  let rec subst env expr = match expr with
-    (* TODO: do stuff with type variables *)
-    | D.Const c -> D.Const c
-    | D.Var {v_var = v} ->
-        let lbl = var_to_lbl v in
-        begin match Map.find env lbl with
-          | None -> D.Var {v_var = v}
-          | Some None -> get_record_field lbl
-          | Some (Some ty) ->
-              D.App {
-                app_fn = D.WithType {wt_type = desugar_type ty};
-                app_arg = get_record_field lbl;
-              }
-        end
-    | D.Ctor{ c_lbl; c_arg } ->
-        D.Ctor{ c_lbl; c_arg = subst env c_arg }
-    | D.Lam {l_param; l_body} ->
-        D.Lam {
-          l_param;
-          l_body = subst
-              (Map.remove env (var_to_lbl l_param))
-              l_body;
-        }
-    | D.App{ app_fn = f; app_arg = x } ->
-        D.App {
-          app_fn = subst env f;
-          app_arg = subst env x;
-        }
-    | D.Match {cases; default} ->
-        D.Match
-          { cases =
-              Map.map cases ~f:(fun (var, body) ->
-                  let env' = Map.remove env (var_to_lbl var) in
-                  ( var
-                  , subst env' body
-                  )
-                )
-          ; default = Option.map default ~f:(function
-                | (None, body) -> (None, subst env body)
-                | (Some var, body) ->
-                    ( Some var
-                    , let env' = Map.remove env (var_to_lbl var) in
-                      subst env' body
-                    )
-              )
-          }
-    | D.ConstMatch {cm_cases; cm_default} ->
-        D.ConstMatch
-          { cm_cases = Map.map cm_cases ~f:(subst env)
-          ; cm_default = subst env cm_default
-          }
-    | D.Let{let_v; let_e; let_body} ->
-        D.Let
-          { let_v
-          ; let_e = subst env let_e
-          ; let_body = subst (Map.remove env (var_to_lbl let_v)) let_body
-          }
-    | D.LetType{letty_binds; letty_body} ->
-        D.LetType{letty_binds; letty_body = subst env letty_body}
-    | D.Fix _ | D.EmptyRecord | D.GetField _ | D.Update _ | D.WithType _ | D.Witness _ ->
-        expr
+    |> Map.of_alist_exn (module Ast.Var)
   in
   let build_record fields =
     let types = List.filter_map fields ~f:(function
@@ -535,7 +476,7 @@ and desugar_record fields =
                             };
                           app_arg = old;
                         };
-                      app_arg = subst label_map (desugar v');
+                      app_arg = D.subst var_map (desugar v');
                     }
               )
       }
@@ -701,7 +642,7 @@ and desugar_let bs body = match simplify_bindings bs with
                       , DT.Path {
                           p_info = DT.get_info ty;
                           p_var = record_name;
-                          p_lbls = [var_to_lbl v];
+                          p_lbls = [Ast.var_to_label v];
                         }
                       ]
                   ; letty_body = accum

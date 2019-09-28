@@ -469,4 +469,60 @@ module Expr = struct
     | GetField x -> GetField x
     | Update x -> Update x
     | Const x -> Const x
+
+  let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
+    match expr with
+    (* TODO: do stuff with type variables *)
+    | Var {v_var = v} ->
+        begin match Map.find env v with
+          | None -> expr
+          | Some e -> e
+        end
+    | Ctor{ c_lbl; c_arg } ->
+        Ctor{ c_lbl; c_arg = subst env c_arg }
+    | Lam {l_param; l_body} ->
+        Lam {
+          l_param;
+          l_body = subst
+              (Map.remove env l_param)
+              l_body;
+        }
+    | App{ app_fn = f; app_arg = x } ->
+        App {
+          app_fn = subst env f;
+          app_arg = subst env x;
+        }
+    | Match {cases; default} ->
+        Match
+          { cases =
+              Map.map cases ~f:(fun (var, body) ->
+                  let env' = Map.remove env var in
+                  ( var
+                  , subst env' body
+                  )
+                )
+          ; default = Option.map default ~f:(function
+                | (None, body) -> (None, subst env body)
+                | (Some var, body) ->
+                    ( Some var
+                    , let env' = Map.remove env var in
+                      subst env' body
+                    )
+              )
+          }
+    | ConstMatch {cm_cases; cm_default} ->
+        ConstMatch
+          { cm_cases = Map.map cm_cases ~f:(subst env)
+          ; cm_default = subst env cm_default
+          }
+    | Let{let_v; let_e; let_body} ->
+        Let
+          { let_v
+          ; let_e = subst env let_e
+          ; let_body = subst (Map.remove env let_v) let_body
+          }
+    | LetType{letty_binds; letty_body} ->
+        LetType{letty_binds; letty_body = subst env letty_body}
+    | Const _ | Fix _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->
+        expr
 end
