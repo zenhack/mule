@@ -270,7 +270,7 @@ let gen_types
       | `Both(tmp, final) ->
           UnionFind.merge (fun _ v -> v) tmp final
       | `Left _ | `Right _ ->
-          failwith "impossible"
+          MuleErr.bug "impossible"
     );
   tys
 

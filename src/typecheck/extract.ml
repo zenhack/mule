@@ -162,7 +162,7 @@ and semi_extract_row visited uvar = match UnionFind.get uvar with
   | `Const(_, `Named "<empty>", [], _) ->
       `Empty
   | `Const _ ->
-      failwith "BUG: illegal const"
+      MuleErr.bug "illegal const"
 and semi_extract_tyvar: tyvar -> semi_var = fun {ty_id; ty_bound} ->
   let {b_at; b_ty} = !ty_bound in
   { v_flag = b_ty
@@ -345,7 +345,7 @@ let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
         app_arg = finish_extract_t sign x;
       }
   | `Named (_i, _name, _params) ->
-      failwith "BUG: can't use Named with arguments in desugared ast."
+      MuleErr.bug "can't use Named with arguments in desugared ast."
   | `Union(_, row) ->
       Type.Union {u_row = finish_extract_row sign row}
   | `Record(i, rowl, rowr) ->
