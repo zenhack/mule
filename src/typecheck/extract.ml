@@ -303,10 +303,6 @@ let sign_flag_to_q sign flag = match sign, flag with
   | `Neg, `Rigid -> `All
   | `Neg, `Explicit | `Pos, `Explicit ->
       `All
-        (*
-      (* TODO: see if we can find a way to avoid this possibility statically. *)
-      failwith "BUG: explcit bounds should not appear in quantifiers."
-           *)
 
 let rec finish_extract_t: sign -> semi_t -> int Type.t = fun sign -> function
   | `Var v -> Type.Var{ v_info = v.v_var_id; v_var = ivar v.v_var_id }
