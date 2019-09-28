@@ -18,6 +18,8 @@ let rec prune e = match e with
   | D.LetType{letty_binds = []; letty_body} -> prune letty_body
   | _ -> D.apply_to_kids e ~f:prune
 
+(* [substitute_type_apps f params ty] replaces occurances of [f] applied to
+ * the list of parameters in [ty] with just [f]. *)
 let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK.maybe_kind DT.t =
   fun fvar params ->
   let vars = Set.of_list (module Ast.Var) (fvar :: params) in
