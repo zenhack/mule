@@ -1,3 +1,5 @@
+open Common_ast
+
 let each_file : f:(string -> 'a Lwt.t) -> unit Lwt.t =
   fun ~f ->
   let rec go i =
@@ -18,10 +20,14 @@ let exit_msg msg =
   Caml.exit 1
 
 let build_js () =
-  Js_ast.(
-    Return (LamE(["x"], Var "x"))
+  Desugared_ast.Expr.(
+    Ctor {
+      c_lbl = Label.of_string "Foo";
+      c_arg = Const {const_val = Const.Text "hello" };
+    }
   )
-  |> Js_ast.stmt
+  |> To_js.translate_expr
+  |> Js_ast.expr
   |> Fmt.to_string
   |> Caml.print_endline
 

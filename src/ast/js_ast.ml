@@ -20,8 +20,11 @@ let rec expr = function
   | String str ->
       (* FIXME: deal with escaping properly. *)
       c '"' ^ s str ^ c '"'
-  | LamE (ps, e) -> lambda ps (expr e)
-  | LamS (ps, b) -> lambda ps (braces (stmts b))
+  | BigInt n ->
+      s (Z.to_string n) ^ c 'z'
+  | Lam (ps, `E e) -> lambda ps (expr e)
+  | Lam (ps, `S b) -> lambda ps (braces (stmts b))
+  | Null -> s "null"
 and lambda ps body =
   concat [
     parens (comma_sep (List.map ps ~f:s));
@@ -31,6 +34,8 @@ and lambda ps body =
 and stmts ss =
   end_by (c ';') (List.map ss ~f:stmt)
 and stmt = function
+  | VarDecl (v, e) ->
+      s "var " ^ s v ^ s " = " ^ expr e
   | Return e ->
       s "return " ^ expr e
   | Switch {sw_scrutinee; sw_cases; sw_default} ->

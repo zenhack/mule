@@ -6,8 +6,14 @@ type expr =
   | Array of expr list
   | Object of (string * expr) list
   | String of string
-  | LamE of (string list * expr) (* Single-expression lambda *)
-  | LamS of (string list * block) (* Lambda with statements in the body. *)
+  | BigInt of Z.t
+  | Lam of
+      ( string list
+      * [ `E of expr (* Single expression *)
+        | `S of block (* Statements *)
+        ]
+      )
+  | Null
 and stmt =
   | Return of expr
   | Switch of {
@@ -15,5 +21,6 @@ and stmt =
       sw_cases: (expr * block) list;
       sw_default: block option;
     }
+  | VarDecl of (string * expr)
 and block =
   stmt list
