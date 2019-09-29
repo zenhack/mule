@@ -1,4 +1,3 @@
-
 let each_file : f:(string -> 'a Lwt.t) -> unit Lwt.t =
   fun ~f ->
   let rec go i =
@@ -18,6 +17,14 @@ let exit_msg msg =
   let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
   Caml.exit 1
 
+let build_js () =
+  Js_ast.(
+    Return (LamE(["x"], Var "x"))
+  )
+  |> Js_ast.stmt
+  |> Fmt.to_string
+  |> Caml.print_endline
+
 let main () =
   if Array.length Sys.argv <= 1 then
     Repl.loop ()
@@ -30,6 +37,8 @@ let main () =
               let%lwt _ = Run.run input in
               Lwt.return ()
             )
+      | "build-js" ->
+          Lwt.return (build_js ())
       | "run" ->
           begin try%lwt
               let runner_name = Array.get Sys.argv 2 in
