@@ -23,7 +23,7 @@ let rec expr = function
   | Int n ->
       s (Int.to_string n)
   | BigInt n ->
-      s (Z.to_string n) ^ c 'z'
+      s (Z.to_string n) ^ c 'n'
   | Lam (ps, `E e) -> lambda ps (expr e)
   | Lam (ps, `S b) -> lambda ps (braces (stmts b))
   | Null -> s "null"
