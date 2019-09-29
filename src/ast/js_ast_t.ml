@@ -7,6 +7,7 @@ type expr =
   | Object of (string * expr) list
   | String of string
   | BigInt of Z.t
+  | Int of int
   | Lam of
       ( string list
       * [ `E of expr (* Single expression *)

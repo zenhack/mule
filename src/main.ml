@@ -21,9 +21,20 @@ let exit_msg msg =
 
 let build_js () =
   Desugared_ast.Expr.(
-    Ctor {
-      c_lbl = Label.of_string "Foo";
-      c_arg = Const {const_val = Const.Text "hello" };
+    App {
+      app_fn = Match {
+          cases =
+            LabelMap.singleton
+              (Label.of_string "Foo")
+              (Var.of_string "x", Var {v_var = Var.of_string "x"});
+          default =
+            Some (None, Const { const_val = Const.Text "goodbye" });
+        };
+      app_arg =
+        Ctor {
+          c_lbl = Label.of_string "Foo";
+          c_arg = Const {const_val = Const.Text "hello" };
+        };
     }
   )
   |> To_js.translate_expr

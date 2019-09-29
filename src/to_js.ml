@@ -94,6 +94,56 @@ let translate_expr expr =
     | D.Expr.Witness _ -> Js.Null
     | D.Expr.Update {up_level = `Type; _} ->
         Js.Lam(["x"], `E (Js.Lam(["y"], `E (Js.Var "x"))))
+    | D.Expr.Update {up_level = `Value; up_lbl} ->
+        Js.Lam
+          ( ["r"]
+          , `E ( Js.Lam
+              ( ["v"]
+              , `E
+                  (Js.Call
+                     ( Js.Var "$update"
+                     , [
+                         Js.Var "r";
+                         Js.String (Label.to_string up_lbl);
+                         Js.Var "v";
+                       ]
+                     )
+                  )
+              ))
+          )
+    | D.Expr.Match {cases; default} ->
+        Js.Lam
+          ( ["p"]
+          , `S [
+              Js.Switch {
+                sw_scrutinee = Js.Index (Js.Var "p", Js.Int 0);
+                sw_cases =
+                  Map.to_alist cases
+                  |> List.map ~f:(fun (lbl, (v, body)) ->
+                      ( Js.String (Label.to_string lbl)
+                      , let env' = add_var env v in [
+                          Js.VarDecl
+                            ( translate_var env' v
+                            , Js.Index (Js.Var "p", Js.Int 1)
+                            );
+                          Js.Return (go env' body);
+                        ]
+                      )
+                    );
+                sw_default = Option.map default ~f:(fun (v, body) ->
+                    match v with
+                    | None -> [Js.Return (go env body)]
+                    | Some v ->
+                        let env' = add_var env v in [
+                          Js.VarDecl(translate_var env' v, Js.Var "p");
+                          Js.Return(go env' body);
+                        ]
+
+                  )
+              };
+            ]
+          )
+
     | _ -> MuleErr.bug "TODO"
   in
   go VarMap.empty expr

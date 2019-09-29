@@ -20,6 +20,8 @@ let rec expr = function
   | String str ->
       (* FIXME: deal with escaping properly. *)
       c '"' ^ s str ^ c '"'
+  | Int n ->
+      s (Int.to_string n)
   | BigInt n ->
       s (Z.to_string n) ^ c 'z'
   | Lam (ps, `E e) -> lambda ps (expr e)
