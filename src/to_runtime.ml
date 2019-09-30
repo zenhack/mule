@@ -7,7 +7,8 @@ type binding = [ `Index of int | `Term of R.t ]
 
 let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
-    | D.LetRec _ -> MuleErr.bug "TODO"
+    | D.LetRec {letrec_vals; letrec_body; _} ->
+        translate_letrec depth env letrec_vals letrec_body
     | D.Const {const_val = c} -> (0, R.Const c)
     | D.Var {v_var = v} ->
         begin match Util.find_exn env v with
@@ -118,6 +119,19 @@ and translate_fix_rec depth env = function
       )
   | _ ->
       failwith "BUG"
+and translate_letrec depth env bindings body =
+  let env' =
+    bindings
+    |> List.mapi ~f:(fun i (var, _) -> (var, `Index (depth + i + 1)))
+    |> List.fold ~init:env ~f:(fun env (key, data) -> Map.set env ~key ~data)
+  in
+  let depth' = depth + List.length bindings in
+  let binds = List.map bindings ~f:(fun (_, v) -> translate depth' env' v) in
+  let (bcap, body) = translate depth' env' body in
+  let cap =
+    List.fold ~init:0 ~f:Int.max (bcap :: List.map binds ~f:fst)
+  in
+  (cap, R.LetRec(binds, body))
 and translate_record_body depth env = function
   | D.EmptyRecord ->
       (0, LabelMap.empty)

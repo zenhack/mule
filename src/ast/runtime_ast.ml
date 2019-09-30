@@ -9,6 +9,7 @@ module Expr = struct
     | Var of int
     | Fix of [ `Let | `Record ]
     | Lam of (int * t list * t)
+    | LetRec of ((int * t) list * t)
     | App of (t * t)
     | Record of t LabelMap.t
     | GetField of ([`Lazy|`Strict] * Label.t)

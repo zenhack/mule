@@ -24,15 +24,26 @@ let rec whnf stack expr =
     | Lazy (env, e) ->
         e := whnf (env @ stack) !e;
         !e
+    | LetRec (binds, body) ->
+        do_letrec whnf stack binds body
     | e ->
         e
   end
+and do_letrec do_ev stack binds body =
+  let binds =
+    List.map binds ~f:(fun (cap, expr) -> Lazy(List.take stack cap, ref expr))
+  in
+  let stack' = (binds @ stack) in
+  let binds = List.map binds ~f:(eval stack') in
+  do_ev (binds @ stack) body
 and eval stack expr =
   report "eval" expr;
   begin match whnf stack expr with
     | PrimIO io -> PrimIO io
     | Prim p -> Prim p
     | Const c -> Const c
+    | LetRec (binds, body) ->
+        do_letrec eval stack binds body
     | Lazy (env, e) ->
         e := eval (env @ stack) !e;
         !e
