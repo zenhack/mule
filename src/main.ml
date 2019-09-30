@@ -19,28 +19,28 @@ let exit_msg msg =
   let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
   Caml.exit 1
 
-let build_js () =
-  Desugared_ast.Expr.(
-    App {
-      app_fn = Match {
-          cases =
-            LabelMap.singleton
-              (Label.of_string "Foo")
-              (Var.of_string "x", Var {v_var = Var.of_string "x"});
-          default =
-            Some (None, Const { const_val = Const.Text "goodbye" });
-        };
-      app_arg =
-        Ctor {
-          c_lbl = Label.of_string "Foo";
-          c_arg = Const {const_val = Const.Text "hello" };
-        };
-    }
-  )
-  |> To_js.translate_expr
-  |> Js_ast.expr
-  |> Fmt.to_string
-  |> Caml.print_endline
+let load_and_typecheck typ file_name =
+  let%lwt input = Util.IO.slurp_file file_name in
+  match MParser.parse_string Parser.expr_file input () with
+    | Failed(msg, _) ->
+        let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
+        Caml.exit 1
+    | Success expr ->
+        begin try%lwt
+            let expr = Ast.Surface.Expr.WithType {
+                wt_term = expr;
+                wt_type = typ;
+              }
+            in
+            let _ = Lint.check expr in
+            let dexp = Desugar.desugar expr in
+            let _ = Typecheck.typecheck dexp in
+            Lwt.return dexp
+          with
+          | MuleErr.MuleExn err ->
+              let%lwt _ = Lwt_io.write Lwt_io.stderr (MuleErr.show err ^ "\n") in
+              Caml.exit 1
+        end
 
 let main () =
   if Array.length Sys.argv <= 1 then
@@ -55,7 +55,35 @@ let main () =
               Lwt.return ()
             )
       | "build-js" ->
-          Lwt.return (build_js ())
+          begin try%lwt
+              let file_name = Array.get Sys.argv 2 in
+              let%lwt dexp =
+                load_and_typecheck
+                  Ast.Surface.Type.(
+                    (* For now we're not imposing any particular type,
+                     * so we just set it as `exists t. t`.
+                     *)
+                    let v = Var.of_string "t" in
+                    Quant {
+                      q_quant = `Exist;
+                      q_vars = [v];
+                      q_body = Var {v_var = v};
+                    }
+                  )
+                  file_name
+              in
+              To_js.translate_expr dexp
+              |> Js_ast.expr
+              |> Fmt.(fun x -> x ^ s "\n")
+              |> Fmt.to_string
+              |> Lwt_io.write Lwt_io.stdout
+            with
+            | Invalid_argument _ ->
+                let%lwt _ = Lwt_io.write Lwt_io.stderr "not enough arguments to build-js\n" in
+                Caml.exit 1
+            | e ->
+                raise e
+          end
       | "run" ->
           begin try%lwt
               let runner_name = Array.get Sys.argv 2 in
@@ -65,30 +93,10 @@ let main () =
                     let%lwt _ = Lwt_io.write Lwt_io.stderr "no such runner\n" in
                     Caml.exit 1
                 | Some runner ->
-                    let%lwt input = Util.IO.slurp_file file_name in
-                    begin match MParser.parse_string Parser.expr_file input () with
-                      | Failed(msg, _) ->
-                          let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
-                          Caml.exit 1
-                      | Success expr ->
-                          begin try%lwt
-                              let expr = Ast.Surface.Expr.WithType {
-                                  wt_term = expr;
-                                  wt_type = runner.Runners.want_type;
-                                }
-                              in
-                              let _ = Lint.check expr in
-                              let dexp = Desugar.desugar expr in
-                              let _ = Typecheck.typecheck dexp in
-                              let rt_expr = To_runtime.translate dexp in
-                              let%lwt _ = runner.Runners.run rt_expr in
-                              Lwt.return ()
-                            with
-                            | MuleErr.MuleExn err ->
-                                let%lwt _ = Lwt_io.write Lwt_io.stderr (MuleErr.show err ^ "\n") in
-                                Caml.exit 1
-                          end
-                    end
+                    let%lwt dexp = load_and_typecheck runner.Runners.want_type file_name in
+                    let rt_expr = To_runtime.translate dexp in
+                    let%lwt _ = runner.Runners.run rt_expr in
+                    Lwt.return ()
               end
             with
             | Invalid_argument _ ->
