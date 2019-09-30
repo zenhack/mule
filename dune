@@ -9,5 +9,6 @@
     lwt.unix
     mparser
     topological_sort
+    yojson
     zarith)
   (preprocess (pps ppx_sexp_conv ppx_let lwt_ppx)))

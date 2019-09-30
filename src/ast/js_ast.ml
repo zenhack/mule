@@ -18,10 +18,9 @@ let rec expr = function
         )
       )
   | String str ->
-      (* FIXME: deal with escaping properly. *)
-      c '"' ^ s str ^ c '"'
+      s (Yojson.to_string (`String str))
   | Int n ->
-      s (Int.to_string n)
+      s (Yojson.to_string (`Int n))
   | BigInt n ->
       s (Z.to_string n) ^ c 'n'
   | Lam (ps, `E e) -> lambda ps (expr e)
