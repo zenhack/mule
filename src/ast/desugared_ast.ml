@@ -310,6 +310,11 @@ module Expr = struct
         letty_binds : (Var.t * 'i Type.t) list;
         letty_body : 'i t;
       }
+    | LetRec of {
+        letrec_vals: (Var.t * 'i t) list;
+        letrec_types: (Var.t * 'i Type.t) list;
+        letrec_body: 'i t;
+      }
     | Const of {
         const_val : Const.t;
       }
@@ -375,6 +380,27 @@ module Expr = struct
           ; Sexp.List [Var.sexp_of_t v; sexp_of_t e]
           ; sexp_of_t body
           ]
+    | LetRec{letrec_types; letrec_vals; letrec_body} ->
+        Sexp.List
+          [ Sexp.Atom "letrec"
+          ; Sexp.List
+              [ Sexp.Atom "types"
+              ; Sexp.List
+                ( List.map letrec_types ~f:(fun (v, ty) ->
+                     Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+                    )
+                )
+              ]
+          ; Sexp.List
+              [ Sexp.Atom "values"
+              ; Sexp.List
+                  ( List.map letrec_vals ~f:(fun (var, value) ->
+                        Sexp.List [Var.sexp_of_t var; sexp_of_t value]
+                      )
+                  )
+              ]
+          ; sexp_of_t letrec_body
+          ]
     | LetType{letty_binds = binds; letty_body = body} ->
         Sexp.List
           [ Sexp.Atom "let-type"
@@ -413,6 +439,12 @@ module Expr = struct
         let_e = f let_e;
         let_body = f let_body
       }
+    | LetRec{letrec_types; letrec_vals; letrec_body} ->
+        LetRec {
+          letrec_types;
+          letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, f e));
+          letrec_body = f letrec_body;
+        }
     | LetType{letty_binds; letty_body} -> LetType {
         letty_binds;
         letty_body = f letty_body;
@@ -463,6 +495,12 @@ module Expr = struct
         let_e = map let_e ~f;
         let_body = map let_body ~f;
       }
+    | LetRec{letrec_types; letrec_vals; letrec_body} ->
+        LetRec {
+          letrec_types = List.map letrec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
+          letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, map e ~f));
+          letrec_body = map letrec_body ~f;
+        }
     | Var x -> Var x
     | Fix x -> Fix x
     | EmptyRecord -> EmptyRecord
@@ -521,6 +559,8 @@ module Expr = struct
           ; let_e = subst env let_e
           ; let_body = subst (Map.remove env let_v) let_body
           }
+    | LetRec _ ->
+        MuleErr.bug "TODO"
     | LetType{letty_binds; letty_body} ->
         LetType{letty_binds; letty_body = subst env letty_body}
     | Const _ | Fix _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->

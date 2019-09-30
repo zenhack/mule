@@ -8,6 +8,7 @@ type reason =
   | `MatchSiblingsBody
   | `MatchSiblingsPattern
   | `MatchDefault
+  | `LetRec
   | `VarUse of <
       bind_type : [ `Lambda | `Let | `LetType ];
       var : Var.t

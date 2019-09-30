@@ -88,6 +88,61 @@ let rec walk: context -> k_var Expr.t -> u_var =
                        Map.set env_terms ~key:v ~data:(lazy (`G g_e))
           }
           body
+    | Expr.LetRec{letrec_types; letrec_vals; letrec_body} ->
+        let val_map = Map.of_alist_exn (module Ast.Var) letrec_vals in
+        let vals =
+          Map.map val_map ~f:(fun _ ->
+              let ret = lazy (`Ty (gen_u (gen_k ()) (`G g))) in
+              let _ = Lazy.force ret in
+              ret
+            )
+        in
+        let ctx = {
+          ctx with env_terms =
+                     Map.merge_skewed
+                       ctx.env_terms
+                       vals
+                       ~combine:(fun ~key:_ _ r -> r)
+        }
+        in
+        let types =
+          Coercions.gen_types
+            { ctx; b_at = `G g }
+            `Pos
+            (Map.of_alist_exn (module Ast.Var) letrec_types)
+        in
+        let ctx =
+          { ctx with env_types =
+                       Map.merge_skewed
+                         ctx.env_types
+                         types
+                         ~combine:(fun ~key:_ _ r -> r)
+          }
+        in
+        let vals' = List.map letrec_vals ~f:(fun (v, e) ->
+            let g_e =
+              with_g g (fun g ->
+                  let ret = walk { ctx with g = Lazy.force g } e in
+                  begin match Lazy.force (Util.find_exn vals v) with
+                    | `Ty uv ->
+                        cops.constrain_unify `LetRec ret uv
+                    | `G _ ->
+                        MuleErr.bug "impossible"
+                  end;
+                  ret
+                )
+            in
+            (v, `G g_e)
+          )
+        in
+        let ctx = { ctx with env_terms =
+                              List.fold
+                                vals'
+                                ~init:ctx.env_terms
+                                ~f:(fun old (v, t) -> Map.set old ~key:v ~data:(lazy t))
+                            }
+        in
+        walk ctx letrec_body
     | Expr.LetType{letty_binds = binds; letty_body = body} ->
         let binds = Map.of_alist_exn (module Ast.Var) binds in
         let env_types =
