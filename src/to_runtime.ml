@@ -16,14 +16,14 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         begin match Util.find_exn env v with
           | `Index m ->
               let n = depth - m in
-              (n, R.Var n)
+              (n+1, R.Var n)
           | `Term t -> (0, t)
         end
     | D.Lam {l_param; l_body} ->
         let (ncap, body') =
           translate (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
         in
-        (ncap, R.Lam(ncap, [], body'))
+        (ncap-1, R.Lam(ncap-1, [], body'))
     | D.App { app_fn = D.WithType _; app_arg = e } ->
         translate depth env e
     | D.App {app_fn = f; app_arg = x} ->
@@ -106,11 +106,12 @@ and translate_letrec depth env bindings body =
     |> List.mapi ~f:(fun i (var, _) -> (var, `Index (depth + i + 1)))
     |> List.fold ~init:env ~f:(fun env (key, data) -> Map.set env ~key ~data)
   in
-  let depth' = depth + List.length bindings in
+  let len = List.length bindings in
+  let depth' = depth + len in
   let binds = List.map bindings ~f:(fun (_, v) -> translate depth' env' v) in
   let (bcap, body) = translate depth' env' body in
   let cap =
-    List.fold ~init:0 ~f:Int.max (bcap :: List.map binds ~f:fst)
+    List.fold ~init:0 ~f:Int.max (bcap - len :: List.map binds ~f:(fun (cap, _) -> cap - len))
   in
   (cap, R.LetRec(binds, body))
 and translate_record_body depth env = function

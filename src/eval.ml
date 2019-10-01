@@ -23,9 +23,9 @@ let rec eval_letrec stack binds body =
       ))
   in
   let binds' = Lazy.force binds' in
-  let stack' = Lazy.force stack' in
+  let _ = Lazy.force stack' in
   let binds' = List.map binds' ~f:(eval stack) in
-  eval (binds' @ stack') body
+  eval (binds' @ stack) body
 and eval stack expr =
   report "eval" stack expr;
   begin match expr with (* whnf stack expr with *)
