@@ -12,10 +12,6 @@ let incomplete_pattern p =
 let unreachable_cases cases =
   MuleErr.throw (`UnreachableCases cases)
 
-let rec prune e = match e with
-  | D.LetType{letty_binds = []; letty_body} -> prune letty_body
-  | _ -> D.apply_to_kids e ~f:prune
-
 (* [substitute_type_apps f params ty] replaces occurances of [f] applied to
  * the list of parameters in [ty] with just [f]. *)
 let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK.maybe_kind DT.t =
@@ -622,7 +618,3 @@ and simplify_bindings = function
             }
         )
       :: simplify_bindings (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
-
-
-let desugar e =
-  prune (desugar e)

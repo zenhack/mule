@@ -304,10 +304,6 @@ module Expr = struct
         let_e : 'i t;
         let_body : 'i t;
       }
-    | LetType of {
-        letty_binds : (Var.t * 'i Type.t) list;
-        letty_body : 'i t;
-      }
     | LetRec of {
         letrec_vals: (Var.t * 'i t) list;
         letrec_types: (Var.t * 'i Type.t) list;
@@ -397,16 +393,6 @@ module Expr = struct
               ]
           ; sexp_of_t letrec_body
           ]
-    | LetType{letty_binds = binds; letty_body = body} ->
-        Sexp.List
-          [ Sexp.Atom "let-type"
-          ; Sexp.List
-              (List.map binds ~f:(fun (v, ty) ->
-                   Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-                 )
-              )
-          ; sexp_of_t body
-          ]
     | Const {const_val = c} ->
         Const.sexp_of_t c
 
@@ -441,10 +427,6 @@ module Expr = struct
           letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, f e));
           letrec_body = f letrec_body;
         }
-    | LetType{letty_binds; letty_body} -> LetType {
-        letty_binds;
-        letty_body = f letty_body;
-      }
     | Var _
     | EmptyRecord
     | GetField _
@@ -462,11 +444,6 @@ module Expr = struct
     match e with
     | WithType {wt_type = ty} -> WithType {wt_type = Type.map ty ~f}
     | Witness {wi_type = ty} -> Witness {wi_type = Type.map ty ~f}
-    | LetType{letty_binds = binds; letty_body = body} ->
-        LetType {
-          letty_binds = List.map binds ~f:(fun (k, v) -> (k, Type.map v ~f));
-          letty_body = map body ~f;
-        }
     | Lam{l_param; l_body} ->
         Lam{l_param; l_body = map l_body ~f}
     | App{app_fn; app_arg}-> App {
@@ -555,8 +532,6 @@ module Expr = struct
           }
     | LetRec _ ->
         MuleErr.bug "TODO"
-    | LetType{letty_binds; letty_body} ->
-        LetType{letty_binds; letty_body = subst env letty_body}
     | Const _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->
         expr
 end

@@ -67,8 +67,6 @@ let translate_expr expr =
             )
           , [go env let_e]
           )
-    | D.Expr.LetType {letty_body; _} ->
-        go env letty_body
     | D.Expr.Const {const_val} ->
         translate_const const_val
     | D.Expr.WithType _ -> Js.Lam(["x"], `E (Js.Var "x"))

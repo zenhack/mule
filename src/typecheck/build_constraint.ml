@@ -31,7 +31,7 @@ let walk_const g c =
   UnionFind.make (ty (gen_ty_var g))
 
 let rec walk: context -> k_var Expr.t -> u_var =
-  fun ({cops; env_types; env_terms; g} as ctx) -> function
+  fun ({cops; env_types = _; env_terms; g} as ctx) -> function
     | Expr.Const {const_val = c} -> walk_const g c
     | Expr.Var {v_var = v} ->
         let tv = gen_u kvar_type (`G g) in
@@ -130,33 +130,6 @@ let rec walk: context -> k_var Expr.t -> u_var =
                             }
         in
         walk ctx letrec_body
-    | Expr.LetType{letty_binds = binds; letty_body = body} ->
-        let binds = Map.of_alist_exn (module Ast.Var) binds in
-        let env_types =
-          Map.merge_skewed
-            env_types
-            (Map.map binds ~f:(fun _ -> gen_u (gen_k ()) (`G g)))
-            ~combine:(fun ~key:_ _ v -> v)
-        in
-        let ctx = { ctx with env_types } in
-        let u_vars = Coercions.gen_types { ctx; b_at = `G g } `Pos binds in
-        let env_new =
-          Map.merge_skewed
-            env_types
-            u_vars
-            ~combine:(fun ~key:var l r ->
-                cops.constrain_kind
-                  (`VarUse
-                     (object
-                       method bind_type = `LetType;
-                       method var = var;
-                     end))
-                  (get_kind l)
-                  (get_kind r);
-                r
-              )
-        in
-        walk { ctx with env_types = env_new } body
     | Expr.App {app_fn = f; app_arg = arg} ->
         let param_var = gen_u kvar_type (`G g) in
         let ret_var = gen_u kvar_type (`G g) in

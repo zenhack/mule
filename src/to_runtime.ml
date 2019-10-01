@@ -97,8 +97,6 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
               };
             app_arg = e;
           })
-    | D.LetType{letty_body = body; _} ->
-        translate depth env body
 and translate_letrec depth env bindings body =
   let env' =
     bindings
@@ -133,8 +131,6 @@ and translate_record_body depth env = function
       app_arg = _type
     } ->
       translate_record_body depth env old
-  | D.LetType{letty_body = body; _} ->
-      translate_record_body depth env body
   | _ ->
       failwith "BUG"
 
