@@ -102,6 +102,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
 and translate_letrec depth env bindings body =
   let env' =
     bindings
+    |> List.rev
     |> List.mapi ~f:(fun i (var, _) -> (var, `Index (depth + i + 1)))
     |> List.fold ~init:env ~f:(fun env (key, data) -> Map.set env ~key ~data)
   in
