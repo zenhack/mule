@@ -72,11 +72,13 @@ let main () =
                   )
                   file_name
               in
+              let out = Lwt_io.stdout in
+              let%lwt _ = Lwt_io.write out "'use strict';\n" in
               To_js.translate_expr dexp
               |> Js_ast.expr
               |> Fmt.(fun x -> x ^ s "\n")
               |> Fmt.to_string
-              |> Lwt_io.write Lwt_io.stdout
+              |> Lwt_io.write out
             with
             | Invalid_argument _ ->
                 let%lwt _ = Lwt_io.write Lwt_io.stderr "not enough arguments to build-js\n" in
