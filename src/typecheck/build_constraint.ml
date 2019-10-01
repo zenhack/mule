@@ -112,7 +112,12 @@ let rec walk: context -> k_var Expr.t -> u_var =
                   let ret = walk { ctx with g = Lazy.force g } e in
                   begin match Lazy.force (Util.find_exn vals v) with
                     | `Ty uv ->
-                        cops.constrain_unify `LetRec ret uv
+                        (* Important: we don't want to constrain_unify here,
+                         * because uv is bound above our g node, which is not
+                         * what we want -- ideally we'd create it later, but
+                         * cyclic dependencies and all...
+                         *)
+                        UnionFind.merge (fun _ r -> r) uv ret
                     | `G _ ->
                         MuleErr.bug "impossible"
                   end;
