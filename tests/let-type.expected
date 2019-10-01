@@ -1,7 +1,8 @@
 
 Desugared:
 
-	(let-type ((t (rec t (record (types ()) (values ()))))) ((: t) {}))
+	(letrec (types ((t (rec t (record (types ()) (values ())))))) (values ())
+	 ((: t) {}))
 
 inferred type:
 
@@ -9,7 +10,7 @@ inferred type:
 
 Runtime term:
 
-	(Record ())
+	(LetRec (() (Record ())))
 
 Evaluated:
 

@@ -277,7 +277,6 @@ module Expr = struct
         app_fn : 'i t;
         app_arg : 'i t;
       }
-    | Fix of { fix_type : [ `Let | `Record ] }
     | EmptyRecord
     | GetField of {
         gf_strategy : [`Lazy|`Strict];
@@ -325,8 +324,6 @@ module Expr = struct
         Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
     | App{app_fn; app_arg} ->
         Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
-    | Fix { fix_type = `Let } -> Sexp.Atom "fix/let"
-    | Fix { fix_type = `Record } -> Sexp.Atom "fix/record"
     | EmptyRecord -> Sexp.Atom "{}"
     | GetField{gf_lbl; _} -> Sexp.List [
         Sexp.Atom ".";
@@ -450,7 +447,6 @@ module Expr = struct
         letty_body = f letty_body;
       }
     | Var _
-    | Fix _
     | EmptyRecord
     | GetField _
     | Update _
@@ -502,7 +498,6 @@ module Expr = struct
           letrec_body = map letrec_body ~f;
         }
     | Var x -> Var x
-    | Fix x -> Fix x
     | EmptyRecord -> EmptyRecord
     | GetField x -> GetField x
     | Update x -> Update x
@@ -563,6 +558,6 @@ module Expr = struct
         MuleErr.bug "TODO"
     | LetType{letty_binds; letty_body} ->
         LetType{letty_binds; letty_body = subst env letty_body}
-    | Const _ | Fix _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->
+    | Const _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->
         expr
 end

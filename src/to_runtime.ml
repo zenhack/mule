@@ -17,15 +17,11 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
               (n, R.Var n)
           | `Term t -> (0, t)
         end
-    | D.Fix {fix_type = flag} ->
-        (0, R.Fix flag)
     | D.Lam {l_param; l_body} ->
         let (ncap, body') =
           translate (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
         in
         (ncap, R.Lam(ncap, [], body'))
-    | D.App{ app_fn = D.Fix {fix_type = `Record}; app_arg = f } ->
-        translate_fix_rec depth env f
     | D.App { app_fn = D.WithType _; app_arg = e } ->
         translate depth env e
     | D.App {app_fn = f; app_arg = x} ->
@@ -103,22 +99,6 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
           })
     | D.LetType{letty_body = body; _} ->
         translate depth env body
-and translate_fix_rec depth env = function
-  | D.Lam{l_param = v; l_body = body} ->
-      let (n, lblmap) =
-        translate_record_body
-          (depth + 1)
-          (Map.set env ~key:v ~data:(`Index (depth + 1)))
-          body
-      in
-      ( n - 1
-      , R.App
-          ( R.Fix `Record
-          , R.Lam(n, [], R.Record lblmap)
-          )
-      )
-  | _ ->
-      failwith "BUG"
 and translate_letrec depth env bindings body =
   let env' =
     bindings

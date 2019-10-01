@@ -1,10 +1,9 @@
 
 Desugared:
 
-	(let
-	 (rank2
-	  (fix/let
-	   (fn rank2
+	(letrec (types ())
+	 (values
+	  ((rank2
 	    ((: (all b ((all a (a -> a)) -> (record (types ()) (values ())))))
 	     (fn rank1 (rank1 {}))))))
 	 (rank2 (fn $0 (Integer 4))))

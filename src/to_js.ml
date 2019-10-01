@@ -28,24 +28,6 @@ let translate_expr expr =
               go env app_arg
           | D.Expr.App {app_fn = D.Expr.Update {up_level = `Type; _}; app_arg = ret} ->
               go env ret
-          | D.Expr.Fix{fix_type = `Let} ->
-              begin match app_arg with
-                | D.Expr.Lam{l_param; l_body} ->
-                    let env' = add_var env l_param in
-                    let var = translate_var env' l_param in
-                    Js.Call
-                      ( Js.Lam
-                        ( []
-                        , `S [
-                            Js.VarDecl (var, go env' l_body);
-                            Js.Return (Js.Var var);
-                          ]
-                        )
-                      , []
-                      )
-                | _ ->
-                    MuleErr.bug "fix applied to non-lambda"
-              end
           | _ ->
               Js.Call(go env app_fn, [go env app_arg])
         end
@@ -89,7 +71,6 @@ let translate_expr expr =
         go env letty_body
     | D.Expr.Const {const_val} ->
         translate_const const_val
-    | D.Expr.Fix{fix_type = `Let} -> MuleErr.bug "Naked fix/let"
     | D.Expr.WithType _ -> Js.Lam(["x"], `E (Js.Var "x"))
     | D.Expr.Witness _ -> Js.Null
     | D.Expr.Update {up_level = `Type; _} ->

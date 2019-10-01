@@ -399,94 +399,63 @@ and desugar_lambda ps body =
             )
       }
 and desugar_record fields =
-  let record_var = Gensym.anon_var () in
-  let get_record_field lbl =
-    D.App {
-      app_fn = D.GetField {
-          gf_strategy = `Lazy;
-          gf_lbl = lbl;
-        };
-      app_arg = D.Var {v_var = record_var};
-    }
-  in
-  let var_map =
-    List.filter_map fields ~f:(function
-        | `Value (l, None, _) ->
-            Some (Ast.var_of_label l, get_record_field l)
-        | `Value (l, Some ty, _) ->
-            Some (Ast.var_of_label l, D.App {
-              app_fn = D.WithType {wt_type = desugar_type ty};
-              app_arg = get_record_field l;
-            })
-        | `Type _ -> None)
-    |> Map.of_alist_exn (module Ast.Var)
-  in
-  let build_record fields =
-    let types = List.filter_map fields ~f:(function
-        | `Type (lbl, params, body) ->
-            Some
-              ( desugar_type_binding
-                  ( Ast.var_of_label lbl
-                  , params
-                  , body
-                  )
+  let types, values =
+    List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->
+        match bind with
+        | `Value(l, None, e) -> (types, ((Ast.var_of_label l, desugar e) :: values))
+        | `Value(l, Some ty, e) ->
+            ( types
+            , ( Ast.var_of_label l
+              , D.App {
+                  app_fn = D.WithType {wt_type = desugar_type ty};
+                  app_arg = desugar e;
+                }
               )
-        | `Value _ ->
-            None
+              :: values
+            )
+        | `Type (l, params, body) ->
+            ( ( desugar_type_binding (Ast.var_of_label l, params, body)
+              :: types
+              )
+            , values
+            )
       )
-    in
-    D.LetType
-      { letty_binds = types
-      ; letty_body = List.fold_right
-            fields
-            ~init:D.EmptyRecord
-            ~f:(fun field old ->
-                match field with
-                | `Type (lbl, _, _) ->
-                    D.App {
-                      app_fn = D.App {
-                          app_fn = D.Update {
-                              up_level = `Type;
-                              up_lbl = lbl;
-                            };
-                          app_arg = old;
-                        };
-                      app_arg = D.Witness {
-                          wi_type = DT.Var {
-                              v_info = `Unknown;
-                              v_var = Ast.var_of_label lbl;
-                            };
-                        };
-                    }
-                | `Value(l, ty, v) ->
-                    let v' =
-                      begin match ty with
-                        | None -> v
-                        | Some ty' -> S.WithType {
-                            wt_term = v;
-                            wt_type = ty';
-                          }
-                      end
-                    in
-                    D.App {
-                      app_fn = D.App {
-                          app_fn = D.Update {
-                              up_level = `Value;
-                              up_lbl = l;
-                            };
-                          app_arg = old;
-                        };
-                      app_arg = D.subst var_map (desugar v');
-                    }
-              )
-      }
   in
-  D.App {
-    app_fn = D.Fix { fix_type = `Record };
-    app_arg = D.Lam {
-        l_param = record_var;
-        l_body = build_record fields;
-      }
+  let body = List.fold_right fields ~init:D.EmptyRecord ~f:(fun bind old ->
+      match bind with
+        | `Value (l, _, _) ->
+            D.App {
+              app_fn = D.App {
+                app_fn = D.Update {
+                  up_level = `Value;
+                  up_lbl = l;
+                };
+                app_arg = old;
+              };
+              app_arg = D.Var {v_var = Ast.var_of_label l};
+            }
+        | `Type (l, _, _) ->
+            D.App {
+              app_fn = D.App {
+                app_fn = D.Update {
+                  up_level = `Type;
+                  up_lbl = l;
+                };
+                app_arg = old;
+              };
+              app_arg = D.Witness {
+                  wi_type = DT.Var {
+                      v_info = `Unknown;
+                      v_var = Ast.var_of_label l;
+                    }
+              };
+            }
+    )
+  in
+  D.LetRec {
+    letrec_vals = values;
+    letrec_types = types;
+    letrec_body = body;
   }
 and desugar_match cases =
   begin match cases with
@@ -584,72 +553,21 @@ and finalize_dict dict =
             }
         )
       )
-and desugar_let bs body = match simplify_bindings bs with
-  | [] ->
-      (* Shouldn't ever happen, but the correct behavior is clear. *)
-      desugar body
-  | [`Value(v, e)] ->
-      D.Let
-        { let_v = v
-        ; let_e = D.App {
-              app_fn = D.Fix { fix_type = `Let };
-              app_arg = D.Lam {
-                  l_param = v;
-                  l_body = desugar e;
-                }
-            }
-        ; let_body = desugar body
+and desugar_let bs body =
+  let rec go vals types = function
+    | `Value(v, e) :: fs ->
+        go ((v, desugar e) :: vals) types fs
+    | `Type t :: fs ->
+        let (v, ty) = desugar_type_binding t in
+        go vals ((v, ty) :: types) fs
+    | [] ->
+        D.LetRec {
+          letrec_types = types;
+          letrec_vals = vals;
+          letrec_body = desugar body;
         }
-  | [`Type t] ->
-      let (v, ty) = desugar_type_binding t in
-      D.LetType {
-        letty_binds = [v, ty];
-        letty_body = desugar body;
-      }
-  | bindings ->
-      let record =
-        List.map bindings ~f:(function
-            | `Value(v, S.WithType{wt_term = e; wt_type = ty}) ->
-                `Value(Ast.var_to_label v, Some ty, e)
-            | `Value (v, e) ->
-                `Value(Ast.var_to_label v, None, e)
-            | `Type (f, params, body) ->
-                `Type(Ast.var_to_label f, params, body)
-          )
-        |> desugar_record
-      in
-      let record_name = Gensym.anon_var () in
-      let body =
-        List.fold bindings ~init:(desugar body) ~f:(fun accum bind ->
-            match bind with
-            | `Value(v, _) ->
-                D.Let {
-                  let_v = v;
-                  let_e = D.App {
-                      app_fn = D.GetField {
-                          gf_strategy = `Strict;
-                          gf_lbl = Ast.var_to_label v;
-                        };
-                      app_arg = D.Var {v_var = record_name};
-                    };
-                  let_body = accum;
-                }
-            | `Type t ->
-                let (v, ty) = desugar_type_binding t in
-                D.LetType
-                  { letty_binds =
-                      [ v
-                      , DT.Path {
-                          p_info = DT.get_info ty;
-                          p_var = record_name;
-                          p_lbls = [Ast.var_to_label v];
-                        }
-                      ]
-                  ; letty_body = accum
-                  }
-          )
-      in
-      D.Let{let_v = record_name; let_e = record; let_body = body}
+  in
+  go [] [] (simplify_bindings bs)
 and desugar_type_binding (v, params, ty) =
   (* Here, we convert things like `type t a b = ... (t a b) ...` to
    * `lam a b. rec t. ... t ...`.
