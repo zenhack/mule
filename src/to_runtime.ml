@@ -33,7 +33,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Witness _ ->
         (0, R.Record LabelMap.empty)
     | D.EmptyRecord -> (0, R.Record LabelMap.empty)
-    | D.GetField {gf_strategy; gf_lbl} -> (0, R.GetField (gf_strategy, gf_lbl))
+    | D.GetField {gf_lbl} -> (0, R.GetField gf_lbl)
     | D.Update {up_level = `Value; up_lbl = label } ->
         ( 0
         , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))

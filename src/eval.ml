@@ -48,7 +48,6 @@ and eval stack expr =
         e := eval (env @ stack) !e;
         !e
 
-    | Fix flag -> Fix flag
     | Vec arr ->
         (* XXX: this is O(n) even for already-evaluated
          * arrays; should avoid re-scanning.
@@ -99,34 +98,12 @@ and apply stack f arg =
           | e ->
               bug "ConstMatch matched against non constant" e
         end
-    | GetField (`Strict, label) ->
+    | GetField label ->
         begin match eval stack arg with
           | Record r ->
               Util.find_exn r label
           | e ->
               bug "Tried to get field of non-record" e
-        end
-    | GetField (`Lazy, label) ->
-        begin match whnf stack arg with
-          | Record r ->
-              Util.find_exn r label
-          | e ->
-              bug "Tried to (lazily) get field of non-record" e
-        end
-    | Fix `Let ->
-        begin match whnf stack arg with
-          | Lam(0, env, body) ->
-              let arg' = Lazy ([], ref (App(Fix `Let, Lam(0, env, body)))) in
-              eval (arg' :: (env @ stack)) body
-          | e ->
-              bug "fix/let given a non-lambda." e
-        end
-    | Fix `Record ->
-        begin match whnf stack arg with
-          | Lam(0, env, Record r) as arg' ->
-              Record (Map.map r ~f:(fun v -> Lazy(App(Fix `Record, arg') :: env, ref v)))
-          | e ->
-              bug "BUG: fix/record given something other than a lambda with a record body." e
         end
     | e ->
         bug "Tried to call non-function" e

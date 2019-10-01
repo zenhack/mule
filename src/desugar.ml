@@ -305,7 +305,6 @@ and desugar = function
   | S.GetField {gf_arg = e; gf_lbl = l} ->
       D.App {
         app_fn = D.GetField {
-            gf_strategy = `Strict;
             gf_lbl = l;
           };
         app_arg = desugar e;

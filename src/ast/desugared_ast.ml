@@ -279,7 +279,6 @@ module Expr = struct
       }
     | EmptyRecord
     | GetField of {
-        gf_strategy : [`Lazy|`Strict];
         gf_lbl : Label.t;
       }
     | Update of {

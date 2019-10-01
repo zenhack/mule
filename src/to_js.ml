@@ -33,7 +33,7 @@ let translate_expr expr =
         end
     | D.Expr.EmptyRecord ->
         Js.Object []
-    | D.Expr.GetField{gf_strategy = `Strict; gf_lbl} ->
+    | D.Expr.GetField{gf_lbl} ->
         Js.Lam(["o"], `E (Js.Index(Js.Var "o", Js.String (Label.to_string gf_lbl))))
     | D.Expr.Ctor{c_lbl; c_arg} ->
         Js.Array [

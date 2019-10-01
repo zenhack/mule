@@ -7,12 +7,11 @@ module Expr = struct
 
   type t =
     | Var of int
-    | Fix of [ `Let | `Record ]
     | Lam of (int * t list * t)
     | LetRec of ((int * t) list * t)
     | App of (t * t)
     | Record of t LabelMap.t
-    | GetField of ([`Lazy|`Strict] * Label.t)
+    | GetField of Label.t
     | Update of
         { old: t
         ; label: Label.t
