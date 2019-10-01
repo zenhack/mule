@@ -7,7 +7,7 @@ inferred type:
 
 	(all a
 	 (all b
-	  (record (types (...a)) (values ((x (record (types (...b)) (values ()))))))))
+	  (record (types (...b)) (values ((x (record (types (...a)) (values ()))))))))
 
 Runtime term:
 
