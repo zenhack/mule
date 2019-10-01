@@ -21,8 +21,8 @@ Runtime term:
 	(LetRec
 	 (((0 (Lam (0 () (Var 0)))))
 	  (LetRec
-	   (((2 (App ((Var 2) (Lam (0 () (Var 0))))))
-	     (2 (App ((Var 2) (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Record ())))))))
+	   (((3 (App ((Var 2) (Lam (0 () (Var 0))))))
+	     (3 (App ((Var 2) (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Record ())))))))
 	    (App
 	     ((App
 	       ((Lam
