@@ -7,3 +7,21 @@ const $update = (r, lbl, v) => {
 	ret[lbl] = v;
 	return ret;
 }
+
+const $lazy = (f) => {
+	return {state: 'delayed', thunk: f}
+}
+
+const $force = (l) => {
+	switch(l.state) {
+	case 'ready':
+			return l.thunk;
+	case 'in-progress':
+			throw 'Infinite loop';
+	case 'delayed':
+			l.state = 'in-progress';
+			l.thunk = l.thunk();
+			l.state = 'ready';
+			return l.thunk;
+	}
+}
