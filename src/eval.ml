@@ -14,25 +14,7 @@ let report step stack expr =
       List.iter stack ~f:(fun e -> Stdio.print_endline ("  + " ^ Pretty.runtime_expr e))
     end
 
-let rec whnf stack expr =
-  report "whnf" stack expr;
-  begin match expr with
-    | Var v ->
-        whnf stack (List.nth_exn stack v)
-    | App (f, x) ->
-        apply stack (whnf stack f) x
-    | Lam (n, env, body) ->
-        Lam (0, List.take stack n @ env, body)
-    | Lazy thunk ->
-        let (env, e) = Lazy.force thunk in
-        e := whnf (env @ stack) !e;
-        !e
-    | LetRec (binds, body) ->
-        do_letrec whnf stack binds body
-    | e ->
-        e
-  end
-and do_letrec do_ev stack binds body =
+let rec eval_letrec stack binds body =
   let
     rec stack' = lazy (Lazy.force binds' @ stack)
     and binds' =
@@ -44,15 +26,21 @@ and do_letrec do_ev stack binds body =
   let binds' = Lazy.force binds' in
   let stack' = Lazy.force stack' in
   let binds' = List.map binds' ~f:(eval stack) in
-  do_ev (binds' @ stack') body
+  eval (binds' @ stack') body
 and eval stack expr =
   report "eval" stack expr;
-  begin match whnf stack expr with
+  begin match expr with (* whnf stack expr with *)
+    | Var v ->
+        eval stack (List.nth_exn stack v)
+    | App(f, x) ->
+        apply stack (eval stack f) (eval stack x)
+    | Lam (n, env, body) ->
+        Lam (0, List.take stack n @ env, body)
     | PrimIO io -> PrimIO io
     | Prim p -> Prim p
     | Const c -> Const c
     | LetRec (binds, body) ->
-        do_letrec eval stack binds body
+        eval_letrec stack binds body
     | Lazy thunk ->
         let (env, e) = Lazy.force thunk in
         e := eval (env @ stack) !e;
@@ -63,7 +51,6 @@ and eval stack expr =
          * arrays; should avoid re-scanning.
         *)
         Vec (Array.map arr ~f:(eval stack))
-    | Lam lam -> Lam lam
     | Match {cases; default} ->
         Match
           { cases = Map.map cases ~f:(eval stack)
@@ -79,10 +66,6 @@ and eval stack expr =
           }
     | GetField l -> GetField l
     | Ctor (c, arg) -> Ctor (c, eval stack arg)
-    | App (f, x) ->
-        bug "App should never appear after whnf." (App (f, x))
-    | Var v ->
-        bug "Var should never appear after whnf." (Var v)
     | Record r ->
         Record (Map.map r ~f:(eval stack))
     | Update {old; label; field} ->
@@ -93,23 +76,22 @@ and eval stack expr =
   end
 and apply stack f arg =
   report "apply" stack (App(f, arg));
-  let f' = eval stack f in
-  begin match f' with
+  begin match f with
     | Prim prim ->
-        prim (eval stack arg)
+        prim arg
     | Lam (_, env, body) ->
-        eval (eval stack arg :: (env @ stack)) body
+        eval (arg :: (env @ stack)) body
     | Match {cases; default} ->
-        eval_match stack cases default (eval stack arg)
+        eval_match stack cases default arg
     | ConstMatch {cm_cases; cm_default} ->
-        begin match eval stack arg with
+        begin match arg with
           | Const c ->
               eval_const_match stack cm_cases cm_default c
           | e ->
               bug "ConstMatch matched against non constant" e
         end
     | GetField label ->
-        begin match eval stack arg with
+        begin match arg with
           | Record r ->
               Util.find_exn r label
           | e ->
