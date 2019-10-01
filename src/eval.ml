@@ -6,14 +6,16 @@ module Label = Ast.Label
 let bug msg term =
   MuleErr.bug (msg ^ ": " ^ Pretty.runtime_expr term)
 
-let report step expr =
+let report step stack expr =
   if Config.print_eval_steps then
-    Stdio.print_endline ("evaluation: " ^ step ^ ": " ^ Pretty.runtime_expr expr)
-  else
-    ()
+    begin
+      Stdio.print_endline ("evaluation: " ^ step ^ ": " ^ Pretty.runtime_expr expr);
+      Stdio.print_endline ("stack:");
+      List.iter stack ~f:(fun e -> Stdio.print_endline ("  " ^ Pretty.runtime_expr e))
+    end
 
 let rec whnf stack expr =
-  report "whnf" expr;
+  report "whnf" stack expr;
   begin match expr with
     | Var v ->
         whnf stack (List.nth_exn stack v)
@@ -37,7 +39,7 @@ and do_letrec do_ev stack binds body =
   let binds = List.map binds ~f:(eval stack') in
   do_ev (binds @ stack) body
 and eval stack expr =
-  report "eval" expr;
+  report "eval" stack expr;
   begin match whnf stack expr with
     | PrimIO io -> PrimIO io
     | Prim p -> Prim p
@@ -82,7 +84,7 @@ and eval stack expr =
         end
   end
 and apply stack f arg =
-  report "apply" (App(f, arg));
+  report "apply" stack (App(f, arg));
   let f' = eval stack f in
   begin match f' with
     | Prim prim ->
