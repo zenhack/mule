@@ -11,7 +11,7 @@ let report step stack expr =
     begin
       Stdio.print_endline ("evaluation: " ^ step ^ ": " ^ Pretty.runtime_expr expr);
       Stdio.print_endline ("stack:");
-      List.iter stack ~f:(fun e -> Stdio.print_endline ("  " ^ Pretty.runtime_expr e))
+      List.iter stack ~f:(fun e -> Stdio.print_endline ("  + " ^ Pretty.runtime_expr e))
     end
 
 let rec whnf stack expr =
