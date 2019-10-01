@@ -1,13 +1,7 @@
 
 Desugared:
 
-	(let
-	 ($1
-	  (fix/record
-	   (fn $0
-	    (let-type ((a (rec a int)) (b (rec b a)))
-	     (((.type= a) (((.type= b) {}) (type b))) (type a))))))
-	 (let-type ((b (. $1 b))) (let-type ((a (. $1 a))) (Integer 0))))
+	(letrec (types ((b (rec b a)) (a (rec a int)))) (values ()) (Integer 0))
 
 inferred type:
 
@@ -15,9 +9,7 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((Lam (0 () (Const (Integer 0))))
-	  (App ((Fix Record) (Lam (0 () (Record ())))))))
+	(Const (Integer 0))
 
 Evaluated:
 

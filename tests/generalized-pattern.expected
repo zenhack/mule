@@ -1,15 +1,13 @@
 
 Desugared:
 
-	(let
-	 ($4
-	  (fix/record
-	   (fn $2
-	    (((.= $0) (((.= x) {}) ((: (all a (a -> a))) ((. $0) $2))))
-	     ((match ((Ok ($3 ((match () ($1 $1)) $3))))) ((fn x (Ok x)) (fn x x)))))))
-	 (let (x ((. x) $4))
-	  (let ($0 ((. $0) $4))
-	   (fix/record (fn $5 (((.= k) (((.= v) {}) (x (fn y y)))) (x {})))))))
+	(letrec (types ())
+	 (values
+	  ((x ((: (all a (a -> a))) $0))
+	   ($0
+	    ((match ((Ok ($2 ((match () ($1 $1)) $2))))) ((fn x (Ok x)) (fn x x))))))
+	 (letrec (types ()) (values ((k (x {})) (v (x (fn y y)))))
+	  (((.= k) (((.= v) {}) v)) k)))
 
 inferred type:
 
@@ -17,46 +15,38 @@ inferred type:
 	 (all b
 	  (all c
 	   (record (types (...c))
-	    (values ((k (record (types (...b)) (values ()))) (v (a -> a))))))))
+	    (values ((k (record (types (...a)) (values ()))) (v (b -> b))))))))
 
 Runtime term:
 
-	(App
-	 ((Lam
-	   (1 ()
+	(LetRec
+	 (((2 (Var 1))
+	   (0
 	    (App
-	     ((Lam
-	       (1 ()
-	        (App
-	         ((Lam
-	           (1 ()
+	     ((Match
+	       (cases
+	        ((Ok
+	          (Lam
+	           (0 ()
 	            (App
-	             ((Fix Record)
-	              (Lam
-	               (2 ()
-	                (Record
-	                 ((k (App ((Var 2) (Record ()))))
-	                  (v (App ((Var 2) (Lam (0 () (Var 0))))))))))))))
-	          (App ((GetField (Strict $0)) (Var 1)))))))
-	      (App ((GetField (Strict x)) (Var 0)))))))
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     (0 ()
-	      (Record
-	       (($0
-	         (App
-	          ((Match
-	            (cases
-	             ((Ok
-	               (Lam
-	                (0 ()
-	                 (App
-	                  ((Match (cases ()) (default ((Lam (0 () (Var 0))))))
-	                   (Var 0))))))))
-	            (default ()))
-	           (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0))))))))
-	        (x (App ((GetField (Lazy $0)) (Var 0))))))))))))
+	             ((Match (cases ()) (default ((Lam (0 () (Var 0)))))) (Var 0))))))))
+	       (default ()))
+	      (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0)))))))))
+	  (LetRec
+	   (((3 (App ((Var 2) (Record ()))))
+	     (3 (App ((Var 2) (Lam (0 () (Var 0)))))))
+	    (App
+	     ((App
+	       ((Lam
+	         (0 () (Lam (1 () (Update (old (Var 1)) (label k) (field (Var 0)))))))
+	        (App
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label v) (field (Var 0)))))))
+	            (Record ())))
+	          (Var 1)))))
+	      (Var 0)))))))
 
 Evaluated:
 

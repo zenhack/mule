@@ -3,9 +3,9 @@ Desugared:
 
 	(fn choice
 	 (let (choice ((: (all a (a -> (a -> a)))) choice))
-	  (fix/record
-	   (fn $0
-	    (((.= x) (((.= y) {}) ((choice (fn x x)) (fn x x)))) ((choice {}) {}))))))
+	  (letrec (types ())
+	   (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
+	   (((.= x) (((.= y) {}) y)) x))))
 
 inferred type:
 
@@ -24,15 +24,24 @@ Runtime term:
 	  (App
 	   ((Lam
 	     (0 ()
-	      (App
-	       ((Fix Record)
-	        (Lam
-	         (1 ()
-	          (Record
-	           ((x (App ((App ((Var 1) (Record ()))) (Record ()))))
-	            (y
-	             (App
-	              ((App ((Var 1) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0))))))))))))))
+	      (LetRec
+	       (((3 (App ((App ((Var 2) (Record ()))) (Record ()))))
+	         (3
+	          (App ((App ((Var 2) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0)))))))
+	        (App
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	            (App
+	             ((App
+	               ((Lam
+	                 (0 ()
+	                  (Lam
+	                   (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	                (Record ())))
+	              (Var 1)))))
+	          (Var 0)))))))
 	    (Var 0)))))
 
 Evaluated:
@@ -42,13 +51,22 @@ Evaluated:
 	  (App
 	   ((Lam
 	     (0 ()
-	      (App
-	       ((Fix Record)
-	        (Lam
-	         (1 ()
-	          (Record
-	           ((x (App ((App ((Var 1) (Record ()))) (Record ()))))
-	            (y
-	             (App
-	              ((App ((Var 1) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0))))))))))))))
+	      (LetRec
+	       (((3 (App ((App ((Var 2) (Record ()))) (Record ()))))
+	         (3
+	          (App ((App ((Var 2) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0)))))))
+	        (App
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	            (App
+	             ((App
+	               ((Lam
+	                 (0 ()
+	                  (Lam
+	                   (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	                (Record ())))
+	              (Var 1)))))
+	          (Var 0)))))))
 	    (Var 0)))))

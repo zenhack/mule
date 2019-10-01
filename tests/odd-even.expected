@@ -2,56 +2,31 @@
 Desugared:
 
 	(((. odd)
-	  (fix/record
-	   (fn $0
-	    (((.= even)
-	      (((.= odd) {})
-	       ((:
-	         ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
-	          (union
-	           ((True (record (types ()) (values ())))
-	            (False (record (types ()) (values ())))))))
-	        (fn x
-	         ((match
-	           ((S
-	             ($1
-	              ((match ()
-	                (k
-	                 (((:
-	                    ((rec n
-	                      (union ((Z (record (types ()) (values ()))) (S n))))
-	                     ->
-	                     (union
-	                      ((True (record (types ()) (values ())))
-	                       (False (record (types ()) (values ())))))))
-	                   ((. even) $0))
-	                  k)))
-	               $1)))
-	            (Z ($2 ((match () (_ ((fn x (False x)) {}))) $2)))))
-	          x)))))
-	     ((:
-	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
-	        (union
-	         ((True (record (types ()) (values ())))
-	          (False (record (types ()) (values ())))))))
-	      (fn x
-	       ((match
-	         ((S
-	           ($3
-	            ((match ()
-	              (k
-	               (((:
-	                  ((rec n
-	                    (union ((Z (record (types ()) (values ()))) (S n))))
-	                   ->
-	                   (union
-	                    ((True (record (types ()) (values ())))
-	                     (False (record (types ()) (values ())))))))
-	                 ((. odd) $0))
-	                k)))
-	             $3)))
-	          (Z ($4 ((match () (_ ((fn x (True x)) {}))) $4)))))
-	        x)))))))
+	  (letrec (types ())
+	   (values
+	    ((even
+	      ((:
+	        ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	         (union
+	          ((True (record (types ()) (values ())))
+	           (False (record (types ()) (values ())))))))
+	       (fn x
+	        ((match
+	          ((S ($2 ((match () (k (odd k))) $2)))
+	           (Z ($3 ((match () (_ ((fn x (True x)) {}))) $3)))))
+	         x))))
+	     (odd
+	      ((:
+	        ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	         (union
+	          ((True (record (types ()) (values ())))
+	           (False (record (types ()) (values ())))))))
+	       (fn x
+	        ((match
+	          ((S ($0 ((match () (k (even k))) $0)))
+	           (Z ($1 ((match () (_ ((fn x (False x)) {}))) $1)))))
+	         x))))))
+	   (((.= even) (((.= odd) {}) odd)) even)))
 	 ((fn x (S x))
 	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
 
@@ -65,73 +40,74 @@ Runtime term:
 
 	(App
 	 ((App
-	   ((GetField (Strict odd))
-	    (App
-	     ((Fix Record)
-	      (Lam
-	       (3 ()
-	        (Record
-	         ((even
-	           (Lam
-	            (3 ()
-	             (App
-	              ((Match
-	                (cases
-	                 ((S
-	                   (Lam
-	                    (3 ()
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         ((Lam
-	                           (3 ()
-	                            (App
-	                             ((App ((GetField (Lazy odd)) (Var 3))) (Var 0))))))))
-	                       (Var 0))))))
-	                  (Z
-	                   (Lam
-	                    (0 ()
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         ((Lam
-	                           (0 ()
-	                            (App
-	                             ((Lam (0 () (Ctor (True (Var 0))))) (Record ()))))))))
-	                       (Var 0))))))))
-	                (default ()))
-	               (Var 0))))))
-	          (odd
-	           (Lam
-	            (3 ()
-	             (App
-	              ((Match
-	                (cases
-	                 ((S
-	                   (Lam
-	                    (3 ()
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         ((Lam
-	                           (3 ()
-	                            (App
-	                             ((App ((GetField (Lazy even)) (Var 3))) (Var 0))))))))
-	                       (Var 0))))))
-	                  (Z
-	                   (Lam
-	                    (0 ()
-	                     (App
-	                      ((Match (cases ())
-	                        (default
-	                         ((Lam
-	                           (0 ()
-	                            (App
-	                             ((Lam (0 () (Ctor (False (Var 0)))))
-	                              (Record ()))))))))
-	                       (Var 0))))))))
-	                (default ()))
-	               (Var 0))))))))))))))
+	   ((GetField odd)
+	    (LetRec
+	     (((2
+	        (Lam
+	         (2 ()
+	          (App
+	           ((Match
+	             (cases
+	              ((S
+	                (Lam
+	                 (3 ()
+	                  (App
+	                   ((Match (cases ())
+	                     (default ((Lam (4 () (App ((Var 4) (Var 0))))))))
+	                    (Var 0))))))
+	               (Z
+	                (Lam
+	                 (0 ()
+	                  (App
+	                   ((Match (cases ())
+	                     (default
+	                      ((Lam
+	                        (0 ()
+	                         (App
+	                          ((Lam (0 () (Ctor (True (Var 0))))) (Record ()))))))))
+	                    (Var 0))))))))
+	             (default ()))
+	            (Var 0))))))
+	       (1
+	        (Lam
+	         (1 ()
+	          (App
+	           ((Match
+	             (cases
+	              ((S
+	                (Lam
+	                 (2 ()
+	                  (App
+	                   ((Match (cases ())
+	                     (default ((Lam (3 () (App ((Var 3) (Var 0))))))))
+	                    (Var 0))))))
+	               (Z
+	                (Lam
+	                 (0 ()
+	                  (App
+	                   ((Match (cases ())
+	                     (default
+	                      ((Lam
+	                        (0 ()
+	                         (App
+	                          ((Lam (0 () (Ctor (False (Var 0))))) (Record ()))))))))
+	                    (Var 0))))))))
+	             (default ()))
+	            (Var 0)))))))
+	      (App
+	       ((App
+	         ((Lam
+	           (0 ()
+	            (Lam (1 () (Update (old (Var 1)) (label even) (field (Var 0)))))))
+	          (App
+	           ((App
+	             ((Lam
+	               (0 ()
+	                (Lam
+	                 (1 () (Update (old (Var 1)) (label odd) (field (Var 0)))))))
+	              (Record ())))
+	            (Var 1)))))
+	        (Var 0)))))))
 	  (App
 	   ((Lam (0 () (Ctor (S (Var 0)))))
 	    (App

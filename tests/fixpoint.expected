@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(fn f (let (g (fix/let (fn g (fn x (f (fn v ((x x) v))))))) (g g)))
+	(fn f (letrec (types ()) (values ((g (fn x (f (fn v ((x x) v))))))) (g g)))
 
 inferred type:
 
@@ -10,29 +10,21 @@ inferred type:
 Runtime term:
 
 	(Lam
-	 (2 ()
-	  (App
-	   ((Lam (0 () (App ((Var 0) (Var 0)))))
-	    (App
-	     ((Fix Let)
+	 (0 ()
+	  (LetRec
+	   (((2
 	      (Lam
 	       (2 ()
-	        (Lam
-	         (2 ()
-	          (App
-	           ((Var 2) (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))))))))
+	        (App ((Var 2) (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))
+	    (App ((Var 0) (Var 0)))))))
 
 Evaluated:
 
 	(Lam
 	 (0 ()
-	  (App
-	   ((Lam (0 () (App ((Var 0) (Var 0)))))
-	    (App
-	     ((Fix Let)
+	  (LetRec
+	   (((2
 	      (Lam
 	       (2 ()
-	        (Lam
-	         (2 ()
-	          (App
-	           ((Var 2) (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))))))))
+	        (App ((Var 2) (Lam (1 () (App ((App ((Var 1) (Var 1))) (Var 0)))))))))))
+	    (App ((Var 0) (Var 0)))))))

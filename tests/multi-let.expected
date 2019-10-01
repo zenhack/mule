@@ -1,13 +1,8 @@
 
 Desugared:
 
-	(let
-	 ($1
-	  (fix/record
-	   (fn $0
-	    (((.= x) (((.= y) {}) ((((. add) int) ((. x) $0)) (Integer 2))))
-	     (Integer 1)))))
-	 (let (y ((. y) $1)) (let (x ((. x) $1)) y)))
+	(letrec (types ())
+	 (values ((y ((((. add) int) x) (Integer 2))) (x (Integer 1)))) y)
 
 inferred type:
 
@@ -15,30 +10,19 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((Lam
-	   (1 ()
+	(LetRec
+	 (((2
 	    (App
-	     ((Lam
-	       (1 ()
-	        (App ((Lam (1 () (Var 1))) (App ((GetField (Strict x)) (Var 1)))))))
-	      (App ((GetField (Strict y)) (Var 0)))))))
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     (0 ()
-	      (Record
-	       ((x (Const (Integer 1)))
-	        (y
-	         (App
-	          ((App
-	            ((App
-	              ((GetField (Strict add))
-	               (Record
-	                ((add (Prim <fun>)) (div (Prim <fun>)) (mul (Prim <fun>))
-	                 (rem (Prim <fun>)) (sub (Prim <fun>))))))
-	             (App ((GetField (Lazy x)) (Var 0)))))
-	           (Const (Integer 2)))))))))))))
+	     ((App
+	       ((App
+	         ((GetField add)
+	          (Record
+	           ((add (Prim <fun>)) (div (Prim <fun>)) (mul (Prim <fun>))
+	            (rem (Prim <fun>)) (sub (Prim <fun>))))))
+	        (Var 1)))
+	      (Const (Integer 2)))))
+	   (0 (Const (Integer 1))))
+	  (Var 0)))
 
 Evaluated:
 

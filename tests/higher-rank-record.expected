@@ -1,9 +1,11 @@
 
 Desugared:
 
-	(let (r (fix/let (fn r (fix/record (fn $1 (((.= y) {}) (fn x x)))))))
-	 (let (f (fix/let (fn f ((: (all a (a -> a))) ((. y) r)))))
-	  (fix/record (fn $0 (((.= l) (((.= k) {}) (f (fn z z)))) (f {}))))))
+	(letrec (types ())
+	 (values ((r (letrec (types ()) (values ((y (fn x x)))) (((.= y) {}) y)))))
+	 (letrec (types ()) (values ((f ((: (all a (a -> a))) ((. y) r)))))
+	  (letrec (types ()) (values ((l (f {})) (k (f (fn z z)))))
+	   (((.= l) (((.= k) {}) k)) l))))
 
 inferred type:
 
@@ -11,29 +13,39 @@ inferred type:
 	 (all b
 	  (all c
 	   (record (types (...c))
-	    (values ((k (a -> a)) (l (record (types (...b)) (values ())))))))))
+	    (values ((k (b -> b)) (l (record (types (...a)) (values ())))))))))
 
 Runtime term:
 
-	(App
-	 ((Lam
-	   (1 ()
-	    (App
-	     ((Lam
-	       (0 ()
-	        (App
-	         ((Fix Record)
-	          (Lam
-	           (1 ()
-	            (Record
-	             ((k (App ((Var 1) (Lam (0 () (Var 0))))))
-	              (l (App ((Var 1) (Record ()))))))))))))
-	      (App ((Fix Let) (Lam (1 () (App ((GetField (Strict y)) (Var 1)))))))))))
-	  (App
-	   ((Fix Let)
-	    (Lam
-	     (-1 ()
-	      (App ((Fix Record) (Lam (0 () (Record ((y (Lam (0 () (Var 0))))))))))))))))
+	(LetRec
+	 (((0
+	    (LetRec
+	     (((0 (Lam (0 () (Var 0)))))
+	      (App
+	       ((App
+	         ((Lam
+	           (0 ()
+	            (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	          (Record ())))
+	        (Var 0)))))))
+	  (LetRec
+	   (((2 (App ((GetField y) (Var 1)))))
+	    (LetRec
+	     (((3 (App ((Var 2) (Record ()))))
+	       (3 (App ((Var 2) (Lam (0 () (Var 0)))))))
+	      (App
+	       ((App
+	         ((Lam
+	           (0 ()
+	            (Lam (1 () (Update (old (Var 1)) (label l) (field (Var 0)))))))
+	          (App
+	           ((App
+	             ((Lam
+	               (0 ()
+	                (Lam (1 () (Update (old (Var 1)) (label k) (field (Var 0)))))))
+	              (Record ())))
+	            (Var 1)))))
+	        (Var 0)))))))))
 
 Evaluated:
 

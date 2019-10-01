@@ -19,9 +19,9 @@ inferred type:
 Runtime term:
 
 	(LetRec
-	 (((2
+	 (((1
 	    (Lam
-	     (2 ()
+	     (1 ()
 	      (App
 	       ((ConstMatch (cm_cases (((Integer 0) (Const (Integer 1)))))
 	         (cm_default

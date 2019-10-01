@@ -30,7 +30,7 @@ Runtime term:
 	(LetRec
 	 (((0 (Lam (0 () (App ((GetField y) (Var 0)))))))
 	  (LetRec
-	   (((2
+	   (((3
 	      (App
 	       ((Var 2)
 	        (LetRec
@@ -42,7 +42,7 @@ Runtime term:
 	                (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
 	              (Record ())))
 	            (Var 0))))))))
-	     (2
+	     (3
 	      (App
 	       ((Var 2)
 	        (LetRec

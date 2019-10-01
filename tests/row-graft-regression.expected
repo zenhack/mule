@@ -16,7 +16,7 @@ inferred type:
 Runtime term:
 
 	(Lam
-	 (1 ()
+	 (0 ()
 	  (Lam
 	   (1 ()
 	    (App

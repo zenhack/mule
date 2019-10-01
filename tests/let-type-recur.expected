@@ -1,16 +1,18 @@
 
 Desugared:
 
-	(let-type
-	 ((int-list
-	   (rec int-list
-	    (union
-	     ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
-	      (Nil (record (types ()) (values ()))))))))
+	(letrec
+	 (types
+	  ((int-list
+	    (rec int-list
+	     (union
+	      ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
+	       (Nil (record (types ()) (values ())))))))))
+	 (values ())
 	 ((: int-list)
 	  ((fn x (Cons x))
-	   (fix/record
-	    (fn $0 (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 4)))))))
+	   (letrec (types ()) (values ((hd (Integer 4)) (tl ((fn x (Nil x)) {}))))
+	    (((.= hd) (((.= tl) {}) tl)) hd)))))
 
 inferred type:
 
@@ -23,13 +25,22 @@ Runtime term:
 
 	(App
 	 ((Lam (0 () (Ctor (Cons (Var 0)))))
-	  (App
-	   ((Fix Record)
-	    (Lam
-	     (0 ()
-	      (Record
-	       ((hd (Const (Integer 4)))
-	        (tl (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ()))))))))))))
+	  (LetRec
+	   (((0 (Const (Integer 4)))
+	     (0 (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ())))))
+	    (App
+	     ((App
+	       ((Lam
+	         (0 ()
+	          (Lam (1 () (Update (old (Var 1)) (label hd) (field (Var 0)))))))
+	        (App
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label tl) (field (Var 0)))))))
+	            (Record ())))
+	          (Var 1)))))
+	      (Var 0)))))))
 
 Evaluated:
 

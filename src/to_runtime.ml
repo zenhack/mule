@@ -23,7 +23,8 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         let (ncap, body') =
           translate (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
         in
-        (ncap-1, R.Lam(ncap-1, [], body'))
+        let ncap = Int.max 0 (ncap - 1) in
+        (ncap, R.Lam(ncap, [], body'))
     | D.App { app_fn = D.WithType _; app_arg = e } ->
         translate depth env e
     | D.App {app_fn = f; app_arg = x} ->
