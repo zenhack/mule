@@ -26,10 +26,14 @@ module Expr = struct
         { cm_cases: t ConstMap.t
         ; cm_default: t
         }
-    | Lazy of (t list * t ref) Lazy.t
+    | Lazy of (lazy_state ref) Lazy.t
     | Vec of t array
     | Const of Const.t
     | Prim of (t -> t)
     | PrimIO of (t io)
   [@@deriving sexp_of]
+  and lazy_state =
+    | Delayed of (t list * t)
+    | InProgress
+    | Ready of t
 end

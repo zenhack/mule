@@ -37,6 +37,8 @@ type t =
    * pipeline. *)
   | `MatchDesugarMismatch
 
+  | `LazyLoop
+
   | `TypeError of (reason * type_error)
   | `DuplicateFields of (Label.t list)
   | `UnreachableCases of (Surface_ast.Pattern.t * Surface_ast.Expr.t) list
@@ -112,6 +114,8 @@ let show = function
       "Illegal annotated type: only types of function parameters may be annotated."
   | `PathError pe ->
       show_path_error pe
+  | `LazyLoop ->
+      "Infinite loop"
   | `Bug msg ->
       "BUG: " ^ msg
 

@@ -19,8 +19,7 @@ let rec eval_letrec stack binds body =
     rec stack' = lazy (Lazy.force binds' @ stack)
     and binds' =
     lazy (List.map binds ~f:(fun (cap, expr) ->
-        let e = ref expr in
-        Lazy (lazy (List.take (Lazy.force stack') cap, e))
+        Lazy (lazy (ref (Delayed (List.take (Lazy.force stack') cap, expr))))
       ))
   in
   let binds' = Lazy.force binds' in
@@ -42,9 +41,18 @@ and eval stack expr =
     | LetRec (binds, body) ->
         eval_letrec stack binds body
     | Lazy thunk ->
-        let (env, e) = Lazy.force thunk in
-        e := eval (env @ stack) !e;
-        !e
+        let r = Lazy.force thunk in
+        begin match !r with
+          | Ready ret ->
+              ret
+          | InProgress ->
+              MuleErr.throw `LazyLoop
+          | Delayed (env, e) ->
+              r := InProgress;
+              let ret = eval (env @ stack) e in
+              r := Ready ret;
+              ret
+        end
 
     | Vec arr ->
         (* XXX: this is O(n) even for already-evaluated
