@@ -10,8 +10,8 @@ inferred type:
 
 Runtime term:
 
-	(Lam (0 () (App ((GetField (Strict x)) (Var 0)))))
+	(Lam (0 () (App ((GetField x) (Var 0)))))
 
 Evaluated:
 
-	(Lam (0 () (App ((GetField (Strict x)) (Var 0)))))
+	(Lam (0 () (App ((GetField x) (Var 0)))))

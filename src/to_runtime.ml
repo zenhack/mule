@@ -7,6 +7,8 @@ type binding = [ `Index of int | `Term of R.t ]
 
 let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
   fun depth env -> function
+    | D.LetRec {letrec_vals = []; letrec_body; _} ->
+        translate depth env letrec_body
     | D.LetRec {letrec_vals; letrec_body; _} ->
         translate_letrec depth env letrec_vals letrec_body
     | D.Const {const_val = c} -> (0, R.Const c)

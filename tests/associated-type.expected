@@ -4,7 +4,7 @@ Desugared:
 	((:
 	  (record (types ((t (rec t (record (types ()) (values ()))))))
 	   (values ((x t)))))
-	 (fix/record (fn $0 (((.= x) {}) {}))))
+	 (letrec (types ()) (values ((x {}))) (((.= x) {}) x)))
 
 inferred type:
 
@@ -13,7 +13,14 @@ inferred type:
 
 Runtime term:
 
-	(App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))
+	(LetRec
+	 (((0 (Record ())))
+	  (App
+	   ((App
+	     ((Lam
+	       (0 () (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	      (Record ())))
+	    (Var 0)))))
 
 Evaluated:
 

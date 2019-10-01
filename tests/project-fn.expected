@@ -9,8 +9,8 @@ inferred type:
 
 Runtime term:
 
-	(Lam (0 () (App ((GetField (Strict y)) (Var 0)))))
+	(Lam (0 () (App ((GetField y) (Var 0)))))
 
 Evaluated:
 
-	(Lam (0 () (App ((GetField (Strict y)) (Var 0)))))
+	(Lam (0 () (App ((GetField y) (Var 0)))))

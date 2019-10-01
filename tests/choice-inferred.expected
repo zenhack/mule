@@ -2,7 +2,7 @@
 Desugared:
 
 	(fn choice
-	 (fix/record
-	  (fn $0
-	   (((.= x) (((.= y) {}) ((choice (fn x x)) (fn x x)))) ((choice {}) {})))))
-Type error: mismatched type constructors: {...} and ->
+	 (letrec (types ())
+	  (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
+	  (((.= x) (((.= y) {}) y)) x)))
+Type error: mismatched type constructors: -> and {...}

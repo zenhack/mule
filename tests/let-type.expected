@@ -10,7 +10,7 @@ inferred type:
 
 Runtime term:
 
-	(LetRec (() (Record ())))
+	(Record ())
 
 Evaluated:
 

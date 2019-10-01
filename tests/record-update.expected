@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(((.= y) (fix/record (fn $1 (((.= x) {}) {}))))
-	 (fix/record (fn $0 (((.= z) {}) {}))))
+	(((.= y) (letrec (types ()) (values ((x {}))) (((.= x) {}) x)))
+	 (letrec (types ()) (values ((z {}))) (((.= z) {}) z)))
 
 inferred type:
 
@@ -23,8 +23,23 @@ Runtime term:
 	 ((App
 	   ((Lam
 	     (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	    (App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))))
-	  (App ((Fix Record) (Lam (0 () (Record ((z (Record ()))))))))))
+	    (LetRec
+	     (((0 (Record ())))
+	      (App
+	       ((App
+	         ((Lam
+	           (0 ()
+	            (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	          (Record ())))
+	        (Var 0)))))))
+	  (LetRec
+	   (((0 (Record ())))
+	    (App
+	     ((App
+	       ((Lam
+	         (0 () (Lam (1 () (Update (old (Var 1)) (label z) (field (Var 0)))))))
+	        (Record ())))
+	      (Var 0)))))))
 
 Evaluated:
 

@@ -1,17 +1,24 @@
 
 Desugared:
 
-	(fix/record (fn $0 (((.= x) {}) {})))
+	(letrec (types ()) (values ((x {}))) (((.= x) {}) x))
 
 inferred type:
 
 	(all a
 	 (all b
-	  (record (types (...b)) (values ((x (record (types (...a)) (values ()))))))))
+	  (record (types (...a)) (values ((x (record (types (...b)) (values ()))))))))
 
 Runtime term:
 
-	(App ((Fix Record) (Lam (0 () (Record ((x (Record ()))))))))
+	(LetRec
+	 (((0 (Record ())))
+	  (App
+	   ((App
+	     ((Lam
+	       (0 () (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	      (Record ())))
+	    (Var 0)))))
 
 Evaluated:
 

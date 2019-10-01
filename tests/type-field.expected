@@ -1,10 +1,8 @@
 
 Desugared:
 
-	(fix/record
-	 (fn $0
-	  (let-type ((t (rec t int)))
-	   (((.type= t) (((.= x) {}) ((: t) (Integer 4)))) (type t)))))
+	(letrec (types ((t (rec t int)))) (values ((x ((: t) (Integer 4)))))
+	 (((.type= t) (((.= x) {}) x)) (type t)))
 
 inferred type:
 
@@ -12,7 +10,19 @@ inferred type:
 
 Runtime term:
 
-	(App ((Fix Record) (Lam (0 () (Record ((x (Const (Integer 4)))))))))
+	(LetRec
+	 (((0 (Const (Integer 4))))
+	  (App
+	   ((App
+	     ((Lam (0 () (Lam (1 () (Var 1)))))
+	      (App
+	       ((App
+	         ((Lam
+	           (0 ()
+	            (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
+	          (Record ())))
+	        (Var 0)))))
+	    (Record ())))))
 
 Evaluated:
 

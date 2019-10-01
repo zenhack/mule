@@ -1,10 +1,9 @@
 
 Desugared:
 
-	(let
-	 (factorial
-	  (fix/let
-	   (fn factorial
+	(letrec (types ())
+	 (values
+	  ((factorial
 	    (fn n
 	     ((match/const (((Integer 0) (Integer 1)))
 	       (_
@@ -19,41 +18,37 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((Lam (0 () (App ((Var 0) (Const (Integer 5))))))
-	  (App
-	   ((Fix Let)
+	(LetRec
+	 (((2
 	    (Lam
 	     (2 ()
-	      (Lam
-	       (2 ()
-	        (App
-	         ((ConstMatch (cm_cases (((Integer 0) (Const (Integer 1)))))
-	           (cm_default
-	            (Lam
-	             (2 ()
-	              (App
+	      (App
+	       ((ConstMatch (cm_cases (((Integer 0) (Const (Integer 1)))))
+	         (cm_default
+	          (Lam
+	           (2 ()
+	            (App
+	             ((App
 	               ((App
-	                 ((App
-	                   ((GetField (Strict mul))
-	                    (Record
-	                     ((add (Prim <fun>)) (div (Prim <fun>))
-	                      (mul (Prim <fun>)) (rem (Prim <fun>))
-	                      (sub (Prim <fun>))))))
-	                  (Var 0)))
+	                 ((GetField mul)
+	                  (Record
+	                   ((add (Prim <fun>)) (div (Prim <fun>)) (mul (Prim <fun>))
+	                    (rem (Prim <fun>)) (sub (Prim <fun>))))))
+	                (Var 0)))
+	              (App
+	               ((Var 2)
 	                (App
-	                 ((Var 2)
-	                  (App
+	                 ((App
 	                   ((App
-	                     ((App
-	                       ((GetField (Strict sub))
-	                        (Record
-	                         ((add (Prim <fun>)) (div (Prim <fun>))
-	                          (mul (Prim <fun>)) (rem (Prim <fun>))
-	                          (sub (Prim <fun>))))))
-	                      (Var 0)))
-	                    (Const (Integer 1))))))))))))
-	          (Var 0)))))))))))
+	                     ((GetField sub)
+	                      (Record
+	                       ((add (Prim <fun>)) (div (Prim <fun>))
+	                        (mul (Prim <fun>)) (rem (Prim <fun>))
+	                        (sub (Prim <fun>))))))
+	                    (Var 0)))
+	                  (Const (Integer 1))))))))))))
+	        (Var 0)))))))
+	  (App ((Var 0) (Const (Integer 5))))))
 
 Evaluated:
 

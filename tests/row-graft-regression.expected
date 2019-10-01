@@ -24,7 +24,7 @@ Runtime term:
 	       ((Lam
 	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
 	        (Var 0)))
-	      (App ((Var 1) (App ((GetField (Strict z)) (Var 0)))))))))))
+	      (App ((Var 1) (App ((GetField z) (Var 0)))))))))))
 
 Evaluated:
 
@@ -37,4 +37,4 @@ Evaluated:
 	       ((Lam
 	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
 	        (Var 0)))
-	      (App ((Var 1) (App ((GetField (Strict z)) (Var 0)))))))))))
+	      (App ((Var 1) (App ((GetField z) (Var 0)))))))))))
