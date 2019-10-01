@@ -1,15 +1,16 @@
 
 Desugared:
 
-	(let (f (fix/let (fn f (fn x ((. y) x)))))
-	 (fix/record
-	  (fn $0
-	   (((.= a)
-	     (((.= b) {})
-	      (f
-	       (fix/record
-	        (fn $1 (((.= y) {}) (fix/record (fn $2 (((.= z) {}) {})))))))))
-	    (f (fix/record (fn $3 (((.= y) {}) {}))))))))
+	(letrec (types ()) (values ((f (fn x ((. y) x)))))
+	 (letrec (types ())
+	  (values
+	   ((a (f (letrec (types ()) (values ((y {}))) (((.= y) {}) y))))
+	    (b
+	     (f
+	      (letrec (types ())
+	       (values ((y (letrec (types ()) (values ((z {}))) (((.= z) {}) z)))))
+	       (((.= y) {}) y))))))
+	  (((.= a) (((.= b) {}) b)) a)))
 
 inferred type:
 
@@ -19,39 +20,62 @@ inferred type:
 	   (all d
 	    (record (types (...d))
 	     (values
-	      ((a (record (types (...c)) (values ())))
+	      ((a (record (types (...a)) (values ())))
 	       (b
-	        (record (types (...b))
-	         (values ((z (record (types (...a)) (values ()))))))))))))))
+	        (record (types (...c))
+	         (values ((z (record (types (...b)) (values ()))))))))))))))
 
 Runtime term:
 
-	(App
-	 ((Lam
-	   (0 ()
+	(LetRec
+	 (((0 (Lam (0 () (App ((GetField y) (Var 0)))))))
+	  (LetRec
+	   (((2
+	      (App
+	       ((Var 2)
+	        (LetRec
+	         (((0 (Record ())))
+	          (App
+	           ((App
+	             ((Lam
+	               (0 ()
+	                (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	              (Record ())))
+	            (Var 0))))))))
+	     (2
+	      (App
+	       ((Var 2)
+	        (LetRec
+	         (((0
+	            (LetRec
+	             (((0 (Record ())))
+	              (App
+	               ((App
+	                 ((Lam
+	                   (0 ()
+	                    (Lam
+	                     (1 () (Update (old (Var 1)) (label z) (field (Var 0)))))))
+	                  (Record ())))
+	                (Var 0)))))))
+	          (App
+	           ((App
+	             ((Lam
+	               (0 ()
+	                (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
+	              (Record ())))
+	            (Var 0)))))))))
 	    (App
-	     ((Fix Record)
-	      (Lam
-	       (1 ()
-	        (Record
-	         ((a
-	           (App
-	            ((Var 1)
-	             (App ((Fix Record) (Lam (0 () (Record ((y (Record ())))))))))))
-	          (b
-	           (App
-	            ((Var 1)
-	             (App
-	              ((Fix Record)
-	               (Lam
-	                (0 ()
-	                 (Record
-	                  ((y
-	                    (App
-	                     ((Fix Record) (Lam (0 () (Record ((z (Record ()))))))))))))))))))))))))))
-	  (App
-	   ((Fix Let)
-	    (Lam (0 () (Lam (0 () (App ((GetField (Strict y)) (Var 0)))))))))))
+	     ((App
+	       ((Lam
+	         (0 () (Lam (1 () (Update (old (Var 1)) (label a) (field (Var 0)))))))
+	        (App
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label b) (field (Var 0)))))))
+	            (Record ())))
+	          (Var 1)))))
+	      (Var 0)))))))
 
 Evaluated:
 

@@ -23,7 +23,8 @@ let rec whnf stack expr =
         apply stack (whnf stack f) x
     | Lam (n, env, body) ->
         Lam (0, List.take stack n @ env, body)
-    | Lazy (env, e) ->
+    | Lazy thunk ->
+        let (env, e) = Lazy.force thunk in
         e := whnf (env @ stack) !e;
         !e
     | LetRec (binds, body) ->
@@ -32,12 +33,18 @@ let rec whnf stack expr =
         e
   end
 and do_letrec do_ev stack binds body =
-  let binds =
-    List.map binds ~f:(fun (cap, expr) -> Lazy(List.take stack cap, ref expr))
+  let
+    rec stack' = lazy (Lazy.force binds' @ stack)
+    and binds' =
+    lazy (List.map binds ~f:(fun (cap, expr) ->
+        let e = ref expr in
+        Lazy (lazy (List.take (Lazy.force stack') cap, e))
+      ))
   in
-  let stack' = (binds @ stack) in
-  let binds = List.map binds ~f:(eval stack') in
-  do_ev (binds @ stack) body
+  let binds' = Lazy.force binds' in
+  let stack' = Lazy.force stack' in
+  let binds' = List.map binds' ~f:(eval stack) in
+  do_ev (binds' @ stack') body
 and eval stack expr =
   report "eval" stack expr;
   begin match whnf stack expr with
@@ -46,7 +53,8 @@ and eval stack expr =
     | Const c -> Const c
     | LetRec (binds, body) ->
         do_letrec eval stack binds body
-    | Lazy (env, e) ->
+    | Lazy thunk ->
+        let (env, e) = Lazy.force thunk in
         e := eval (env @ stack) !e;
         !e
 

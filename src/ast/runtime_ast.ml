@@ -26,7 +26,7 @@ module Expr = struct
         { cm_cases: t ConstMap.t
         ; cm_default: t
         }
-    | Lazy of (t list * t ref)
+    | Lazy of (t list * t ref) Lazy.t
     | Vec of t array
     | Const of Const.t
     | Prim of (t -> t)
