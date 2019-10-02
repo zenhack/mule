@@ -4,8 +4,7 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((x ((: (all a (a -> a))) $0))
-	   ($0
-	    ((match ((Ok ($2 ((match () ($1 $1)) $2))))) ((fn x (Ok x)) (fn x x))))))
+	   ($0 ((match ((Ok ($1 $1)))) ((fn x (Ok x)) (fn x x))))))
 	 (letrec (types ()) (values ((k (x {})) (v (x (fn y y)))))
 	  (((.= k) (((.= v) {}) v)) k)))
 
@@ -23,14 +22,7 @@ Runtime term:
 	 (((2 (Var 1))
 	   (0
 	    (App
-	     ((Match
-	       (cases
-	        ((Ok
-	          (Lam
-	           (0 ()
-	            (App
-	             ((Match (cases ()) (default ((Lam (0 () (Var 0)))))) (Var 0))))))))
-	       (default ()))
+	     ((Match (cases ((Ok (Lam (0 () (Var 0)))))) (default ()))
 	      (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0)))))))))
 	  (LetRec
 	   (((3 (App ((Var 2) (Record ()))))

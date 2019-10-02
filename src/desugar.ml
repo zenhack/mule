@@ -550,19 +550,57 @@ and finalize_dict dict =
       )
 and desugar_let bs body =
   let rec go vals types = function
-    | `Value(v, e) :: fs ->
-        go ((v, desugar e) :: vals) types fs
-    | `Type t :: fs ->
-        let (v, ty) = desugar_type_binding t in
-        go vals ((v, ty) :: types) fs
-    | [] ->
-        D.LetRec {
-          letrec_types = types;
-          letrec_vals = vals;
-          letrec_body = desugar body;
-        }
+  | [] ->
+      D.LetRec {
+        letrec_types = types;
+        letrec_vals = vals;
+        letrec_body = desugar body;
+      }
+  (* Simplify a list of bindings, such that there are no "complex" patterns;
+   * everything is a simple variable. *)
+  | `BindType t :: bs ->
+      let (v, ty) = desugar_type_binding t in
+      go vals ((v, ty) :: types) bs
+  | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
+      go ((v, desugar e) :: vals) types bs
+  | `BindVal((SP.Const _) as p, _) :: _ ->
+      incomplete_pattern p
+  | `BindVal(SP.Wild, e) :: bs  ->
+      go ((Gensym.anon_var (), desugar e) :: vals) types bs
+  | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
+      go
+        (( v
+         , D.App {
+            app_fn = D.WithType{wt_type = desugar_type ty};
+            app_arg = desugar e;
+          }
+         ) :: vals)
+        types
+        bs
+  | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
+      let bind_var = Gensym.anon_var () in
+      let match_var = Gensym.anon_var () in
+      let bind =
+        ( bind_var
+        , D.App {
+            app_fn =
+              D.Match {
+                default = None;
+                cases = LabelMap.singleton lbl
+                    ( match_var
+                    , D.Var {v_var = match_var}
+                    )
+              };
+            app_arg = desugar e;
+          }
+        )
+      in
+      (* TODO: avoid creating the intermediate S.Var node somehow. This will
+       * make it easier to add metadata to the surface AST without having
+       * to "invent" it for the intermediate node. *)
+      go (bind :: vals) types (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
   in
-  go [] [] (simplify_bindings bs)
+  go [] [] bs
 and desugar_type_binding (v, params, ty) =
   (* Here, we convert things like `type t a b = ... (t a b) ...` to
    * `lam a b. rec t. ... t ...`.
@@ -589,32 +627,3 @@ and desugar_type_binding (v, params, ty) =
         )
   in
   (v, ty)
-and simplify_bindings = function
-  (* Simplify a list of bindings, such that there are no "complex" patterns;
-   * everything is a simple variable. *)
-  | [] -> []
-  | `BindType t :: bs ->
-      `Type t :: simplify_bindings bs
-  | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
-      `Value(v, e) :: simplify_bindings bs
-  | `BindVal((SP.Const _) as p, _) :: _ ->
-      incomplete_pattern p
-  | `BindVal(SP.Wild, e) :: bs  ->
-      `Value(Gensym.anon_var (), e) :: simplify_bindings bs
-  | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
-      `Value(v, S.WithType{wt_term = e; wt_type = ty}) :: simplify_bindings bs
-  | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
-      let bind_var = Gensym.anon_var () in
-      let match_var = Gensym.anon_var () in
-      `Value
-        ( bind_var
-        , S.Match
-            { match_arg = e
-            ; match_cases =
-                [ ( SP.Ctor{c_lbl = lbl; c_arg = SP.Var {v_var = match_var; v_type = None}}
-                  , S.Var {v_var = match_var}
-                  )
-                ]
-            }
-        )
-      :: simplify_bindings (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
