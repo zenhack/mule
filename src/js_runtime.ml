@@ -1,4 +1,5 @@
 
+let src = "'use strict';
 const $update = (r, lbl, v) => {
 	var ret = {};
 	for(var k in Object.getOwnPropertyNames(r)) {
@@ -25,3 +26,4 @@ const $force = (l) => {
 			return l.thunk;
 	}
 }
+"

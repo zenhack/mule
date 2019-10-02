@@ -73,7 +73,7 @@ let main () =
                   file_name
               in
               let out = Lwt_io.stdout in
-              let%lwt _ = Lwt_io.write out "'use strict';\n" in
+              let%lwt _ = Lwt_io.write out Js_runtime.src in
               To_js.translate_expr dexp
               |> Js_ast.expr
               |> Fmt.(fun x -> x ^ s "\n")
