@@ -152,10 +152,10 @@ let rec semi_extract_t: IntSet.t -> u_var -> semi_t =
                 `Named(ty_id, name, List.map args ~f:(fun (ty, _) -> semi_extract_t visited ty))
           end
       | `Const (_, `Extend _, _, _) ->
-          MuleErr.bug "Kind error"
+          MuleErr.bug "Kind error: expected type but got row"
     end
 and semi_extract_row visited uvar = match UnionFind.get uvar with
-  | `Quant _ -> MuleErr.bug "Kind error"
+  | `Quant _ -> MuleErr.bug "Kind error: expected row but got type"
   | `Free(tyvar, _) -> `Var(semi_extract_tyvar tyvar)
   | `Const(_, `Extend lbl, [head, _; tail, _], _) ->
       `Extend(lbl, semi_extract_t visited head, semi_extract_row visited tail)
