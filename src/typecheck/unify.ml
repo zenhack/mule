@@ -184,45 +184,45 @@ let graft_and_unify: unify_ctx -> u_type -> tyvar -> u_type = fun {c_rsn; _} t v
  * TODO: it would be better to wrap the error in something that explained the
  * problem. The error should explain why a bottom-up merge attempt didn't work,
  * but we should add extra info for why top-down wasn't good enough either.
- *)
+*)
 let check_merge_graphs: MuleErr.t -> u_type -> u_type -> unit =
   fun e l r ->
-    (* Two maps for keeping track of which nodes from the sub
-     * graphs correspond to one another: *)
-    let l2r = ref IntMap.empty in
-    let r2l = ref IntMap.empty in
+  (* Two maps for keeping track of which nodes from the sub
+   * graphs correspond to one another: *)
+  let l2r = ref IntMap.empty in
+  let r2l = ref IntMap.empty in
 
-    let rec go l r =
-      let tvl = get_tyvar l in
-      let tvr = get_tyvar r in
-      let check_bounds () =
-        (* If these are empty it's because we're the root; nothing
-         * to do: *)
-        if not (Map.is_empty !l2r) then
-          begin
-            let get_tgt_id tv =
-              let {b_at; _} = !(tv.ty_bound) in
-              match b_at with
-              | `G _ ->
-                  (* Condition 4: bound on g-node, which is therefore above
-                   * our root. *)
-                  raise (MuleErr.MuleExn e)
-              | `Ty t -> (get_tyvar (UnionFind.get (Lazy.force t))).ty_id
-            in
-            (* make sure these are bound somewhere higher up in the tree. *)
-            let lparent = get_tgt_id tvl in
-            let rparent = get_tgt_id tvr in
-            if not (Map.mem !l2r lparent && Map.mem !r2l rparent) then
-              (* Condition 4 failed; one of the nodes is bound above our
-               * root. *)
-              raise (MuleErr.MuleExn e)
-          end
-      in
-      if tvl.ty_id = tvr.ty_id then
-        (* Same node, we're good. *)
-        ()
-      else
-        begin match l, r with
+  let rec go l r =
+    let tvl = get_tyvar l in
+    let tvr = get_tyvar r in
+    let check_bounds () =
+      (* If these are empty it's because we're the root; nothing
+       * to do: *)
+      if not (Map.is_empty !l2r) then
+        begin
+          let get_tgt_id tv =
+            let {b_at; _} = !(tv.ty_bound) in
+            match b_at with
+            | `G _ ->
+                (* Condition 4: bound on g-node, which is therefore above
+                 * our root. *)
+                raise (MuleErr.MuleExn e)
+            | `Ty t -> (get_tyvar (UnionFind.get (Lazy.force t))).ty_id
+          in
+          (* make sure these are bound somewhere higher up in the tree. *)
+          let lparent = get_tgt_id tvl in
+          let rparent = get_tgt_id tvr in
+          if not (Map.mem !l2r lparent && Map.mem !r2l rparent) then
+            (* Condition 4 failed; one of the nodes is bound above our
+             * root. *)
+            raise (MuleErr.MuleExn e)
+        end
+    in
+    if tvl.ty_id = tvr.ty_id then
+      (* Same node, we're good. *)
+      ()
+    else
+      begin match l, r with
         | `Const(_, cl, argsl, _), `Const(_, cr, argsr, _) ->
             if not (typeconst_eq cl cr) then
               (* The graphs are not isomorphic; if this didn't get fixed during
@@ -239,11 +239,11 @@ let check_merge_graphs: MuleErr.t -> u_type -> u_type -> unit =
         | `Free _, `Free _ ->
             check_bounds ()
         | _ ->
-          (* Graphs are not isomorphic. *)
-          raise (MuleErr.MuleExn e)
-        end
-    in
-    go l r
+            (* Graphs are not isomorphic. *)
+            raise (MuleErr.MuleExn e)
+      end
+  in
+  go l r
 
 let rec unify (ctx: unify_ctx) l r =
   !Debug.render_hook ();
@@ -301,7 +301,7 @@ let rec unify (ctx: unify_ctx) l r =
                *
                * On `Free nodes there is no subgraph to check; we handle
                * the `Free, `Free case above.
-               *)
+              *)
               check_merge_graphs e l r;
               `Quant(merge_tv (), argl)
             end
@@ -410,4 +410,4 @@ let normalize_unify rsn l r =
     c_root_l = l;
     c_root_r = r;
   }
-  l r
+    l r

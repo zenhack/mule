@@ -23,25 +23,25 @@ let load_and_typecheck typ file_name =
   let%lwt input = Util.IO.slurp_file file_name in
   let full_path = Caml.Filename.current_dir_name ^ "/" ^ file_name in
   match MParser.parse_string Parser.expr_file input full_path with
-    | Failed(msg, _) ->
-        let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
-        Caml.exit 1
-    | Success expr ->
-        begin try%lwt
-            let expr = Ast.Surface.Expr.WithType {
-                wt_term = expr;
-                wt_type = typ;
-              }
-            in
-            let _ = Lint.check expr in
-            let dexp = Desugar.desugar expr in
-            let _ = Typecheck.typecheck dexp in
-            Lwt.return dexp
-          with
-          | MuleErr.MuleExn err ->
-              let%lwt _ = Lwt_io.write Lwt_io.stderr (MuleErr.show err ^ "\n") in
-              Caml.exit 1
-        end
+  | Failed(msg, _) ->
+      let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
+      Caml.exit 1
+  | Success expr ->
+      begin try%lwt
+          let expr = Ast.Surface.Expr.WithType {
+              wt_term = expr;
+              wt_type = typ;
+            }
+          in
+          let _ = Lint.check expr in
+          let dexp = Desugar.desugar expr in
+          let _ = Typecheck.typecheck dexp in
+          Lwt.return dexp
+        with
+        | MuleErr.MuleExn err ->
+            let%lwt _ = Lwt_io.write Lwt_io.stderr (MuleErr.show err ^ "\n") in
+            Caml.exit 1
+      end
 
 let main () =
   if Array.length Sys.argv <= 1 then
@@ -63,7 +63,7 @@ let main () =
                   Ast.Surface.Type.(
                     (* For now we're not imposing any particular type,
                      * so we just set it as `exists t. t`.
-                     *)
+                    *)
                     let v = Var.of_string "t" in
                     Quant {
                       q_quant = `Exist;

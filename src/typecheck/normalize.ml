@@ -41,7 +41,7 @@ and nf_row: LabelSet.t -> u_var -> u_var =
           let t' = nf_row (Set.add lbls lbl) t in
           let ret = UnionFind.make (`Const(Gen_t.clone_ty_var tv, `Extend lbl, [nf h, hk; t', tk], k)) in
           (if UnionFind.equal t t' then
-            UnionFind.merge (fun _ r -> r) uvar ret);
+             UnionFind.merge (fun _ r -> r) uvar ret);
           ret
         end
   | _ ->

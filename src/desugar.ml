@@ -41,7 +41,7 @@ let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK
     | DT.Union _
     | DT.Path _
     | DT.Named _
-        -> None
+      -> None
   in
   (* Return whether one of the variables in [vars] would be shadowed in part of [ty]. *)
   let shadows_var ty =
@@ -59,7 +59,7 @@ let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK
          * _HOWEVER_, we need to treat functions specially, since they if they
          * shadow a variable they *only* shadow it in the return value; we still
          * need to recurse on the parameter. This is a little gross.
-         *)
+        *)
         | DT.Fn{fn_info; fn_pvar; fn_param; fn_ret} ->
             DT.Fn {fn_info; fn_pvar; fn_param = go fn_param; fn_ret}
         | _ ->
@@ -414,7 +414,7 @@ and desugar_record fields =
             )
         | `Type (l, params, body) ->
             ( ( desugar_type_binding (Ast.var_of_label l, params, body)
-              :: types
+                :: types
               )
             , values
             )
@@ -422,33 +422,33 @@ and desugar_record fields =
   in
   let body = List.fold_right fields ~init:D.EmptyRecord ~f:(fun bind old ->
       match bind with
-        | `Value (l, _, _) ->
-            D.App {
-              app_fn = D.App {
+      | `Value (l, _, _) ->
+          D.App {
+            app_fn = D.App {
                 app_fn = D.Update {
-                  up_level = `Value;
-                  up_lbl = l;
-                };
+                    up_level = `Value;
+                    up_lbl = l;
+                  };
                 app_arg = old;
               };
-              app_arg = D.Var {v_var = Ast.var_of_label l};
-            }
-        | `Type (l, _, _) ->
-            D.App {
-              app_fn = D.App {
+            app_arg = D.Var {v_var = Ast.var_of_label l};
+          }
+      | `Type (l, _, _) ->
+          D.App {
+            app_fn = D.App {
                 app_fn = D.Update {
-                  up_level = `Type;
-                  up_lbl = l;
-                };
+                    up_level = `Type;
+                    up_lbl = l;
+                  };
                 app_arg = old;
               };
-              app_arg = D.Witness {
-                  wi_type = DT.Var {
-                      v_info = `Unknown;
-                      v_var = Ast.var_of_label l;
-                    }
+            app_arg = D.Witness {
+                wi_type = DT.Var {
+                    v_info = `Unknown;
+                    v_var = Ast.var_of_label l;
+                  }
               };
-            }
+          }
     )
   in
   D.LetRec {
@@ -554,55 +554,55 @@ and finalize_dict dict =
       )
 and desugar_let bs body =
   let rec go vals types = function
-  | [] ->
-      D.LetRec {
-        letrec_types = types;
-        letrec_vals = vals;
-        letrec_body = desugar body;
-      }
-  (* Simplify a list of bindings, such that there are no "complex" patterns;
-   * everything is a simple variable. *)
-  | `BindType t :: bs ->
-      let (v, ty) = desugar_type_binding t in
-      go vals ((v, ty) :: types) bs
-  | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
-      go ((v, desugar e) :: vals) types bs
-  | `BindVal((SP.Const _) as p, _) :: _ ->
-      incomplete_pattern p
-  | `BindVal(SP.Wild, e) :: bs  ->
-      go ((Gensym.anon_var (), desugar e) :: vals) types bs
-  | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
-      go
-        (( v
-         , D.App {
-            app_fn = D.WithType{wt_type = desugar_type ty};
-            app_arg = desugar e;
-          }
-         ) :: vals)
-        types
-        bs
-  | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
-      let bind_var = Gensym.anon_var () in
-      let match_var = Gensym.anon_var () in
-      let bind =
-        ( bind_var
-        , D.App {
-            app_fn =
-              D.Match {
-                default = None;
-                cases = LabelMap.singleton lbl
-                    ( match_var
-                    , D.Var {v_var = match_var}
-                    )
-              };
-            app_arg = desugar e;
-          }
-        )
-      in
-      (* TODO: avoid creating the intermediate S.Var node somehow. This will
-       * make it easier to add metadata to the surface AST without having
-       * to "invent" it for the intermediate node. *)
-      go (bind :: vals) types (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
+    | [] ->
+        D.LetRec {
+          letrec_types = types;
+          letrec_vals = vals;
+          letrec_body = desugar body;
+        }
+    (* Simplify a list of bindings, such that there are no "complex" patterns;
+     * everything is a simple variable. *)
+    | `BindType t :: bs ->
+        let (v, ty) = desugar_type_binding t in
+        go vals ((v, ty) :: types) bs
+    | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
+        go ((v, desugar e) :: vals) types bs
+    | `BindVal((SP.Const _) as p, _) :: _ ->
+        incomplete_pattern p
+    | `BindVal(SP.Wild, e) :: bs  ->
+        go ((Gensym.anon_var (), desugar e) :: vals) types bs
+    | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
+        go
+          (( v
+           , D.App {
+               app_fn = D.WithType{wt_type = desugar_type ty};
+               app_arg = desugar e;
+             }
+           ) :: vals)
+          types
+          bs
+    | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
+        let bind_var = Gensym.anon_var () in
+        let match_var = Gensym.anon_var () in
+        let bind =
+          ( bind_var
+          , D.App {
+              app_fn =
+                D.Match {
+                  default = None;
+                  cases = LabelMap.singleton lbl
+                      ( match_var
+                      , D.Var {v_var = match_var}
+                      )
+                };
+              app_arg = desugar e;
+            }
+          )
+        in
+        (* TODO: avoid creating the intermediate S.Var node somehow. This will
+         * make it easier to add metadata to the surface AST without having
+         * to "invent" it for the intermediate node. *)
+        go (bind :: vals) types (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
   in
   go [] [] bs
 and desugar_type_binding (v, params, ty) =

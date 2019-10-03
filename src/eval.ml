@@ -17,7 +17,7 @@ let report step stack expr =
 let rec eval_letrec stack binds body =
   let
     rec stack' = lazy (Lazy.force binds' @ stack)
-    and binds' =
+  and binds' =
     lazy (List.map binds ~f:(fun (cap, expr) ->
         Lazy (lazy (ref (Delayed (List.take (Lazy.force stack') cap, expr))))
       ))

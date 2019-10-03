@@ -384,10 +384,10 @@ module Expr = struct
           ; Sexp.List
               [ Sexp.Atom "types"
               ; Sexp.List
-                ( List.map letrec_types ~f:(fun (v, ty) ->
-                     Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-                    )
-                )
+                  ( List.map letrec_types ~f:(fun (v, ty) ->
+                        Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+                      )
+                  )
               ]
           ; Sexp.List
               [ Sexp.Atom "values"

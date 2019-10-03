@@ -117,7 +117,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
                          * because uv is bound above our g node, which is not
                          * what we want -- ideally we'd create it later, but
                          * cyclic dependencies and all...
-                         *)
+                        *)
                         UnionFind.merge (fun _ r -> r) uv ret
                     | `G _ ->
                         MuleErr.bug "impossible"
@@ -129,11 +129,11 @@ let rec walk: context -> k_var Expr.t -> u_var =
           )
         in
         let ctx = { ctx with env_terms =
-                              List.fold
-                                vals'
-                                ~init:ctx.env_terms
-                                ~f:(fun old (v, t) -> Map.set old ~key:v ~data:(lazy t))
-                            }
+                               List.fold
+                                 vals'
+                                 ~init:ctx.env_terms
+                                 ~f:(fun old (v, t) -> Map.set old ~key:v ~data:(lazy t))
+                  }
         in
         walk ctx letrec_body
     | Expr.App {app_fn = f; app_arg = arg} ->

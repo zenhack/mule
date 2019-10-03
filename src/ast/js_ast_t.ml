@@ -10,9 +10,9 @@ type expr =
   | Int of int
   | Lam of
       ( string list
-      * [ `E of expr (* Single expression *)
-        | `S of block (* Statements *)
-        ]
+        * [ `E of expr (* Single expression *)
+          | `S of block (* Statements *)
+          ]
       )
   | Null
 and stmt =

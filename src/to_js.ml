@@ -13,9 +13,9 @@ let force e =
 
 let translate_var env v =
   match Util.find_exn env v with
-    | `Var var -> Js.Var(Var.to_string var)
-    | `LazyVar var ->
-        force (Js.Var (Var.to_string var))
+  | `Var var -> Js.Var(Var.to_string var)
+  | `LazyVar var ->
+      force (Js.Var (Var.to_string var))
 
 let get_var_name env v =
   match Util.find_exn env v with
@@ -91,18 +91,18 @@ let translate_expr expr =
         Js.Lam
           ( ["r"]
           , `E ( Js.Lam
-              ( ["v"]
-              , `E
-                  (Js.Call
-                     ( Js.Var "$update"
-                     , [
-                         Js.Var "r";
-                         Js.String (Label.to_string up_lbl);
-                         Js.Var "v";
-                       ]
-                     )
-                  )
-              ))
+                   ( ["v"]
+                   , `E
+                       (Js.Call
+                          ( Js.Var "$update"
+                          , [
+                            Js.Var "r";
+                            Js.String (Label.to_string up_lbl);
+                            Js.Var "v";
+                          ]
+                          )
+                       )
+                   ))
           )
     | D.Expr.Match {cases; default} ->
         Js.Lam
@@ -139,8 +139,8 @@ let translate_expr expr =
     | D.Expr.LetRec {letrec_vals; letrec_body; _} ->
         let env' =
           List.fold letrec_vals ~init:env ~f:(fun env (v, _) ->
-            snd (add_lazy_var env v)
-          )
+              snd (add_lazy_var env v)
+            )
         in
         let decls =
           List.map letrec_vals ~f:(fun (v, body) ->
