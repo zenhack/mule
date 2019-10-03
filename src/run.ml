@@ -49,7 +49,8 @@ let desugar_typecheck expr =
 let run : string -> unit LwtResult.t = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
    * regardless of whether we're at the repl: *)
-  match MParser.parse_string Parser.repl_line input () with
+  let path = Caml.Filename.current_dir_name ^ "/<repl>" in
+  match MParser.parse_string Parser.repl_line input path with
   | MParser.Failed (msg, _) ->
       let%lwt _ = display "Parse Error" msg in
       Lwt.return (Ok ())

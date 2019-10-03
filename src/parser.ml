@@ -72,7 +72,7 @@ let comma_list1 p =
   sep_start_by1 p (kwd ",")
 
 (* An identifier. Does not check if the identifier is a reserved word. *)
-let identifier : (string, unit) MParser.t = (
+let identifier : (string, string) MParser.t = (
   let id_start = lowercase <|> char '_' in
   let id_cont =
     letter
@@ -93,7 +93,7 @@ let var = token (
       return (Var.of_string name)
   )
 
-let int_const: (Const.t, unit) MParser.t = token (
+let int_const: (Const.t, string) MParser.t = token (
     let%bind sign = option (char '+' <|> char '-') in
     let sign =
       begin match sign with
@@ -140,24 +140,24 @@ let text = token (
     String.of_char_list chars
   )
 
-let text_const: (Const.t, unit) MParser.t =
+let text_const: (Const.t, string) MParser.t =
   let%map str = text in
   Const.Text str
 
-let char_const: (Const.t, unit) MParser.t = token (
+let char_const: (Const.t, string) MParser.t = token (
     let%bind _ = char '\'' in
     let%bind c = char_legal <|> escaped in
     let%map _ = char '\'' in
     Const.Char c
   )
 
-let constant : (Const.t, unit) MParser.t = choice
+let constant : (Const.t, string) MParser.t = choice
     [ text_const
     ; int_const
     ; char_const
     ]
 
-let import: (string -> 'a) -> ('a, unit) MParser.t
+let import: (string -> 'a) -> ('a, string) MParser.t
   = fun f ->
     let%map path = kwd "import" >> text in
     f path
@@ -245,20 +245,20 @@ and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
 and record_type = lazy (
   let%map items = braces (comma_list (lazy_p record_item)) in
   Type.Record {r_items = items}
-) and record_item: (Type.record_item, unit) MParser.t Lazy.t = lazy (
+) and record_item: (Type.record_item, string) MParser.t Lazy.t = lazy (
     choice
       [ lazy_p type_decl
       ; lazy_p field_decl
       ; kwd "..." >> (var |>> fun v -> Type.Rest v)
       ]
-  ) and type_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
+  ) and type_decl: (Type.record_item, string) MParser.t Lazy.t = lazy (
     let%bind l = kwd "type" >> label in
     let%bind vars = many var in
     let%bind () = optional text_const in
     let%map ty = option (kwd "=" >> lazy_p typ)
     in
     Type.Type(l, vars, ty)
-  ) and field_decl: (Type.record_item, unit) MParser.t Lazy.t = lazy (
+  ) and field_decl: (Type.record_item, string) MParser.t Lazy.t = lazy (
     let%bind l = label in
     let%bind ty = kwd ":" >> lazy_p typ in
     let%map () = optional text_const in

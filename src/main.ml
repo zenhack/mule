@@ -21,7 +21,8 @@ let exit_msg msg =
 
 let load_and_typecheck typ file_name =
   let%lwt input = Util.IO.slurp_file file_name in
-  match MParser.parse_string Parser.expr_file input () with
+  let full_path = Caml.Filename.current_dir_name ^ "/" ^ file_name in
+  match MParser.parse_string Parser.expr_file input full_path with
     | Failed(msg, _) ->
         let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
         Caml.exit 1

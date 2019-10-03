@@ -3,7 +3,7 @@ module R = Ast.Runtime
 module C = Ast.Const
 
 let type_of_string_exn s =
-  match MParser.parse_string Parser.typ s () with
+  match MParser.parse_string Parser.typ s "<builtin>" with
   | MParser.Failed (msg, _) -> failwith ("parse failed : " ^ msg)
   | MParser.Success ty -> ty
 
