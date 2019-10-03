@@ -80,9 +80,36 @@ from some or all of them in that:
   around it, so we should gain some experience before deciding that we
   need to add an additional mechanism to the language.
 
----
+# Lisp family
 
-TODO: other comparisons, probably start with lisp dialects...
+Mule shares some things with most lisps:
+
+* An emphasis on higher order functions and immutability
+* (Planned) the ability to load code dynamically at run-time.
+* (Planned) a macro system. The macro system is hygenic, like Scheme
+  and unlike Common Lisp and Clojure. We plan to take the hygene a bit
+  farther than Scheme does though.
+
+The biggest differences are:
+
+* Mule is statically typed, whereas lisps are generally dynamically
+  typed.
+
+  If your only experience with type systems comes from mainstream
+  imperative languages like Java and C++, keep an open mind -- Mule's
+  type system stays out of your way, while at the same time being much
+  more powerful and expressive. It can infer most types without them
+  being explicitly written down, so you don't have to sacrifice concision
+  to get the benefits.
+* Mule is *not* homoiconic; we have dedicated syntax for certain
+  constructs (e.g. let, lambda, and match), rather than using data
+  literals for everything.  The syntax however is still very minimal,
+  and we expect the experience of writing macros won't suffer for it.
+  Furthermore, having dedicated constructs for variable binding makes
+  macro hygiene simpler; we're able to do scope resolution entirely
+  before macro expansion, whereas even in Scheme these steps are
+  interleaved, and in non-hygienic systems macro expansion happens
+  first.
 
 [ocap]: http://habitatchronicles.com/2017/05/what-are-capabilities/
 [spectre]: https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)
