@@ -1,8 +1,9 @@
-open Ast.Desugared
+open Desugared_ast
 open Typecheck_types
 open Gensym
 open Gen_t
-module Const = Ast.Const
+module Const = Common_ast.Const
+module Var = Common_ast.Var
 
 include Build_constraint_t
 
@@ -77,7 +78,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
           }
           body
     | Expr.LetRec{letrec_types; letrec_vals; letrec_body} ->
-        let val_map = Map.of_alist_exn (module Ast.Var) letrec_vals in
+        let val_map = Map.of_alist_exn (module Var) letrec_vals in
         let vals =
           Map.map val_map ~f:(fun _ ->
               let ret = lazy (`Ty (gen_u (gen_k ()) (`G g))) in
@@ -97,7 +98,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
           Coercions.gen_types
             { ctx; b_at = `G g }
             `Pos
-            (Map.of_alist_exn (module Ast.Var) letrec_types)
+            (Map.of_alist_exn (module Var) letrec_types)
         in
         let ctx =
           { ctx with env_types =
@@ -272,7 +273,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
               Expr.Lam{l_param; l_body}
           | Some (None, l_body) ->
               Expr.Lam {
-                l_param = Ast.Var.of_string "_";
+                l_param = Var.of_string "_";
                 l_body;
               }
         in

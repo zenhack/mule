@@ -1,6 +1,7 @@
 
-module R = Ast.Runtime
-module C = Ast.Const
+open Common_ast
+module R = Runtime_ast
+module C = Const
 
 let type_of_string_exn s =
   match MParser.parse_string Parser.typ s "<builtin>" with
@@ -8,7 +9,7 @@ let type_of_string_exn s =
   | MParser.Success ty -> ty
 
 type runner =
-  { want_type : Ast.Surface.Type.t
+  { want_type : Surface_ast.Type.t
   ; run : R.Expr.t -> R.Expr.t Lwt.t
   }
 
@@ -50,8 +51,8 @@ let io_get_line = prim_io (fun () ->
 
 let mk_record fields =
   fields
-  |> List.map ~f:(fun (k, v) -> (Ast.Label.of_string k, v))
-  |> Map.of_alist_exn (module Ast.Label)
+  |> List.map ~f:(fun (k, v) -> (Label.of_string k, v))
+  |> Map.of_alist_exn (module Label)
   |> fun lblmap -> R.Expr.Record lblmap
 
 let root_io_val =

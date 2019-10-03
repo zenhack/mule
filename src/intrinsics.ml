@@ -1,9 +1,9 @@
-open Ast
+open Common_ast
 
 module C = Const
-module D = Desugared
-module R = Runtime
-module S = Surface
+module D = Desugared_ast
+module R = Runtime_ast
+module S = Surface_ast
 
 open Typecheck_types
 

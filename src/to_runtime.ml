@@ -1,7 +1,7 @@
-open Ast
+open Common_ast
 
-module D = Desugared.Expr
-module R = Runtime.Expr
+module D = Desugared_ast.Expr
+module R = Runtime_ast.Expr
 
 type binding = [ `Index of int | `Term of R.t ]
 

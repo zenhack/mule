@@ -1,10 +1,11 @@
-module SP = Ast.Surface.Pattern
-module S = Ast.Surface.Expr
-module ST = Ast.Surface.Type
-module D = Ast.Desugared.Expr
-module C = Ast.Const
-module DT = Ast.Desugared.Type
-module DK = Ast.Desugared.Kind
+module SP = Surface_ast.Pattern
+module S = Surface_ast.Expr
+module ST = Surface_ast.Type
+module D = Desugared_ast.Expr
+module Ast = Common_ast
+module C = Common_ast.Const
+module DT = Desugared_ast.Type
+module DK = Desugared_ast.Kind
 
 let incomplete_pattern p =
   MuleErr.throw (`IncompletePattern p)

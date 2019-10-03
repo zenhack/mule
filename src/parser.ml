@@ -1,6 +1,6 @@
 open MParser
-open Ast
-open Ast.Surface
+open Common_ast
+open Surface_ast
 
 module Let_syntax = struct
   (* currently unused, but potentially used by the desugaring process.
@@ -169,7 +169,7 @@ let embed =
   Expr.Embed {e_path; e_from}
 
 let label =
-  var |>> Ast.var_to_label
+  var |>> var_to_label
 
 let ctor = token (
     let%bind c = uppercase in

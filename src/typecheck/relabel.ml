@@ -1,4 +1,4 @@
-open Ast
+open Common_ast
 
 let letters =
   Char.all
@@ -28,10 +28,10 @@ let new_get () =
   in
   Memoize.memoize (fun _ -> seq_next ())
 
-let relabel_type: unit -> 'a Desugared.Type.t -> 'a Desugared.Type.t = fun () ->
+let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = fun () ->
   (* We're careful about the order in which we walk the tree, so
    * variables are always left to right. *)
-  let open Desugared.Type in
+  let open Desugared_ast.Type in
   let get = new_get () in
   let get v = Var.of_string (get v) in
   let rec go typ = match typ with

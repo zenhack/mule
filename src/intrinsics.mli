@@ -1,5 +1,5 @@
-module D = Ast.Desugared
-module R = Ast.Runtime
+module D = Desugared_ast
+module R = Runtime_ast
 
 open Typecheck_types
 

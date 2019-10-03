@@ -1,3 +1,3 @@
-val typ : 'i Ast.Desugared.Type.t -> string
-val expr : 'i Ast.Desugared.Expr.t -> string
-val runtime_expr : Ast.Runtime.Expr.t -> string
+val typ : 'i Desugared_ast.Type.t -> string
+val expr : 'i Desugared_ast.Expr.t -> string
+val runtime_expr : Runtime_ast.Expr.t -> string

@@ -7,7 +7,7 @@ let rec gen_kind = function
   | `Unknown -> gen_k ()
 
 let typecheck expr =
-  Ast.Desugared.Expr.map expr ~f:gen_kind
+  Desugared_ast.Expr.map expr ~f:gen_kind
   |> Build_constraint.build_constraints
   |> Solve.solve_constraints
   |> Extract.get_var_type

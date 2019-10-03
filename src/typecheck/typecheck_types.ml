@@ -1,5 +1,6 @@
 (* types used by the type checker *)
 
+open Common_ast
 open Types
 
 type u_kind =
@@ -20,7 +21,7 @@ let gen_k: unit -> k_var =
 
 type u_typeconst =
   [ `Named of string
-  | `Extend of Ast.Label.t
+  | `Extend of Label.t
   ]
 (* Contents of unification variables: *)
 and u_type =
@@ -68,7 +69,7 @@ let get_flag: quantifier -> sign -> bound_ty =
     | `Exist, `Pos -> `Rigid
     | `Exist, `Neg -> `Flex
 
-let rec make_u_kind: Ast.Desugared.Kind.t -> u_kind = function
+let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
   | `Type -> `Type
   | `Row -> `Row
   | `Arrow(x, y) ->
@@ -91,7 +92,7 @@ let record: tyvar -> u_var -> u_var -> u_type = fun tv r_types r_values ->
   `Const(tv, `Named "{...}", [r_types, kvar_row; r_values, kvar_row], kvar_type)
 let empty: tyvar -> u_type = fun tv ->
   `Const(tv, `Named "<empty>", [], kvar_row)
-let extend: tyvar -> Ast.Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
+let extend: tyvar -> Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
   `Const(tv, `Extend lbl, [head, kvar_type; tail, kvar_row], kvar_row)
 let witness: tyvar -> k_var -> u_var -> u_type = fun tv kind ty ->
   `Const(tv, `Named "<witness>", [ty, kind], kvar_type)

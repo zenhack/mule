@@ -28,7 +28,7 @@ let load_and_typecheck typ file_name =
       Caml.exit 1
   | Success expr ->
       begin try%lwt
-          let expr = Ast.Surface.Expr.WithType {
+          let expr = Surface_ast.Expr.WithType {
               wt_term = expr;
               wt_type = typ;
             }
@@ -60,7 +60,7 @@ let main () =
               let file_name = Array.get Sys.argv 2 in
               let%lwt dexp =
                 load_and_typecheck
-                  Ast.Surface.Type.(
+                  Surface_ast.Type.(
                     (* For now we're not imposing any particular type,
                      * so we just set it as `exists t. t`.
                     *)

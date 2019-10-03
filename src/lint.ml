@@ -1,5 +1,5 @@
-open Ast.Surface
-open Ast.Surface.Expr
+open Surface_ast
+open Surface_ast.Expr
 
 let duplicate_fields dups =
   MuleErr.throw (`DuplicateFields dups)

@@ -1,3 +1,3 @@
 val typecheck
-  : Ast.Desugared.Kind.maybe_kind Ast.Desugared.Expr.t
-  -> int Ast.Desugared.Type.t
+  : Desugared_ast.Kind.maybe_kind Desugared_ast.Expr.t
+  -> int Desugared_ast.Type.t

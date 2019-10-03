@@ -1,4 +1,4 @@
 open Typecheck_types
-open Ast.Desugared
+open Desugared_ast
 
 val get_var_type: u_var -> int Type.t

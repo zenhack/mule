@@ -1,4 +1,5 @@
 include Debug_t
+open Common_ast
 
 let render_hook = ref (fun () -> ())
 
@@ -34,7 +35,7 @@ let fmt_node: node_type -> int -> string =
       | `Const c ->
           begin match c with
             | `Named name -> name
-            | `Extend lbl -> Ast.Label.to_string lbl ^ " ::"
+            | `Extend lbl -> Label.to_string lbl ^ " ::"
           end
       | `G -> "G"
     end

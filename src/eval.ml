@@ -1,7 +1,4 @@
-open Ast.Runtime.Expr
-
-module Var = Ast.Var
-module Label = Ast.Label
+open Runtime_ast.Expr
 
 let bug msg term =
   MuleErr.bug (msg ^ ": " ^ Pretty.runtime_expr term)

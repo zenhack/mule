@@ -1,6 +1,6 @@
 include module type of Build_constraint_t
 open Typecheck_types
-open Ast.Desugared
+open Desugared_ast
 
 val build_constraints: k_var Expr.t -> built_constraints
 

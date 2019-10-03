@@ -1,8 +1,8 @@
 open Typecheck_types
-open Ast
-open Ast.Desugared
+open Common_ast
+open Desugared_ast
 
-module ST = Ast.Surface.Type
+module ST = Surface_ast.Type
 
 (* A "semi-extracted" type. This has the basic structure and some metadata,
  * but still needs a bit of work to fix up/label the quantifiers.
@@ -38,7 +38,7 @@ and semi_var =
 
 type sign = [ `Pos | `Neg ]
 
-let ivar i = Ast.Var.of_string ("t" ^ Int.to_string i)
+let ivar i = Var.of_string ("t" ^ Int.to_string i)
 
 let maybe_add_rec: int -> IntSet.t -> semi_t -> (IntSet.t * semi_t) =
   fun i vars ty ->

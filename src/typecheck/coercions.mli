@@ -1,4 +1,4 @@
-open Ast.Desugared
+open Desugared_ast
 open Typecheck_types
 
 open Build_constraint_t

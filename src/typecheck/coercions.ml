@@ -1,4 +1,5 @@
-open Ast.Desugared
+open Common_ast
+open Desugared_ast
 open Gen_t
 open Typecheck_types
 
@@ -35,7 +36,7 @@ let rec add_row_to_env: u_var VarMap.t -> u_var -> u_var VarMap.t =
       add_row_to_env
         (Map.set
            env
-           ~key:(Ast.var_of_label lbl)
+           ~key:(var_of_label lbl)
            ~data:head)
         tail
   | _ ->
