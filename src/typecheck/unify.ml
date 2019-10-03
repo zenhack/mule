@@ -6,6 +6,8 @@ type unify_ctx = {
   c_rsn: Types.reason;
   c_root_l: u_var;
   c_root_r: u_var;
+  c_stack_l: u_var list;
+  c_stack_r: u_var list;
 }
 
 (* Helpers for signaling type errors *)
@@ -401,7 +403,11 @@ let rec unify (ctx: unify_ctx) l r =
 (* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
 and normalize_unify ctx l r =
   let l, r = Normalize.pair l r in
-  UnionFind.merge (unify ctx) l r
+  UnionFind.merge
+    (unify { ctx with
+             c_stack_l = l :: ctx.c_stack_l;
+             c_stack_r = r :: ctx.c_stack_r;
+           }) l r
 
 let normalize_unify rsn l r =
   normalize_unify {
@@ -409,5 +415,7 @@ let normalize_unify rsn l r =
     c_rsn = rsn;
     c_root_l = l;
     c_root_r = r;
+    c_stack_l = [];
+    c_stack_r = [];
   }
     l r
