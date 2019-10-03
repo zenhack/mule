@@ -7,4 +7,4 @@ Desugared:
 	    ((: (all b ((all a (a -> a)) -> (record (types ()) (values ())))))
 	     (fn rank1 (rank1 {}))))))
 	 (rank2 (fn $0 (Integer 4))))
-Type error: permission error during graft
+Type error: could not instatiate rigid type variable

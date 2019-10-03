@@ -25,6 +25,8 @@ let show_type_error (_rsn, err) = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
+  | `PermissionErr `Graft ->
+      "could not instatiate rigid type variable"
   | `PermissionErr op ->
       "permission error during " ^ show_op op
 
