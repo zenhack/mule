@@ -46,6 +46,7 @@ module Type = struct
       }
     | Import of {
         i_path : string;
+        i_from : string;
       }
   [@@deriving sexp_of]
 
@@ -109,9 +110,11 @@ module Expr = struct
     | Const of {const_val : Const.t}
     | Import of
         { i_path : string
+        ; i_from : string
         }
     | Embed of {
         e_path : string;
+        e_from : string;
       }
   [@@deriving sexp_of]
   and binding =

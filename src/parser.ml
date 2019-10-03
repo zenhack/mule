@@ -157,14 +157,16 @@ let constant : (Const.t, string) MParser.t = choice
     ; char_const
     ]
 
-let import: (string -> 'a) -> ('a, string) MParser.t
+let import: (string -> string -> 'a) -> ('a, string) MParser.t
   = fun f ->
-    let%map path = kwd "import" >> text in
-    f path
+    let%bind path = kwd "import" >> text in
+    let%map from = get_user_state in
+    f path from
 
 let embed =
-  let%map e_path = kwd "embed" >> text in
-  Expr.Embed {e_path}
+  let%bind e_path = kwd "embed" >> text in
+  let%map e_from = get_user_state in
+  Expr.Embed {e_path; e_from}
 
 let label =
   var |>> Ast.var_to_label
@@ -188,7 +190,7 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ import (fun i_path -> Type.Import {i_path})
+    [ import (fun i_path i_from -> Type.Import {i_path; i_from})
     ; begin
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest {rr_var = v}
@@ -323,7 +325,7 @@ and ex2 = lazy (
 )
 and ex3 = lazy (
   choice
-    [ (import (fun i_path -> Expr.Import {i_path}))
+    [ (import (fun i_path i_from -> Expr.Import {i_path; i_from}))
     ; embed
     ; lazy_p lambda
     ; lazy_p match_expr
