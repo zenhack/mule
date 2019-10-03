@@ -6,8 +6,8 @@ type unify_ctx = {
   c_rsn: Types.reason;
   c_root_l: u_var;
   c_root_r: u_var;
-  c_stack_l: u_var list;
-  c_stack_r: u_var list;
+  c_stack_l: (int * u_var) list;
+  c_stack_r: (int * u_var) list;
 }
 
 (* Helpers for signaling type errors *)
@@ -283,8 +283,8 @@ let rec unify (ctx: unify_ctx) l r =
           try
             normalize_unify
               { ctx with c_rsn = `Cascade(ctx.c_rsn, 1) }
-              argl
-              argr;
+              (0, argl)
+              (0, argr);
             `Quant(merge_tv (), argl)
           with MuleErr.MuleExn e ->
             begin
@@ -343,8 +343,8 @@ let rec unify (ctx: unify_ctx) l r =
                   try
                     normalize_unify
                       { ctx with c_rsn = `Cascade(ctx.c_rsn, i+1) }
-                      l
-                      r
+                      (i, l)
+                      (i, r)
                   with MuleErr.MuleExn e ->
                     (* Save the error and keep trying to unify the other branches. *)
                     begin match !subgraph_error with
@@ -386,12 +386,12 @@ let rec unify (ctx: unify_ctx) l r =
                   in
                   normalize_unify
                     { ctx with c_rsn = `ExtendTail (ctx.c_rsn, `L) }
-                    r_rest
-                    (UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
+                    (1, r_rest)
+                    (1, UnionFind.make (extend (new_tv ()) l_lbl l_ty new_rest_r));
                   normalize_unify
                     { ctx with c_rsn = `ExtendTail (ctx.c_rsn, `R) }
-                    l_rest
-                    (UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
+                    (1, l_rest)
+                    (1, UnionFind.make (extend (new_tv ()) r_lbl r_ty new_rest_l));
                 end;
                 extend (merge_tv ()) l_lbl l_ty l_rest
             | _ ->
@@ -401,12 +401,12 @@ let rec unify (ctx: unify_ctx) l r =
           end
   end
 (* Wrapper around UnionFind.merge/unify that first normalizes the arguments. *)
-and normalize_unify ctx l r =
+and normalize_unify ctx (li, l) (ri, r) =
   let l, r = Normalize.pair l r in
   UnionFind.merge
     (unify { ctx with
-             c_stack_l = l :: ctx.c_stack_l;
-             c_stack_r = r :: ctx.c_stack_r;
+             c_stack_l = (li, l) :: ctx.c_stack_l;
+             c_stack_r = (ri, r) :: ctx.c_stack_r;
            }) l r
 
 let normalize_unify rsn l r =
@@ -418,4 +418,5 @@ let normalize_unify rsn l r =
     c_stack_l = [];
     c_stack_r = [];
   }
-    l r
+    (0, l)
+    (0, r)
