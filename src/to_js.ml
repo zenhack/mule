@@ -32,6 +32,8 @@ let add_lazy_var env v =
 
 let translate_expr expr =
   let rec go env = function
+    | D.Expr.Embed {e_value; _} ->
+        Js.String e_value
     | D.Expr.Var {v_var} ->
         translate_var env v_var
     | D.Expr.Lam{l_param; l_body} ->

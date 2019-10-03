@@ -271,6 +271,10 @@ end
 
 module Expr = struct
   type 'i t =
+    | Embed of {
+        e_path: string;
+        e_value: string;
+      }
     | Var of { v_var : Var.t }
     | Lam of { l_param : Var.t; l_body : 'i t }
     | App of {
@@ -314,6 +318,8 @@ module Expr = struct
       }
 
   let rec sexp_of_t = function
+    | Embed { e_path; _ } ->
+        Sexp.List [Sexp.Atom "embed"; Sexp.Atom e_path]
     | Var { v_var = v } -> Sexp.Atom (Var.to_string v)
     | Lam{ l_param = v; l_body = body } ->
         Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
@@ -433,6 +439,7 @@ module Expr = struct
     | Update _
     | WithType _
     | Witness _
+    | Embed _
     | Const _ -> e
 
   let rec subst_ty old new_ = function
@@ -478,6 +485,7 @@ module Expr = struct
     | GetField x -> GetField x
     | Update x -> Update x
     | Const x -> Const x
+    | Embed x -> Embed x
 
   let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
     match expr with
@@ -532,6 +540,6 @@ module Expr = struct
           }
     | LetRec _ ->
         MuleErr.bug "TODO"
-    | Const _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ ->
+    | Const _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ | Embed _ ->
         expr
 end

@@ -287,7 +287,11 @@ and desugar_type t =
   |> quantify_opaques
 and desugar = function
   | S.Import _ -> failwith "TODO: implement import"
-  | S.Embed _ -> failwith "TODO: implement embed"
+  | S.Embed {e_path; e_from} ->
+      D.Embed {
+        e_path;
+        e_value = Lwt_main.run (Paths.resolve_embed ~here:e_from ~target:e_path);
+      }
   | S.Const {const_val = c} -> D.Const {const_val = c}
   | S.Var {v_var = v} -> D.Var {v_var = v}
   | S.App{app_fn = f; app_arg = x} -> D.App {

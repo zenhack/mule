@@ -33,6 +33,7 @@ let walk_const g c =
 let rec walk: context -> k_var Expr.t -> u_var =
   fun ({cops; env_types = _; env_terms; g} as ctx) -> function
     | Expr.Const {const_val = c} -> walk_const g c
+    | Expr.Embed _ -> UnionFind.make (text (gen_ty_var g))
     | Expr.Var {v_var = v} ->
         let tv = gen_u kvar_type (`G g) in
         begin match Option.map ~f:Lazy.force (Map.find env_terms v) with

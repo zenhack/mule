@@ -1,8 +1,4 @@
-
-type path =
-  [ `Relative of string
-  | `Absolute of string
-  ]
+include module type of Paths_t
 
 val resolve_embed : here:string -> target:string -> string Lwt.t
 
