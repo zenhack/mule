@@ -89,7 +89,7 @@ let rec gen_type
       let param' =
         gen_type ctx (flip_sign sign) fn_param
       in
-      cops.constrain_kind (`KnownKind `Fn) (get_kind param') kvar_type;
+      cops.constrain_kind (`KnownKind `Fn) (get_kind param') ktype;
       let env_terms' = match fn_pvar with
         | Some v ->
             Map.set env_terms ~key:v ~data:(lazy (`Ty param'))
@@ -110,10 +110,10 @@ let rec gen_type
       cops.constrain_kind
         (`Cascade(`KnownKind `Fn, 2))
         (get_kind ret')
-        kvar_type;
+        ktype;
       UnionFind.make (fn tv param' ret')
   | Type.Recur{mu_var; mu_body; _} ->
-      let ret = gen_u kvar_type b_at in
+      let ret = gen_u ktype b_at in
       let ret' =
         gen_type
           { ctx with
@@ -126,7 +126,7 @@ let rec gen_type
           mu_body
       in
       UnionFind.merge (fun _ r -> r) ret ret';
-      cops.constrain_kind (`KnownKind `Recur) (get_kind ret') kvar_type;
+      cops.constrain_kind (`KnownKind `Recur) (get_kind ret') ktype;
       ret
   | Type.Var {v_var; _} ->
       begin match Map.find env_types v_var with
@@ -154,15 +154,15 @@ let rec gen_type
             let init =
               UnionFind.make
                 ( record (tv ())
-                    (UnionFind.make (extend (ty_var_at b_at) l ret (gen_u kvar_row b_at)))
-                    (gen_u kvar_row b_at)
+                    (UnionFind.make (extend (ty_var_at b_at) l ret (gen_u krow b_at)))
+                    (gen_u krow b_at)
                 )
             in
             let record_u = List.fold_left ls ~init ~f:(fun acc l ->
                 UnionFind.make
                   (record (tv ())
-                     (gen_u kvar_row b_at)
-                     (UnionFind.make (extend (tv ()) l acc (gen_u kvar_row b_at))))
+                     (gen_u krow b_at)
+                     (UnionFind.make (extend (tv ()) l acc (gen_u krow b_at))))
               )
             in
             begin match term with
@@ -201,7 +201,7 @@ let rec gen_type
   | Type.Union {u_row} ->
       UnionFind.make (union tv (gen_row ctx sign u_row))
   | Type.Quant{q_quant = q; q_var = v; q_body = body; _} ->
-      let ret = gen_u kvar_type b_at in
+      let ret = gen_u ktype b_at in
       let bound_v =
         UnionFind.make
           (`Free
@@ -230,7 +230,7 @@ let rec gen_type
              )
           )
       in
-      cops.constrain_kind (`KnownKind `Quant) (get_kind ret') kvar_type;
+      cops.constrain_kind (`KnownKind `Quant) (get_kind ret') ktype;
       UnionFind.merge (fun _ r -> r) ret ret';
       ret
 (* [gen_row] is like [gen_type], but for row variables. *)
@@ -240,7 +240,7 @@ and gen_row ({ctx = {cops; env_types; _}; b_at} as ctx) sign (_, fields, rest) =
     | Some v -> Util.find_exn env_types v
     | None -> UnionFind.make (empty (ty_var_at b_at))
   in
-  cops.constrain_kind (`KnownKind `Row) (get_kind rest') kvar_row;
+  cops.constrain_kind (`KnownKind `Row) (get_kind rest') krow;
   List.fold_right
     fields
     ~init:rest'

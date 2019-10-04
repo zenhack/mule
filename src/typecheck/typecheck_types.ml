@@ -13,8 +13,8 @@ and k_var = u_kind UnionFind.var
 
 (* These can be the same physical variables for all type/row kind vars,
  * since their identity has no meaning. *)
-let kvar_type = UnionFind.make `Type
-let kvar_row = UnionFind.make `Row
+let ktype = UnionFind.make `Type
+let krow = UnionFind.make `Row
 
 let gen_k: unit -> k_var =
   fun () -> UnionFind.make (`Free (Gensym.gensym ()))
@@ -80,22 +80,22 @@ let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
 
 (* constructors for common type constants. *)
 let const: tyvar -> string -> u_type = fun tv name ->
-  `Const(tv, `Named name, [], kvar_type)
+  `Const(tv, `Named name, [], ktype)
 let int: tyvar -> u_type = fun tv -> const tv "int"
 let text: tyvar -> u_type = fun tv -> const tv "text"
 let char: tyvar -> u_type = fun tv -> const tv "char"
 let fn: tyvar -> u_var -> u_var -> u_type = fun tv param ret ->
-  `Const(tv, `Named "->", [param, kvar_type; ret, kvar_type], kvar_type)
+  `Const(tv, `Named "->", [param, ktype; ret, ktype], ktype)
 let union: tyvar -> u_var -> u_type = fun tv row ->
-  `Const(tv, `Named "|", [row, kvar_row], kvar_type)
+  `Const(tv, `Named "|", [row, krow], ktype)
 let record: tyvar -> u_var -> u_var -> u_type = fun tv r_types r_values ->
-  `Const(tv, `Named "{...}", [r_types, kvar_row; r_values, kvar_row], kvar_type)
+  `Const(tv, `Named "{...}", [r_types, krow; r_values, krow], ktype)
 let empty: tyvar -> u_type = fun tv ->
-  `Const(tv, `Named "<empty>", [], kvar_row)
+  `Const(tv, `Named "<empty>", [], krow)
 let extend: tyvar -> Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
-  `Const(tv, `Extend lbl, [head, kvar_type; tail, kvar_row], kvar_row)
+  `Const(tv, `Extend lbl, [head, ktype; tail, krow], krow)
 let witness: tyvar -> k_var -> u_var -> u_type = fun tv kind ty ->
-  `Const(tv, `Named "<witness>", [ty, kind], kvar_type)
+  `Const(tv, `Named "<witness>", [ty, kind], ktype)
 let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x xk ->
   begin match UnionFind.get fk with
     | `Arrow(_, rk) ->

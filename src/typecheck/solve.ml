@@ -160,7 +160,7 @@ let expand: constraint_ops -> g_node -> bound_target -> u_var =
             ret
     end
   in
-  let rec new_root = lazy (go kvar_type old_root new_root) in
+  let rec new_root = lazy (go ktype old_root new_root) in
   Lazy.force new_root
 
 let propagate: constraint_ops -> g_node -> u_var -> unit =

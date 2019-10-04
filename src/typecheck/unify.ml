@@ -373,7 +373,7 @@ let rec unify (ctx: unify_ctx) l r =
                          ( { ty_id = gensym ()
                            ; ty_bound = ref (get_u_bound (UnionFind.get v))
                            }
-                         , kvar_row
+                         , krow
                          )
                       )
                   in

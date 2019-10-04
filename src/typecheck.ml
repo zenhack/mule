@@ -2,8 +2,8 @@ open Typecheck_types
 
 let rec gen_kind = function
   | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
-  | `Type -> kvar_type
-  | `Row -> kvar_row
+  | `Type -> ktype
+  | `Row -> krow
   | `Unknown -> gen_k ()
 
 let typecheck expr =

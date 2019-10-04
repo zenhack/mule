@@ -38,7 +38,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.Const {const_val = c} -> walk_const g c
     | Expr.Embed _ -> Typebuilder.(text |> at_g g)
     | Expr.Var {v_var = v} ->
-        let tv = gen_u kvar_type (`G g) in
+        let tv = gen_u ktype (`G g) in
         begin match Option.map ~f:Lazy.force (Map.find env_terms v) with
           | None ->
               MuleErr.throw (`UnboundVar v)
@@ -56,8 +56,8 @@ let rec walk: context -> k_var Expr.t -> u_var =
         end;
         tv
     | Expr.Lam {l_param = param; l_body = body} ->
-        let param_var = gen_u kvar_type (`G g) in
-        let ret_var = gen_u kvar_type (`G g) in
+        let param_var = gen_u ktype (`G g) in
+        let ret_var = gen_u ktype (`G g) in
         let f_var = UnionFind.make (fn (gen_ty_var g) param_var ret_var) in
         let g_body = with_g g
             (fun g -> walk
@@ -140,8 +140,8 @@ let rec walk: context -> k_var Expr.t -> u_var =
         in
         walk ctx letrec_body
     | Expr.App {app_fn = f; app_arg = arg} ->
-        let param_var = gen_u kvar_type (`G g) in
-        let ret_var = gen_u kvar_type (`G g) in
+        let param_var = gen_u ktype (`G g) in
+        let ret_var = gen_u ktype (`G g) in
         let f_var = UnionFind.make(fn (gen_ty_var g) param_var ret_var) in
         let g_f =
           with_g g (fun g -> walk { ctx with g = Lazy.force g} f)
@@ -154,19 +154,19 @@ let rec walk: context -> k_var Expr.t -> u_var =
         ret_var
     | Expr.EmptyRecord ->
         Typebuilder.(
-          all kvar_row (fun r -> record_t ([], Some r))
+          all krow (fun r -> record_t ([], Some r))
           |> at_g g
         )
     | Expr.GetField {gf_lbl; _} ->
         Typebuilder.(
-          all kvar_type (fun a -> all kvar_row (fun rt -> (all kvar_row (fun rv ->
+          all ktype (fun a -> all krow (fun rt -> (all krow (fun rv ->
               record ([], Some rt) ([gf_lbl, a], Some rv) **> a
             ))))
           |> at_g g
         )
     | Expr.Update { up_level = `Value; up_lbl } ->
         Typebuilder.(
-          all kvar_type (fun a -> all kvar_row (fun rt -> all kvar_row (fun rv ->
+          all ktype (fun a -> all krow (fun rt -> all krow (fun rv ->
                 record ([], Some rt) ([], Some rv)
                   **> a
                   **> record ([], Some rt) ([up_lbl, a], Some rv)
@@ -178,7 +178,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         up_lbl = lbl;
       } ->
         Typebuilder.(
-          all kvar_type (fun a -> all kvar_row (fun rt -> all kvar_row (fun rv ->
+          all ktype (fun a -> all krow (fun rt -> all krow (fun rv ->
                 record ([], Some rt) ([], Some rv)
                   **> witness a
                   **> record ([lbl, a], Some rt) ([], Some rv)
@@ -188,7 +188,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.Ctor {c_lbl = lbl; c_arg = param} ->
         let param_var = walk ctx param in
         Typebuilder.(
-          all kvar_row (fun r -> union ([lbl, return param_var], Some r))
+          all krow (fun r -> union ([lbl, return param_var], Some r))
           |> at_g g
         )
     | Expr.Match {cases; default} when Map.is_empty cases ->
@@ -205,8 +205,8 @@ let rec walk: context -> k_var Expr.t -> u_var =
         in
         walk ctx term
     | Expr.ConstMatch {cm_cases; cm_default} ->
-        let body_ty = gen_u kvar_type (`G g) in
-        let arg_ty = gen_u kvar_type (`G g) in
+        let body_ty = gen_u ktype (`G g) in
+        let arg_ty = gen_u ktype (`G g) in
         Map.iteri cm_cases ~f:(fun ~key:c ~data:body ->
             let ty = walk ctx body in
             cops.constrain_unify `MatchSiblingsBody ty body_ty;
@@ -221,7 +221,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.Match {cases; default} ->
         let final = match default with
           | None -> UnionFind.make (empty (gen_ty_var g))
-          | Some _ -> gen_u kvar_row (`G g)
+          | Some _ -> gen_u krow (`G g)
         in
         let (rowVar, bodyVar) =
           walk_match ctx final (Map.to_alist cases)
@@ -240,9 +240,9 @@ let rec walk: context -> k_var Expr.t -> u_var =
         UnionFind.make (witness (ty_var_at (`G g)) (Type.get_info ty) uty)
 and walk_match ({cops; env_types = _; env_terms; g} as ctx) final =
   List.fold_right
-    ~init:(final, gen_u kvar_type (`G g))
+    ~init:(final, gen_u ktype (`G g))
     ~f:(fun (lbl, (var, body)) (row, body') ->
-        let ty = gen_u kvar_type (`G g) in
+        let ty = gen_u ktype (`G g) in
         let bodyVar =
           walk
             { ctx with

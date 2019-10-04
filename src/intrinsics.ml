@@ -7,15 +7,15 @@ module S = Surface_ast
 
 open Typecheck_types
 
-let int_t = D.Type.Named{n_info = kvar_type; n_name = "int"}
-let text_t = D.Type.Named{n_info = kvar_type; n_name = "text"}
+let int_t = D.Type.Named{n_info = ktype; n_name = "int"}
+let text_t = D.Type.Named{n_info = ktype; n_name = "text"}
 let fn_t p r = D.Type.Fn {
-    fn_info = kvar_type;
+    fn_info = ktype;
     fn_pvar = None;
     fn_param = p;
     fn_ret = r;
   }
-let char_t = D.Type.Named{n_info = kvar_type; n_name = "char"}
+let char_t = D.Type.Named{n_info = ktype; n_name = "char"}
 
 let prim x = R.Expr.Prim x
 
@@ -45,7 +45,7 @@ let dict kvs =
   |> Map.of_alist_exn (module Var)
 
 let row kvs =
-  ( kvar_row
+  ( krow
   , List.map kvs ~f:(fun (k, v) -> (Label.of_string k, v))
   , None
   )
@@ -53,7 +53,7 @@ let row kvs =
 let recordType tys vals =
   D.Type.Record
     { r_src = S.Type.Var {v_var = Var.of_string "<intrinsic>"}
-    ; r_info = kvar_type
+    ; r_info = ktype
     ; r_types = row tys
     ; r_values = row vals
     }
