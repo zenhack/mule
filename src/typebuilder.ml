@@ -9,8 +9,8 @@ type row = (Label.t * t) list * t option
 let build sign b_at builder =
   builder sign b_at
 
-let quant: T.quantifier -> (t -> t) -> t =
-  fun q f sign b_at ->
+let quant: T.quantifier -> T.k_var -> (t -> t) -> t =
+  fun q k f sign b_at ->
   fst
     ( Util.fix
       (fun arg ->
@@ -33,7 +33,7 @@ let quant: T.quantifier -> (t -> t) -> t =
                           b_ty = T.get_flag q sign;
                         };
                     }
-                , T.gen_k ()
+                , k
                 )
              )
          in

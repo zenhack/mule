@@ -152,7 +152,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         ret_var
     | Expr.EmptyRecord ->
         Typebuilder.(
-          all (fun r -> record_t ([], Some r))
+          all kvar_row (fun r -> record_t ([], Some r))
           |> build `Pos (`G g)
         )
     | Expr.GetField {gf_lbl; _} ->
@@ -161,7 +161,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
          * all a r. {lbl: a, ...r} -> a
         *)
         Typebuilder.(
-          all (fun a -> all (fun rt -> (all (fun rv ->
+          all kvar_type (fun a -> all kvar_row (fun rt -> (all kvar_row (fun rv ->
               record ([], Some rt) ([gf_lbl, a], Some rv) **> a
             ))))
           |> build `Pos (`G g)
@@ -172,7 +172,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
          * all a r. {...r} -> a -> {lbl: a, ...r}
         *)
         Typebuilder.(
-          all (fun a -> all (fun rt -> all (fun rv ->
+          all kvar_type (fun a -> all kvar_row (fun rt -> all kvar_row (fun rv ->
                 record ([], Some rt) ([], Some rv)
                   **> a
                   **> record ([], Some rt) ([up_lbl, a], Some rv)
@@ -184,7 +184,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
         up_lbl = lbl;
       } ->
         Typebuilder.(
-          all (fun a -> all (fun rt -> all (fun rv ->
+          all kvar_type (fun a -> all kvar_row (fun rt -> all kvar_row (fun rv ->
                 record ([], Some rt) ([], Some rv)
                   **> witness a
                   **> record ([lbl, a], Some rt) ([], Some rv)

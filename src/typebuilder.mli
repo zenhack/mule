@@ -8,8 +8,8 @@ type row = (Label.t * t) list * t option
 
 val build : sign -> bound_target -> t -> u_var
 
-val all : (t -> t) -> t
-val exist : (t -> t) -> t
+val all : k_var -> (t -> t) -> t
+val exist : k_var -> (t -> t) -> t
 
 val ( **> ) : t -> t -> t
 val record : row -> row -> t
