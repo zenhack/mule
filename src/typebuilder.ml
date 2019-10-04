@@ -9,6 +9,9 @@ type row = (Label.t * t) list * t option
 let build sign b_at builder =
   builder sign b_at
 
+let return v _sign _b_at =
+  v
+
 let quant: T.quantifier -> T.k_var -> (t -> t) -> t =
   fun q k f sign b_at ->
   fst
@@ -37,7 +40,7 @@ let quant: T.quantifier -> T.k_var -> (t -> t) -> t =
                 )
              )
          in
-         f (fun _ _ -> uv) sign b_at
+         f (return uv) sign b_at
       )
     )
 
@@ -64,8 +67,7 @@ let row sign b_at (fs, rest) =
     default
       rest
       (fun () ->
-         let r = UnionFind.make (T.empty (Gen_t.ty_var_at b_at))
-         in fun _ _ -> r)
+         return (UnionFind.make (T.empty (Gen_t.ty_var_at b_at))))
   in
   let r =
     List.fold_right fs ~init:(rest sign b_at) ~f:(fun (lbl, hd) tl ->

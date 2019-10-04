@@ -193,17 +193,10 @@ let rec walk: context -> k_var Expr.t -> u_var =
         )
     | Expr.Ctor {c_lbl = lbl; c_arg = param} ->
         let param_var = walk ctx param in
-        UnionFind.make
-          (union
-             (ty_var_at (`G g))
-             (UnionFind.make
-                (extend
-                   (ty_var_at (`G g))
-                   lbl
-                   param_var
-                   (gen_u kvar_row (`G g)))
-             )
-          )
+        Typebuilder.(
+          all kvar_row (fun r -> union ([lbl, return param_var], Some r))
+          |> build `Pos (`G g)
+        )
     | Expr.Match {cases; default} when Map.is_empty cases ->
         let term =
           match default with

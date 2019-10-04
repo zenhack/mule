@@ -22,3 +22,5 @@ val text : t
 val char : t
 
 val witness : t -> t
+
+val return : u_var -> t
