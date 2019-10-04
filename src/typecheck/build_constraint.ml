@@ -24,12 +24,14 @@ let with_g: g_node -> (g_node Lazy.t -> u_var) -> g_node =
       )
 
 let walk_const g c =
-  let ty = match c with
-    | Const.Integer _ -> int
-    | Const.Text _ -> text
-    | Const.Char _ -> char
-  in
-  UnionFind.make (ty (gen_ty_var g))
+  Typebuilder.(
+    begin match c with
+      | Const.Integer _ -> int
+      | Const.Text _ -> text
+      | Const.Char _ -> char
+    end
+    |> build `Pos (`G g)
+  )
 
 let rec walk: context -> k_var Expr.t -> u_var =
   fun ({cops; env_types = _; env_terms; g} as ctx) -> function
