@@ -7,6 +7,7 @@ type t
 type row = (Label.t * t) list * t option
 
 val build : sign -> bound_target -> t -> u_var
+val at_g : g_node -> t -> u_var
 
 val all : k_var -> (t -> t) -> t
 val exist : k_var -> (t -> t) -> t

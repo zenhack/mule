@@ -30,7 +30,7 @@ let walk_const g c =
       | Const.Text _ -> text
       | Const.Char _ -> char
     end
-    |> build `Pos (`G g)
+    |> at_g g
   )
 
 let rec walk: context -> k_var Expr.t -> u_var =
@@ -155,7 +155,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
     | Expr.EmptyRecord ->
         Typebuilder.(
           all kvar_row (fun r -> record_t ([], Some r))
-          |> build `Pos (`G g)
+          |> at_g g
         )
     | Expr.GetField {gf_lbl; _} ->
         (* Field accesses have the type:
@@ -166,7 +166,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
           all kvar_type (fun a -> all kvar_row (fun rt -> (all kvar_row (fun rv ->
               record ([], Some rt) ([gf_lbl, a], Some rv) **> a
             ))))
-          |> build `Pos (`G g)
+          |> at_g g
         )
     | Expr.Update { up_level = `Value; up_lbl } ->
         (* Record updates have the type:
@@ -179,7 +179,7 @@ let rec walk: context -> k_var Expr.t -> u_var =
                   **> a
                   **> record ([], Some rt) ([up_lbl, a], Some rv)
             )))
-          |> build `Pos (`G g)
+          |> at_g g
         )
     | Expr.Update {
         up_level = `Type;
@@ -191,13 +191,13 @@ let rec walk: context -> k_var Expr.t -> u_var =
                   **> witness a
                   **> record ([lbl, a], Some rt) ([], Some rv)
             )))
-          |> build `Pos (`G g)
+          |> at_g g
         )
     | Expr.Ctor {c_lbl = lbl; c_arg = param} ->
         let param_var = walk ctx param in
         Typebuilder.(
           all kvar_row (fun r -> union ([lbl, return param_var], Some r))
-          |> build `Pos (`G g)
+          |> at_g g
         )
     | Expr.Match {cases; default} when Map.is_empty cases ->
         let term =

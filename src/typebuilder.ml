@@ -9,6 +9,9 @@ type row = (Label.t * t) list * t option
 let build sign b_at builder =
   builder sign b_at
 
+let at_g g =
+  build `Pos (`G g)
+
 let return v _sign _b_at =
   v
 
