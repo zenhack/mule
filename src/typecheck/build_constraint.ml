@@ -151,107 +151,46 @@ let rec walk: context -> k_var Expr.t -> u_var =
         cops.constrain_inst g_arg param_var;
         ret_var
     | Expr.EmptyRecord ->
-        UnionFind.make
-          (record
-             (ty_var_at (`G g))
-             (gen_u kvar_row (`G g))
-             (UnionFind.make (empty (ty_var_at (`G g))))
-          )
+        Typebuilder.(
+          all (fun r -> record_t ([], Some r))
+          |> build `Pos (`G g)
+        )
     | Expr.GetField {gf_lbl; _} ->
         (* Field accesses have the type:
          *
          * all a r. {lbl: a, ...r} -> a
         *)
-        let rec ret = lazy (
-          let b_at = `Ty ret in
-          let head_var = gen_u kvar_type b_at in
-          UnionFind.make
-            (fn
-               (gen_ty_var g)
-               (UnionFind.make
-                  (record
-                     (ty_var_at b_at)
-                     (gen_u kvar_row b_at)
-                     (UnionFind.make
-                        (extend
-                           (ty_var_at b_at)
-                           gf_lbl
-                           head_var
-                           (gen_u kvar_row b_at)
-                        ))))
-               head_var)
+        Typebuilder.(
+          all (fun a -> all (fun rt -> (all (fun rv ->
+              record ([], Some rt) ([gf_lbl, a], Some rv) **> a
+            ))))
+          |> build `Pos (`G g)
         )
-        in
-        Lazy.force ret
     | Expr.Update { up_level = `Value; up_lbl } ->
         (* Record updates have the type:
          *
          * all a r. {...r} -> a -> {lbl: a, ...r}
         *)
-        let rec ret = lazy (
-          let b_at = `Ty ret in
-          let head_var = gen_u kvar_type b_at in
-          let tail_var = gen_u kvar_row b_at in
-          let types_row_var = gen_u kvar_row b_at in
-          UnionFind.make
-            (fn
-               (gen_ty_var g)
-               (UnionFind.make
-                  (record
-                     (ty_var_at b_at)
-                     types_row_var
-                     tail_var))
-               (UnionFind.make
-                  (fn
-                     (ty_var_at b_at)
-                     head_var
-                     (UnionFind.make
-                        (record
-                           (ty_var_at b_at)
-                           types_row_var
-                           (UnionFind.make
-                              (extend
-                                 (ty_var_at b_at)
-                                 up_lbl
-                                 head_var
-                                 tail_var
-                              )))))))
-        ) in
-        Lazy.force ret
+        Typebuilder.(
+          all (fun a -> all (fun rt -> all (fun rv ->
+                record ([], Some rt) ([], Some rv)
+                  **> a
+                  **> record ([], Some rt) ([up_lbl, a], Some rv)
+            )))
+          |> build `Pos (`G g)
+        )
     | Expr.Update {
         up_level = `Type;
         up_lbl = lbl;
       } ->
-        let rec ret = lazy (
-          let b_at = `Ty ret in
-          let kvar = gen_k () in
-          let head_var = gen_u kvar b_at in
-          let tail_var = gen_u kvar_row b_at in
-          let vals_row_var = gen_u kvar_row b_at in
-          UnionFind.make
-            (fn
-               (gen_ty_var g)
-               (UnionFind.make
-                  (record
-                     (ty_var_at b_at)
-                     tail_var
-                     vals_row_var))
-               (UnionFind.make
-                  (fn
-                     (ty_var_at b_at)
-                     (UnionFind.make (witness (ty_var_at b_at) kvar head_var))
-                     (UnionFind.make
-                        (record
-                           (ty_var_at b_at)
-                           (UnionFind.make
-                              (extend
-                                 (ty_var_at b_at)
-                                 lbl
-                                 head_var
-                                 tail_var))
-                           vals_row_var)))))
-        ) in
-        Lazy.force ret
+        Typebuilder.(
+          all (fun a -> all (fun rt -> all (fun rv ->
+                record ([], Some rt) ([], Some rv)
+                  **> witness a
+                  **> record ([lbl, a], Some rt) ([], Some rv)
+            )))
+          |> build `Pos (`G g)
+        )
     | Expr.Ctor {c_lbl = lbl; c_arg = param} ->
         let param_var = walk ctx param in
         UnionFind.make
