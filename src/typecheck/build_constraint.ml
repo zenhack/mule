@@ -158,10 +158,6 @@ let rec walk: context -> k_var Expr.t -> u_var =
           |> at_g g
         )
     | Expr.GetField {gf_lbl; _} ->
-        (* Field accesses have the type:
-         *
-         * all a r. {lbl: a, ...r} -> a
-        *)
         Typebuilder.(
           all kvar_type (fun a -> all kvar_row (fun rt -> (all kvar_row (fun rv ->
               record ([], Some rt) ([gf_lbl, a], Some rv) **> a
@@ -169,10 +165,6 @@ let rec walk: context -> k_var Expr.t -> u_var =
           |> at_g g
         )
     | Expr.Update { up_level = `Value; up_lbl } ->
-        (* Record updates have the type:
-         *
-         * all a r. {...r} -> a -> {lbl: a, ...r}
-        *)
         Typebuilder.(
           all kvar_type (fun a -> all kvar_row (fun rt -> all kvar_row (fun rv ->
                 record ([], Some rt) ([], Some rv)
