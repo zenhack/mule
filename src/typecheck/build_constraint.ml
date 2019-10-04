@@ -2,8 +2,7 @@ open Desugared_ast
 open Typecheck_types
 open Gensym
 open Gen_t
-module Const = Common_ast.Const
-module Var = Common_ast.Var
+open Common_ast
 
 include Build_constraint_t
 
@@ -80,65 +79,44 @@ let rec walk: context -> k_var Expr.t -> u_var =
           }
           body
     | Expr.LetRec{letrec_types; letrec_vals; letrec_body} ->
-        let val_map = Map.of_alist_exn (module Var) letrec_vals in
-        let vals =
-          Map.map val_map ~f:(fun _ ->
-              let ret = lazy (`Ty (gen_u (gen_k ()) (`G g))) in
-              let _ = Lazy.force ret in
-              ret
-            )
+        let record_var = Gensym.anon_var () in
+        let get_var_set ls =
+          List.map ls ~f:(fun (v, _) -> v)
+          |> Set.of_list (module Var)
         in
-        let ctx = {
-          ctx with env_terms =
-                     Map.merge_skewed
-                       ctx.env_terms
-                       vals
-                       ~combine:(fun ~key:_ _ r -> r)
-        }
-        in
-        let types =
-          Coercions.gen_types
-            { ctx; b_at = `G g }
-            `Pos
-            (Map.of_alist_exn (module Var) letrec_types)
-        in
-        let ctx =
-          { ctx with env_types =
-                       Map.merge_skewed
-                         ctx.env_types
-                         types
-                         ~combine:(fun ~key:_ _ r -> r)
+        let subst_args = Desugared_ast.SubstRec.{
+            rec_name = record_var;
+            type_vars = get_var_set letrec_types;
+            val_vars = get_var_set letrec_types;
           }
         in
-        let vals' = List.map letrec_vals ~f:(fun (v, e) ->
-            let g_e =
-              with_g g (fun g ->
-                  let ret = walk { ctx with g = Lazy.force g } e in
-                  begin match Lazy.force (Util.find_exn vals v) with
-                    | `Ty uv ->
-                        (* Important: we don't want to constrain_unify here,
-                         * because uv is bound above our g node, which is not
-                         * what we want -- ideally we'd create it later, but
-                         * cyclic dependencies and all...
-                        *)
-                        UnionFind.merge (fun _ r -> r) uv ret
-                    | `G _ ->
-                        MuleErr.bug "impossible"
-                  end;
-                  ret
-                )
-            in
-            (v, `G g_e)
-          )
+        let val_rec =
+          List.fold letrec_vals ~init:Expr.EmptyRecord ~f:(fun acc (k, v) ->
+              Expr.App {
+                app_fn =
+                  Expr.App {
+                    app_fn = Expr.Update {up_level = `Value; up_lbl = var_to_label k};
+                    app_arg = acc;
+                  };
+                app_arg =
+                    Desugared_ast.SubstRec.expr subst_args v;
+              }
+            )
         in
-        let ctx = { ctx with env_terms =
-                               List.fold
-                                 vals'
-                                 ~init:ctx.env_terms
-                                 ~f:(fun old (v, t) -> Map.set old ~key:v ~data:(lazy t))
-                  }
+        let final_rec =
+          List.fold letrec_types ~init:val_rec ~f:(fun acc (k, v) ->
+              Expr.App {
+                app_fn =
+                  Expr.App {
+                    app_fn = Expr.Update {up_level = `Type; up_lbl = var_to_label k};
+                    app_arg = acc;
+                  };
+                app_arg =
+                    Expr.Witness {wi_type = Desugared_ast.SubstRec.typ subst_args v};
+              }
+            )
         in
-        walk ctx letrec_body
+        ()
     | Expr.App {app_fn = f; app_arg = arg} ->
         let param_var = gen_u ktype (`G g) in
         let ret_var = gen_u ktype (`G g) in
