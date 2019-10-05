@@ -95,8 +95,11 @@ module SubstRec = struct
           app_fn = Expr.GetField{gf_lbl = var_to_label v_var};
           app_arg = Expr.Var{v_var = args.rec_name};
         }
-    | Expr.Lam{l_param; _} ->
-        expr (mask_val args l_param) e
+    | Expr.Lam{l_param; l_body} ->
+        Expr.Lam {
+          l_param;
+          l_body = expr (mask_val args l_param) l_body;
+        }
     | Expr.Let{let_v; let_e; let_body} ->
         Expr.Let{
           let_v;

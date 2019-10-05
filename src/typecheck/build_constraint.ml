@@ -87,36 +87,54 @@ let rec walk: context -> k_var Expr.t -> u_var =
         let subst_args = Desugared_ast.SubstRec.{
             rec_name = record_var;
             type_vars = get_var_set letrec_types;
-            val_vars = get_var_set letrec_types;
+            val_vars = get_var_set letrec_vals;
+          }
+        in
+        (* Helpers for constructing terms. TODO: factor this out and put
+         * it somewhere more useful. *)
+        let lam f =
+          let p = Gensym.anon_var () in
+          Expr.Lam {l_param = p; l_body = f (Expr.Var {v_var = p})}
+        in
+        let ($) f x = Expr.App {
+            app_fn = f;
+            app_arg = x;
           }
         in
         let val_rec =
           List.fold letrec_vals ~init:Expr.EmptyRecord ~f:(fun acc (k, v) ->
-              Expr.App {
-                app_fn =
-                  Expr.App {
-                    app_fn = Expr.Update {up_level = `Value; up_lbl = var_to_label k};
-                    app_arg = acc;
-                  };
-                app_arg =
-                    Desugared_ast.SubstRec.expr subst_args v;
-              }
+              Expr.Update {up_level = `Value; up_lbl = var_to_label k}
+                $ acc
+                $ Desugared_ast.SubstRec.expr subst_args v
             )
         in
         let final_rec =
           List.fold letrec_types ~init:val_rec ~f:(fun acc (k, v) ->
-              Expr.App {
-                app_fn =
-                  Expr.App {
-                    app_fn = Expr.Update {up_level = `Type; up_lbl = var_to_label k};
-                    app_arg = acc;
-                  };
-                app_arg =
-                    Expr.Witness {wi_type = Desugared_ast.SubstRec.typ subst_args v};
-              }
+              Expr.Update {up_level = `Type; up_lbl = var_to_label k}
+                $ acc
+                $ Expr.Witness {wi_type = Desugared_ast.SubstRec.typ subst_args v}
             )
         in
-        ()
+        let fix =
+          (* Standard fixpoint combinator. *)
+          lam (fun f ->
+                (lam (fun x -> f $ (x $ x))) $
+                (lam (fun x -> f $ (x $ x)))
+            )
+        in
+        let desugared =
+          Expr.Let {
+            let_v = record_var;
+            let_e =
+              fix $ Expr.Lam {
+                  l_param = record_var;
+                  l_body = final_rec;
+                };
+            let_body =
+              Desugared_ast.SubstRec.expr subst_args letrec_body;
+          }
+        in
+        walk ctx desugared
     | Expr.App {app_fn = f; app_arg = arg} ->
         let param_var = gen_u ktype (`G g) in
         let ret_var = gen_u ktype (`G g) in
