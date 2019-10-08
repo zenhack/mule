@@ -1,6 +1,7 @@
 
 include Cli_t
 
+(*
 open Cmdliner
 
 let repl_term =
@@ -51,3 +52,4 @@ let build_js_term =
 
 let parse_cmd () =
     Term.eval_choice repl_term [repl_term; test_term; run_term; build_js_term]
+   *)
