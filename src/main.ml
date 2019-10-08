@@ -1,2 +1,0 @@
-
-let () = Mule.Main.main ()

@@ -1,16 +1,3 @@
-(include_subdirs unqualified)
-
-(library
+(executable
   (name mule)
-  (flags (:standard -open Base))
-  (libraries
-    base
-    lwt
-    lwt.unix
-    mparser
-    topological_sort
-    yojson
-    zarith
-
-    cmdliner)
-  (preprocess (pps ppx_sexp_conv ppx_let lwt_ppx)))
+  (libraries libmule))

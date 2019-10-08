@@ -3,16 +3,16 @@
 tests := $(wildcard tests/*.mule)
 checks := $(tests:.mule=.check)
 
-main_exe := ./_build/default/src/main.exe
+main_exe := src/mule/mule.exe
 
 all:
-	dune build src/main.exe
+	dune build $(main_exe)
 repl: all
-	rlwrap $(main_exe)
+	rlwrap ./_build/default/$(main_exe)
 check: $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*
-	@$(main_exe) test $*.mule > $*.actual || true
+	@./_build/default/$(main_exe) test $*.mule > $*.actual || true
 	@diff -u $*.expected $*.actual
 	@touch $@
 clean:

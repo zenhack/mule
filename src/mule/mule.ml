@@ -1,0 +1,2 @@
+
+let () = Libmule.Main.main ()
