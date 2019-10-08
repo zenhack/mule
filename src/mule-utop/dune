@@ -1,0 +1,9 @@
+(executable
+  (name mule_utop)
+  (link_flags (-linkall))
+  (modes byte)
+  (libraries
+    libmule
+    compiler-libs.toplevel
+    utop
+    ))
