@@ -76,6 +76,8 @@ let main () =
               let out = Lwt_io.stdout in
               let%lwt _ = Lwt_io.write out Js_runtime.src in
               To_js.translate_expr dexp
+              |> Js_pre.cps (fun x -> x)
+              |> Js_pre.to_js
               |> Js_ast.expr
               |> Fmt.(fun x -> x ^ s "\n")
               |> Fmt.to_string

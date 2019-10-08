@@ -13,17 +13,19 @@ const $lazy = (f) => {
 	return {state: 'delayed', thunk: f}
 }
 
-const $force = (l) => {
+const $force = (l, k) => {
 	switch(l.state) {
 	case 'ready':
-			return l.thunk;
+			return () => k(l.thunk);
 	case 'in-progress':
 			throw 'Infinite loop';
 	case 'delayed':
 			l.state = 'in-progress';
-			l.thunk = l.thunk();
-			l.state = 'ready';
-			return l.thunk;
-	}
+      return l.thunk((val) => {
+        l.thunk = val;
+        l.state = 'ready';
+        return k(l.thunk);
+      })
+  }
 }
 "
