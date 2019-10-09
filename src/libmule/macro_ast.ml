@@ -5,27 +5,36 @@ type var = {
   v_id : int;
   v_name : string;
 }
+[@@deriving sexp]
 
 type 'm var_ = ('m, var) Wm.t
+[@@deriving sexp]
 
 type 'm pattern =
   | PVar of var
+  [@@deriving sexp]
 type 'm pattern_ = ('m, 'm pattern) Wm.t
+  [@@deriving sexp]
 
 type 'm exp =
   | EVar of 'm var_
   | ELam of ('m, 'm pattern_ * 'm exp_) Wm.t
   | EApp of ('m, 'm exp_ * 'm exp_) Wm.t
   | EWithType of ('m, 'm exp_ * 'm typ_) Wm.t
+  [@@deriving sexp]
 and 'm exp_ = ('m, 'm exp) Wm.t
+  [@@deriving sexp]
 and 'm typ =
   | TVar of 'm var_
   | TFn of ('m, 'm typ_ * 'm typ_) Wm.t
+  [@@deriving sexp]
 and 'm typ_ = ('m, 'm typ) Wm.t
+  [@@deriving sexp]
 
 module Pattern = struct
   module T = struct
     type 'a t = 'a pattern
+    [@@deriving sexp]
     let apply_kids p ~f:_ = p
   end
   include T
@@ -37,6 +46,7 @@ end
 module Type = struct
   module T = struct
     type 'a t = 'a typ
+    [@@deriving sexp]
     let apply_kids ty ~f = match ty with
       | TVar _ -> ty
       | TFn m -> TFn (Wm.map_data m ~f:(fun (param, ret) ->
@@ -57,6 +67,7 @@ end
 module Exp = struct
   module T = struct
     type 'a t = 'a exp
+    [@@deriving sexp]
     let apply_kids e ~f = match e with
       | EVar _ -> e
       | ELam m -> ELam (Wm.map_data m ~f:(fun (pat, body) ->
