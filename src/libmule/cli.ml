@@ -4,7 +4,7 @@ include Cli_t
 open Cmdliner
 
 let repl_term =
-  Term.(const `Repl, info "repl")
+  Term.(const `Repl)
 
 
 let test_term =
@@ -15,7 +15,6 @@ let test_term =
                ~docv:"FILE"
                ~doc:"Test the file $(docv)"
             )
-       , info "test"
        )
 
 let run_term =
@@ -35,7 +34,6 @@ let run_term =
                     ~docv:"FILE"
                     ~doc:"Run the file $(docv)"
                  )
-        , info "run"
         )
 
 let build_js_term =
@@ -46,8 +44,19 @@ let build_js_term =
                 ~docv:"FILE"
                 ~doc:"Compile the file $(docv)"
              )
-       , info "build-js"
        )
 
 let parse_cmd () =
-    Term.eval_choice repl_term [repl_term; test_term; run_term; build_js_term]
+    Term.eval_choice
+      ( repl_term
+      , Term.info "mule"
+      )
+      [
+        ( repl_term
+        , Term.info "repl"
+            ~doc:"Start an interactive repl"
+        );
+        test_term, Term.info "test";
+        run_term, Term.info "run";
+        build_js_term, Term.info "build-js";
+      ]
