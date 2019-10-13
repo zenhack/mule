@@ -32,15 +32,21 @@ let rec expr ctx e = match e with
           })
   | S.Expr.Embed{e_path; _} ->
       wrap_exp e (M.EConst (Const.Text (ctx.resolve_embed_exn e_path)))
+  | _ ->
+      failwith "TODO"
 and pattern p = match p with
   | S.Pattern.Var {v_var; v_type = None} ->
       wrap_pat p (M.PVar (unbound_var v_var))
+  | _ ->
+      failwith "TODO"
 and typ t =
   match t with
   | S.Type.Fn {fn_param; fn_ret} ->
       wrap_type t (M.TFn (typ fn_param, typ fn_ret))
   | S.Type.Var {v_var} ->
       wrap_type t (M.TVar (unbound_var v_var))
+  | _ ->
+      failwith "TODO"
 
 let expr_exn = expr
 let typ_exn _ = typ
