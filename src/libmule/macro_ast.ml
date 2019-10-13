@@ -28,6 +28,7 @@ and 'm exp_ = ('m, 'm exp) Wm.t
 and 'm typ =
   | TVar of var
   | TFn of ('m typ_ * 'm typ_)
+  | TQuant of ([`All|`Exist] * 'm var_ * 'm typ_)
   [@@deriving sexp]
 and 'm typ_ = ('m, 'm typ) Wm.t
   [@@deriving sexp]
@@ -68,6 +69,8 @@ module Type = struct
           ( Wm.map_data ~f param
           , Wm.map_data ~f ret
           )
+      | TQuant (q, v, body) ->
+          TQuant(q, v, Wm.map_data ~f body)
   end
   include T
   include Collapse.Make(T)
@@ -81,13 +84,30 @@ module Type = struct
    * in future uses ignore the possibility of shadowing; each variable has a v_id which
    * is shared only when the variables are truely the same, not when the names merely
    * collide. *)
-  let rec rebind env = function
+  let rec rebind env ty = match ty with
     | TVar var ->
         begin match Map.find env.re_types var.v_name with
           | None -> MuleErr.throw (`UnboundVar (Common_ast.Var.of_string var.v_name))
           | Some var' -> TVar var'
         end
-    | ty ->
+    | TQuant(q, {data; meta}, body) ->
+        let var = {
+          v_name = data.v_name;
+          v_id = Gensym.gensym ();
+        }
+        in
+        TQuant
+          ( q
+          , Wm.{data = var; meta}
+          , Wm.map_data
+              ~f:(rebind
+                  { env with
+                    re_types = Map.set env.re_types ~key:var.v_name ~data:var
+                  }
+              )
+              body
+          )
+    | _ ->
         apply_kids ty ~f:(rebind env)
 end
 
