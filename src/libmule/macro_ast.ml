@@ -32,6 +32,11 @@ and 'm typ =
 and 'm typ_ = ('m, 'm typ) Wm.t
   [@@deriving sexp]
 
+type 'cmp rename_env = {
+  re_terms: (string, var, 'cmp) Map.t;
+  re_types: (string, var, 'cmp) Map.t;
+}
+
 module Pattern = struct
   module T = struct
     type 'a t = 'a pattern
@@ -42,6 +47,15 @@ module Pattern = struct
   include Collapse.Make(T)
 
   let apply_types p ~f:_ = p
+
+  (* Assign new v_id's to each variable in the pattern, and return a pair
+   * of (new_pattern, new_env), where new_env has an updated env_terms. *)
+  let rebind env = function
+    | PVar {v_name; _} ->
+        let var = {v_name; v_id = Gensym.gensym () } in
+        ( PVar var
+        , { env with re_terms = Map.set env.re_terms ~key:v_name ~data:var }
+        )
 end
 
 module Type = struct
@@ -62,6 +76,19 @@ module Type = struct
       | TVar data when data.v_id = var.v_id -> replacement
       | ty -> ty
     )
+
+  (* Populate the v_ids of variables in the type for the first time. This allows us to
+   * in future uses ignore the possibility of shadowing; each variable has a v_id which
+   * is shared only when the variables are truely the same, not when the names merely
+   * collide. *)
+  let rec rebind env = function
+    | TVar var ->
+        begin match Map.find env.re_types var.v_name with
+          | None -> MuleErr.throw (`UnboundVar (Common_ast.Var.of_string var.v_name))
+          | Some var' -> TVar var'
+        end
+    | ty ->
+        apply_kids ty ~f:(rebind env)
 end
 
 module Exp = struct
@@ -102,4 +129,19 @@ module Exp = struct
 
   let subst_type e ~var ~replacement =
     apply_types e ~f:(Wm.map_data ~f:(Type.bottom_up ~f:(Type.subst ~var ~replacement)))
+
+  (* See [Type.rebind] *)
+  let rec rebind env = function
+    | EVar var ->
+        begin match Map.find env.re_terms var.v_name with
+          | None -> MuleErr.throw (`UnboundVar (Common_ast.Var.of_string var.v_name))
+          | Some var' -> EVar var'
+        end
+    | ELam(pat, body) ->
+        let pat' = Wm.map_data pat ~f:(Pattern.rebind env) in
+        let _, env' = pat'.data in
+        let pat' = Wm.map_data pat' ~f:fst in
+        ELam(pat', Wm.map_data body ~f:(rebind env'))
+    | e ->
+        apply_kids e ~f:(rebind env)
 end
