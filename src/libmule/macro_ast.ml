@@ -17,16 +17,17 @@ type 'm pattern_ = ('m, 'm pattern) Wm.t
   [@@deriving sexp]
 
 type 'm exp =
-  | EVar of 'm var_
-  | ELam of ('m, 'm pattern_ * 'm exp_) Wm.t
-  | EApp of ('m, 'm exp_ * 'm exp_) Wm.t
-  | EWithType of ('m, 'm exp_ * 'm typ_) Wm.t
+  | EVar of var
+  | ELam of ('m pattern_ * 'm exp_)
+  | EApp of ('m exp_ * 'm exp_)
+  | EWithType of ('m exp_ * 'm typ_)
+  | EConst of Common_ast.Const.t
   [@@deriving sexp]
 and 'm exp_ = ('m, 'm exp) Wm.t
   [@@deriving sexp]
 and 'm typ =
-  | TVar of 'm var_
-  | TFn of ('m, 'm typ_ * 'm typ_) Wm.t
+  | TVar of var
+  | TFn of ('m typ_ * 'm typ_)
   [@@deriving sexp]
 and 'm typ_ = ('m, 'm typ) Wm.t
   [@@deriving sexp]
@@ -49,17 +50,16 @@ module Type = struct
     [@@deriving sexp]
     let apply_kids ty ~f = match ty with
       | TVar _ -> ty
-      | TFn m -> TFn (Wm.map_data m ~f:(fun (param, ret) ->
+      | TFn (param, ret) -> TFn
           ( Wm.map_data ~f param
           , Wm.map_data ~f ret
           )
-        ))
   end
   include T
   include Collapse.Make(T)
 
   let subst ty ~var ~replacement = bottom_up ty ~f:(function
-      | TVar {data; _} when data.v_id = var.v_id -> replacement
+      | TVar data when data.v_id = var.v_id -> replacement
       | ty -> ty
     )
 end
@@ -69,43 +69,34 @@ module Exp = struct
     type 'a t = 'a exp
     [@@deriving sexp]
     let apply_kids e ~f = match e with
-      | EVar _ -> e
-      | ELam m -> ELam (Wm.map_data m ~f:(fun (pat, body) ->
-          (pat, Wm.map_data body ~f)
-        ))
-      | EApp m ->
-          EApp (Wm.map_data m ~f:(fun (fn, arg) ->
-              ( Wm.map_data ~f fn
-              , Wm.map_data ~f arg
-              )
-            ))
-      | EWithType m ->
-          EWithType (
-            Wm.map_data m ~f:(fun (e, ty) -> (Wm.map_data e ~f, ty))
-          )
+      | EVar _ | EConst _ -> e
+      | ELam (pat, body) -> ELam (pat, Wm.map_data body ~f)
+      | EApp (fn, arg) ->
+          EApp
+            ( Wm.map_data ~f fn
+            , Wm.map_data ~f arg
+            )
+      | EWithType (e, ty) ->
+          EWithType (Wm.map_data e ~f, ty)
   end
   include T
   include Collapse.Make(T)
 
   let apply_patterns ~f = bottom_up ~f:(function
-      | ELam m -> ELam (Wm.map_data m ~f:(fun (pat, body) ->
-          (Wm.map_data pat ~f, body)
-        ))
+      | ELam (pat, body) -> ELam (Wm.map_data pat ~f, body)
       | e -> e
     )
 
   let apply_types e ~f =
     apply_patterns e ~f:(Pattern.apply_types ~f)
     |>  bottom_up ~f:(function
-        | EWithType m -> EWithType (
-            Wm.map_data m ~f:(fun (e, ty) -> (e, f ty))
-          )
+        | EWithType (e, ty) -> EWithType (e, f ty)
         | e -> e
       )
 
   let subst e ~var ~replacement =
     bottom_up e ~f:(function
-      | EVar {data; _} when data.v_id = var.v_id -> replacement
+      | EVar data when data.v_id = var.v_id -> replacement
       | e -> e
     )
 
