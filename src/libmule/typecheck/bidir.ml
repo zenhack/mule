@@ -66,7 +66,13 @@ let rec synth: context -> 'i DE.t -> u_var =
           )))
     | DE.Update {up_level = `Value; up_lbl} ->
         all krow (fun rv -> (all krow (fun rt -> all ktype (fun t ->
-            record rt rv **> record rt (extend up_lbl t rv)
+            record rt rv **> t **> record rt (extend up_lbl t rv)
+          ))))
+    | DE.Update {up_level = `Type; up_lbl} ->
+        let k = gen_k () in
+        all krow (fun rv -> (all krow (fun rt -> all k (fun t ->
+            let tw = witness k t in
+            record rt rv **> tw **> record (extend up_lbl tw rt) rv
           ))))
     | DE.EmptyRecord ->
         exist krow (fun rtypes -> all krow (fun rvals -> record rtypes rvals))
