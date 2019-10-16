@@ -44,15 +44,25 @@ let synth_const = function
   | C.Text _ -> text
   | C.Char _ -> char
 
-let rec synth: context -> 'i DE.t -> u_var =
+let find_bound env var = match Map.find env var with
+  | Some value -> value
+  | None -> unbound_var var
+
+let rec make_type ctx ty = match ty with
+  | DT.Var {v_var; _} ->
+      find_bound ctx.type_env v_var
+  | DT.Quant {q_quant; q_var; q_body; _} ->
+      quant q_quant (gen_k ()) (fun v ->
+        make_type
+          { ctx with type_env = Map.set ctx.type_env ~key:q_var ~data:v }
+          q_body
+      )
+and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
     | DE.Embed _ -> text
     | DE.Var {v_var} ->
-        begin match Map.find ctx.vals_env v_var with
-          | Some v -> v
-          | None -> unbound_var v_var
-        end
+        find_bound ctx.vals_env v_var
     | DE.Lam{l_param; l_body} ->
         with_locals ctx (fun ctx ->
           let p = fresh_local ctx `Flex ktype in
@@ -79,3 +89,17 @@ let rec synth: context -> 'i DE.t -> u_var =
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
         all krow (fun r -> union (extend c_lbl arg_t r))
+    | DE.WithType {wt_type} ->
+        make_type ctx wt_type **> make_type ctx wt_type
+    | DE.Witness {wi_type} ->
+        witness (gen_k ()) (make_type ctx wi_type)
+and check: context -> 'i DE.t -> u_var -> u_var =
+  fun ctx e ty_want ->
+    let ty_got = synth ctx e in
+    require_subtype ctx ~sub:ty_got ~super:ty_want;
+    ty_want
+and require_subtype: context -> sub:u_var -> super:u_var -> unit =
+  fun ctx ~sub ~super ->
+    begin match UnionFind.get sub, UnionFind.get super with
+      | _ -> ()
+    end
