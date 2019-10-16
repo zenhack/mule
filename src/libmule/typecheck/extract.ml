@@ -1,3 +1,5 @@
+let get_var_type _ = failwith "Unimplemented"
+(*
 open Typecheck_types
 open Common_ast
 open Desugared_ast
@@ -390,3 +392,4 @@ let get_var_type uvar =
   |> add_rec_binders
   |> finish_extract_t `Pos
   |> Relabel.relabel_type ()
+*)

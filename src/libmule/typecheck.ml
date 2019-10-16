@@ -1,3 +1,5 @@
+let typecheck _ = failwith "Unimplemented"
+(*
 open Typecheck_types
 
 let rec gen_kind = function
@@ -11,3 +13,4 @@ let typecheck expr =
   |> Build_constraint.build_constraints
   |> Solve.solve_constraints
   |> Extract.get_var_type
+   *)

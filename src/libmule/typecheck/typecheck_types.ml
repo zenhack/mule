@@ -26,8 +26,8 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * k_var)
-  | `Quant of (tyvar * u_var)
-  | `Const of (tyvar * u_typeconst * (u_var * k_var) list * k_var)
+  | `Quant of ([`All|`Exist] * int * u_var)
+  | `Const of (u_typeconst * (u_var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex | `Explicit ]
 and 'a bound =
@@ -36,17 +36,8 @@ and 'a bound =
   }
 and tyvar =
   { ty_id: int
-  ; ty_bound: bound_target bound ref
+  ; ty_flag: bound_ty
   }
-and g_node =
-  { g_id: int
-  ; g_bound: (g_node bound) option
-  ; g_child: u_var Lazy.t
-  }
-and bound_target =
-  [ `Ty of u_var Lazy.t
-  | `G of g_node
-  ]
 and u_var = u_type UnionFind.var
 
 type sign = [ `Pos | `Neg ]
@@ -54,9 +45,9 @@ type sign = [ `Pos | `Neg ]
 type quantifier = [ `All | `Exist ]
 
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
-  | `Const(_, _, _, k) -> k
+  | `Const(_, _, k) -> k
   | `Free (_, k) -> k
-  | `Quant(_, t) -> get_kind t
+  | `Quant(_, _, t) -> get_kind t
 
 let flip_sign = function
   | `Pos -> `Neg
@@ -79,31 +70,32 @@ let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
         )
 
 (* constructors for common type constants. *)
-let const: tyvar -> string -> u_type = fun tv name ->
-  `Const(tv, `Named name, [], ktype)
-let int: tyvar -> u_type = fun tv -> const tv "int"
-let text: tyvar -> u_type = fun tv -> const tv "text"
-let char: tyvar -> u_type = fun tv -> const tv "char"
-let fn: tyvar -> u_var -> u_var -> u_type = fun tv param ret ->
-  `Const(tv, `Named "->", [param, ktype; ret, ktype], ktype)
-let union: tyvar -> u_var -> u_type = fun tv row ->
-  `Const(tv, `Named "|", [row, krow], ktype)
-let record: tyvar -> u_var -> u_var -> u_type = fun tv r_types r_values ->
-  `Const(tv, `Named "{...}", [r_types, krow; r_values, krow], ktype)
-let empty: tyvar -> u_type = fun tv ->
-  `Const(tv, `Named "<empty>", [], krow)
-let extend: tyvar -> Label.t -> u_var -> u_var -> u_type = fun tv lbl head tail ->
-  `Const(tv, `Extend lbl, [head, ktype; tail, krow], krow)
-let witness: tyvar -> k_var -> u_var -> u_type = fun tv kind ty ->
-  `Const(tv, `Named "<witness>", [ty, kind], ktype)
-let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x xk ->
+let const: string -> u_var = fun name ->
+  UnionFind.make (`Const(`Named name, [], ktype))
+let int = const "int"
+let text = const "text"
+let char = const "char"
+let fn: u_var -> u_var -> u_var = fun param ret ->
+  UnionFind.make (`Const(`Named "->", [param, ktype; ret, ktype], ktype))
+let ( **> ) = fn
+let union: u_var -> u_var = fun row ->
+  UnionFind.make (`Const(`Named "|", [row, krow], ktype))
+let record: u_var -> u_var -> u_var = fun r_types r_values ->
+  UnionFind.make (`Const(`Named "{...}", [r_types, krow; r_values, krow], ktype))
+let empty: u_var =
+  UnionFind.make (`Const(`Named "<empty>", [], krow))
+let extend: Label.t -> u_var -> u_var -> u_var = fun lbl head tail ->
+  UnionFind.make (`Const(`Extend lbl, [head, ktype; tail, krow], krow))
+let witness: k_var -> u_var -> u_var = fun kind ty ->
+  UnionFind.make (`Const(`Named "<witness>", [ty, kind], ktype))
+let apply: u_var -> k_var -> u_var -> k_var -> u_var = fun f fk x xk ->
   begin match UnionFind.get fk with
     | `Arrow(_, rk) ->
-        `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
+        UnionFind.make(`Const(`Named "<apply>", [f, fk; x, xk], rk))
     | `Free _ ->
         let rk = gen_k () in
         UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
-        `Const(tv, `Named "<apply>", [f, fk; x, xk], rk)
+        UnionFind.make(`Const(`Named "<apply>", [f, fk; x, xk], rk))
     | k ->
         MuleErr.(
           throw
@@ -126,22 +118,23 @@ let apply: tyvar -> u_var -> k_var -> u_var -> k_var -> u_type = fun tv f fk x x
             )
         )
   end
+let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
+  fun q k mkbody ->
+    let ty_id = Gensym.gensym () in
+    let ty_flag = `Explicit in
+    let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
+    UnionFind.make (`Quant(q, ty_id, mkbody v))
+
+let all : k_var -> (u_var -> u_var) -> u_var =
+  fun k mkbody -> quant `All k mkbody
+
+let exist : k_var -> (u_var -> u_var) -> u_var =
+  fun k mkbody -> quant `Exist k mkbody
 
 type permission = F | R | L | E
 
 type unify_edge =
   | Unify of (reason * u_var * u_var)
 
-type inst_edge =
-  { ie_g_node: g_node
-  ; ie_ty_node: u_var
-  }
-
 let typeconst_eq: u_typeconst -> u_typeconst -> bool = Poly.equal
 let perm_eq: permission -> permission -> bool = Poly.equal
-
-let get_tyvar: u_type -> tyvar = function
-  | `Free (v, _) -> v
-  | `Const (v, _, _, _) -> v
-  | `Quant (v, _) -> v
-let get_u_bound x = !((get_tyvar x).ty_bound)
