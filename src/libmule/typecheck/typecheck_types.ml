@@ -53,12 +53,14 @@ let flip_sign = function
   | `Pos -> `Neg
   | `Neg -> `Pos
 
-let get_flag: quantifier -> sign -> bound_ty =
+type subtype_side = [ `Sub | `Super ]
+
+let get_flag: quantifier -> subtype_side -> bound_ty =
   fun q sign-> match q, sign with
-    | `All, `Pos -> `Flex
-    | `All, `Neg -> `Rigid
-    | `Exist, `Pos -> `Rigid
-    | `Exist, `Neg -> `Flex
+    | `All, `Sub -> `Flex
+    | `All, `Super -> `Rigid
+    | `Exist, `Sub -> `Rigid
+    | `Exist, `Super -> `Flex
 
 let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
   | `Type -> `Type

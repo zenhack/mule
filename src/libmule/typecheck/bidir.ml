@@ -13,6 +13,21 @@ type context = {
 let unbound_var v =
   MuleErr.throw (`UnboundVar v)
 
+let apply_kids t ~f = match t with
+  | `Free _ -> t
+  | `Quant(q, v, body) -> `Quant(q, v, f body)
+  | `Const(c, args, k) ->
+      `Const(c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
+
+let copy = function
+  | `Free({ty_flag; _}, k) -> `Free({ty_flag; ty_id = Gensym.gensym ()}, k)
+  | t -> t
+
+let rec subst ~target ~replacement uv =
+  match UnionFind.get uv with
+    | `Free({ty_id; _}, _) when ty_id = target -> replacement
+    | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
+
 (* Run f with an empty locals stack. When it returns, any locals created that remain
  * un-substituted will be quantified around the result. *)
 let with_locals ctx f =
@@ -103,3 +118,10 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
     begin match UnionFind.get sub, UnionFind.get super with
       | _ -> ()
     end
+and unroll_quant side q id k body =
+  let v = UnionFind.make (`Free({
+      ty_id = Gensym.gensym ();
+      ty_flag = get_flag q side;
+    }, k))
+  in
+  subst ~target:id ~replacement:v body
