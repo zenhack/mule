@@ -72,6 +72,8 @@ let rec make_type ctx ty = match ty with
           { ctx with type_env = Map.set ctx.type_env ~key:q_var ~data:v }
           q_body
       )
+  | DT.Opaque _ ->
+      MuleErr.bug "Opaques should have been qualified before typechecking."
 and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
@@ -100,7 +102,7 @@ and synth: context -> 'i DE.t -> u_var =
             record rt rv **> tw **> record (extend up_lbl tw rt) rv
           ))))
     | DE.EmptyRecord ->
-        exist krow (fun rtypes -> all krow (fun rvals -> record rtypes rvals))
+        exist krow (fun rvals -> all krow (fun rtypes -> record rtypes rvals))
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
         all krow (fun r -> union (extend c_lbl arg_t r))
