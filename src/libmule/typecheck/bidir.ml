@@ -74,6 +74,8 @@ let rec make_type ctx ty = match ty with
       )
   | DT.Opaque _ ->
       MuleErr.bug "Opaques should have been qualified before typechecking."
+  | DT.Named{n_name; _} ->
+      const n_name
 and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
@@ -118,7 +120,30 @@ and check: context -> 'i DE.t -> u_var -> u_var =
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
     begin match UnionFind.get sub, UnionFind.get super with
-      | _ -> ()
+      | _ when UnionFind.equal sub super -> ()
+      | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
+          merge_kinds kl kr;
+          UnionFind.merge
+            (fun _ _ ->
+              `Free
+                ( {
+                    ty_flag = `Flex;
+                    (* The variable with the greater scope will have been
+                     * created first, and therefore have a smaller id: *)
+                    ty_id = Int.min l_id r_id;
+                  }
+                , kl
+                )
+            )
+            sub super
+      | `Free({ty_flag = `Flex; ty_id}, _), _ ->
+          UnionFind.merge sub super (fun _ r -> r)
+      | _, `Free({ty_flag = `Flex; ty_id}, _) ->
+          UnionFind.merge sub super (fun l _ -> l)
+      | `Quant(q, id, k, body), _ ->
+          require_subtype ~sub:(unroll_quant `Sub q id k body) ~super
+      | _, `Quant(q, id, k, body) ->
+          require_subtype ~sub ~super:(unroll_quant `Sub q id k body)
     end
 and unroll_quant side q id k body =
   let v = UnionFind.make (`Free({
