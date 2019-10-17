@@ -34,13 +34,9 @@ let translate_expr expr =
     | D.Expr.Lam{l_param; l_body} ->
         let (param, env') = add_var env l_param in
         Js.Lam1(param, go env' l_body)
+    | D.Expr.UpdateType{ut_record; _} -> go env ut_record
     | D.Expr.App {app_fn; app_arg} ->
-        begin match app_fn with
-          | D.Expr.App {app_fn = D.Expr.Update {up_level = `Type; _}; app_arg = ret} ->
-              go env ret
-          | _ ->
-              Js.Call1(go env app_fn, go env app_arg)
-        end
+        Js.Call1(go env app_fn, go env app_arg)
     | D.Expr.EmptyRecord ->
         Js.Object []
     | D.Expr.GetField{gf_lbl} ->
@@ -79,16 +75,14 @@ let translate_expr expr =
     | D.Expr.WithType {wt_expr; _} ->
         go env wt_expr
     | D.Expr.Witness _ -> Js.Null
-    | D.Expr.Update {up_level = `Type; _} ->
-        Js.Lam1(Var.of_string "x", Js.Lam1(Var.of_string "y", Js.Var (Var.of_string "x")))
-    | D.Expr.Update {up_level = `Value; up_lbl} ->
+    | D.Expr.UpdateVal {uv_lbl} ->
         Js.Lam1
           ( Var.of_string "r"
           , Js.Lam1
              ( Var.of_string "v"
              , Js.Update
                 ( Js.Var (Var.of_string "r")
-                , up_lbl
+                , uv_lbl
                 , Js.Var (Var.of_string "v")
                 )
              )

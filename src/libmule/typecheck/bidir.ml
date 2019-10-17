@@ -94,16 +94,17 @@ and synth: context -> 'i DE.t -> u_var =
         all krow (fun rv -> all ktype (fun a -> all krow (fun rt ->
             record rt (extend gf_lbl a rv) **> a
           )))
-    | DE.Update {up_level = `Value; up_lbl} ->
+    | DE.UpdateVal {uv_lbl} ->
         all krow (fun rv -> (all krow (fun rt -> all ktype (fun t ->
-            record rt rv **> t **> record rt (extend up_lbl t rv)
+            record rt rv **> t **> record rt (extend uv_lbl t rv)
           ))))
-    | DE.Update {up_level = `Type; up_lbl} ->
-        let k = gen_k () in
-        all krow (fun rv -> (all krow (fun rt -> all k (fun t ->
-            let tw = witness k t in
-            record rt rv **> tw **> record (extend up_lbl tw rt) rv
-          ))))
+    | DE.UpdateType {ut_lbl; ut_type; ut_record} ->
+        with_locals ctx (fun ctx ->
+          let rv = fresh_local ctx `Flex krow in
+          let rt = fresh_local ctx `Flex krow in
+          let _ = check ctx ut_record (record rt rv) in
+          record (extend ut_lbl (make_type ctx ut_type) rt) rv
+        )
     | DE.EmptyRecord ->
         exist krow (fun rvals -> all krow (fun rtypes -> record rtypes rvals))
     | DE.Ctor{c_lbl; c_arg} ->

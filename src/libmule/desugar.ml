@@ -342,9 +342,8 @@ and desugar_update e fields =
   | `Value (l, _, v) :: fs ->
       D.App {
         app_fn = D.App {
-            app_fn = D.Update {
-                up_level = `Value;
-                up_lbl = l;
+            app_fn = D.UpdateVal {
+                uv_lbl = l;
               };
             app_arg = desugar_update e fs
           };
@@ -352,15 +351,10 @@ and desugar_update e fields =
       }
   | `Type (lbl, params, ty) :: fs ->
       let (_, ty) = desugar_type_binding (Ast.var_of_label lbl, params, ty) in
-      D.App {
-        app_fn = D.App {
-            app_fn = D.Update {
-                up_level = `Type;
-                up_lbl = lbl;
-              };
-            app_arg = desugar_update e fs
-          };
-        app_arg = D.Witness {wi_type = ty};
+      D.UpdateType {
+        ut_lbl = lbl;
+        ut_type = ty;
+        ut_record = desugar_update e fs;
       }
 and desugar_lambda ps body =
   match ps with
@@ -427,29 +421,21 @@ and desugar_record fields =
       | `Value (l, _, _) ->
           D.App {
             app_fn = D.App {
-                app_fn = D.Update {
-                    up_level = `Value;
-                    up_lbl = l;
+                app_fn = D.UpdateVal {
+                    uv_lbl = l;
                   };
                 app_arg = old;
               };
             app_arg = D.Var {v_var = Ast.var_of_label l};
           }
       | `Type (l, _, _) ->
-          D.App {
-            app_fn = D.App {
-                app_fn = D.Update {
-                    up_level = `Type;
-                    up_lbl = l;
-                  };
-                app_arg = old;
+          D.UpdateType{
+            ut_lbl = l;
+            ut_type = DT.Var {
+                v_info = `Unknown;
+                v_var = Ast.var_of_label l;
               };
-            app_arg = D.Witness {
-                wi_type = DT.Var {
-                    v_info = `Unknown;
-                    v_var = Ast.var_of_label l;
-                  }
-              };
+            ut_record = old;
           }
     )
   in

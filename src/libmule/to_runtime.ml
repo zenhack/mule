@@ -37,14 +37,12 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         (0, R.Record LabelMap.empty)
     | D.EmptyRecord -> (0, R.Record LabelMap.empty)
     | D.GetField {gf_lbl} -> (0, R.GetField gf_lbl)
-    | D.Update {up_level = `Value; up_lbl = label } ->
+    | D.UpdateVal {uv_lbl = label } ->
         ( 0
         , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))
         )
-    | D.Update { up_level = `Type; _} ->
-        ( 0
-        , R.Lam(0, [], R.Lam(1, [], R.Var 1))
-        )
+    | D.UpdateType {ut_record; _} ->
+        translate depth env ut_record
     | D.Ctor { c_lbl = label; c_arg = e } ->
         let (ncap, e') = translate depth env e in
         (ncap, R.Ctor(label, e'))
@@ -115,29 +113,6 @@ and translate_letrec depth env bindings body =
     List.fold ~init:0 ~f:Int.max (bcap - len :: List.map binds ~f:(fun (cap, _) -> cap - len))
   in
   (cap, R.LetRec(binds, body))
-and translate_record_body depth env = function
-  | D.EmptyRecord ->
-      (0, LabelMap.empty)
-  | D.App{
-      app_fn = D.App{
-          app_fn = D.Update {
-              up_level = `Value;
-              up_lbl = lbl;
-            };
-          app_arg = old
-        };
-      app_arg = field;
-    } ->
-      let (n, head) = translate depth env field in
-      let (m, tail) = translate_record_body depth env old in
-      (max n m, Map.set tail ~key:lbl ~data:head)
-  | D.App{
-      app_fn = D.App { app_fn = D.Update {up_level = `Type; _}; app_arg = old };
-      app_arg = _type
-    } ->
-      translate_record_body depth env old
-  | _ ->
-      failwith "BUG"
 
 let translate: 'i D.t -> R.t =
   fun exp ->

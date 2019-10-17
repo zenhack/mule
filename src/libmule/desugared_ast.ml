@@ -151,10 +151,16 @@ module SubstRec = struct
           letrec_vals = List.map letrec_vals ~f:(fun (k, v) -> (k, expr args v));
           letrec_body = expr args letrec_body;
         }
+    | Expr.UpdateType{ut_lbl; ut_type; ut_record} ->
+        Expr.UpdateType {
+          ut_lbl;
+          ut_type = typ args ut_type;
+          ut_record = expr args ut_record;
+        }
     | Expr.Var _
     | Expr.EmptyRecord
     | Expr.GetField _
-    | Expr.Update _
+    | Expr.UpdateVal _
     | Expr.Embed _
     | Expr.Const _ -> e
 end

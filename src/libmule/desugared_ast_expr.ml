@@ -16,9 +16,13 @@ type 'i t =
   | GetField of {
       gf_lbl : Label.t;
     }
-  | Update of {
-      up_level : [`Value | `Type];
-      up_lbl : Label.t;
+  | UpdateType of {
+      ut_lbl    : Label.t;
+      ut_type   : 'i Type.t;
+      ut_record : 'i t;
+    }
+  | UpdateVal of {
+      uv_lbl : Label.t;
     }
   | Ctor of {
       c_lbl : Label.t;
@@ -64,13 +68,15 @@ let rec sexp_of_t = function
       Sexp.Atom ".";
       Label.sexp_of_t gf_lbl;
     ]
-  | Update {up_level = `Value; up_lbl} -> Sexp.List [
+  | UpdateVal {uv_lbl} -> Sexp.List [
       Sexp.Atom ".=";
-      Label.sexp_of_t up_lbl;
+      Label.sexp_of_t uv_lbl;
     ]
-  | Update {up_level = `Type; up_lbl} -> Sexp.List [
+  | UpdateType {ut_lbl; ut_type; ut_record} -> Sexp.List [
       Sexp.Atom ".type=";
-      Label.sexp_of_t up_lbl;
+      Label.sexp_of_t ut_lbl;
+      sexp_of_t ut_record;
+      Type.sexp_of_t ut_type;
     ]
   | Ctor{c_lbl; c_arg} -> Sexp.List [
       Label.sexp_of_t c_lbl;
@@ -167,10 +173,16 @@ let apply_to_kids e ~f = match e with
         letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, f e));
         letrec_body = f letrec_body;
       }
+  | UpdateType{ut_lbl; ut_type; ut_record} ->
+      UpdateType {
+        ut_lbl;
+        ut_type;
+        ut_record = f ut_record;
+      }
   | Var _
   | EmptyRecord
   | GetField _
-  | Update _
+  | UpdateVal _
   | WithType _
   | Witness _
   | Embed _
@@ -222,10 +234,16 @@ let rec map e ~f =
         letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, map e ~f));
         letrec_body = map letrec_body ~f;
       }
+  | UpdateType{ut_lbl; ut_type; ut_record} ->
+      UpdateType {
+        ut_lbl;
+        ut_type = Type.map ut_type ~f;
+        ut_record = map ut_record ~f;
+      }
   | Var x -> Var x
   | EmptyRecord -> EmptyRecord
   | GetField x -> GetField x
-  | Update x -> Update x
+  | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
 
@@ -282,5 +300,11 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         }
   | LetRec _ ->
       MuleErr.bug "TODO"
-  | Const _ | EmptyRecord | GetField _ | Update _ | WithType _ | Witness _ | Embed _ ->
+  | UpdateType{ut_lbl; ut_type; ut_record} ->
+      UpdateType{
+        ut_lbl;
+        ut_type;
+        ut_record = subst env ut_record;
+      }
+  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Witness _ | Embed _ ->
       expr
