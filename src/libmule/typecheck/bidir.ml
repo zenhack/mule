@@ -122,7 +122,11 @@ and synth: context -> 'i DE.t -> u_var =
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
     let ty_got = synth ctx e in
-    require_subtype ctx ~sub:ty_got ~super:ty_want;
+    let _ = with_locals ctx (fun ctx ->
+        require_subtype ctx ~sub:ty_got ~super:ty_want;
+        ty_want
+      )
+    in
     ty_want
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
@@ -149,20 +153,18 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | _, `Free({ty_flag = `Flex; _}, _) ->
           UnionFind.merge (fun l _ -> l) sub super
       | `Quant(q, id, k, body), _ ->
-          require_subtype ctx ~sub:(unroll_quant `Sub q id k body) ~super
+          require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
       | _, `Quant(q, id, k, body) ->
-          require_subtype ctx ~sub ~super:(unroll_quant `Sub q id k body)
+          require_subtype ctx ~sub ~super:(unroll_quant ctx `Sub q id k body)
       | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
     end
-and unroll_quant side q id k body =
-  let v = UnionFind.make (`Free({
-      ty_id = Gensym.gensym ();
-      ty_flag = get_flag q side;
-    }, k))
-  in
-  subst ~target:id ~replacement:v body
+and unroll_quant ctx side q id k body =
+  subst
+      ~target:id
+      ~replacement:(fresh_local ctx (get_flag q side) k)
+      body
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
   require_subtype ctx ~sub:ty_got ~super:ty_want
