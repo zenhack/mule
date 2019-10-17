@@ -106,8 +106,11 @@ module SubstRec = struct
           let_e = expr args let_e;
           let_body = expr (mask_val args let_v) let_body;
         }
-    | Expr.WithType {wt_type} ->
-        Expr.WithType {wt_type = typ args wt_type}
+    | Expr.WithType {wt_expr; wt_type} ->
+        Expr.WithType {
+          wt_expr = expr args wt_expr;
+          wt_type = typ args wt_type;
+        }
     | Expr.Witness {wi_type} ->
         Expr.Witness {wi_type = typ args wi_type}
     | Expr.Ctor {c_lbl; c_arg} ->

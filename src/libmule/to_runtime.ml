@@ -27,14 +27,12 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         in
         let ncap = Int.max 0 (ncap - 1) in
         (ncap, R.Lam(ncap, [], body'))
-    | D.App { app_fn = D.WithType _; app_arg = e } ->
-        translate depth env e
     | D.App {app_fn = f; app_arg = x} ->
         let (fcap, f') = translate depth env f in
         let (xcap, x') = translate depth env x in
         (max fcap xcap, R.App(f', x'))
-    | D.WithType _ ->
-        (0, R.Lam(0, [], R.Var 0))
+    | D.WithType {wt_expr = e; _} ->
+        translate depth env e
     | D.Witness _ ->
         (0, R.Record LabelMap.empty)
     | D.EmptyRecord -> (0, R.Record LabelMap.empty)

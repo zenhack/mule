@@ -36,8 +36,6 @@ let translate_expr expr =
         Js.Lam1(param, go env' l_body)
     | D.Expr.App {app_fn; app_arg} ->
         begin match app_fn with
-          | D.Expr.WithType _ ->
-              go env app_arg
           | D.Expr.App {app_fn = D.Expr.Update {up_level = `Type; _}; app_arg = ret} ->
               go env ret
           | _ ->
@@ -78,7 +76,8 @@ let translate_expr expr =
           )
     | D.Expr.Const {const_val} ->
         Js.Const const_val
-    | D.Expr.WithType _ -> Js.Lam1(Var.of_string "x", Js.Var (Var.of_string "x"))
+    | D.Expr.WithType {wt_expr; _} ->
+        go env wt_expr
     | D.Expr.Witness _ -> Js.Null
     | D.Expr.Update {up_level = `Type; _} ->
         Js.Lam1(Var.of_string "x", Js.Lam1(Var.of_string "y", Js.Var (Var.of_string "x")))

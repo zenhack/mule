@@ -327,9 +327,9 @@ and desugar = function
         app_arg = desugar e;
       }
   | S.WithType{wt_term = e; wt_type = ty} ->
-      D.App {
-        app_fn = D.WithType {wt_type = desugar_type ty};
-        app_arg = desugar e;
+      D.WithType {
+        wt_expr = desugar e;
+        wt_type = desugar_type ty;
       }
   | S.Let {
       let_binds = bindings;
@@ -377,12 +377,13 @@ and desugar_lambda ps body =
         l_param = v_var;
         l_body = D.Let {
             let_v = v_var;
-            let_e = D.App {
-                app_fn = D.WithType {wt_type = desugar_type ty};
-                app_arg = D.Var {v_var};
+            let_e =
+              D.WithType {
+                wt_expr = D.Var {v_var};
+                wt_type = desugar_type ty;
               };
             let_body = desugar_lambda pats body;
-          }
+          };
       }
   | ((SP.Const _) as p :: _) -> incomplete_pattern p
   | (SP.Ctor{c_lbl; c_arg} :: pats) ->
@@ -406,10 +407,10 @@ and desugar_record fields =
         | `Value(l, Some ty, e) ->
             ( types
             , ( Ast.var_of_label l
-              , D.App {
-                  app_fn = D.WithType {wt_type = desugar_type ty};
-                  app_arg = desugar e;
-                }
+              , D.WithType {
+                  wt_expr = desugar e;
+                  wt_type = desugar_type ty;
+                };
               )
               :: values
             )
@@ -521,9 +522,10 @@ and desugar_lbl_match dict = function
       let v' = Gensym.anon_var () in
       let let_ = D.Let
           { let_v = v
-          ; let_e = D.App {
-                app_fn = D.WithType{wt_type = desugar_type ty};
-                app_arg = D.Var {v_var = v'};
+          ; let_e =
+              D.WithType{
+                wt_expr = D.Var {v_var = v'};
+                wt_type = desugar_type ty
               }
           ; let_body = desugar body
           }
@@ -575,9 +577,9 @@ and desugar_let bs body =
     | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
         go
           (( v
-           , D.App {
-               app_fn = D.WithType{wt_type = desugar_type ty};
-               app_arg = desugar e;
+           , D.WithType{
+               wt_expr = desugar e;
+               wt_type = desugar_type ty
              }
            ) :: vals)
           types

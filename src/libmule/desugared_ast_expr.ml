@@ -32,7 +32,10 @@ type 'i t =
       { cm_cases : 'i t ConstMap.t
       ; cm_default: 'i t
       }
-  | WithType of { wt_type : 'i Type.t }
+  | WithType of {
+      wt_expr : 'i t;
+      wt_type : 'i Type.t;
+    }
   | Witness of { wi_type : 'i Type.t }
   | Let of {
       let_v : Var.t;
@@ -99,8 +102,8 @@ let rec sexp_of_t = function
         ; Map.sexp_of_m__t (module Const) sexp_of_t cm_cases
         ; Sexp.List [Sexp.Atom "_"; sexp_of_t cm_default]
         ]
-  | WithType {wt_type = ty} ->
-      Sexp.List [Sexp.Atom ":"; Type.sexp_of_t ty]
+  | WithType {wt_expr = e; wt_type = ty} ->
+      Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
   | Witness {wi_type = ty} ->
       Sexp.List [Sexp.Atom "type"; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
@@ -174,13 +177,21 @@ let apply_to_kids e ~f = match e with
   | Const _ -> e
 
 let rec subst_ty old new_ = function
-  | WithType {wt_type = ty} -> WithType {wt_type = Type.subst old new_ ty}
+  | WithType {wt_expr = e; wt_type = ty} ->
+      WithType {
+        wt_expr = subst_ty old new_ e;
+        wt_type = Type.subst old new_ ty;
+      }
   | Witness {wi_type = ty} -> Witness {wi_type = Type.subst old new_ ty}
   | e -> apply_to_kids e ~f:(subst_ty old new_)
 
 let rec map e ~f =
   match e with
-  | WithType {wt_type = ty} -> WithType {wt_type = Type.map ty ~f}
+  | WithType {wt_expr = e; wt_type = ty} ->
+      WithType {
+        wt_type = Type.map ty ~f;
+        wt_expr = map e ~f;
+      }
   | Witness {wi_type = ty} -> Witness {wi_type = Type.map ty ~f}
   | Lam{l_param; l_body} ->
       Lam{l_param; l_body = map l_body ~f}
