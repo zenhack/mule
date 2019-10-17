@@ -163,3 +163,6 @@ and unroll_quant side q id k body =
     }, k))
   in
   subst ~target:id ~replacement:v body
+and check_const ctx c ty_want =
+  let ty_got = synth_const c in
+  require_subtype ctx ~sub:ty_got ~super:ty_want
