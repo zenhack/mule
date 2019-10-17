@@ -112,6 +112,13 @@ and synth: context -> 'i DE.t -> u_var =
         make_type ctx wt_type **> make_type ctx wt_type
     | DE.Witness {wi_type} ->
         witness (gen_k ()) (make_type ctx wi_type)
+    | DE.Let{let_v; let_e; let_body} ->
+        let ty = synth ctx let_e in
+        synth
+            { ctx
+              with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
+            }
+            let_body
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
     let ty_got = synth ctx e in
