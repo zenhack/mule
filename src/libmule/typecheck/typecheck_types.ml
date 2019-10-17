@@ -26,7 +26,7 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * k_var)
-  | `Quant of ([`All|`Exist] * int * u_var)
+  | `Quant of ([`All|`Exist] * int * k_var * u_var)
   | `Const of (u_typeconst * (u_var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex | `Explicit ]
@@ -47,7 +47,7 @@ type quantifier = [ `All | `Exist ]
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, k) -> k
   | `Free (_, k) -> k
-  | `Quant(_, _, t) -> get_kind t
+  | `Quant(_, _, _, t) -> get_kind t
 
 let flip_sign = function
   | `Pos -> `Neg
@@ -125,7 +125,7 @@ let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
     let ty_id = Gensym.gensym () in
     let ty_flag = `Explicit in
     let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
-    UnionFind.make (`Quant(q, ty_id, mkbody v))
+    UnionFind.make (`Quant(q, ty_id, k, mkbody v))
 
 let all : k_var -> (u_var -> u_var) -> u_var =
   fun k mkbody -> quant `All k mkbody

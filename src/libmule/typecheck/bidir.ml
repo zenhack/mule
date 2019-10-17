@@ -15,7 +15,7 @@ let unbound_var v =
 
 let apply_kids t ~f = match t with
   | `Free _ -> t
-  | `Quant(q, v, body) -> `Quant(q, v, f body)
+  | `Quant(q, v, k, body) -> `Quant(q, v, k, f body)
   | `Const(c, args, k) ->
       `Const(c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
@@ -41,7 +41,7 @@ let with_locals ctx f =
             | `Explicit -> MuleErr.bug "impossible"
           in
           UnionFind.set (`Free({ty_id; ty_flag = `Explicit}, k)) v;
-          Some (fun acc -> UnionFind.make (`Quant(q, ty_id, acc)))
+          Some (fun acc -> UnionFind.make (`Quant(q, ty_id, k, acc)))
       | _ -> None
     )
   in
@@ -122,7 +122,8 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
     begin match UnionFind.get sub, UnionFind.get super with
       | _ when UnionFind.equal sub super -> ()
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
-          merge_kinds kl kr;
+          (* FIXME: the "reason" here is totally bogus; do something better. *)
+          UnionFind.merge (Infer_kind.unify `Frontier) kl kr;
           UnionFind.merge
             (fun _ _ ->
               `Free
@@ -136,14 +137,14 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
                 )
             )
             sub super
-      | `Free({ty_flag = `Flex; ty_id}, _), _ ->
-          UnionFind.merge sub super (fun _ r -> r)
-      | _, `Free({ty_flag = `Flex; ty_id}, _) ->
-          UnionFind.merge sub super (fun l _ -> l)
+      | `Free({ty_flag = `Flex; _}, _), _ ->
+          UnionFind.merge (fun _ r -> r) sub super
+      | _, `Free({ty_flag = `Flex; _}, _) ->
+          UnionFind.merge (fun l _ -> l) sub super
       | `Quant(q, id, k, body), _ ->
-          require_subtype ~sub:(unroll_quant `Sub q id k body) ~super
+          require_subtype ctx ~sub:(unroll_quant `Sub q id k body) ~super
       | _, `Quant(q, id, k, body) ->
-          require_subtype ~sub ~super:(unroll_quant `Sub q id k body)
+          require_subtype ctx ~sub ~super:(unroll_quant `Sub q id k body)
     end
 and unroll_quant side q id k body =
   let v = UnionFind.make (`Free({
