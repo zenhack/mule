@@ -145,6 +145,9 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           require_subtype ctx ~sub:(unroll_quant `Sub q id k body) ~super
       | _, `Quant(q, id, k, body) ->
           require_subtype ctx ~sub ~super:(unroll_quant `Sub q id k body)
+      | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
+          when l_id = r_id ->
+            UnionFind.merge (fun _ r -> r) sub super
     end
 and unroll_quant side q id k body =
   let v = UnionFind.make (`Free({
