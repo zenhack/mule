@@ -86,9 +86,12 @@ and synth: context -> 'i DE.t -> u_var =
     | DE.Lam{l_param; l_body} ->
         with_locals ctx (fun ctx ->
           let p = fresh_local ctx `Flex ktype in
-          synth
-            { ctx with vals_env = Map.set ctx.vals_env ~key:l_param ~data:p }
-            l_body
+          let r =
+            synth
+              { ctx with vals_env = Map.set ctx.vals_env ~key:l_param ~data:p }
+              l_body
+          in
+          p **> r
         )
     | DE.GetField{gf_lbl} ->
         all krow (fun rv -> all ktype (fun a -> all krow (fun rt ->
