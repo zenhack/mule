@@ -93,7 +93,17 @@ and make_type ctx ty = match ty with
       MuleErr.bug "Opaques should have been qualified before typechecking."
   | DT.Named{n_name; _} ->
       const n_name
+  | DT.Record{r_types; r_values; _} ->
+      record (make_row ctx r_types) (make_row ctx r_values)
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
+and make_row ctx (_, fields, v) =
+  let tail = match v with
+    | None -> empty
+    | Some v -> find_bound ctx.type_env v
+  in
+  List.fold_right fields ~init:tail ~f:(fun (lbl, ty) rest ->
+    extend lbl (make_type ctx ty) rest
+  )
 and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
