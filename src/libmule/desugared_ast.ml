@@ -111,8 +111,6 @@ module SubstRec = struct
           wt_expr = expr args wt_expr;
           wt_type = typ args wt_type;
         }
-    | Expr.Witness {wi_type} ->
-        Expr.Witness {wi_type = typ args wi_type}
     | Expr.Ctor {c_lbl; c_arg} ->
         Expr.Ctor{c_lbl; c_arg = expr args c_arg}
     | Expr.App{app_fn; app_arg} ->

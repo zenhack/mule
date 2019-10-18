@@ -40,7 +40,6 @@ type 'i t =
       wt_expr : 'i t;
       wt_type : 'i Type.t;
     }
-  | Witness of { wi_type : 'i Type.t }
   | Let of {
       let_v : Var.t;
       let_e : 'i t;
@@ -110,8 +109,6 @@ let rec sexp_of_t = function
         ]
   | WithType {wt_expr = e; wt_type = ty} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
-  | Witness {wi_type = ty} ->
-      Sexp.List [Sexp.Atom "type"; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
       Sexp.List
         [ Sexp.Atom "let"
@@ -184,7 +181,6 @@ let apply_to_kids e ~f = match e with
   | GetField _
   | UpdateVal _
   | WithType _
-  | Witness _
   | Embed _
   | Const _ -> e
 
@@ -194,7 +190,6 @@ let rec subst_ty old new_ = function
         wt_expr = subst_ty old new_ e;
         wt_type = Type.subst old new_ ty;
       }
-  | Witness {wi_type = ty} -> Witness {wi_type = Type.subst old new_ ty}
   | e -> apply_to_kids e ~f:(subst_ty old new_)
 
 let rec map e ~f =
@@ -204,7 +199,6 @@ let rec map e ~f =
         wt_type = Type.map ty ~f;
         wt_expr = map e ~f;
       }
-  | Witness {wi_type = ty} -> Witness {wi_type = Type.map ty ~f}
   | Lam{l_param; l_body} ->
       Lam{l_param; l_body = map l_body ~f}
   | App{app_fn; app_arg}-> App {
@@ -306,5 +300,5 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         ut_type;
         ut_record = subst env ut_record;
       }
-  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Witness _ | Embed _ ->
+  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Embed _ ->
       expr

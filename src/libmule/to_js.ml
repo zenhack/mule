@@ -74,7 +74,6 @@ let translate_expr expr =
         Js.Const const_val
     | D.Expr.WithType {wt_expr; _} ->
         go env wt_expr
-    | D.Expr.Witness _ -> Js.Null
     | D.Expr.UpdateVal {uv_lbl} ->
         Js.Lam1
           ( Var.of_string "r"

@@ -33,8 +33,6 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         (max fcap xcap, R.App(f', x'))
     | D.WithType {wt_expr = e; _} ->
         translate depth env e
-    | D.Witness _ ->
-        (0, R.Record LabelMap.empty)
     | D.EmptyRecord -> (0, R.Record LabelMap.empty)
     | D.GetField {gf_lbl} -> (0, R.GetField gf_lbl)
     | D.UpdateVal {uv_lbl = label } ->

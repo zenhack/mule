@@ -147,8 +147,6 @@ and synth: context -> 'i DE.t -> u_var =
         all krow (fun r -> union (extend c_lbl arg_t r))
     | DE.WithType {wt_expr; wt_type} ->
         check ctx wt_expr (make_type ctx wt_type)
-    | DE.Witness {wi_type} ->
-        witness (gen_k ()) (make_type ctx wi_type)
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
         synth

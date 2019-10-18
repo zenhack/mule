@@ -90,8 +90,6 @@ let empty: u_var =
   const (`Named "<empty>") [] krow
 let extend: Label.t -> u_var -> u_var -> u_var = fun lbl head tail ->
   const (`Extend lbl) [head, ktype; tail, krow] krow
-let witness: k_var -> u_var -> u_var = fun kind ty ->
-  const (`Named "<witness>") [ty, kind] ktype
 let apply: u_var -> k_var -> u_var -> k_var -> u_var = fun f fk x xk ->
   begin match UnionFind.get fk with
     | `Arrow(_, rk) ->
