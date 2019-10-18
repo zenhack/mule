@@ -93,7 +93,7 @@ and make_type ctx ty = match ty with
       MuleErr.bug "Opaques should have been qualified before typechecking."
   | DT.Named{n_name; _} ->
       const n_name
-  | _ -> failwith "TODO"
+  | _ -> failwith "TODO make_type"
 and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
@@ -141,7 +141,7 @@ and synth: context -> 'i DE.t -> u_var =
               with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
             }
             let_body
-    | _ -> failwith "TODO"
+    | _ -> failwith "TODO: synth"
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
     let ty_got = synth ctx e in
@@ -182,7 +182,7 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
-      | _ -> failwith "TODO"
+      | _ -> failwith "TODO: require_subtype"
     end
 and unroll_quant ctx side q id k body =
   subst
