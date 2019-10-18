@@ -13,11 +13,12 @@ type context = {
 let unbound_var v =
   MuleErr.throw (`UnboundVar v)
 
-let apply_kids t ~f = match t with
-  | `Free _ -> t
-  | `Quant(q, v, k, body) -> `Quant(q, v, k, f body)
-  | `Const(c, args, k) ->
-      `Const(c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
+let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
+  fun  t ~f -> match t with
+    | `Free _ -> t
+    | `Quant(q_id, q, v, k, body) -> `Quant(q_id, q, v, k, f body)
+    | `Const(c_id, c, args, k) ->
+        `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
 let copy = function
   | `Free({ty_flag; _}, k) -> `Free({ty_flag; ty_id = Gensym.gensym ()}, k)
@@ -41,7 +42,7 @@ let with_locals ctx f =
             | `Explicit -> MuleErr.bug "impossible"
           in
           UnionFind.set (`Free({ty_id; ty_flag = `Explicit}, k)) v;
-          Some (fun acc -> UnionFind.make (`Quant(q, ty_id, k, acc)))
+          Some (fun acc -> UnionFind.make (`Quant(Gensym.gensym (), q, ty_id, k, acc)))
       | _ -> None
     )
   in
@@ -92,7 +93,7 @@ and make_type ctx ty = match ty with
   | DT.Opaque _ ->
       MuleErr.bug "Opaques should have been qualified before typechecking."
   | DT.Named{n_name; _} ->
-      const n_name
+      const_ty n_name
   | DT.Record{r_types; r_values; _} ->
       record (make_row ctx r_types) (make_row ctx r_values)
   | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
@@ -189,9 +190,9 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           UnionFind.merge (fun _ r -> r) sub super
       | _, `Free({ty_flag = `Flex; _}, _) ->
           UnionFind.merge (fun l _ -> l) sub super
-      | `Quant(q, id, k, body), _ ->
+      | `Quant(_, q, id, k, body), _ ->
           require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
-      | _, `Quant(q, id, k, body) ->
+      | _, `Quant(_, q, id, k, body) ->
           require_subtype ctx ~sub ~super:(unroll_quant ctx `Sub q id k body)
       | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
           when l_id = r_id ->
