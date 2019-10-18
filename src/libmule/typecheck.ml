@@ -1,5 +1,3 @@
-let typecheck _ = failwith "Unimplemented"
-(*
 open Typecheck_types
 
 let rec gen_kind = function
@@ -8,9 +6,7 @@ let rec gen_kind = function
   | `Row -> krow
   | `Unknown -> gen_k ()
 
-let typecheck expr =
-  Desugared_ast.Expr.map expr ~f:gen_kind
-  |> Build_constraint.build_constraints
-  |> Solve.solve_constraints
+let typecheck exp =
+  Desugared_ast.Expr.map exp ~f:gen_kind
+  |> Bidir.synth (Bidir.make_initial_context ())
   |> Extract.get_var_type
-   *)

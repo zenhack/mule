@@ -63,7 +63,24 @@ let find_bound env var = match Map.find env var with
   | Some value -> value
   | None -> unbound_var var
 
-let rec make_type ctx ty = match ty with
+
+let rec make_initial_context () =
+  let dummy = {
+    type_env = VarMap.empty;
+    vals_env = VarMap.empty;
+    locals = ref [];
+  }
+  in
+  let type_env =
+    Map.map Intrinsics.types ~f:(make_type dummy)
+  in
+  let vals_env =
+    Map.map Intrinsics.values ~f:(fun (ty, _) ->
+      make_type { dummy with type_env = type_env } ty
+    )
+  in
+  { type_env; vals_env; locals = ref [] }
+and make_type ctx ty = match ty with
   | DT.Var {v_var; _} ->
       find_bound ctx.type_env v_var
   | DT.Quant {q_quant; q_var; q_body; _} ->
