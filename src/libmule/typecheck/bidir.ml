@@ -95,6 +95,10 @@ and make_type ctx ty = match ty with
       const n_name
   | DT.Record{r_types; r_values; _} ->
       record (make_row ctx r_types) (make_row ctx r_values)
+  | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
+      make_type ctx fn_param **> make_type ctx fn_ret
+  | DT.Union{u_row} ->
+      union (make_row ctx u_row)
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
 and make_row ctx (_, fields, v) =
   let tail = match v with
