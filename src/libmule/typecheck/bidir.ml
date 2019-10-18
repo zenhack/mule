@@ -93,7 +93,7 @@ and make_type ctx ty = match ty with
       MuleErr.bug "Opaques should have been qualified before typechecking."
   | DT.Named{n_name; _} ->
       const n_name
-  | _ -> failwith "TODO make_type"
+  | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
 and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
