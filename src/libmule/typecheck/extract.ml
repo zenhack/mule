@@ -25,33 +25,31 @@ let get_var_type uv =
     if Set.mem seen ty_id then
       mk_var ty_id
     else
-      let (t, fvs) =
-        begin match t with
-          | `Free _ -> mk_var ty_id
-          | `Quant(q_id, q, v_id, _, body) ->
-              let (body', fvs) = go (Set.add seen q_id) body in
-              ( DT.Quant {
+      begin match t with
+        | `Free _ -> mk_var ty_id
+        | `Quant(q_id, q, v_id, _, body) ->
+            let (body', fvs) = go (Set.add seen q_id) body in
+            maybe_add_recur
+              q_id
+              (Set.remove fvs v_id)
+              (DT.Quant {
                   q_info = q_id;
                   q_quant = q;
                   q_var = var_of_int v_id;
                   q_body = body';
-                }
-              , Set.remove fvs v_id
-              )
-          | `Const(ty_id, c, args, _) ->
-              let seen' = Set.add seen ty_id in
-              let args_fvs =
-                List.map args ~f:(fun (t, _) -> go seen' t)
-              in
-              let args = List.map args_fvs ~f:fst in
-              let fvs =
-                List.map args_fvs ~f:snd
-                |> Set.union_list (module Int)
-              in
-              (make_const ty_id c args, fvs)
-        end
-      in
-      maybe_add_recur ty_id fvs t
+              })
+        | `Const(ty_id, c, args, _) ->
+            let seen' = Set.add seen ty_id in
+            let args_fvs =
+              List.map args ~f:(fun (t, _) -> go seen' t)
+            in
+            let args = List.map args_fvs ~f:fst in
+            let fvs =
+              List.map args_fvs ~f:snd
+              |> Set.union_list (module Int)
+            in
+            maybe_add_recur ty_id fvs (make_const ty_id c args)
+      end
   and maybe_add_recur id fvs ty =
     if Set.mem fvs id then
       ( DT.Recur {
