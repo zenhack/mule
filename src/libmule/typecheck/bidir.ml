@@ -65,6 +65,7 @@ let find_bound env var = match Map.find env var with
   | None -> unbound_var var
 
 
+(* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context () =
   let dummy = {
     type_env = VarMap.empty;
@@ -81,6 +82,8 @@ let rec make_initial_context () =
     )
   in
   { type_env; vals_env; locals = ref [] }
+
+(* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
   | DT.Var {v_var; _} ->
       find_bound ctx.type_env v_var
@@ -177,7 +180,10 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
     begin match UnionFind.get sub, UnionFind.get super with
       | _ when UnionFind.equal sub super -> ()
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
-          (* FIXME: the "reason" here is totally bogus; do something better. *)
+          (* Both sides are flexible variables; merge them, using the larger of their
+           * scopes.
+           *
+           * FIXME: the "reason" here is totally bogus; do something better. *)
           UnionFind.merge (Infer_kind.unify `Frontier) kl kr;
           UnionFind.merge
             (fun _ _ ->
@@ -192,17 +198,25 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
                 )
             )
             sub super
-      | `Free({ty_flag = `Flex; _}, _), _ ->
-          UnionFind.merge (fun _ r -> r) sub super
-      | _, `Free({ty_flag = `Flex; _}, _) ->
-          UnionFind.merge (fun l _ -> l) sub super
+      (* One side is flexible; set it equal to the other one. *)
+      | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
+      | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
+
       | `Quant(_, q, id, k, body), _ ->
           require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
       | _, `Quant(_, q, id, k, body) ->
           require_subtype ctx ~sub ~super:(unroll_quant ctx `Sub q id k body)
+
+      (* Two different rigid variables can't be merged. We should merge them when
+       * they are the same variable, however.
+       *
+       * I(isd) am not sure this can actually come up, but if it does, this is
+       * the behavior that makes sense. *)
       | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
+
+      (* This covers constant cases (text, int, etc.) *)
       | `Const(_, `Named n, [], _), `Const(_, `Named m, [], _) ->
           if not (String.equal n m) then
             MuleErr.throw
@@ -211,10 +225,15 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
                 , `MismatchedCtors(`Named n, `Named m)
                 )
               )
-      | `Const(_, `Named "->", [pl, _; rl, _], _),
-        `Const(_, `Named "->", [pr, _; rr, _], _) ->
-          require_subtype ctx ~sub:pr ~super:pl;
-          require_subtype ctx ~sub:rl ~super:rr
+
+      (* Functions. *)
+      | `Const(_, `Named "->", [psub, _; rsub, _], _),
+        `Const(_, `Named "->", [psuper, _; rsuper, _], _) ->
+          (* Note the flipped sub vs. super in the parameter case; this is standard
+           * contravariance. *)
+          require_subtype ctx ~sub:psuper ~super:psub;
+          require_subtype ctx ~sub:rsub ~super:rsuper
+
       | _ -> failwith "TODO: require_subtype"
     end
 and unroll_quant ctx side q id k body =
