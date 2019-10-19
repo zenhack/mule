@@ -1,6 +1,7 @@
 open Typecheck_types
 
 module DT = Desugared_ast_type
+module ST = Surface_ast.Type
 
 let get_ty_id: u_type -> int = function
   | `Free({ty_id; _}, _) -> ty_id
@@ -38,6 +39,22 @@ let get_var_type uv =
                   q_var = var_of_int v_id;
                   q_body = body';
               })
+        | `Const(ty_id, `Named "{...}", [rtypes, _; rvals, _], _) ->
+            let seen' = Set.add seen ty_id in
+            let (r_types, fv_types) = go_row seen' rtypes in
+            let (r_values, fv_values) = go_row seen' rvals in
+            DT.Record {
+              r_info = ty_id;
+              r_types;
+              r_values;
+              r_src = ST.Record {r_items = []};
+            }
+            |> maybe_add_recur ty_id (Set.union fv_types fv_values)
+        | `Const(ty_id, `Named "|", [row, _], _) ->
+            let seen' = Set.add seen ty_id in
+            let (r, fvs) = go_row seen' row in
+            DT.Union{u_row = r}
+            |> maybe_add_recur ty_id fvs
         | `Const(ty_id, c, args, _) ->
             let seen' = Set.add seen ty_id in
             let args_fvs =
@@ -48,8 +65,26 @@ let get_var_type uv =
               List.map args_fvs ~f:snd
               |> Set.union_list (module Int)
             in
-            maybe_add_recur ty_id fvs (make_const ty_id c args)
+            maybe_add_recur ty_id fvs (make_const_type ty_id c args)
       end
+  and go_row seen uv =
+    let r = UnionFind.get uv in
+    let ty_id = get_ty_id r in
+    match r with
+      | `Free _ ->
+          ( (ty_id, [], Some (var_of_int ty_id))
+          , IntSet.singleton ty_id
+          )
+      | `Const(_, `Named "<empty>", _, _) ->
+          ((ty_id, [], None), IntSet.empty)
+      | `Const(_, `Extend lbl, [h, _; t, _], _) ->
+          let (h', hfv) = go seen h in
+          let ((_, fields, tail), tfv) = go_row seen t in
+          ( (ty_id, ((lbl, h') :: fields), tail)
+          , Set.union hfv tfv
+          )
+      | _ ->
+          MuleErr.bug "Invalid row"
   and maybe_add_recur id fvs ty =
     if Set.mem fvs id then
       ( DT.Recur {
@@ -61,7 +96,7 @@ let get_var_type uv =
       )
     else
       (ty, fvs)
-  and make_const id c args =
+  and make_const_type id c args =
     match c, args with
     | `Named name, [] -> DT.Named {
         n_info = id;
@@ -79,7 +114,7 @@ let get_var_type uv =
         app_arg = x;
       }
     | `Named name, _ ->
-        failwith ("TODO: make_const " ^ name)
+        failwith ("TODO: make_const_type " ^ name)
     | `Extend _, _ ->
         MuleErr.bug "kind mismatch"
   in
