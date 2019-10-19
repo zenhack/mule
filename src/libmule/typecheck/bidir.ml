@@ -203,6 +203,18 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
+      | `Const(_, `Named n, [], _), `Const(_, `Named m, [], _) ->
+          if not (String.equal n m) then
+            MuleErr.throw
+              (`TypeError
+                ( `Frontier
+                , `MismatchedCtors(`Named n, `Named m)
+                )
+              )
+      | `Const(_, `Named "->", [pl, _; rl, _], _),
+        `Const(_, `Named "->", [pr, _; rr, _], _) ->
+          require_subtype ctx ~sub:pr ~super:pl;
+          require_subtype ctx ~sub:rl ~super:rr
       | _ -> failwith "TODO: require_subtype"
     end
 and unroll_quant ctx side q id k body =
