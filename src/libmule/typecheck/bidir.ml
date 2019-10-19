@@ -3,6 +3,7 @@ open Typecheck_types
 module DE = Desugared_ast_expr
 module DT = Desugared_ast_type
 module C = Common_ast.Const
+module Label = Common_ast.Label
 
 type context = {
   type_env : u_var VarMap.t;
@@ -216,15 +217,18 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
 
-      (* This covers constant cases (text, int, etc.) *)
-      | `Const(_, `Named n, [], _), `Const(_, `Named m, [], _) ->
-          if not (String.equal n m) then
+      (* Mismatched constructor names are never reconcilable: *)
+      | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (String.equal n m) ->
             MuleErr.throw
               (`TypeError
                 ( `Frontier
                 , `MismatchedCtors(`Named n, `Named m)
                 )
               )
+
+      (* All of the zero-argument consts unify with themselves; if the above case
+       * didn't cover this one, then we're good: *)
+      | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
 
       (* Functions. *)
       | `Const(_, `Named "->", [psub, _; rsub, _], _),
@@ -233,6 +237,39 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
            * contravariance. *)
           require_subtype ctx ~sub:psuper ~super:psub;
           require_subtype ctx ~sub:rsub ~super:rsuper
+
+      | `Const (_, `Named "->", args_sub, _),
+        `Const (_, `Named "->", args_super, _) ->
+          MuleErr.bug
+            ("Wrong number of arguments for function type constructor: "
+              ^ " wanted (2, 2) but got ("
+              ^ Int.to_string (List.length args_sub)
+              ^ ", "
+              ^ Int.to_string (List.length args_super)
+              ^ ").")
+
+      | `Const(_, `Named "|", [row_sub, _], _),
+        `Const(_, `Named "|", [row_super, _], _) ->
+          (* Unions are contravariant in their arguments.
+           *
+           * TODO: I(isd) _think_ that's right, but I need to think about it a
+           * bit more deeply. *)
+          require_subtype ctx ~sub:row_super ~super:row_sub
+
+      | `Const(_, `Named "{...}", [rtype_sub, _; rvals_sub, _], _),
+        `Const(_, `Named "{...}", [rtype_super, _; rvals_super, _], _) ->
+          require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
+          require_subtype ctx ~sub:rvals_sub ~super:rvals_super
+
+      | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
+        `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
+          if Label.equal lsub lsuper then
+            begin
+              require_subtype ctx ~sub:hsub ~super:hsuper;
+              require_subtype ctx ~sub:tsub ~super:tsuper
+            end
+          else
+            failwith "TODO: mismatched extend"
 
       | _ -> failwith "TODO: require_subtype"
     end
