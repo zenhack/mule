@@ -145,7 +145,7 @@ and synth: context -> 'i DE.t -> u_var =
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
     | DE.EmptyRecord ->
-        exist krow (fun rvals -> all krow (fun rtypes -> record rtypes rvals))
+        all krow (fun rtypes -> record rtypes empty)
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
         all krow (fun r -> union (extend c_lbl arg_t r))
