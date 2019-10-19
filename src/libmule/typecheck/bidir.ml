@@ -217,7 +217,10 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
 
-      (* Mismatched constructor names are never reconcilable: *)
+      (* An empty row is a subtype of a non-empty row: *)
+      | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend _, _, _) -> ()
+
+      (* Mismatched named constructors are never reconcilable: *)
       | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (String.equal n m) ->
             MuleErr.throw
               (`TypeError
