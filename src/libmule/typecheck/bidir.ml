@@ -30,6 +30,20 @@ let rec subst ~target ~replacement uv =
     | `Free({ty_id; _}, _) when ty_id = target -> replacement
     | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
 
+let wrong_num_args ctor want gotl gotr =
+  MuleErr.bug
+    (String.concat [
+          "Wrong number of arguments for ";
+          ctor ^ " type constructor: ";
+          " wanted ";
+          Int.to_string want;
+          " but got (";
+          Int.to_string (List.length gotl);
+          ", ";
+          Int.to_string (List.length gotr);
+          ").";
+        ])
+
 (* Run f with an empty locals stack. When it returns, any locals created that remain
  * un-substituted will be quantified around the result. *)
 let with_locals ctx f =
@@ -217,6 +231,16 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           when l_id = r_id ->
             UnionFind.merge (fun _ r -> r) sub super
 
+      (* In any other case, rigid variable should fail: *)
+      | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
+          MuleErr.throw
+            ( `TypeError
+                ( `Frontier
+                , `PermissionErr `Graft
+                )
+            )
+
+
       (* An empty row is a subtype of a non-empty row: *)
       | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend _, _, _) -> ()
 
@@ -241,15 +265,8 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           require_subtype ctx ~sub:psuper ~super:psub;
           require_subtype ctx ~sub:rsub ~super:rsuper
 
-      | `Const (_, `Named "->", args_sub, _),
-        `Const (_, `Named "->", args_super, _) ->
-          MuleErr.bug
-            ("Wrong number of arguments for function type constructor: "
-              ^ " wanted (2, 2) but got ("
-              ^ Int.to_string (List.length args_sub)
-              ^ ", "
-              ^ Int.to_string (List.length args_super)
-              ^ ").")
+      | `Const (_, `Named "->", x, _), `Const (_, `Named "->", y, _) ->
+          wrong_num_args "->" 2 x y
 
       | `Const(_, `Named "|", [row_sub, _], _),
         `Const(_, `Named "|", [row_super, _], _) ->
@@ -259,10 +276,19 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
            * bit more deeply. *)
           require_subtype ctx ~sub:row_super ~super:row_sub
 
+      | `Const(_, `Named "|", x, _), `Const(_, `Named "|", y, _) ->
+          wrong_num_args "|" 1 x y
+
       | `Const(_, `Named "{...}", [rtype_sub, _; rvals_sub, _], _),
         `Const(_, `Named "{...}", [rtype_super, _; rvals_super, _], _) ->
           require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
           require_subtype ctx ~sub:rvals_sub ~super:rvals_super
+
+      | `Const(_, `Named "{...}", x, _), `Const(_, `Named "{...}", y, _) ->
+          wrong_num_args "{...}" 2 x y
+
+      | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
+          MuleErr.bug ("Unknown type constructor: " ^ c)
 
       | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
         `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
