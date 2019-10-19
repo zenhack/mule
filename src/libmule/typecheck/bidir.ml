@@ -154,6 +154,14 @@ and synth: context -> 'i DE.t -> u_var =
               with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
             }
             let_body
+    | DE.App{app_fn; app_arg} ->
+        with_locals ctx (fun ctx ->
+          let p = fresh_local ctx `Flex ktype in
+          let r = fresh_local ctx `Flex ktype in
+          let _ = check ctx app_fn (p **> r) in
+          let _ = check ctx app_arg p in
+          r
+        )
     | _ -> failwith "TODO: synth"
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
