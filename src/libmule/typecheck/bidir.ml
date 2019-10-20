@@ -240,10 +240,6 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
                 )
             )
 
-
-      (* An empty row is a subtype of a non-empty row: *)
-      | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend _, _, _) -> ()
-
       (* Mismatched named constructors are never reconcilable: *)
       | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (String.equal n m) ->
             MuleErr.throw
@@ -287,9 +283,15 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | `Const(_, `Named "{...}", x, _), `Const(_, `Named "{...}", y, _) ->
           wrong_num_args "{...}" 2 x y
 
-      | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
-          MuleErr.bug ("Unknown type constructor: " ^ c)
-
+      | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend l, _, _) ->
+          MuleErr.throw
+            ( `TypeError
+              ( `Frontier
+              , `MismatchedCtors(`Named "<empty>", `Extend l)
+              )
+            )
+      | `Const(_, `Extend _, _, _), `Const(_, `Named "<empty>", _, _) ->
+          ()
       | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
         `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
           if Label.equal lsub lsuper then
@@ -299,6 +301,9 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
             end
           else
             failwith "TODO: mismatched extend"
+
+      | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
+          MuleErr.bug ("Unknown type constructor: " ^ c)
 
       | _ ->
           let show uv =
