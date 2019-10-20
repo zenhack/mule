@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+cd $(dirname $0)
+set -e
+make
+mule=./_build/default/src/mule/mule.exe
+case "$1" in
+	'') rlwrap $mule $@;;
+	repl) rlwrap $mule $@;;
+	*) $mule $@;;
+esac
