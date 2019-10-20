@@ -14,8 +14,6 @@ install: all
 	dune install libmule
 utop: all
 	./_build/default/$(utop_bc)
-repl: all
-	rlwrap ./_build/default/$(main_exe)
 check: $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*
