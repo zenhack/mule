@@ -220,7 +220,7 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | `Quant(_, q, id, k, body), _ ->
           require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
       | _, `Quant(_, q, id, k, body) ->
-          require_subtype ctx ~sub ~super:(unroll_quant ctx `Sub q id k body)
+          require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
 
       (* Two different rigid variables can't be merged. We should merge them when
        * they are the same variable, however.
