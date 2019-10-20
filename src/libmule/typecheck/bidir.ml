@@ -21,14 +21,21 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
     | `Const(c_id, c, args, k) ->
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
-let copy = function
-  | `Free({ty_flag; _}, k) -> `Free({ty_flag; ty_id = Gensym.gensym ()}, k)
-  | t -> t
-
 let rec subst ~target ~replacement uv =
   match UnionFind.get uv with
     | `Free({ty_id; _}, _) when ty_id = target -> replacement
+    | `Free _ -> uv
     | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
+and copy = function
+  | `Free _ -> MuleErr.bug "impossible"
+  | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
+  | `Quant(_, q, v, k, body) ->
+      let qid = Gensym.gensym () in
+      let v' = Gensym.gensym () in
+      `Quant(qid, q, v', k, subst body ~target:v ~replacement:(UnionFind.make (`Free
+            ( {ty_flag = `Explicit; ty_id = v'}
+            , k
+            ))))
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
@@ -184,14 +191,11 @@ and synth: context -> 'i DE.t -> u_var =
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
     let ty_got = synth ctx e in
-    let _ = with_locals ctx (fun ctx ->
-        require_subtype ctx ~sub:ty_got ~super:ty_want;
-        ty_want
-      )
-    in
+    require_subtype ctx ~sub:ty_got ~super:ty_want;
     ty_want
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
+    trace_req_subtype ~sub ~super;
     begin match UnionFind.get sub, UnionFind.get super with
       | _ when UnionFind.equal sub super -> ()
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
@@ -306,21 +310,26 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           MuleErr.bug ("Unknown type constructor: " ^ c)
 
       | _ ->
-          let show uv =
-            begin
-              try
-                DT.sexp_of_t (Extract.get_var_type uv)
-              with _ ->
-                DT.sexp_of_row (Extract.get_var_row uv)
-            end
-            |> Sexp.to_string_hum
-          in
-          failwith (String.concat [
-              "TODO: require_subtype: ";
-              show sub;
-              " <: ";
-              show super;
-            ])
+          MuleErr.bug "TODO: require_subytpe"
+    end
+and trace_req_subtype ~sub ~super =
+  if Config.trace_require_subtype then
+    begin
+      Caml.print_endline "";
+      (Sexp.List [
+            Sexp.Atom "require_subtype";
+            Sexp.List [
+              Sexp.Atom "sub";
+              sexp_of_uvar IntSet.empty sub;
+            ];
+            Sexp.List [
+              Sexp.Atom "super";
+              sexp_of_uvar IntSet.empty super;
+            ];
+          ])
+      |> Sexp.to_string_hum
+      |> Caml.print_endline;
+      Caml.print_endline ""
     end
 and unroll_quant ctx side q id k body =
   subst
