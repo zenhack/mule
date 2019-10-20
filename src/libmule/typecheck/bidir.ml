@@ -300,7 +300,22 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
           else
             failwith "TODO: mismatched extend"
 
-      | _ -> failwith "TODO: require_subtype"
+      | _ ->
+          let show uv =
+            begin
+              try
+                DT.sexp_of_t (Extract.get_var_type uv)
+              with _ ->
+                DT.sexp_of_row (Extract.get_var_row uv)
+            end
+            |> Sexp.to_string_hum
+          in
+          failwith (String.concat [
+              "TODO: require_subtype: ";
+              show sub;
+              " <: ";
+              show super;
+            ])
     end
 and unroll_quant ctx side q id k body =
   subst
