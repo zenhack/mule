@@ -44,8 +44,8 @@ let wrong_num_args ctor want gotl gotr =
           ").";
         ])
 
-(* Run f with an empty locals stack. When it returns, any locals created that remain
- * un-substituted will be quantified around the result. *)
+(* Run f with an empty locals stack. When it returns, the result will be quantified over
+ * any locals created that remain un-substituted. *)
 let with_locals ctx f =
   let new_locals = ref [] in
   let result = f { ctx with locals = new_locals } in
