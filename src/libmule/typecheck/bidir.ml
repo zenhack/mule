@@ -77,7 +77,7 @@ let fresh_local ctx ty_flag k =
   ctx.locals := (ty_id, v) :: !(ctx.locals);
   v
 
-let synth_const = function
+let synth_const: C.t -> u_var = function
   | C.Integer _ -> int
   | C.Text _ -> text
   | C.Char _ -> char
