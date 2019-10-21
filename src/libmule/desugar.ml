@@ -536,7 +536,7 @@ and finalize_dict dict =
         let v = Gensym.anon_var () in
         ( v
         , D.App
-            { app_fn = desugar_lbl_match LabelMap.empty (List.rev cases)
+            { app_fn = desugar_match (List.rev cases)
             ; app_arg = D.Var {v_var = v}
             }
         )

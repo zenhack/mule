@@ -203,6 +203,38 @@ and synth: context -> 'i DE.t -> u_var =
               ftype
           end
         )
+    | DE.Match {cases; default} ->
+        with_locals ctx (fun ctx ->
+          let map = Map.map cases ~f:(fun _ -> fresh_local ctx `Flex ktype) in
+          let param_row =
+            Map.fold map
+              ~init:begin match default with
+                | None -> empty
+                | Some _ -> fresh_local ctx `Flex krow
+              end
+              ~f:(fun ~key ~data r -> extend key data r)
+          in
+          let param = union param_row in
+          let result = match default with
+            | None -> fresh_local ctx `Flex ktype
+            | Some (None, body) ->
+                synth ctx body
+            | Some (Some v, body) ->
+                synth
+                  { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:param }
+                  body
+          in
+          Map.iteri map ~f:(fun ~key ~data ->
+            let (v, body) = Util.find_exn cases key in
+            let _ = check
+              { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data }
+              body
+              result
+            in
+            ()
+          );
+          (param **> result)
+        )
     | _ -> failwith "TODO: synth"
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
