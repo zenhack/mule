@@ -187,6 +187,22 @@ and synth: context -> 'i DE.t -> u_var =
           let _ = check ctx app_arg p in
           r
         )
+    | DE.ConstMatch {cm_cases; cm_default} ->
+        with_locals ctx (fun ctx ->
+          let param = fresh_local ctx `Flex ktype in
+          let result = fresh_local ctx `Flex ktype in
+          let ftype = check ctx cm_default (param **> result) in
+          begin match Map.to_alist cm_cases with
+          | [] -> ftype
+          | cs ->
+              List.iter cs ~f:(fun (p, body) ->
+                let _ = check_const ctx p param in
+                let _ = check ctx body result in
+                ()
+              );
+              ftype
+          end
+        )
     | _ -> failwith "TODO: synth"
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
