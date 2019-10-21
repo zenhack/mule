@@ -235,7 +235,38 @@ and synth: context -> 'i DE.t -> u_var =
           );
           (param **> result)
         )
-    | _ -> failwith "TODO: synth"
+    | DE.LetRec{letrec_types = _ ; letrec_vals; letrec_body} ->
+        (* TODO: types. *)
+        with_locals ctx (fun ctx ->
+          let new_vars =
+            List.map letrec_vals ~f:(fun (v, _) ->
+              (v, fresh_local ctx `Flex ktype)
+            )
+          in
+          let ctx' =
+            List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v) ->
+              { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data: v }
+            )
+          in
+          let checked_vals =
+            List.map letrec_vals ~f:(fun (v, e) ->
+              with_locals ctx' (fun ctx ->
+                check ctx e (Util.find_exn ctx.vals_env v)
+              )
+            )
+          in
+          let checked_vals =
+            List.map2_exn letrec_vals checked_vals ~f:(fun (v, _) ty ->
+              (v, ty)
+            )
+          in
+          let ctx =
+            List.fold checked_vals ~init:ctx ~f:(fun ctx (v, ty) ->
+              { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:ty }
+            )
+          in
+          synth ctx letrec_body
+        )
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
     let ty_got = synth ctx e in
