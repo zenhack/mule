@@ -214,6 +214,14 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
     trace_req_subtype ~sub ~super;
     begin match UnionFind.get sub, UnionFind.get super with
       | _ when UnionFind.equal sub super -> ()
+      (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
+       * sure this can actually come up, but if it does, this is the behavior that
+       * makes sense. *)
+      | l, r when get_id l = get_id r -> UnionFind.merge (fun _ r -> r) sub super
+
+      | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
+          when l_id = r_id ->
+            UnionFind.merge (fun _ r -> r) sub super
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
           (* Both sides are flexible variables; merge them, using the larger of their
            * scopes.
@@ -242,16 +250,8 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
       | _, `Quant(_, q, id, k, body) ->
           require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
 
-      (* Two different rigid variables can't be merged. We should merge them when
-       * they are the same variable, however.
-       *
-       * I(isd) am not sure this can actually come up, but if it does, this is
-       * the behavior that makes sense. *)
-      | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
-          when l_id = r_id ->
-            UnionFind.merge (fun _ r -> r) sub super
-
-      (* In any other case, rigid variable should fail: *)
+      (* Rigid variable should fail (If they were the same already, they would have been
+       * covered above): *)
       | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
           MuleErr.throw
             ( `TypeError

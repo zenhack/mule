@@ -62,6 +62,11 @@ let get_flag: quantifier -> subtype_side -> bound_ty =
     | `Exist, `Sub -> `Rigid
     | `Exist, `Super -> `Flex
 
+let get_id = function
+  | `Const(ty_id, _, _, _) -> ty_id
+  | `Quant(ty_id, _, _, _, _) -> ty_id
+  | `Free({ty_id; _}, _) -> ty_id
+
 let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
   | `Type -> `Type
   | `Row -> `Row
