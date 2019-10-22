@@ -112,6 +112,17 @@ and make_const_type id c args =
       app_fn = f;
       app_arg = x;
     }
+  | `Named "<lambda>", [p; body] ->
+      begin match p with
+        | DT.Var{v_var; _} ->
+          DT.TypeLam {
+            tl_info = id;
+            tl_param = v_var;
+            tl_body = body;
+          }
+      | _ ->
+          MuleErr.bug "type lambda has non-variable as a parameter"
+      end
   | `Named name, _ ->
       failwith ("TODO: make_const_type " ^ name)
   | `Extend _, _ ->
