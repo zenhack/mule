@@ -134,6 +134,12 @@ and make_type ctx ty = match ty with
       require_kind (get_kind body) ktype;
       UnionFind.merge (fun _ r -> r) v body;
       body
+  | DT.TypeLam{tl_param; tl_body; _} ->
+      lambda (gen_k ()) (fun p ->
+        make_type
+          { ctx with type_env = Map.set ctx.type_env ~key:tl_param ~data:p }
+          tl_body
+      )
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
 and make_row ctx (_, fields, v) =
   let tail = match v with

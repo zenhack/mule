@@ -139,6 +139,27 @@ let all : k_var -> (u_var -> u_var) -> u_var =
 let exist : k_var -> (u_var -> u_var) -> u_var =
   fun k mkbody -> quant `Exist k mkbody
 
+let lambda : k_var -> (u_var -> u_var) -> u_var =
+  fun kparam mkbody ->
+    let id = Gensym.gensym () in
+    let param = UnionFind.make (
+      `Free
+        ( {ty_id = Gensym.gensym (); ty_flag = `Explicit}
+        , kparam
+        )
+    )
+    in
+    let body = mkbody param in
+    let kbody = get_kind body in
+    UnionFind.make
+      (`Const
+        ( id
+        , `Named "<lambda>"
+        , [param, kparam; body, kbody]
+        , UnionFind.make (`Arrow(kparam, kbody))
+        )
+      )
+
 type permission = F | R | L | E
 
 type unify_edge =
