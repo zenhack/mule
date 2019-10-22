@@ -140,6 +140,8 @@ and make_type ctx ty = match ty with
           { ctx with type_env = Map.set ctx.type_env ~key:tl_param ~data:p }
           tl_body
       )
+  | DT.App{app_fn; app_arg; _} ->
+      apply (make_type ctx app_fn) (make_type ctx app_arg)
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
 and make_row ctx (_, fields, v) =
   let tail = match v with
