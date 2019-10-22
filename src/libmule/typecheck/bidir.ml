@@ -121,7 +121,7 @@ and make_type ctx ty = match ty with
   | DT.Record{r_types; r_values; _} ->
       record (make_row ctx r_types) (make_row ctx r_values)
   | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
-      make_type ctx fn_param **> make_type ctx fn_ret
+      with_kind ktype (make_type ctx fn_param) **> with_kind ktype (make_type ctx fn_ret)
   | DT.Union{u_row} ->
       union (make_row ctx u_row)
   | DT.Recur{mu_var; mu_body; _} ->
@@ -141,7 +141,13 @@ and make_type ctx ty = match ty with
           tl_body
       )
   | DT.App{app_fn; app_arg; _} ->
-      apply (make_type ctx app_fn) (make_type ctx app_arg)
+      let arg = make_type ctx app_arg in
+      let k_arg = get_kind arg in
+      apply
+        (make_type ctx app_fn
+          |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
+        )
+        arg
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
 and make_row ctx (_, fields, v) =
   let tail = match v with
