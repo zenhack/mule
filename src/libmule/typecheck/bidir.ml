@@ -312,10 +312,8 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
             UnionFind.merge (fun _ r -> r) sub super
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
           (* Both sides are flexible variables; merge them, using the larger of their
-           * scopes.
-           *
-           * FIXME: the "reason" here is totally bogus; do something better. *)
-          UnionFind.merge (Infer_kind.unify `Frontier) kl kr;
+           * scopes. *)
+          require_kind kl kr;
           UnionFind.merge
             (fun _ _ ->
               `Free
@@ -443,3 +441,28 @@ and unroll_quant ctx side q id k body =
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
   require_subtype ctx ~sub:ty_got ~super:ty_want
+and require_kind l r = UnionFind.merge unify_kind l r
+and unify_kind l r =
+  begin match l, r with
+  | `Free n, k | k, `Free n -> kind_occurs_check n k; k
+  | `Type, `Type | `Row, `Row -> r
+  | `Arrow(pl, pr), `Arrow(rl, rr) ->
+      UnionFind.merge unify_kind pl pr;
+      UnionFind.merge unify_kind rl rr;
+      r
+  | _ ->
+      MuleErr.throw
+        ( `TypeError
+            ( `Frontier
+            , `MismatchedKinds (Extract.kind l, Extract.kind r)
+            )
+        )
+  end
+and kind_occurs_check: int -> u_kind -> unit =
+  fun n -> function
+    | `Free m when n = m ->
+        MuleErr.throw (`TypeError (`Frontier, `OccursCheckKind))
+    | `Free _ | `Type | `Row -> ()
+    | `Arrow(x, y) ->
+        kind_occurs_check n (UnionFind.get x);
+        kind_occurs_check n (UnionFind.get y)

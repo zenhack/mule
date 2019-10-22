@@ -1,6 +1,7 @@
 open Typecheck_types
 
 module DT = Desugared_ast_type
+module DK = Desugared_ast_kind
 module ST = Surface_ast.Type
 
 let get_ty_id: u_type -> int = function
@@ -122,3 +123,10 @@ let get_var_type uv =
 
 let get_var_row uv =
   fst (go_row (IntSet.empty) uv)
+
+let rec kind: u_kind -> DK.maybe_kind = function
+  | `Free _ -> `Unknown
+  | `Type -> `Type
+  | `Row -> `Row
+  | `Arrow(x, y) ->
+      `Arrow(kind (UnionFind.get x), kind (UnionFind.get y))
