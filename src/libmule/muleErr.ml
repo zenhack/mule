@@ -18,7 +18,7 @@ let rec show_kind = function
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
-let show_type_error (_rsn, err) = match err with
+let show_type_error err = match err with
   | `MismatchedCtors (l, r) ->
       "mismatched type constructors: " ^ show_ctor l ^ " and " ^ show_ctor r
   | `MismatchedKinds (l, r) ->

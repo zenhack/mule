@@ -1,7 +1,6 @@
 (* types used by the type checker *)
 
 open Common_ast
-open Types
 
 type u_kind =
   [ `Free of int
@@ -106,26 +105,22 @@ let apply: u_var -> u_var -> u_var = fun f x ->
         UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
         const (`Named "<apply>") [f, fk; x, xk] rk
     | k ->
-        MuleErr.(
-          throw
-            (`TypeError
-               ( `AppParamArg
-               (* FIXME: if presented in an error message this may be confusing, as
-                * we don't actually need type -> type, but just some arrow kind.
-                *
-                * We should find a way to not over-specify the kind.
-               *)
-               , (`MismatchedKinds
-                    ( `Arrow(`Type, `Type)
-                    , match k with
-                    | `Type -> `Type
-                    | `Row -> `Row
-                    | _ -> failwith "impossible"
-                    )
-                 )
-               )
-            )
-        )
+        MuleErr.throw
+          (`TypeError
+             (* FIXME: if presented in an error message this may be confusing, as
+              * we don't actually need type -> type, but just some arrow kind.
+              *
+              * We should find a way to not over-specify the kind.
+             *)
+             (`MismatchedKinds
+                ( `Arrow(`Type, `Type)
+                , match k with
+                | `Type -> `Type
+                | `Row -> `Row
+                | _ -> failwith "impossible"
+                )
+             )
+          )
   end
 let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
@@ -163,9 +158,6 @@ let lambda : k_var -> (u_var -> u_var) -> u_var =
       )
 
 type permission = F | R | L | E
-
-type unify_edge =
-  | Unify of (reason * u_var * u_var)
 
 let typeconst_eq: u_typeconst -> u_typeconst -> bool = Poly.equal
 let perm_eq: permission -> permission -> bool = Poly.equal

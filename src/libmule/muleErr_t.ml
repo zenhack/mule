@@ -1,4 +1,3 @@
-open Types
 open Common_ast
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
@@ -39,7 +38,7 @@ type t =
 
   | `LazyLoop
 
-  | `TypeError of (reason * type_error)
+  | `TypeError of type_error
   | `DuplicateFields of (Label.t list)
   | `UnreachableCases of (Surface_ast.Pattern.t * Surface_ast.Expr.t) list
   | `EmptyMatch

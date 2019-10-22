@@ -407,21 +407,11 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
       (* Rigid variable should fail (If they were the same already, they would have been
        * covered above): *)
       | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
-          MuleErr.throw
-            ( `TypeError
-                ( `Frontier
-                , `PermissionErr `Graft
-                )
-            )
+          MuleErr.throw (`TypeError(`PermissionErr `Graft))
 
       (* Mismatched named constructors are never reconcilable: *)
       | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (String.equal n m) ->
-            MuleErr.throw
-              (`TypeError
-                ( `Frontier
-                , `MismatchedCtors(`Named n, `Named m)
-                )
-              )
+            MuleErr.throw (`TypeError (`MismatchedCtors(`Named n, `Named m)))
 
       (* All of the zero-argument consts unify with themselves; if the above case
        * didn't cover this one, then we're good: *)
@@ -459,11 +449,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
 
       | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend l, _, _) ->
           MuleErr.throw
-            ( `TypeError
-              ( `Frontier
-              , `MismatchedCtors(`Named "<empty>", `Extend l)
-              )
-            )
+            (`TypeError (`MismatchedCtors(`Named "<empty>", `Extend l)))
       | `Const(_, `Extend _, _, _), `Const(_, `Named "<empty>", _, _) ->
           ()
       | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
@@ -520,17 +506,12 @@ and unify_kind l r =
       UnionFind.merge unify_kind rl rr;
       r
   | _ ->
-      MuleErr.throw
-        ( `TypeError
-            ( `Frontier
-            , `MismatchedKinds (Extract.kind l, Extract.kind r)
-            )
-        )
+      MuleErr.throw (`TypeError(`MismatchedKinds (Extract.kind l, Extract.kind r)))
   end
 and kind_occurs_check: int -> u_kind -> unit =
   fun n -> function
     | `Free m when n = m ->
-        MuleErr.throw (`TypeError (`Frontier, `OccursCheckKind))
+        MuleErr.throw (`TypeError `OccursCheckKind)
     | `Free _ | `Type | `Row -> ()
     | `Arrow(x, y) ->
         kind_occurs_check n (UnionFind.get x);
