@@ -25,6 +25,9 @@ let rec subst ~target ~replacement uv =
   match UnionFind.get uv with
     | `Free({ty_id; _}, _) when ty_id = target -> replacement
     | `Free _ -> uv
+    | `Quant(_, _, v, _, _) when v = target ->
+        (* Shadowing the target; stop here. *)
+        uv
     | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
 and copy = function
   | `Free _ -> MuleErr.bug "impossible"
