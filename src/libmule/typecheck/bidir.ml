@@ -122,6 +122,18 @@ and make_type ctx ty = match ty with
       record (make_row ctx r_types) (make_row ctx r_values)
   | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
       with_kind ktype (make_type ctx fn_param) **> with_kind ktype (make_type ctx fn_ret)
+  | DT.Fn{fn_param; fn_ret; fn_pvar = Some pvar; _} ->
+      with_locals ctx (fun ctx ->
+        let param_type = make_type ctx fn_param |> with_kind ktype in
+        let param_type = strip_param_exists ctx param_type in
+        let ret_type =
+          make_type
+            { ctx with vals_env = Map.set ctx.vals_env ~key:pvar ~data:param_type }
+            fn_ret
+          |> with_kind ktype
+        in
+        param_type **> ret_type
+      )
   | DT.Union{u_row} ->
       union (make_row ctx u_row)
   | DT.Recur{mu_var; mu_body; _} ->
@@ -149,6 +161,17 @@ and make_type ctx ty = match ty with
         )
         arg
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
+and strip_param_exists ctx pty =
+  match UnionFind.get pty with
+  | `Quant(_, `Exist, id, k, body) ->
+      strip_param_exists ctx (
+        subst
+          body
+          ~target:id
+          ~replacement:(fresh_local ctx `Flex k)
+      )
+  | _ ->
+      pty
 and make_row ctx (_, fields, v) =
   let tail = match v with
     | None -> empty
