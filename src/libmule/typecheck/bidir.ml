@@ -235,9 +235,24 @@ and synth: context -> 'i DE.t -> u_var =
           );
           (param **> result)
         )
-    | DE.LetRec{letrec_types = _ ; letrec_vals; letrec_body} ->
-        (* TODO: types. *)
+    | DE.LetRec{letrec_types; letrec_vals; letrec_body} ->
+        (* TODO: mutual recursion among types.
+         *
+         * This also doesn't currently handle dependencies among types at all, but
+         * the plan for non-cyclic dependencies is to sort them topologically and
+         * separate them out into separate let expressions in an earlier stage, so
+         * we won't have to worry about that here.
+         *)
         with_locals ctx (fun ctx ->
+          let ctx = List.fold letrec_types ~init:ctx ~f:(fun ctx (v, ty) ->
+              { ctx with type_env =
+                           Map.set
+                             ctx.type_env
+                             ~key:v
+                             ~data:(with_locals ctx (fun ctx -> make_type ctx ty))
+              }
+            )
+          in
           let new_vars =
             List.map letrec_vals ~f:(fun (v, _) ->
               (v, fresh_local ctx `Flex ktype)
