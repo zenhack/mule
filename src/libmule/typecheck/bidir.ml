@@ -160,7 +160,33 @@ and make_type ctx ty = match ty with
           |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
         )
         arg
-  | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
+  | DT.Path{p_var; p_lbls; _} ->
+      let var_type = match Map.find ctx.vals_env p_var with
+        | Some ty -> ty |> with_kind ktype
+        | None -> unbound_var p_var
+      in
+      let result_type = fresh_local ctx `Flex (gen_k ()) in
+      let path_type = make_path_type result_type p_lbls in
+      require_subtype ctx ~sub:var_type ~super:path_type;
+      result_type
+and make_path_type result_type lbls =
+  begin match List.rev lbls with
+  | [] ->
+      (* Shouldn't happen, but this is correct if it did. *)
+      result_type
+  | (last :: rest) ->
+      List.fold_left
+        rest
+        ~init:(exist krow (fun rv -> (exist krow (fun rt ->
+            record (extend last result_type rt) rv
+          ))))
+        ~f:(fun tail next ->
+          exist krow (fun rv -> (exist krow (fun rt ->
+              record
+                rt
+                (extend next tail rv)
+            ))))
+  end
 and strip_param_exists ctx pty =
   match UnionFind.get pty with
   | `Quant(_, `Exist, id, k, body) ->
