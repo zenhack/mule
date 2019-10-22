@@ -157,11 +157,6 @@ let lambda : k_var -> (u_var -> u_var) -> u_var =
         )
       )
 
-type permission = F | R | L | E
-
-let typeconst_eq: u_typeconst -> u_typeconst -> bool = Poly.equal
-let perm_eq: permission -> permission -> bool = Poly.equal
-
 let rec sexp_of_u_kind: u_kind -> Sexp.t = function
   | `Free n -> Int.sexp_of_t n
   | `Row -> Sexp.Atom "row"
