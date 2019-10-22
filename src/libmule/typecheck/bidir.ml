@@ -86,7 +86,6 @@ let find_bound env var = match Map.find env var with
   | Some value -> value
   | None -> unbound_var var
 
-
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context () =
   let dummy = {
@@ -139,7 +138,7 @@ and make_type ctx ty = match ty with
 and make_row ctx (_, fields, v) =
   let tail = match v with
     | None -> empty
-    | Some v -> find_bound ctx.type_env v
+    | Some v -> with_kind krow (find_bound ctx.type_env v)
   in
   List.fold_right fields ~init:tail ~f:(fun (lbl, ty) rest ->
     extend lbl (make_type ctx ty) rest
@@ -441,6 +440,7 @@ and unroll_quant ctx side q id k body =
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
   require_subtype ctx ~sub:ty_got ~super:ty_want
+and with_kind k u = require_kind k (get_kind u); u
 and require_kind l r = UnionFind.merge unify_kind l r
 and unify_kind l r =
   begin match l, r with
