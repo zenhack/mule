@@ -194,7 +194,7 @@ and synth: context -> 'i DE.t -> u_var =
         let arg_t = synth ctx c_arg in
         all krow (fun r -> union (extend c_lbl arg_t r))
     | DE.WithType {wt_expr; wt_type} ->
-        check ctx wt_expr (make_type ctx wt_type)
+        check ctx wt_expr (make_type ctx wt_type |> with_kind ktype)
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
         synth
