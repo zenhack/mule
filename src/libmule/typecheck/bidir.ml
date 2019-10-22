@@ -126,13 +126,13 @@ and make_type ctx ty = match ty with
   | DT.Union{u_row} ->
       union (make_row ctx u_row)
   | DT.Recur{mu_var; mu_body; _} ->
-      (* TODO: restrict the kind of the body to ktype. *)
       let v = fresh_local ctx `Explicit ktype in
       let body =
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:mu_var ~data:v }
           mu_body
       in
+      require_kind (get_kind body) ktype;
       UnionFind.merge (fun _ r -> r) v body;
       body
   | _ -> failwith ("TODO make_type: " ^ Pretty.typ ty)
