@@ -312,6 +312,9 @@ and check: context -> 'i DE.t -> u_var -> u_var =
     ty_want
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
+    require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super)
+and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
+  fun ctx ~sub ~super ->
     trace_req_subtype ~sub ~super;
     begin match UnionFind.get sub, UnionFind.get super with
       | _ when UnionFind.equal sub super -> ()
@@ -480,3 +483,24 @@ and kind_occurs_check: int -> u_kind -> unit =
     | `Arrow(x, y) ->
         kind_occurs_check n (UnionFind.get x);
         kind_occurs_check n (UnionFind.get y)
+and whnf: u_var -> u_var =
+  fun t ->
+    match UnionFind.get t with
+    | `Quant(qid, q, v, k, body) ->
+        UnionFind.set
+          (`Quant(qid, q, v, k, whnf body))
+          t;
+        t
+    | `Const(_, `Named "<apply>", [f, fk; x, xk], k) ->
+        require_kind (UnionFind.make(`Arrow(xk, k))) fk;
+        apply_type t f x;
+        whnf t
+    | _ -> t
+and apply_type app f arg =
+  match UnionFind.get (whnf f) with
+  | `Const(_, `Named "<lambda>", [p, _; body, _], _) ->
+      let result =
+        subst body ~target:(get_id (UnionFind.get p)) ~replacement:arg
+      in
+      UnionFind.merge (fun _ r -> r) app result
+  | _ -> ()
