@@ -1,3 +1,4 @@
+# Test for issue #10
 match A (A "") with
 | A (B _) -> 1
 | _ -> 0
