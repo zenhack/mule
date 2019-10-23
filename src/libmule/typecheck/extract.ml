@@ -38,7 +38,7 @@ let rec go seen uv =
                 q_var = var_of_int v_id;
                 q_body = body';
             })
-      | `Const(ty_id, `Named "{...}", [rtypes, _; rvals, _], _) ->
+      | `Const(ty_id, `Named `Record, [rtypes, _; rvals, _], _) ->
           let seen' = Set.add seen ty_id in
           let (r_types, fv_types) = go_row seen' rtypes in
           let (r_values, fv_values) = go_row seen' rvals in
@@ -49,7 +49,7 @@ let rec go seen uv =
             r_src = ST.Record {r_items = []};
           }
           |> maybe_add_recur ty_id (Set.union fv_types fv_values)
-      | `Const(ty_id, `Named "|", [row, _], _) ->
+      | `Const(ty_id, `Named `Union, [row, _], _) ->
           let seen' = Set.add seen ty_id in
           let (r, fvs) = go_row seen' row in
           DT.Union{u_row = r}
@@ -74,7 +74,7 @@ and go_row seen uv =
         ( (ty_id, [], Some (var_of_int ty_id))
         , IntSet.singleton ty_id
         )
-    | `Const(_, `Named "<empty>", _, _) ->
+    | `Const(_, `Named `Empty, _, _) ->
         ((ty_id, [], None), IntSet.empty)
     | `Const(_, `Extend lbl, [h, _; t, _], _) ->
         let (h', hfv) = go seen h in
@@ -101,20 +101,20 @@ and make_const_type id c args =
       n_info = id;
       n_name = name;
     }
-  | `Named "->", [p; r] -> DT.Fn {
+  | `Named `Fn, [p; r] -> DT.Fn {
       fn_info = id;
       fn_pvar = None;
       fn_param = p;
       fn_ret = r;
     }
-  | `Named "<apply>", [f; x] -> DT.App {
+  | `Named `Apply, [f; x] -> DT.App {
       app_info = id;
       app_fn = f;
       app_arg = x;
     }
-  | `Named "<lambda>", [p; body] ->
+  | `Named `Lambda, [p; body] ->
       begin match p with
-        | DT.Var{v_var; _} ->
+      | DT.Var{v_var; _} ->
           DT.TypeLam {
             tl_info = id;
             tl_param = v_var;
@@ -124,7 +124,7 @@ and make_const_type id c args =
           MuleErr.bug "type lambda has non-variable as a parameter"
       end
   | `Named name, _ ->
-      failwith ("TODO: make_const_type " ^ name)
+      failwith ("TODO: make_const_type " ^ string_of_typeconst_name name)
   | `Extend _, _ ->
       MuleErr.bug "kind mismatch"
 

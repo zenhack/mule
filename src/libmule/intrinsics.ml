@@ -7,15 +7,15 @@ module S = Surface_ast
 
 open Typecheck_types
 
-let int_t = D.Type.Named{n_info = ktype; n_name = "int"}
-let text_t = D.Type.Named{n_info = ktype; n_name = "text"}
+let int_t = D.Type.Named{n_info = ktype; n_name = `Int}
+let text_t = D.Type.Named{n_info = ktype; n_name = `Text}
 let fn_t p r = D.Type.Fn {
     fn_info = ktype;
     fn_pvar = None;
     fn_param = p;
     fn_ret = r;
   }
-let char_t = D.Type.Named{n_info = ktype; n_name = "char"}
+let char_t = D.Type.Named{n_info = ktype; n_name = `Char}
 
 let prim x = R.Expr.Prim x
 

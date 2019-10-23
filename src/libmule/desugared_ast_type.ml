@@ -44,7 +44,7 @@ type 'i t =
     }
   | Named of {
       n_info : 'i;
-      n_name : string;
+      n_name : Typecheck_types_t.typeconst_name;
     }
   | Opaque of { o_info : 'i }
   | TypeLam of {
@@ -162,7 +162,7 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
         Sexp.Atom(Var.to_string tl_param);
         sexp_of_t tl_body;
       ]
-  | Named{n_name; _} -> Sexp.Atom n_name
+  | Named{n_name; _} -> Typecheck_types_t.sexp_of_typeconst_name n_name
   | Opaque _ -> Sexp.Atom "<opaque>"
   | App{app_fn; app_arg; _} -> Sexp.List [
       sexp_of_t app_fn;

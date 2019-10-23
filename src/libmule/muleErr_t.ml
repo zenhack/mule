@@ -1,10 +1,7 @@
 open Common_ast
 
 type op = [ `Graft | `Merge | `Raise | `Weaken ]
-type ctor =
-  [ `Named of string
-  | `Extend of Label.t
-  ]
+type ctor = Typecheck_types_t.u_typeconst
 type kind =
   [ `Row
   | `Type

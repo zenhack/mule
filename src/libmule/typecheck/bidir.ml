@@ -44,7 +44,7 @@ let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
     (String.concat [
           "Wrong number of arguments for ";
-          ctor ^ " type constructor: ";
+          string_of_typeconst_name ctor ^ " type constructor: ";
           " wanted ";
           Int.to_string want;
           " but got (";
@@ -410,47 +410,47 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
           MuleErr.throw (`TypeError(`PermissionErr `Graft))
 
       (* Mismatched named constructors are never reconcilable: *)
-      | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (String.equal n m) ->
-            MuleErr.throw (`TypeError (`MismatchedCtors(`Named n, `Named m)))
+      | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
+            MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
 
       (* All of the zero-argument consts unify with themselves; if the above case
        * didn't cover this one, then we're good: *)
       | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
 
       (* Functions. *)
-      | `Const(_, `Named "->", [psub, _; rsub, _], _),
-        `Const(_, `Named "->", [psuper, _; rsuper, _], _) ->
+      | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
+        `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
           (* Note the flipped sub vs. super in the parameter case; this is standard
            * contravariance. *)
           require_subtype ctx ~sub:psuper ~super:psub;
           require_subtype ctx ~sub:rsub ~super:rsuper
 
-      | `Const (_, `Named "->", x, _), `Const (_, `Named "->", y, _) ->
-          wrong_num_args "->" 2 x y
+      | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
+          wrong_num_args `Fn 2 x y
 
-      | `Const(_, `Named "|", [row_sub, _], _),
-        `Const(_, `Named "|", [row_super, _], _) ->
+      | `Const(_, `Named `Union, [row_sub, _], _),
+        `Const(_, `Named `Union, [row_super, _], _) ->
           (* Unions are contravariant in their arguments.
            *
            * TODO: I(isd) _think_ that's right, but I need to think about it a
            * bit more deeply. *)
           require_subtype ctx ~sub:row_super ~super:row_sub
 
-      | `Const(_, `Named "|", x, _), `Const(_, `Named "|", y, _) ->
-          wrong_num_args "|" 1 x y
+      | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
+          wrong_num_args `Union 1 x y
 
-      | `Const(_, `Named "{...}", [rtype_sub, _; rvals_sub, _], _),
-        `Const(_, `Named "{...}", [rtype_super, _; rvals_super, _], _) ->
+      | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
+        `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
           require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
           require_subtype ctx ~sub:rvals_sub ~super:rvals_super
 
-      | `Const(_, `Named "{...}", x, _), `Const(_, `Named "{...}", y, _) ->
-          wrong_num_args "{...}" 2 x y
+      | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
+          wrong_num_args `Record 2 x y
 
-      | `Const(_, `Named "<empty>", _, _), `Const(_, `Extend l, _, _) ->
+      | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
           MuleErr.throw
-            (`TypeError (`MismatchedCtors(`Named "<empty>", `Extend l)))
-      | `Const(_, `Extend _, _, _), `Const(_, `Named "<empty>", _, _) ->
+            (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
+      | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
           ()
       | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
         `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
@@ -463,7 +463,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             failwith "TODO: mismatched extend"
 
       | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
-          MuleErr.bug ("Unknown type constructor: " ^ c)
+          MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
       | _ ->
           MuleErr.bug "TODO: require_subytpe"
@@ -524,14 +524,14 @@ and whnf: u_var -> u_var =
           (`Quant(qid, q, v, k, whnf body))
           t;
         t
-    | `Const(_, `Named "<apply>", [f, fk; x, xk], k) ->
+    | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->
         require_kind (UnionFind.make(`Arrow(xk, k))) fk;
         apply_type t f x;
         whnf t
     | _ -> t
 and apply_type app f arg =
   match UnionFind.get (whnf f) with
-  | `Const(_, `Named "<lambda>", [p, _; body, _], _) ->
+  | `Const(_, `Named `Lambda, [p, _; body, _], _) ->
       let result =
         subst body ~target:(get_id (UnionFind.get p)) ~replacement:arg
       in

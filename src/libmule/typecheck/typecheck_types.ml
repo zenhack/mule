@@ -1,14 +1,5 @@
-(* types used by the type checker *)
-
 open Common_ast
-
-type u_kind =
-  [ `Free of int
-  | `Row
-  | `Type
-  | `Arrow of k_var * k_var
-  ]
-and k_var = u_kind UnionFind.var
+include Typecheck_types_t
 
 (* These can be the same physical variables for all type/row kind vars,
  * since their identity has no meaning. *)
@@ -17,31 +8,6 @@ let krow = UnionFind.make `Row
 
 let gen_k: unit -> k_var =
   fun () -> UnionFind.make (`Free (Gensym.gensym ()))
-
-type u_typeconst =
-  [ `Named of string
-  | `Extend of Label.t
-  ]
-(* Contents of unification variables: *)
-and u_type =
-  [ `Free of (tyvar * k_var)
-  | `Quant of (int * [`All|`Exist] * int * k_var * u_var)
-  | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
-  ]
-and bound_ty = [ `Rigid | `Flex | `Explicit ]
-and 'a bound =
-  { b_ty: bound_ty
-  ; b_at: 'a
-  }
-and tyvar =
-  { ty_id: int
-  ; ty_flag: bound_ty
-  }
-and u_var = u_type UnionFind.var
-
-type sign = [ `Pos | `Neg ]
-
-type quantifier = [ `All | `Exist ]
 
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
@@ -80,18 +46,18 @@ let const: u_typeconst -> (u_var * k_var) list -> k_var -> u_var =
   fun c args k ->
     UnionFind.make (`Const(Gensym.gensym (), c, args, k))
 let const_ty name = const (`Named name) [] ktype
-let int = const_ty "int"
-let text = const_ty "text"
-let char = const_ty "char"
+let int = const_ty `Int
+let text = const_ty `Text
+let char = const_ty `Char
 let fn: u_var -> u_var -> u_var = fun param ret ->
-  const (`Named "->") [param, ktype; ret, ktype] ktype
+  const (`Named `Fn) [param, ktype; ret, ktype] ktype
 let ( **> ) = fn
 let union: u_var -> u_var = fun row ->
-  const (`Named "|") [row, krow] ktype
+  const (`Named `Union) [row, krow] ktype
 let record: u_var -> u_var -> u_var = fun r_types r_values ->
-  const (`Named "{...}") [r_types, krow; r_values, krow] ktype
+  const (`Named `Record) [r_types, krow; r_values, krow] ktype
 let empty: u_var =
-  const (`Named "<empty>") [] krow
+  const (`Named `Empty) [] krow
 let extend: Label.t -> u_var -> u_var -> u_var = fun lbl head tail ->
   const (`Extend lbl) [head, ktype; tail, krow] krow
 let apply: u_var -> u_var -> u_var = fun f x ->
@@ -99,11 +65,11 @@ let apply: u_var -> u_var -> u_var = fun f x ->
   let xk = get_kind x in
   begin match UnionFind.get fk with
     | `Arrow(_, rk) ->
-        const (`Named "<apply>") [f, fk; x, xk] rk
+        const (`Named `Apply) [f, fk; x, xk] rk
     | `Free _ ->
         let rk = gen_k () in
         UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
-        const (`Named "<apply>") [f, fk; x, xk] rk
+        const (`Named `Apply) [f, fk; x, xk] rk
     | k ->
         MuleErr.throw
           (`TypeError
@@ -151,7 +117,7 @@ let lambda : k_var -> (u_var -> u_var) -> u_var =
     UnionFind.make
       (`Const
         ( id
-        , `Named "<lambda>"
+        , `Named `Lambda
         , [param, kparam; body, kbody]
         , UnionFind.make (`Arrow(kparam, kbody))
         )
@@ -166,7 +132,7 @@ and sexp_of_kvar: k_var -> Sexp.t = fun v -> sexp_of_u_kind (UnionFind.get v)
 and sexp_of_uvar: IntSet.t -> u_var -> Sexp.t =
   fun seen v -> sexp_of_u_type seen (UnionFind.get v)
 and sexp_of_u_typeconst: u_typeconst -> Sexp.t = function
-  | `Named n -> Sexp.List [Sexp.Atom "named"; Sexp.Atom n]
+  | `Named n -> Sexp.List [Sexp.Atom "named"; sexp_of_typeconst_name n]
   | `Extend l -> Sexp.List [Sexp.Atom "extend"; Sexp.Atom (Label.to_string l)]
 and sexp_of_flag: bound_ty -> Sexp.t = function
   | `Flex -> Sexp.Atom "flex"

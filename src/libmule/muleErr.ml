@@ -2,7 +2,7 @@ include MuleErr_t
 open Common_ast
 
 let show_ctor = function
-  | `Named name -> name
+  | `Named name -> Typecheck_types_t.string_of_typeconst_name name
   | `Extend lbl -> "row containing " ^ Label.to_string lbl
 
 let show_op = function
