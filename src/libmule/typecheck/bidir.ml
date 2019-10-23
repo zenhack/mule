@@ -375,9 +375,6 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
        * makes sense. *)
       | l, r when get_id l = get_id r -> UnionFind.merge (fun _ r -> r) sub super
 
-      | `Free({ty_flag = `Rigid; ty_id = l_id}, _), `Free({ty_flag = `Rigid; ty_id = r_id}, _)
-          when l_id = r_id ->
-            UnionFind.merge (fun _ r -> r) sub super
       | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
           (* Both sides are flexible variables; merge them, using the larger of their
            * scopes. *)
