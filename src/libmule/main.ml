@@ -45,7 +45,7 @@ let load_and_typecheck typ file_name =
 
 let interp_cmd = function
   | `Repl -> Repl.loop ()
-  | `Test path ->
+  | `Eval path ->
       let%lwt contents = Util.IO.slurp_file path in
       let%lwt _ = Run.run contents in
       Lwt.return ()

@@ -7,13 +7,13 @@ let repl_term =
   Term.(const `Repl)
 
 
-let test_term =
-  Term.(const (fun p -> `Test p) $
+let eval_term =
+  Term.(const (fun p -> `Eval p) $
         Arg.(required
              & pos 0 (some non_dir_file) None
              & info []
                ~docv:"FILE"
-               ~doc:"Test the file $(docv)"
+               ~doc:"Evaluate the expression in the file $(docv)"
             )
        )
 
@@ -56,7 +56,13 @@ let parse_cmd () =
         , Term.info "repl"
             ~doc:"Start an interactive repl"
         );
-        test_term, Term.info "test";
+        ( eval_term
+        , Term.info "eval"
+            ~doc:"Evaluate an expression in a file"
+        );
         run_term, Term.info "run";
-        build_js_term, Term.info "build-js";
+        ( build_js_term
+        , Term.info "build-js"
+            ~doc:"Compile to javascript."
+        )
       ]

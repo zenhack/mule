@@ -13,7 +13,7 @@ install: all
 check: $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*
-	@DEBUG_STEPS=1 ./_build/default/$(main_exe) test $*.mule > $*.actual || true
+	@DEBUG_STEPS=1 ./_build/default/$(main_exe) eval $*.mule > $*.actual || true
 	@diff -u $*.expected $*.actual
 	@touch $@
 clean:
