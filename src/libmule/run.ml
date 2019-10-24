@@ -2,14 +2,17 @@
 let print_endline s =
   Lwt_io.write Lwt_io.stdout (s ^ "\n")
 
+let display_always label text =
+  let text =
+    String.split_lines text
+    |> List.map ~f:(fun line -> "\t" ^ line)
+    |> String.concat ~sep:"\n"
+  in
+  print_endline ("\n" ^ label ^ ":\n\n" ^ text)
+
 let display label text =
   if Config.debug_steps then
-    let text =
-      String.split_lines text
-      |> List.map ~f:(fun line -> "\t" ^ line)
-      |> String.concat ~sep:"\n"
-    in
-    print_endline ("\n" ^ label ^ ":\n\n" ^ text)
+    display_always label text
   else
     Lwt.return ()
 
@@ -55,7 +58,7 @@ let run : string -> unit LwtResult.t = fun input ->
   let path = Caml.Filename.current_dir_name ^ "/<repl>" in
   match MParser.parse_string Parser.repl_line input path with
   | MParser.Failed (msg, _) ->
-      let%lwt _ = display "Parse Error" msg in
+      let%lwt _ = display_always "Parse Error" msg in
       Lwt.return (Ok ())
   | MParser.Success None ->
       (* empty input *)
