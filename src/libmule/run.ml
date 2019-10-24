@@ -50,7 +50,7 @@ let desugar_typecheck expr =
   let%lwt _ = display "Desugared" (Pretty.expr dexp) in
   let ty = Typecheck.typecheck dexp in
   let%lwt _ = display "inferred type"  (Pretty.typ ty) in
-  Lwt.return dexp
+  Lwt.return (ty, dexp)
 
 let run : string -> unit LwtResult.t = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
@@ -66,7 +66,7 @@ let run : string -> unit LwtResult.t = fun input ->
   | MParser.Success (Some expr) ->
       begin
         try%lwt
-          let%lwt dexp = desugar_typecheck expr in
+          let%lwt (ty, dexp) = desugar_typecheck expr in
           let rexp = To_runtime.translate dexp in
           let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
           let ret = Eval.eval rexp in
@@ -75,7 +75,11 @@ let run : string -> unit LwtResult.t = fun input ->
             if Config.debug_steps then
               Lwt.return ()
             else
-              print_endline (Runtime_ast.Expr.to_string ret)
+              print_endline
+                (Runtime_ast.Expr.to_string ret
+                    ^ " : "
+                    ^ Pretty.typ ty
+                )
           in
           Lwt.return (Ok ())
         with
