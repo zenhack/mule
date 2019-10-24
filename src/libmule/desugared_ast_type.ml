@@ -249,3 +249,92 @@ and map_row (x, fields, rest) ~f =
   , List.map fields ~f:(fun(l, t) -> (l, map t ~f))
   , rest
   )
+
+let rec to_string = function
+  | Fn {fn_pvar = Some p; fn_param; fn_ret; _} ->
+      String.concat [
+        "(";
+        Var.to_string p;
+        " : ";
+        to_string fn_param;
+        ") -> ";
+        to_string fn_ret;
+      ]
+  | Fn {fn_pvar = None; fn_param; fn_ret; _} ->
+      String.concat ["("; to_string fn_param; ") -> "; to_string fn_ret]
+  | Recur{mu_var; mu_body; _} -> String.concat [
+      "rec ";
+      Var.to_string mu_var;
+      ". ";
+      to_string mu_body;
+    ]
+  | Var {v_var; _} -> Var.to_string v_var
+  | Path {p_var; p_lbls; _} ->
+      String.concat ~sep:"." (Var.to_string p_var :: List.map p_lbls ~f:Label.to_string)
+  | Record {r_types = (_, types, types_rest); r_values = (_, vals, vals_rest); _} ->
+      List.concat [
+        List.map types ~f:(fun (lbl, ty) -> format_type_member lbl ty);
+        begin match types_rest with
+          | None -> []
+          | Some v -> ["...type " ^ Var.to_string v]
+        end;
+        List.map vals ~f:(fun (lbl, ty) -> Label.to_string lbl ^ " : " ^ to_string ty);
+        begin match vals_rest with
+          | None -> []
+          | Some v -> ["..." ^ Var.to_string v]
+        end;
+      ]
+      |> String.concat ~sep:", "
+      |> (fun s -> "{ " ^ s ^ " }")
+  | Union{u_row = (_, fields, rest)} ->
+      String.concat ~sep:"|" (
+        List.map fields ~f:(fun (lbl, ty) ->
+          String.concat [
+            Label.to_string lbl;
+            " (";
+            to_string ty;
+            ")";
+          ]
+        )
+      @ begin match rest with
+          | None -> []
+          | Some v -> ["..." ^ Var.to_string v]
+        end)
+  | Quant{q_quant; q_var; q_body; _} ->
+      let q = match q_quant with `All -> "all" | `Exist -> "exist" in
+      String.concat [
+        q;
+        " ";
+        Var.to_string q_var;
+        ". ";
+        to_string q_body;
+      ]
+  | Named {n_name; _} ->
+      Typecheck_types_t.string_of_typeconst_name n_name
+  | Opaque _ -> "<opaque>"
+  | TypeLam _ -> "<type lambda>"
+  | App{app_fn; app_arg; _} ->
+      String.concat [
+        "(";
+        to_string app_fn;
+        ") ";
+        to_string app_arg;
+      ]
+and format_type_member lbl ty =
+  let rec go params = function
+    | Recur{mu_var; mu_body; _}
+        when String.equal (Var.to_string mu_var) (Label.to_string lbl) ->
+          (List.rev params, mu_body)
+    | TypeLam{tl_param; tl_body; _} ->
+        go (tl_param :: params) tl_body
+    | t -> (List.rev params, t)
+  in
+  let (params, body) = go [] ty in
+  String.concat [
+    "type ";
+    Label.to_string lbl;
+    String.concat (List.map params ~f:(fun p -> " " ^ Var.to_string p))
+  ] ^ begin match body with
+    | Opaque _ -> ""
+    | _ -> " = " ^ to_string body
+  end

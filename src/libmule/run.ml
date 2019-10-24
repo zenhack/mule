@@ -78,7 +78,7 @@ let run : string -> unit LwtResult.t = fun input ->
               print_endline
                 (Runtime_ast.Expr.to_string ret
                     ^ " : "
-                    ^ Pretty.typ ty
+                    ^ Desugared_ast_type.to_string ty
                 )
           in
           Lwt.return (Ok ())
