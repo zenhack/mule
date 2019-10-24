@@ -3,12 +3,15 @@ let print_endline s =
   Lwt_io.write Lwt_io.stdout (s ^ "\n")
 
 let display label text =
-  let text =
-    String.split_lines text
-    |> List.map ~f:(fun line -> "\t" ^ line)
-    |> String.concat ~sep:"\n"
-  in
-  print_endline ("\n" ^ label ^ ":\n\n" ^ text)
+  if Config.debug_steps then
+    let text =
+      String.split_lines text
+      |> List.map ~f:(fun line -> "\t" ^ line)
+      |> String.concat ~sep:"\n"
+    in
+    print_endline ("\n" ^ label ^ ":\n\n" ^ text)
+  else
+    Lwt.return ()
 
 module LwtResult = struct
   type 'a t = ('a, MuleErr.t) Result.t Lwt.t
@@ -65,6 +68,12 @@ let run : string -> unit LwtResult.t = fun input ->
           let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
           let ret = Eval.eval rexp in
           let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
+          let%lwt _ =
+            if Config.debug_steps then
+              Lwt.return ()
+            else
+              print_endline (Runtime_ast.Expr.to_string ret)
+          in
           Lwt.return (Ok ())
         with
         | MuleErr.MuleExn e ->
