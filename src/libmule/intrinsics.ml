@@ -52,7 +52,7 @@ let row kvs =
 
 let recordType tys vals =
   D.Type.Record
-    { r_src = S.Type.Var {v_var = Var.of_string "<intrinsic>"}
+    { r_src = None
     ; r_info = ktype
     ; r_types = row tys
     ; r_values = row vals

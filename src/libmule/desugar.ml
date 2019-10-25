@@ -248,7 +248,7 @@ and desugar_union_type tail (l, r) =
         (`MalformedType
             "Unions must be composed of ctors and at most one ...r")
 and desugar_record_type types fields r =
-  let r_src = ST.Record {r_items = r} in
+  let r_src = Some (ST.Record {r_items = r}) in
   let rec go types fields = function
     (* TODO: how do we have variable fields for the type row? *)
     | (ST.Type(lbl, params, Some t) :: fs) ->

@@ -46,7 +46,7 @@ let rec go seen uv =
             r_info = ty_id;
             r_types;
             r_values;
-            r_src = ST.Record {r_items = []};
+            r_src = None;
           }
           |> maybe_add_recur ty_id (Set.union fv_types fv_values)
       | `Const(ty_id, `Named `Union, [row, _], _) ->

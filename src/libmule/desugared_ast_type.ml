@@ -31,7 +31,7 @@ type 'i t =
       { r_info : 'i
       ; r_types : 'i row
       ; r_values : 'i row
-      ; r_src : Surface_ast.Type.t;
+      ; r_src : Surface_ast.Type.t option;
       }
   | Union of {
       u_row : 'i row;
