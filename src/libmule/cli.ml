@@ -6,11 +6,11 @@ open Cmdliner
 let s_debug_opts = "OPTIONS FOR DEVELOPING MULE"
 
 let debug_opts_block = `Blocks [
-          `S s_debug_opts;
-          `P (
-            "These options are inteded for use in developing mule itself;"
-            ^ " they are not likely to be of interest to users."
-          );
+    `S s_debug_opts;
+    `P (
+      "These options are inteded for use in developing mule itself;"
+      ^ " they are not likely to be of interest to users."
+    );
   ]
 
 let man_with_args = [
