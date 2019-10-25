@@ -11,7 +11,7 @@ let display_always label text =
   print_endline ("\n" ^ label ^ ":\n\n" ^ text)
 
 let display label text =
-  if Config.debug_steps then
+  if Config.debug_steps () then
     display_always label text
   else
     Lwt.return ()
@@ -72,7 +72,7 @@ let run : string -> unit LwtResult.t = fun input ->
           let ret = Eval.eval rexp in
           let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
           let%lwt _ =
-            if Config.debug_steps then
+            if Config.debug_steps () then
               Lwt.return ()
             else
               print_endline

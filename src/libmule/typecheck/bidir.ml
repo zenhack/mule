@@ -466,7 +466,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
           MuleErr.bug "TODO: require_subytpe"
     end
 and trace_req_subtype ~sub ~super =
-  if Config.trace_require_subtype then
+  if Config.trace_require_subtype () then
     begin
       Caml.print_endline "";
       (Sexp.List [

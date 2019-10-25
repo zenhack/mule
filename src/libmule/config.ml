@@ -1,16 +1,14 @@
-let env_equal =
-  Option.equal String.equal
+let config = ref (object
+    method print_eval_steps = false
+    method always_print_stack_trace = false
+    method trace_require_subtype = false
+    method debug_steps = false
+  end)
 
-let flag: string -> bool =
-  fun name -> env_equal (Caml.Sys.getenv_opt name) (Some "1")
+let set new_cfg =
+  config := new_cfg
 
-let render_constraints = flag "RENDER_CONSTRAINTS"
-let print_eval_steps   = flag "PRINT_EVAL_STEPS"
-let always_print_stack_trace = flag "ALWAYS_PRINT_STACK_TRACE"
-let trace_require_subtype = flag "TRACE_REQUIRE_SUBTYPE"
-let debug_steps = flag "DEBUG_STEPS"
-
-let browser: string =
-  match Caml.Sys.getenv_opt "BROWSER" with
-  | Some b -> b
-  | None -> "firefox"
+let print_eval_steps () = (!config)#print_eval_steps
+let always_print_stack_trace () = (!config)#always_print_stack_trace
+let trace_require_subtype () = (!config)#trace_require_subtype
+let debug_steps () = (!config)#debug_steps

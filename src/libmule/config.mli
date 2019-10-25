@@ -1,8 +1,7 @@
 
-val render_constraints : bool
-val print_eval_steps   : bool
-val always_print_stack_trace : bool
-val trace_require_subtype : bool
-val debug_steps : bool
+val set : Cli.debug_flags -> unit
 
-val browser : string
+val print_eval_steps : unit -> bool
+val always_print_stack_trace : unit ->  bool
+val trace_require_subtype : unit -> bool
+val debug_steps : unit -> bool

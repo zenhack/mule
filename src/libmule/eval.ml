@@ -4,7 +4,7 @@ let bug msg term =
   MuleErr.bug (msg ^ ": " ^ Pretty.runtime_expr term)
 
 let report step stack expr =
-  if Config.print_eval_steps then
+  if Config.print_eval_steps () then
     begin
       Stdio.print_endline ("evaluation: " ^ step ^ ": " ^ Pretty.runtime_expr expr);
       Stdio.print_endline ("stack:");

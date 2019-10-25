@@ -98,7 +98,9 @@ let interp_cmd = function
 
 let main () =
   match Cli.parse_cmd () with
-  | `Ok cmd -> interp_cmd cmd
+  | `Ok result ->
+      Config.set result#debug_flags;
+      interp_cmd result#cmd
   | `Version | `Help -> Caml.exit 0
   | `Error _ -> Caml.exit 1
 
