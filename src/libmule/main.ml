@@ -50,7 +50,7 @@ let interp_cmd = function
       let%lwt _ = Run.run contents in
       Lwt.return ()
   | `Build_js file_name ->
-        begin try%lwt
+      begin try%lwt
           let%lwt dexp =
             load_and_typecheck
               Surface_ast.Type.(

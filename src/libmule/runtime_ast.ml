@@ -46,7 +46,7 @@ module Expr = struct
    * - The De Bruijn index representation would be confusing to users if we showed it.
    * - More generally, a displayed non-value (including the body of a lambda) would
    *   include code that has been transformed.
-   *)
+  *)
   let rec to_string = function
     | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ | ConstMatch _ ->
         "<non-value>"

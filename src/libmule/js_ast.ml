@@ -13,8 +13,8 @@ let rec expr = function
       braces (
         comma_sep (
           List.map fs ~f:(fun (name, e) ->
-              expr (String name) ^ c ':' ^ parens (expr e)
-            )
+            expr (String name) ^ c ':' ^ parens (expr e)
+          )
         )
       )
   | String str ->
@@ -46,13 +46,13 @@ and stmt = function
         braces (
           concat [
             List.map sw_cases ~f:(fun (e, b) ->
-                concat [
-                  s "case ";
-                  expr e;
-                  c ':';
-                  stmts b;
-                ]
-              )
+              concat [
+                s "case ";
+                expr e;
+                c ':';
+                stmts b;
+              ]
+            )
             |> concat;
             begin match sw_default with
               | None -> empty

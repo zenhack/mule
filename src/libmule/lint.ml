@@ -31,19 +31,19 @@ let check_duplicate_record_fields =
         go_type ty
   and go_let =
     List.iter ~f:(function
-        | `BindVal(pat, e) ->
-            go_pat pat;
-            go_expr e
-        | `BindType(_, _, ty) -> go_type ty
-      )
+      | `BindVal(pat, e) ->
+          go_pat pat;
+          go_expr e
+      | `BindType(_, _, ty) -> go_type ty
+    )
   and go_fields fields =
     List.iter fields ~f:(function
-        | `Value (_, ty, e) ->
-            Option.iter ty ~f:go_type;
-            go_expr e
-        | `Type (_, _, ty) ->
-            go_type ty
-      );
+      | `Value (_, ty, e) ->
+          Option.iter ty ~f:go_type;
+          go_expr e
+      | `Type (_, _, ty) ->
+          go_type ty
+    );
     let labels = List.map fields ~f:(function
         | `Value (lbl, _, _) -> lbl
         | `Type (lbl, _, _) -> lbl
@@ -65,14 +65,14 @@ let check_duplicate_record_fields =
     | Type.Fn{fn_param; fn_ret} -> go_type fn_param; go_type fn_ret
     | Type.Record {r_items = fields} ->
         List.map fields ~f:(function
-            | Type.Rest _ -> []
-            | Type.Field(lbl, ty)
-            | Type.Type(lbl, _, Some ty) ->
-                go_type ty;
-                [lbl]
-            | Type.Type (lbl, _, None) ->
-                [lbl]
-          )
+          | Type.Rest _ -> []
+          | Type.Field(lbl, ty)
+          | Type.Type(lbl, _, Some ty) ->
+              go_type ty;
+              [lbl]
+          | Type.Type (lbl, _, None) ->
+              [lbl]
+        )
         |> List.concat
         |> go_labels
     | Type.Union{u_l = l; u_r = r} -> go_type l; go_type r

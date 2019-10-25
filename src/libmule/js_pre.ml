@@ -38,16 +38,16 @@ let rec cps k e = match e with
       k (Lam2(p, kv, cps k' body))
   | Call1(f, x) ->
       f |> cps (fun f' ->
-      x |> cps (fun x' ->
-        Continue(Call2(f', x', lam1 k))))
+        x |> cps (fun x' ->
+          Continue(Call2(f', x', lam1 k))))
   | Switch(e, arms, def) ->
       e |> cps (fun e ->
-          Switch
-            ( e
-            , List.map arms ~f:(fun (l, v) -> (l, cps k v))
-            , Option.map def ~f:(cps k)
-            )
-        )
+        Switch
+          ( e
+          , List.map arms ~f:(fun (l, v) -> (l, cps k v))
+          , Option.map def ~f:(cps k)
+          )
+      )
   | Lazy e ->
       let k' = Gensym.anon_var () in
       Lazy(Lam1(k', e |> cps (fun e -> Call1(Var k', e))))
@@ -92,8 +92,8 @@ let rec to_js = function
   | Switch(e, cases, default) ->
       Js.Call
         ( Js.Lam
-          ( []
-          , `S [
+            ( []
+            , `S [
               Js.Switch {
                 sw_scrutinee = to_js e;
                 sw_cases =
@@ -108,7 +108,7 @@ let rec to_js = function
                   );
               }
             ]
-          )
+            )
         , []
         )
   | Lazy e ->

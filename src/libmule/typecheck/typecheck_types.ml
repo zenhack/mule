@@ -44,7 +44,7 @@ let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
 (* constructors for common type constants. *)
 let const: u_typeconst -> (u_var * k_var) list -> k_var -> u_var =
   fun c args k ->
-    UnionFind.make (`Const(Gensym.gensym (), c, args, k))
+  UnionFind.make (`Const(Gensym.gensym (), c, args, k))
 let const_ty name = const (`Named name) [] ktype
 let int = const_ty `Int
 let text = const_ty `Text
@@ -73,28 +73,28 @@ let apply: u_var -> u_var -> u_var = fun f x ->
     | k ->
         MuleErr.throw
           (`TypeError
-             (* FIXME: if presented in an error message this may be confusing, as
-              * we don't actually need type -> type, but just some arrow kind.
-              *
-              * We should find a way to not over-specify the kind.
-             *)
-             (`MismatchedKinds
-                ( `Arrow(`Type, `Type)
-                , match k with
-                | `Type -> `Type
-                | `Row -> `Row
-                | _ -> failwith "impossible"
-                )
-             )
+              (* FIXME: if presented in an error message this may be confusing, as
+               * we don't actually need type -> type, but just some arrow kind.
+               *
+               * We should find a way to not over-specify the kind.
+              *)
+              (`MismatchedKinds
+                  ( `Arrow(`Type, `Type)
+                  , match k with
+                  | `Type -> `Type
+                  | `Row -> `Row
+                  | _ -> failwith "impossible"
+                  )
+              )
           )
   end
 let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
-    let q_id = Gensym.gensym () in
-    let ty_id = Gensym.gensym () in
-    let ty_flag = `Explicit in
-    let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
-    UnionFind.make (`Quant(q_id, q, ty_id, k, mkbody v))
+  let q_id = Gensym.gensym () in
+  let ty_id = Gensym.gensym () in
+  let ty_flag = `Explicit in
+  let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
+  UnionFind.make (`Quant(q_id, q, ty_id, k, mkbody v))
 
 let all : k_var -> (u_var -> u_var) -> u_var =
   fun k mkbody -> quant `All k mkbody
@@ -104,24 +104,24 @@ let exist : k_var -> (u_var -> u_var) -> u_var =
 
 let lambda : k_var -> (u_var -> u_var) -> u_var =
   fun kparam mkbody ->
-    let id = Gensym.gensym () in
-    let param = UnionFind.make (
+  let id = Gensym.gensym () in
+  let param = UnionFind.make (
       `Free
         ( {ty_id = Gensym.gensym (); ty_flag = `Explicit}
         , kparam
         )
     )
-    in
-    let body = mkbody param in
-    let kbody = get_kind body in
-    UnionFind.make
-      (`Const
+  in
+  let body = mkbody param in
+  let kbody = get_kind body in
+  UnionFind.make
+    (`Const
         ( id
         , `Named `Lambda
         , [param, kparam; body, kbody]
         , UnionFind.make (`Arrow(kparam, kbody))
         )
-      )
+    )
 
 let rec sexp_of_u_kind: u_kind -> Sexp.t = function
   | `Free n -> Int.sexp_of_t n

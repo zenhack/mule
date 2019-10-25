@@ -24,9 +24,9 @@ module LwtResult = struct
 
   let bind x ~f =
     Lwt.bind x (function
-        | Ok x' -> f x'
-        | Error e -> Lwt.return (Error e)
-      )
+      | Ok x' -> f x'
+      | Error e -> Lwt.return (Error e)
+    )
 
   let both x y =
     let (>>=) x f = bind x ~f in
@@ -77,8 +77,8 @@ let run : string -> unit LwtResult.t = fun input ->
             else
               print_endline
                 (Runtime_ast.Expr.to_string ret
-                    ^ " : "
-                    ^ Desugared_ast_type.to_string ty
+                 ^ " : "
+                 ^ Desugared_ast_type.to_string ty
                 )
           in
           Lwt.return (Ok ())

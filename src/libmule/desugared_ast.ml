@@ -6,9 +6,9 @@ module SubstRec = struct
   open Common_ast
 
   type args = {
-      rec_name: Var.t;
-      type_vars: VarSet.t;
-      val_vars: VarSet.t;
+    rec_name: Var.t;
+    type_vars: VarSet.t;
+    val_vars: VarSet.t;
   }
 
   let mask_val args var =
@@ -82,13 +82,13 @@ module SubstRec = struct
     | Type.Opaque _ -> ty
   and row: args -> 'i Type.row -> 'i Type.row =
     fun args (info, fields, rest) ->
-        ( info
-        , List.map fields ~f:(fun (l, t) -> (l, typ args t))
-        , rest
-          (* FIXME: we should potentially do a substitution here, but it's
-           * not clear how since rest is [Var.t option], so we can't put another
-           * expr there. *)
-        )
+    ( info
+    , List.map fields ~f:(fun (l, t) -> (l, typ args t))
+    , rest
+      (* FIXME: we should potentially do a substitution here, but it's
+       * not clear how since rest is [Var.t option], so we can't put another
+       * expr there. *)
+    )
   and expr: args -> 'i Expr.t -> 'i Expr.t = fun args e -> match e with
     | Expr.Var {v_var} when Set.mem args.val_vars v_var ->
         Expr.App {
@@ -125,9 +125,9 @@ module SubstRec = struct
             );
           default =
             Option.map default ~f:(function
-                | (None, body) -> (None, expr args body)
-                | (Some v, body) -> (Some v, expr (mask_val args v) body)
-              )
+              | (None, body) -> (None, expr args body)
+              | (Some v, body) -> (Some v, expr (mask_val args v) body)
+            )
         }
     | Expr.ConstMatch{cm_cases; cm_default} ->
         Expr.ConstMatch {
@@ -136,7 +136,7 @@ module SubstRec = struct
         }
     | Expr.LetRec{letrec_vals; letrec_types; letrec_body} ->
         let remove_batch set vars =
-            List.fold vars ~init:set ~f:(fun acc (k, _) -> Set.remove acc k)
+          List.fold vars ~init:set ~f:(fun acc (k, _) -> Set.remove acc k)
         in
         let args =
           { args with

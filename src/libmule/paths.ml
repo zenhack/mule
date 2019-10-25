@@ -4,27 +4,27 @@ include Paths_t
 let validate_parts parts =
   let path = String.concat ~sep:"/" parts in
   List.iter parts ~f:(fun part -> match part with
-      | "" | "." | ".." -> MuleErr.(
-          throw
-            (`PathError {
+    | "" | "." | ".." -> MuleErr.(
+        throw
+          (`PathError {
                 pe_path = path;
                 pe_problem = `BadPathPart part;
               })
-        )
-      | _ -> String.iter part ~f:(fun c ->
-          if not (Char.is_alphanum c ) then
-            begin match c with
-              | '-' | '_' | '.' -> ()
-              | _ -> MuleErr.(
-                  throw
-                    (`PathError {
+      )
+    | _ -> String.iter part ~f:(fun c ->
+        if not (Char.is_alphanum c ) then
+          begin match c with
+            | '-' | '_' | '.' -> ()
+            | _ -> MuleErr.(
+                throw
+                  (`PathError {
                         pe_path = path;
                         pe_problem = `IllegalChar c;
                       })
-                )
-            end
-        )
-    )
+              )
+          end
+      )
+  )
 
 let resolve_path ~here ~target =
   let parts = String.split ~on:'/' target in

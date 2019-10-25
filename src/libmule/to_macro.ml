@@ -7,9 +7,9 @@ module M = Macro_ast
 module Wm = With_meta
 
 let unbound_var v = M.{
-  v_id = 0;
-  v_name = Common_ast.Var.to_string v;
-}
+    v_id = 0;
+    v_name = Common_ast.Var.to_string v;
+  }
 
 let wrap_meta meta data = Wm.{meta; data}
 

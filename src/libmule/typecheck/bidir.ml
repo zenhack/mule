@@ -23,12 +23,12 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
 
 let rec subst ~target ~replacement uv =
   match UnionFind.get uv with
-    | `Free({ty_id; _}, _) when ty_id = target -> replacement
-    | `Free _ -> uv
-    | `Quant(_, _, v, _, _) when v = target ->
-        (* Shadowing the target; stop here. *)
-        uv
-    | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
+  | `Free({ty_id; _}, _) when ty_id = target -> replacement
+  | `Free _ -> uv
+  | `Quant(_, _, v, _, _) when v = target ->
+      (* Shadowing the target; stop here. *)
+      uv
+  | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
 and copy = function
   | `Free _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
@@ -160,7 +160,7 @@ and make_type ctx ty = match ty with
       let k_arg = get_kind arg in
       apply
         (make_type ctx app_fn
-          |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
+         |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
         )
         arg
   | DT.Path{p_var; p_lbls; _} ->
@@ -174,21 +174,21 @@ and make_type ctx ty = match ty with
       result_type
 and make_path_type result_type lbls =
   begin match List.rev lbls with
-  | [] ->
-      (* Shouldn't happen, but this is correct if it did. *)
-      result_type
-  | (last :: rest) ->
-      List.fold_left
-        rest
-        ~init:(exist krow (fun rv -> (exist krow (fun rt ->
-            record (extend last result_type rt) rv
-          ))))
-        ~f:(fun tail next ->
-          exist krow (fun rv -> (exist krow (fun rt ->
-              record
-                rt
-                (extend next tail rv)
+    | [] ->
+        (* Shouldn't happen, but this is correct if it did. *)
+        result_type
+    | (last :: rest) ->
+        List.fold_left
+          rest
+          ~init:(exist krow (fun rv -> (exist krow (fun rt ->
+              record (extend last result_type rt) rv
             ))))
+          ~f:(fun tail next ->
+            exist krow (fun rv -> (exist krow (fun rt ->
+                record
+                  rt
+                  (extend next tail rv)
+              ))))
   end
 and strip_param_exists ctx pty =
   match UnionFind.get pty with
@@ -250,10 +250,10 @@ and synth: context -> 'i DE.t -> u_var =
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
         synth
-            { ctx
-              with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
-            }
-            let_body
+          { ctx
+            with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
+          }
+          let_body
     | DE.App{app_fn; app_arg} ->
         with_locals ctx (fun ctx ->
           let p = fresh_local ctx `Flex ktype in
@@ -268,14 +268,14 @@ and synth: context -> 'i DE.t -> u_var =
           let result = fresh_local ctx `Flex ktype in
           let ftype = check ctx cm_default (param **> result) in
           begin match Map.to_alist cm_cases with
-          | [] -> ftype
-          | cs ->
-              List.iter cs ~f:(fun (p, body) ->
-                let _ = check_const ctx p param in
-                let _ = check ctx body result in
-                ()
-              );
-              ftype
+            | [] -> ftype
+            | cs ->
+                List.iter cs ~f:(fun (p, body) ->
+                  let _ = check_const ctx p param in
+                  let _ = check ctx body result in
+                  ()
+                );
+                ftype
           end
         )
     | DE.Match {cases; default} ->
@@ -302,9 +302,9 @@ and synth: context -> 'i DE.t -> u_var =
           Map.iteri map ~f:(fun ~key ~data ->
             let (v, body) = Util.find_exn cases key in
             let _ = check
-              { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data }
-              body
-              result
+                { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data }
+                body
+                result
             in
             ()
           );
@@ -317,7 +317,7 @@ and synth: context -> 'i DE.t -> u_var =
          * the plan for non-cyclic dependencies is to sort them topologically and
          * separate them out into separate let expressions in an earlier stage, so
          * we won't have to worry about that here.
-         *)
+        *)
         with_locals ctx (fun ctx ->
           let ctx = List.fold letrec_types ~init:ctx ~f:(fun ctx (v, ty) ->
               { ctx with type_env =
@@ -359,112 +359,112 @@ and synth: context -> 'i DE.t -> u_var =
         )
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
-    let ty_got = synth ctx e in
-    require_subtype ctx ~sub:ty_got ~super:ty_want;
-    ty_want
+  let ty_got = synth ctx e in
+  require_subtype ctx ~sub:ty_got ~super:ty_want;
+  ty_want
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
-    require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super)
+  require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super)
 and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
-    trace_req_subtype ~sub ~super;
-    begin match UnionFind.get sub, UnionFind.get super with
-      | _ when UnionFind.equal sub super -> ()
-      (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
-       * sure this can actually come up, but if it does, this is the behavior that
-       * makes sense. *)
-      | l, r when get_id l = get_id r -> UnionFind.merge (fun _ r -> r) sub super
+  trace_req_subtype ~sub ~super;
+  begin match UnionFind.get sub, UnionFind.get super with
+    | _ when UnionFind.equal sub super -> ()
+    (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
+     * sure this can actually come up, but if it does, this is the behavior that
+     * makes sense. *)
+    | l, r when get_id l = get_id r -> UnionFind.merge (fun _ r -> r) sub super
 
-      | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
-          (* Both sides are flexible variables; merge them, using the larger of their
-           * scopes. *)
-          require_kind kl kr;
-          UnionFind.merge
-            (fun _ _ ->
+    | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
+        (* Both sides are flexible variables; merge them, using the larger of their
+         * scopes. *)
+        require_kind kl kr;
+        UnionFind.merge
+          (fun _ _ ->
               `Free
                 ( {
-                    ty_flag = `Flex;
-                    (* The variable with the greater scope will have been
-                     * created first, and therefore have a smaller id: *)
-                    ty_id = Int.min l_id r_id;
-                  }
+                  ty_flag = `Flex;
+                  (* The variable with the greater scope will have been
+                   * created first, and therefore have a smaller id: *)
+                  ty_id = Int.min l_id r_id;
+                }
                 , kl
                 )
-            )
-            sub super
-      (* One side is flexible; set it equal to the other one. *)
-      | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
-      | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
+          )
+          sub super
+    (* One side is flexible; set it equal to the other one. *)
+    | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
+    | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
 
-      | `Quant(_, q, id, k, body), _ ->
-          require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
-      | _, `Quant(_, q, id, k, body) ->
-          require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
+    | `Quant(_, q, id, k, body), _ ->
+        require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
+    | _, `Quant(_, q, id, k, body) ->
+        require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
 
-      (* Rigid variable should fail (If they were the same already, they would have been
-       * covered above): *)
-      | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
-          MuleErr.throw (`TypeError(`PermissionErr `Graft))
+    (* Rigid variable should fail (If they were the same already, they would have been
+     * covered above): *)
+    | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
+        MuleErr.throw (`TypeError(`PermissionErr `Graft))
 
-      (* Mismatched named constructors are never reconcilable: *)
-      | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
-            MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
+    (* Mismatched named constructors are never reconcilable: *)
+    | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
+        MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
 
-      (* All of the zero-argument consts unify with themselves; if the above case
-       * didn't cover this one, then we're good: *)
-      | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
+    (* All of the zero-argument consts unify with themselves; if the above case
+     * didn't cover this one, then we're good: *)
+    | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
 
-      (* Functions. *)
-      | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
-        `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
-          (* Note the flipped sub vs. super in the parameter case; this is standard
-           * contravariance. *)
-          require_subtype ctx ~sub:psuper ~super:psub;
-          require_subtype ctx ~sub:rsub ~super:rsuper
+    (* Functions. *)
+    | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
+      `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
+        (* Note the flipped sub vs. super in the parameter case; this is standard
+         * contravariance. *)
+        require_subtype ctx ~sub:psuper ~super:psub;
+        require_subtype ctx ~sub:rsub ~super:rsuper
 
-      | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
-          wrong_num_args `Fn 2 x y
+    | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
+        wrong_num_args `Fn 2 x y
 
-      | `Const(_, `Named `Union, [row_sub, _], _),
-        `Const(_, `Named `Union, [row_super, _], _) ->
-          (* Unions are contravariant in their arguments.
-           *
-           * TODO: I(isd) _think_ that's right, but I need to think about it a
-           * bit more deeply. *)
-          require_subtype ctx ~sub:row_super ~super:row_sub
+    | `Const(_, `Named `Union, [row_sub, _], _),
+      `Const(_, `Named `Union, [row_super, _], _) ->
+        (* Unions are contravariant in their arguments.
+         *
+         * TODO: I(isd) _think_ that's right, but I need to think about it a
+         * bit more deeply. *)
+        require_subtype ctx ~sub:row_super ~super:row_sub
 
-      | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
-          wrong_num_args `Union 1 x y
+    | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
+        wrong_num_args `Union 1 x y
 
-      | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
-        `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-          require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
-          require_subtype ctx ~sub:rvals_sub ~super:rvals_super
+    | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
+      `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
+        require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
+        require_subtype ctx ~sub:rvals_sub ~super:rvals_super
 
-      | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
-          wrong_num_args `Record 2 x y
+    | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
+        wrong_num_args `Record 2 x y
 
-      | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
-          MuleErr.throw
-            (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
-      | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
-          ()
-      | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
-        `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
-          if Label.equal lsub lsuper then
-            begin
-              require_subtype ctx ~sub:hsub ~super:hsuper;
-              require_subtype ctx ~sub:tsub ~super:tsuper
-            end
-          else
-            failwith "TODO: mismatched extend"
+    | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
+        MuleErr.throw
+          (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
+    | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
+        ()
+    | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
+      `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
+        if Label.equal lsub lsuper then
+          begin
+            require_subtype ctx ~sub:hsub ~super:hsuper;
+            require_subtype ctx ~sub:tsub ~super:tsuper
+          end
+        else
+          failwith "TODO: mismatched extend"
 
-      | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
-          MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
+    | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
+        MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
-      | _ ->
-          MuleErr.bug "TODO: require_subytpe"
-    end
+    | _ ->
+        MuleErr.bug "TODO: require_subytpe"
+  end
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
@@ -486,9 +486,9 @@ and trace_req_subtype ~sub ~super =
     end
 and unroll_quant ctx side q id k body =
   subst
-      ~target:id
-      ~replacement:(fresh_local ctx (get_flag q side) k)
-      body
+    ~target:id
+    ~replacement:(fresh_local ctx (get_flag q side) k)
+    body
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
   require_subtype ctx ~sub:ty_got ~super:ty_want
@@ -496,14 +496,14 @@ and with_kind k u = require_kind k (get_kind u); u
 and require_kind l r = UnionFind.merge unify_kind l r
 and unify_kind l r =
   begin match l, r with
-  | `Free n, k | k, `Free n -> kind_occurs_check n k; k
-  | `Type, `Type | `Row, `Row -> r
-  | `Arrow(pl, pr), `Arrow(rl, rr) ->
-      UnionFind.merge unify_kind pl pr;
-      UnionFind.merge unify_kind rl rr;
-      r
-  | _ ->
-      MuleErr.throw (`TypeError(`MismatchedKinds (Extract.kind l, Extract.kind r)))
+    | `Free n, k | k, `Free n -> kind_occurs_check n k; k
+    | `Type, `Type | `Row, `Row -> r
+    | `Arrow(pl, pr), `Arrow(rl, rr) ->
+        UnionFind.merge unify_kind pl pr;
+        UnionFind.merge unify_kind rl rr;
+        r
+    | _ ->
+        MuleErr.throw (`TypeError(`MismatchedKinds (Extract.kind l, Extract.kind r)))
   end
 and kind_occurs_check: int -> u_kind -> unit =
   fun n -> function
@@ -515,17 +515,17 @@ and kind_occurs_check: int -> u_kind -> unit =
         kind_occurs_check n (UnionFind.get y)
 and whnf: u_var -> u_var =
   fun t ->
-    match UnionFind.get t with
-    | `Quant(qid, q, v, k, body) ->
-        UnionFind.set
-          (`Quant(qid, q, v, k, whnf body))
-          t;
-        t
-    | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->
-        require_kind (UnionFind.make(`Arrow(xk, k))) fk;
-        apply_type t f x;
-        whnf t
-    | _ -> t
+  match UnionFind.get t with
+  | `Quant(qid, q, v, k, body) ->
+      UnionFind.set
+        (`Quant(qid, q, v, k, whnf body))
+        t;
+      t
+  | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->
+      require_kind (UnionFind.make(`Arrow(xk, k))) fk;
+      apply_type t f x;
+      whnf t
+  | _ -> t
 and apply_type app f arg =
   match UnionFind.get (whnf f) with
   | `Const(_, `Named `Lambda, [p, _; body, _], _) ->

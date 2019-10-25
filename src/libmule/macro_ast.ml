@@ -12,9 +12,9 @@ type 'm var_ = ('m, var) Wm.t
 
 type 'm pattern =
   | PVar of var
-  [@@deriving sexp]
+[@@deriving sexp]
 type 'm pattern_ = ('m, 'm pattern) Wm.t
-  [@@deriving sexp]
+[@@deriving sexp]
 
 type 'm exp =
   | EVar of var
@@ -22,16 +22,16 @@ type 'm exp =
   | EApp of ('m exp_ * 'm exp_)
   | EWithType of ('m exp_ * 'm typ_)
   | EConst of Common_ast.Const.t
-  [@@deriving sexp]
+[@@deriving sexp]
 and 'm exp_ = ('m, 'm exp) Wm.t
-  [@@deriving sexp]
+[@@deriving sexp]
 and 'm typ =
   | TVar of var
   | TFn of ('m typ_ * 'm typ_)
   | TQuant of ([`All|`Exist] * 'm var_ * 'm typ_)
-  [@@deriving sexp]
+[@@deriving sexp]
 and 'm typ_ = ('m, 'm typ) Wm.t
-  [@@deriving sexp]
+[@@deriving sexp]
 
 type 'cmp rename_env = {
   re_terms: (string, var, 'cmp) Map.t;
@@ -66,9 +66,9 @@ module Type = struct
     let apply_kids ty ~f = match ty with
       | TVar _ -> ty
       | TFn (param, ret) -> TFn
-          ( Wm.map_data ~f param
-          , Wm.map_data ~f ret
-          )
+            ( Wm.map_data ~f param
+            , Wm.map_data ~f ret
+            )
       | TQuant (q, v, body) ->
           TQuant(q, v, Wm.map_data ~f body)
   end
@@ -137,9 +137,9 @@ module Exp = struct
   let apply_types e ~f =
     apply_patterns e ~f:(Pattern.apply_types ~f)
     |>  bottom_up ~f:(function
-        | EWithType (e, ty) -> EWithType (e, f ty)
-        | e -> e
-      )
+      | EWithType (e, ty) -> EWithType (e, f ty)
+      | e -> e
+    )
 
   let subst e ~var ~replacement =
     bottom_up e ~f:(function

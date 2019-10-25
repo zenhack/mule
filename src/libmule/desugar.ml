@@ -149,13 +149,13 @@ let rec quantify_opaques t = match t with
           }
       in
       List.fold !vars ~init ~f:(fun ty v ->
-          DT.Quant {
-            q_info = `Unknown;
-            q_quant = `Exist;
-            q_var = v;
-            q_body = ty;
-          }
-        )
+        DT.Quant {
+          q_info = `Unknown;
+          q_quant = `Exist;
+          q_var = v;
+          q_body = ty;
+        }
+      )
   | DT.Opaque i -> DT.Opaque i
   | DT.Fn {fn_info; fn_pvar; fn_param; fn_ret} ->
       DT.Fn {
@@ -204,7 +204,7 @@ let rec desugar_type' = function
             q_var = v;
             q_body = body;
           }
-          )
+        )
   | ST.Recur{recur_var = v; recur_body = body} ->
       DT.Recur {
         mu_info = `Type;
@@ -246,7 +246,7 @@ and desugar_union_type tail (l, r) =
   | _ ->
       MuleErr.throw
         (`MalformedType
-           "Unions must be composed of ctors and at most one ...r")
+            "Unions must be composed of ctors and at most one ...r")
 and desugar_record_type types fields r =
   let r_src = ST.Record {r_items = r} in
   let rec go types fields = function
@@ -396,25 +396,25 @@ and desugar_lambda ps body =
 and desugar_record fields =
   let types, values =
     List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->
-        match bind with
-        | `Value(l, None, e) -> (types, ((Ast.var_of_label l, desugar e) :: values))
-        | `Value(l, Some ty, e) ->
-            ( types
-            , ( Ast.var_of_label l
-              , D.WithType {
-                  wt_expr = desugar e;
-                  wt_type = desugar_type ty;
-                };
-              )
-              :: values
+      match bind with
+      | `Value(l, None, e) -> (types, ((Ast.var_of_label l, desugar e) :: values))
+      | `Value(l, Some ty, e) ->
+          ( types
+          , ( Ast.var_of_label l
+            , D.WithType {
+                wt_expr = desugar e;
+                wt_type = desugar_type ty;
+              };
+          )
+            :: values
+          )
+      | `Type (l, params, body) ->
+          ( ( desugar_type_binding (Ast.var_of_label l, params, body)
+              :: types
             )
-        | `Type (l, params, body) ->
-            ( ( desugar_type_binding (Ast.var_of_label l, params, body)
-                :: types
-              )
-            , values
-            )
-      )
+          , values
+          )
+    )
   in
   let body = List.fold_right fields ~init:D.EmptyRecord ~f:(fun bind old ->
       match bind with
@@ -523,9 +523,9 @@ and desugar_lbl_match dict = function
   | (SP.Ctor {c_lbl = lbl; c_arg = p}, body) :: cases ->
       let dict' =
         Map.update dict lbl ~f:(function
-            | None -> [(p, body)]
-            | Some cases -> ((p, body) :: cases)
-          )
+          | None -> [(p, body)]
+          | Some cases -> ((p, body) :: cases)
+        )
       in
       desugar_lbl_match dict' cases
   | (_ :: cs) ->
@@ -533,14 +533,14 @@ and desugar_lbl_match dict = function
 and finalize_dict dict =
   Map.map dict
     ~f:( fun cases ->
-        let v = Gensym.anon_var () in
-        ( v
-        , D.App
-            { app_fn = desugar_match (List.rev cases)
-            ; app_arg = D.Var {v_var = v}
-            }
-        )
+      let v = Gensym.anon_var () in
+      ( v
+      , D.App
+          { app_fn = desugar_match (List.rev cases)
+          ; app_arg = D.Var {v_var = v}
+          }
       )
+    )
 and desugar_let bs body =
   let rec go vals types = function
     | [] ->
@@ -567,7 +567,7 @@ and desugar_let bs body =
                wt_expr = desugar e;
                wt_type = desugar_type ty
              }
-           ) :: vals)
+          ) :: vals)
           types
           bs
     | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
@@ -612,11 +612,11 @@ and desugar_type_binding (v, params, ty) =
       params
       ~init:ty
       ~f:(fun param tybody ->
-          DT.TypeLam {
-            tl_info = `Arrow(`Unknown, `Unknown);
-            tl_param = param;
-            tl_body = tybody;
-          }
-        )
+        DT.TypeLam {
+          tl_info = `Arrow(`Unknown, `Unknown);
+          tl_param = param;
+          tl_body = tybody;
+        }
+      )
   in
   (v, ty)

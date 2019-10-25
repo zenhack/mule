@@ -87,7 +87,7 @@ let rec sexp_of_t = function
         ; Map.sexp_of_m__t
             (module Label)
             (fun (v, e) ->
-               Sexp.List [Var.sexp_of_t v; sexp_of_t e]
+                  Sexp.List [Var.sexp_of_t v; sexp_of_t e]
             )
             cases
         ]
@@ -267,11 +267,11 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
       Match
         { cases =
             Map.map cases ~f:(fun (var, body) ->
-                let env' = Map.remove env var in
-                ( var
-                , subst env' body
-                )
+              let env' = Map.remove env var in
+              ( var
+              , subst env' body
               )
+            )
         ; default = Option.map default ~f:(function
               | (None, body) -> (None, subst env body)
               | (Some var, body) ->

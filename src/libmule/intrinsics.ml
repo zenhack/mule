@@ -105,15 +105,15 @@ let values = dict
             prim (fun s -> int (Z.of_int (String.length (assert_text s))))
           ; "uncons",
             prim (fun s ->
-                match assert_text s with
-                | "" -> unionVal "None" (recordVal [])
-                | txt -> unionVal "Some"
-                      (recordVal
-                         [ "head", char (txt.[0])
-                         ; "tail", text (String.drop_prefix txt 1)
-                         ]
-                      )
-              )
+              match assert_text s with
+              | "" -> unionVal "None" (recordVal [])
+              | txt -> unionVal "Some"
+                    (recordVal
+                        [ "head", char (txt.[0])
+                        ; "tail", text (String.drop_prefix txt 1)
+                        ]
+                    )
+            )
           ]
       )
     ; "char",

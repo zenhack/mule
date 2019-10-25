@@ -12,12 +12,12 @@ let get_ty_id: u_type -> int = function
 let var_of_int n =
   Common_ast.Var.of_string ("$$" ^ Int.to_string n)
 let mk_var id =
-    ( DT.Var {
+  ( DT.Var {
         v_info = id;
         v_var = var_of_int id;
       }
-    , IntSet.singleton id
-    )
+  , IntSet.singleton id
+  )
 
 let rec go seen uv =
   let t = UnionFind.get uv in
@@ -33,11 +33,11 @@ let rec go seen uv =
             q_id
             (Set.remove fvs v_id)
             (DT.Quant {
-                q_info = q_id;
-                q_quant = q;
-                q_var = var_of_int v_id;
-                q_body = body';
-            })
+                  q_info = q_id;
+                  q_quant = q;
+                  q_var = var_of_int v_id;
+                  q_body = body';
+                })
       | `Const(ty_id, `Named `Record, [rtypes, _; rvals, _], _) ->
           let seen' = Set.add seen ty_id in
           let (r_types, fv_types) = go_row seen' rtypes in
@@ -70,27 +70,27 @@ and go_row seen uv =
   let r = UnionFind.get uv in
   let ty_id = get_ty_id r in
   match r with
-    | `Free _ ->
-        ( (ty_id, [], Some (var_of_int ty_id))
-        , IntSet.singleton ty_id
-        )
-    | `Const(_, `Named `Empty, _, _) ->
-        ((ty_id, [], None), IntSet.empty)
-    | `Const(_, `Extend lbl, [h, _; t, _], _) ->
-        let (h', hfv) = go seen h in
-        let ((_, fields, tail), tfv) = go_row seen t in
-        ( (ty_id, ((lbl, h') :: fields), tail)
-        , Set.union hfv tfv
-        )
-    | _ ->
-        MuleErr.bug "Invalid row"
+  | `Free _ ->
+      ( (ty_id, [], Some (var_of_int ty_id))
+      , IntSet.singleton ty_id
+      )
+  | `Const(_, `Named `Empty, _, _) ->
+      ((ty_id, [], None), IntSet.empty)
+  | `Const(_, `Extend lbl, [h, _; t, _], _) ->
+      let (h', hfv) = go seen h in
+      let ((_, fields, tail), tfv) = go_row seen t in
+      ( (ty_id, ((lbl, h') :: fields), tail)
+      , Set.union hfv tfv
+      )
+  | _ ->
+      MuleErr.bug "Invalid row"
 and maybe_add_recur id fvs ty =
   if Set.mem fvs id then
     ( DT.Recur {
-        mu_info = id;
-        mu_var = var_of_int id;
-        mu_body = ty;
-      }
+          mu_info = id;
+          mu_var = var_of_int id;
+          mu_body = ty;
+        }
     , Set.remove fvs id
     )
   else
@@ -114,14 +114,14 @@ and make_const_type id c args =
     }
   | `Named `Lambda, [p; body] ->
       begin match p with
-      | DT.Var{v_var; _} ->
-          DT.TypeLam {
-            tl_info = id;
-            tl_param = v_var;
-            tl_body = body;
-          }
-      | _ ->
-          MuleErr.bug "type lambda has non-variable as a parameter"
+        | DT.Var{v_var; _} ->
+            DT.TypeLam {
+              tl_info = id;
+              tl_param = v_var;
+              tl_body = body;
+            }
+        | _ ->
+            MuleErr.bug "type lambda has non-variable as a parameter"
       end
   | `Named name, _ ->
       failwith ("TODO: make_const_type " ^ string_of_typeconst_name name)

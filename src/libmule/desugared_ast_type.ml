@@ -171,8 +171,8 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
 and sexp_of_row (_, fields, rest) =
   let fields =
     List.map fields ~f:(fun (l, t) ->
-        Sexp.List [Label.sexp_of_t l; sexp_of_t t]
-      )
+      Sexp.List [Label.sexp_of_t l; sexp_of_t t]
+    )
   in
   match rest with
   | Some v -> Sexp.List (fields @ [Sexp.Atom ("..." ^ Var.to_string v)])
@@ -296,7 +296,7 @@ let rec to_string = function
             ")";
           ]
         )
-      @ begin match rest with
+        @ begin match rest with
           | None -> []
           | Some v -> ["..." ^ Var.to_string v]
         end)
@@ -323,8 +323,8 @@ let rec to_string = function
 and format_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
-        when String.equal (Var.to_string mu_var) (Label.to_string lbl) ->
-          (List.rev params, mu_body)
+      when String.equal (Var.to_string mu_var) (Label.to_string lbl) ->
+        (List.rev params, mu_body)
     | TypeLam{tl_param; tl_body; _} ->
         go (tl_param :: params) tl_body
     | t -> (List.rev params, t)
