@@ -38,13 +38,14 @@ let keywords = Set.of_list (module String)
     ; "embed"
     ]
 
-(*
+(* Add source location info to a parser.
+ * The argument should be a parser that returns a *function* accepting
+ * the source location (as a Loc.t) of the data that it parsed. *)
 let with_loc p =
   let%bind start = MParser.get_pos in
   let%bind f = p in
   let%map stop = MParser.get_pos in
-  f (`SrcLoc (Loc.{start; stop}))
-   *)
+  f (Loc.{start; stop})
 
 let sep_start_by p sep =
   optional sep >> sep_by p sep
@@ -195,11 +196,11 @@ and typ_factor = lazy (
       let%map v = attempt (kwd "...") >> var in
       Type.RowRest {rr_var = v}
     end
-    ; begin
+    ; with_loc begin
       let%bind v = var in
       match%map many (kwd "." >> label) with
-      | [] -> Type.Var {v_var = v}
-      | p_lbls -> Type.Path {
+      | [] -> fun v_loc -> Type.Var {v_var = v; v_loc}
+      | p_lbls -> fun _loc -> Type.Path {
           p_var = v;
           p_lbls;
         }
@@ -330,7 +331,7 @@ and ex3 = lazy (
     ; lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
-    ; (var |>> fun v -> Expr.Var {v_var = v})
+    ; with_loc (var |>> fun v loc -> Expr.Var {v_var = v; v_loc = loc})
     ; parens (lazy_p expr)
     ; lazy_p record
     ; (ctor |>> fun c -> Expr.Ctor {c_lbl = c})

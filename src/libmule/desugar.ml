@@ -211,7 +211,7 @@ let rec desugar_type' = function
         mu_var = v;
         mu_body = desugar_type' body;
       }
-  | ST.Var {v_var = v} ->
+  | ST.Var {v_var = v; v_loc = _} ->
       DT.Var{v_info = `Unknown; v_var = v}
   | ST.Union {u_l; u_r} ->
       DT.Union {u_row = desugar_union_type None (u_l, u_r) }
@@ -294,7 +294,7 @@ and desugar = function
         e_value = Lwt_main.run (Paths.resolve_embed ~here:e_from ~target:e_path);
       }
   | S.Const {const_val = c} -> D.Const {const_val = c}
-  | S.Var {v_var = v} -> D.Var {v_var = v}
+  | S.Var {v_var = v; v_loc = _} -> D.Var {v_var = v}
   | S.App{app_fn = f; app_arg = x} -> D.App {
       app_fn = desugar f;
       app_arg = desugar x;

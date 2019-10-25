@@ -18,7 +18,10 @@ module Type = struct
         recur_var : Var.t;
         recur_body : t;
       }
-    | Var of {v_var : Var.t}
+    | Var of {
+        v_var : Var.t;
+        v_loc : Loc.t;
+      }
     | Record of {
         r_items : record_item list;
       }
@@ -84,7 +87,10 @@ module Expr = struct
         lam_params : Pattern.t list;
         lam_body : t;
       }
-    | Var of {v_var : Var.t}
+    | Var of {
+        v_var : Var.t;
+        v_loc : Loc.t;
+      }
     | Record of {r_fields : field list}
     | GetField of {
         gf_arg : t;
