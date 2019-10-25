@@ -471,21 +471,81 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
           (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
     | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
         ()
-    | `Const(_, `Extend lsub, [hsub, _; tsub, _], _),
-      `Const(_, `Extend lsuper, [hsuper, _; tsuper, _], _) ->
-        if Label.equal lsub lsuper then
-          begin
-            require_subtype ctx ~sub:hsub ~super:hsuper;
-            require_subtype ctx ~sub:tsub ~super:tsuper
-          end
-        else
-          failwith "TODO: mismatched extend"
+    | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
+        require_subtype_extend ctx ~sub ~super
 
     | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
         MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
     | _ ->
         MuleErr.bug "TODO: require_subytpe"
+  end
+and require_subtype_extend ctx ~sub ~super =
+  let fold_row =
+    let rec go m row =
+      require_kind (get_kind row) krow;
+      match UnionFind.get (whnf row) with
+      | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
+          require_kind krow k;
+          require_kind krow tk;
+          go
+            (Map.update m lbl ~f:(function
+              | None -> (h, hk)
+              | Some v -> v
+            ))
+            t
+      | _ ->
+          (m, row)
+    in
+    go LabelMap.empty
+  in
+  let unfold_row fields tail =
+    List.fold fields ~init:tail ~f:(fun t (lbl, (h, hk)) ->
+      UnionFind.make
+        (`Const
+            ( Gensym.gensym()
+            , `Extend lbl
+            , [h, hk; t, krow]
+            , krow
+            )
+        )
+    )
+  in
+  let (sub_fields, sub_tail) = fold_row sub in
+  let (super_fields, super_tail) = fold_row super in
+  let sub_only = ref [] in
+  let super_only = ref [] in
+  Map.iter2 sub_fields super_fields ~f:(fun ~key ~data -> match data with
+    | `Left v -> sub_only := (key, v) :: !sub_only
+    | `Right v -> super_only := (key, v) :: !super_only
+    | `Both ((sub_t, sub_k), (super_t, super_k)) ->
+        require_kind sub_k super_k;
+        require_subtype ctx ~sub:sub_t ~super:super_t
+  );
+  begin match UnionFind.get sub_tail with
+    | `Free({ty_flag = `Flex; _}, _) ->
+        UnionFind.merge (fun _ r -> r) sub_tail (unfold_row !super_only super_tail)
+    | `Free({ty_flag = `Rigid; ty_id = sub_id}, _) ->
+        begin match !super_only, UnionFind.get super_tail with
+          | [], `Free({ty_flag = `Flex; _}, _) ->
+              UnionFind.merge (fun l _ -> l) sub_tail super_tail
+          | [], `Free({ty_id = super_id; _}, _) when sub_id = super_id ->
+              UnionFind.merge (fun l _ -> l) sub_tail super_tail
+          | _ ->
+              MuleErr.throw (`TypeError(`PermissionErr `Graft))
+        end
+    | `Const(_, `Named `Empty, _, _) ->
+        begin match !super_only, UnionFind.get super_tail with
+          | [], `Const(_, `Named `Empty, _, _) -> ()
+          | fields, `Free({ty_flag = `Flex; _}, _) ->
+              UnionFind.merge (fun _ r -> r) sub_tail (unfold_row fields super_tail)
+          | _, `Free({ty_flag = `Rigid; _}, _) ->
+              MuleErr.throw (`TypeError(`PermissionErr `Graft))
+          | _ ->
+              MuleErr.bug "impossible"
+        end
+    | _ ->
+        MuleErr.bug "impossible"
   end
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
