@@ -5,6 +5,20 @@ open Cmdliner
 
 let s_debug_opts = "OPTIONS FOR DEVELOPING MULE"
 
+let debug_opts_block = `Blocks [
+          `S s_debug_opts;
+          `P (
+            "These options are inteded for use in developing mule itself;"
+            ^ " they are not likely to be of interest to users."
+          );
+  ]
+
+let man_with_args = [
+  `S "OPTIONS";
+  `S "ARGUMENTS";
+  debug_opts_block;
+]
+
 let debug_flag name ~doc =
   Arg.(value & flag & info
          ~doc
@@ -99,11 +113,7 @@ let parse_cmd () =
     , Term.info "mule"
         ~man:[
           `S "OPTIONS";
-          `S s_debug_opts;
-          `P (
-            "These options are inteded for use in developing mule itself;"
-            ^ " they are not likely to be of interest to users."
-          );
+          debug_opts_block;
         ]
     )
     [
@@ -114,10 +124,12 @@ let parse_cmd () =
       ( eval_term
       , Term.info "eval"
           ~doc:"Evaluate an expression in a file"
+          ~man:man_with_args
       );
       run_term, Term.info "run";
       ( build_js_term
       , Term.info "build-js"
           ~doc:"Compile to javascript."
+          ~man:man_with_args
       )
     ]
