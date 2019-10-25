@@ -364,10 +364,12 @@ and check: context -> 'i DE.t -> u_var -> u_var =
   ty_want
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
-  require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super)
+  trace_req_subtype ~sub ~super;
+  require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super);
+  if Config.trace_require_subtype () then
+    Caml.print_endline "Return."
 and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
-  trace_req_subtype ~sub ~super;
   begin match UnionFind.get sub, UnionFind.get super with
     | _ when UnionFind.equal sub super -> ()
     (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
