@@ -1,24 +1,5 @@
 open Common_ast
 
-let each_file : f:(string -> 'a Lwt.t) -> unit Lwt.t =
-  fun ~f ->
-  let rec go i =
-    if i < Array.length Sys.argv then
-      begin
-        let path = Array.get Sys.argv i in
-        let%lwt contents = Util.IO.slurp_file path in
-        let%lwt () = f contents in
-        go (i + 1)
-      end
-    else
-      Lwt.return ()
-  in
-  go 2
-
-let exit_msg msg =
-  let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
-  Caml.exit 1
-
 let load_and_typecheck typ file_name =
   let%lwt input = Util.IO.slurp_file file_name in
   let full_path = Caml.Filename.current_dir_name ^ "/" ^ file_name in
