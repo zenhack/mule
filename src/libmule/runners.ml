@@ -6,10 +6,10 @@ module C = Const
 let type_of_string_exn s =
   match MParser.parse_string Parser.typ s "<builtin>" with
   | MParser.Failed (msg, _) -> failwith ("parse failed : " ^ msg)
-  | MParser.Success ty -> ty
+  | MParser.Success ty -> Desugar.desugar_type ty
 
 type runner =
-  { want_type : Surface_ast.Type.t
+  { want_type : Desugared_ast_kind.maybe_kind Desugared_ast_type.t
   ; run : R.Expr.t -> R.Expr.t Lwt.t
   }
 

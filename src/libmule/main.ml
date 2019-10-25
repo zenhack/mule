@@ -9,13 +9,12 @@ let load_and_typecheck typ file_name =
       Caml.exit 1
   | Success expr ->
       begin try%lwt
-          let expr = Surface_ast.Expr.WithType {
-              wt_term = expr;
+          let _ = Lint.check expr in
+          let dexp = Desugared_ast_expr.WithType {
+              wt_expr = Desugar.desugar expr;
               wt_type = typ;
             }
           in
-          let _ = Lint.check expr in
-          let dexp = Desugar.desugar expr in
           let _ = Typecheck.typecheck dexp in
           Lwt.return dexp
         with
@@ -32,17 +31,20 @@ let interp_cmd = function
       Lwt.return ()
   | `Build_js file_name ->
       begin try%lwt
+          let v = Var.of_string "t" in
           let%lwt dexp =
             load_and_typecheck
-              Surface_ast.Type.(
+              Desugared_ast_type.(
                 (* For now we're not imposing any particular type,
-                 * so we just set it as `exists t. t`.
-                *)
-                let v = Var.of_string "t" in
+                 * so we just set it as `exists t. t`. *)
                 Quant {
+                  q_info = `Type;
                   q_quant = `Exist;
-                  q_vars = [v];
-                  q_body = Var {v_var = v};
+                  q_var = v;
+                  q_body = Var {
+                    v_info = `Unknown;
+                    v_var = v;
+                  };
                 }
               )
               file_name
