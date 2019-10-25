@@ -542,6 +542,8 @@ and finalize_dict dict =
       )
     )
 and desugar_let bs body =
+  (* As part of the desugaring process, we have to remove all "complex" patterns;
+   * in the desugared AST, let bindings only have simple variables as patterns. *)
   let rec go vals types = function
     | [] ->
         D.LetRec {
@@ -549,28 +551,30 @@ and desugar_let bs body =
           letrec_vals = vals;
           letrec_body = desugar body;
         }
-    (* Simplify a list of bindings, such that there are no "complex" patterns;
-     * everything is a simple variable. *)
     | `BindType t :: bs ->
         let (v, ty) = desugar_type_binding t in
         go vals ((v, ty) :: types) bs
-    | `BindVal (SP.Var {v_var = v; v_type = None}, e) :: bs ->
-        go ((v, desugar e) :: vals) types bs
-    | `BindVal((SP.Const _) as p, _) :: _ ->
+    | `BindVal (p, e) :: bs ->
+        go_val_binding vals types (p, desugar e) bs
+
+  and go_val_binding vals types (pat, e) bs = match (pat, e) with
+    | (SP.Var {v_var = v; v_type = None}, e) ->
+        go ((v, e) :: vals) types bs
+    | ((SP.Const _) as p, _) ->
         incomplete_pattern p
-    | `BindVal(SP.Wild, e) :: bs  ->
-        go ((Gensym.anon_var (), desugar e) :: vals) types bs
-    | `BindVal(SP.Var{v_var = v; v_type = Some ty}, e) :: bs ->
+    | (SP.Wild, e) ->
+        go ((Gensym.anon_var (), e) :: vals) types bs
+    | (SP.Var{v_var = v; v_type = Some ty}, e) ->
         go
           (( v
            , D.WithType{
-               wt_expr = desugar e;
+               wt_expr = e;
                wt_type = desugar_type ty
              }
           ) :: vals)
           types
           bs
-    | `BindVal(SP.Ctor{c_lbl = lbl; c_arg = pat}, e) :: bs ->
+    | (SP.Ctor{c_lbl = lbl; c_arg = pat}, e) ->
         let bind_var = Gensym.anon_var () in
         let match_var = Gensym.anon_var () in
         let bind =
@@ -584,14 +588,15 @@ and desugar_let bs body =
                       , D.Var {v_var = match_var}
                       )
                 };
-              app_arg = desugar e;
+              app_arg = e;
             }
           )
         in
-        (* TODO: avoid creating the intermediate S.Var node somehow. This will
-         * make it easier to add metadata to the surface AST without having
-         * to "invent" it for the intermediate node. *)
-        go (bind :: vals) types (`BindVal(pat, S.Var {v_var = bind_var}) :: bs)
+        go_val_binding
+          (bind :: vals)
+          types
+          (pat, D.Var {v_var = bind_var})
+          bs
   in
   go [] [] bs
 and desugar_type_binding (v, params, ty) =
