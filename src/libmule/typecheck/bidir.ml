@@ -81,8 +81,13 @@ let with_locals ctx f =
             | `Rigid -> `Exist
             | `Explicit -> MuleErr.bug "impossible"
           in
-          UnionFind.set (`Free({ty_id; ty_flag = `Explicit}, k)) v;
-          Some (fun acc -> UnionFind.make (`Quant(Gensym.gensym (), q, ty_id, k, acc)))
+          let replacement = UnionFind.make (`Free({ty_id; ty_flag = `Explicit}, k)) in
+          Some (fun acc ->
+            UnionFind.make
+              (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
+                ~target:ty_id
+                ~replacement))
+          )
       | _ -> None
     )
   in

@@ -3,8 +3,6 @@ Desugared:
 
 	(letrec (types ())
 	 (values
-	  ((rank2
-	    ((: (all b ((all a (a -> a)) -> (record (types ()) (values ())))))
-	     (fn rank1 (rank1 {}))))))
-	 (rank2 (fn $0 (Integer 4))))
+	  ((rank2 (: (fn rank1 (rank1 (Integer 0))) ((all a (a -> a)) -> int)))))
+	 (rank2 (fn $4 (Integer 4))))
 Type error: could not instatiate rigid type variable
