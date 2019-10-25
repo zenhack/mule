@@ -85,8 +85,8 @@ let with_locals ctx f =
           Some (fun acc ->
             UnionFind.make
               (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
-                ~target:ty_id
-                ~replacement))
+                        ~target:ty_id
+                        ~replacement))
           )
       | _ -> None
     )
