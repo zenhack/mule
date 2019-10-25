@@ -22,13 +22,28 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
 let rec subst ~target ~replacement uv =
-  match UnionFind.get uv with
-  | `Free({ty_id; _}, _) when ty_id = target -> replacement
-  | `Free _ -> uv
-  | `Quant(_, _, v, _, _) when v = target ->
-      (* Shadowing the target; stop here. *)
-      uv
-  | u -> UnionFind.make (copy (apply_kids u ~f:(subst ~target ~replacement)))
+  (* Nodes we've already seen, to detect cycles and avoid traversing
+   * shared sub-graphs. *)
+  let seen = ref IntMap.empty in
+  let rec go uv =
+    begin match UnionFind.get uv with
+      | u when get_id u = target -> replacement
+      | u when Map.mem !seen (get_id u) -> Util.find_exn !seen (get_id u)
+      | `Free _ -> uv
+      | `Quant(_, _, v, _, _) when v = target ->
+          (* Shadowing the target; stop here. *)
+          uv
+      | u ->
+          (* An an entry to `seen` before traversing, in case we hit
+           * ourselves further down. *)
+          let result = copy u in
+          let result_v = UnionFind.make result in
+          seen := Map.set !seen ~key:(get_id u) ~data:result_v;
+          UnionFind.set (apply_kids result ~f:go) result_v;
+          result_v
+    end
+  in
+  go uv
 and copy = function
   | `Free _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
