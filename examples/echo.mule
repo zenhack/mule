@@ -1,1 +1,2 @@
+# Read a line of input from the user, then print it back out.
 fn io. io.then io.get-line io.print

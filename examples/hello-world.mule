@@ -1,1 +1,6 @@
+# Standard hello world in mule.
+#
+# run with:
+#
+# mule run root-io hello-world.mule
 fn io. io.print "Hello, World!\n"

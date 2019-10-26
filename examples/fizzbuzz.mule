@@ -1,3 +1,9 @@
+# FizzBuzz in mule.
+#
+# This uses a few features that are not yet implemented. In particular:
+#
+# * Macros (~run and ~if)
+# * Infix operators (<=, <|, and ==).
 fn io.
   let go = fn n.
     ~run io [

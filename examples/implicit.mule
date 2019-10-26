@@ -1,3 +1,0 @@
-
-sum : ?(f:foldable) -> ?(n:num) -> f.t n.t -> n.t =
-  fn {foldl} {(+), zero}. foldl (+) zero
