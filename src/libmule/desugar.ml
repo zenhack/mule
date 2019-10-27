@@ -180,14 +180,14 @@ and quantify_row_opaques (i, fields, rest) =
 let rec desugar_type' = function
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
-  | ST.Fn{fn_param = ST.Annotated{anno_var; anno_ty = param; _}; fn_ret = ret} ->
+  | ST.Fn{fn_param = ST.Annotated{anno_var; anno_ty = param; _}; fn_ret = ret; _} ->
       DT.Fn {
         fn_info = `Type;
         fn_pvar = Some anno_var;
         fn_param = desugar_type' param;
         fn_ret = desugar_type' ret;
       }
-  | ST.Fn{fn_param = param; fn_ret = ret} ->
+  | ST.Fn{fn_param = param; fn_ret = ret; _} ->
       DT.Fn {
         fn_info = `Type;
         fn_pvar = None;

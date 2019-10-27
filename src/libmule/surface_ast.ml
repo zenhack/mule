@@ -8,6 +8,7 @@ module Type = struct
     | Fn of  {
         fn_param : t;
         fn_ret : t;
+        fn_loc : Loc.t;
       }
     | Quant of {
         q_quant : quantifier;

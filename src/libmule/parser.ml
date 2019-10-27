@@ -267,18 +267,17 @@ and record_type = lazy (
     let%map () = optional text_const in
     Type.Field (l, ty)
   ) and typ_fn = lazy (
-    begin match%map sep_by1 (lazy_p typ_annotated) (kwd "->") with
-      | [t] -> t
-      | ts ->
-          let ts = List.rev ts in
-          begin match ts with
-            | [] -> MuleErr.bug "impossible"
-            | (t::ts) -> List.fold_left ts ~init:t ~f:(fun r l -> Type.Fn {
-                fn_param = l;
-                fn_ret = r;
-              })
-          end
-    end
+    with_loc (
+      let%bind t = lazy_p typ_annotated in
+      let%bind ts = option (kwd "->" >> lazy_p typ_fn) in
+      match ts with
+      | None -> return (fun _ -> t)
+      | Some fn_ret -> return (fun fn_loc -> Type.Fn {
+          fn_loc;
+          fn_param = t;
+          fn_ret;
+        })
+    )
   ) and typ_sum = lazy (
     optional (kwd "|") >>
     begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
