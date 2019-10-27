@@ -59,7 +59,7 @@ let show = function
        |> String.concat ~sep:",")
   | `EmptyMatch ->
       "Empty match expression."
-  | `IncompletePattern _ ->
+  | `IncompletePattern ->
       "Incomplete pattern"
   | `IllegalAnnotatedType _ ->
       "Illegal annotated type: only types of function parameters may be annotated."

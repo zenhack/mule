@@ -90,16 +90,25 @@ module Pattern = struct
     | Ctor of {
         c_lbl : Label.t;
         c_arg : t;
+        c_loc : Loc.t;
       }
     | Var of {
         v_var : Var.t;
         v_type : Type.t option;
+        v_loc : Loc.t;
       }
-    | Wild
+    | Wild of {w_loc : Loc.t}
     | Const of {
         const_val : Const.t;
+        const_loc : Loc.t;
       }
   [@@deriving sexp_of]
+
+  let t_loc = function
+    | Ctor{c_loc; _} -> c_loc
+    | Var{v_loc; _} -> v_loc
+    | Wild{w_loc; _} -> w_loc
+    | Const{const_loc; _} -> const_loc
 end
 
 module Expr = struct

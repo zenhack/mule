@@ -399,19 +399,18 @@ and case = lazy (
 )
 and pattern = lazy ((
   choice
-    [ (constant |>> fun n -> Pattern.Const {const_val = n})
+    [ with_loc (constant |>> fun n const_loc -> Pattern.Const {const_val = n; const_loc})
     ; parens (lazy_p pattern)
-    ; (kwd "_" |>> fun _ -> Pattern.Wild)
-    ; begin
-      let%bind v = var in
-      match%map option (kwd ":" >> lazy_p typ) with
-      | Some ty -> Pattern.Var {v_var = v; v_type = Some ty}
-      | None -> Pattern.Var {v_var = v; v_type = None}
+    ; with_loc (kwd "_" |>> fun _ w_loc -> Pattern.Wild{w_loc})
+    ; with_loc begin
+      let%bind v_var = var in
+      let%map v_type = option (kwd ":" >> lazy_p typ) in
+      fun v_loc -> Pattern.Var {v_var; v_type; v_loc}
     end
-    ; begin
+    ; with_loc begin
       let%bind lbl = ctor in
       let%map p = lazy_p pattern in
-      Pattern.Ctor {c_lbl = lbl; c_arg = p}
+      fun c_loc -> Pattern.Ctor {c_lbl = lbl; c_arg = p; c_loc}
     end
     ]
 ) <?> "pattern")

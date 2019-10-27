@@ -7,8 +7,8 @@ module C = Common_ast.Const
 module DT = Desugared_ast.Type
 module DK = Desugared_ast.Kind
 
-let incomplete_pattern p =
-  MuleErr.throw (`IncompletePattern p)
+let incomplete_pattern () =
+  MuleErr.throw `IncompletePattern
 
 let unreachable_cases cases =
   MuleErr.throw (`UnreachableCases cases)
@@ -376,14 +376,14 @@ and desugar_update e fields =
 and desugar_lambda ps body =
   match ps with
   | [] -> desugar body
-  | (SP.Var {v_var; v_type = None} :: pats) ->
+  | (SP.Var {v_var; v_type = None; _} :: pats) ->
       D.Lam {l_param = v_var; l_body = desugar_lambda pats body}
-  | (SP.Wild :: pats) ->
+  | (SP.Wild _ :: pats) ->
       D.Lam {
         l_param = Gensym.anon_var ();
         l_body = desugar_lambda pats body;
       }
-  | (SP.Var {v_var; v_type = Some ty} :: pats) ->
+  | (SP.Var {v_var; v_type = Some ty; _} :: pats) ->
       D.Lam {
         l_param = v_var;
         l_body = D.Let {
@@ -396,8 +396,8 @@ and desugar_lambda ps body =
             let_body = desugar_lambda pats body;
           };
       }
-  | ((SP.Const _) as p :: _) -> incomplete_pattern p
-  | (SP.Ctor{c_lbl; c_arg} :: pats) ->
+  | ((SP.Const _) :: _) -> incomplete_pattern ()
+  | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
       let v = Gensym.anon_var () in
       D.Match {
         default = None;
@@ -473,18 +473,18 @@ and desugar_match cases =
           { cases = LabelMap.empty
           ; default = None
           }
-    | ((SP.Wild, _) :: cs) | ((SP.Var _, _) :: cs) ->
+    | ((SP.Wild _, _) :: cs) | ((SP.Var _, _) :: cs) ->
         unreachable_cases cs
   end
 and desugar_const_match dict = function
-  | [(SP.Wild, body)] -> D.ConstMatch
+  | [(SP.Wild _, body)] -> D.ConstMatch
         { cm_default = D.Lam {
               l_param = Gensym.anon_var ();
               l_body = desugar body;
             }
         ; cm_cases = dict
         }
-  | ((SP.Wild, _) :: cs) ->
+  | ((SP.Wild _, _) :: cs) ->
       unreachable_cases cs
   | [(SP.Var _) as p, body] ->
       D.ConstMatch
@@ -493,7 +493,7 @@ and desugar_const_match dict = function
         }
   | ((SP.Var _, _) :: cs) ->
       unreachable_cases cs
-  | ((SP.Const {const_val = c}, body) as case :: rest) ->
+  | ((SP.Const {const_val = c; _}, body) as case :: rest) ->
       begin match Map.find dict c with
         | Some _ ->
             unreachable_cases [case]
@@ -503,8 +503,7 @@ and desugar_const_match dict = function
               rest
       end
   | [] ->
-      (* TODO: what should the argument actually be here? *)
-      incomplete_pattern SP.Wild
+      incomplete_pattern ()
   | ((SP.Ctor _, _) :: _) ->
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
@@ -512,16 +511,16 @@ and desugar_lbl_match dict = function
         { default = None
         ; cases = finalize_dict dict
         }
-  | [(SP.Wild, body)] -> D.Match
+  | [(SP.Wild _, body)] -> D.Match
         { default = Some (None, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var {v_var = v; v_type = None}, body] ->
+  | [SP.Var {v_var = v; v_type = None; _}, body] ->
       D.Match
         { default = Some (Some v, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var {v_var = v; v_type = Some ty}, body] ->
+  | [SP.Var {v_var = v; v_type = Some ty; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let
           { let_v = v
@@ -537,7 +536,7 @@ and desugar_lbl_match dict = function
         { default = Some(Some v', let_)
         ; cases = finalize_dict dict
         }
-  | (SP.Ctor {c_lbl = lbl; c_arg = p}, body) :: cases ->
+  | (SP.Ctor {c_lbl = lbl; c_arg = p; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl ~f:(function
           | None -> [(p, body)]
@@ -575,13 +574,13 @@ and desugar_let bs body =
         go_val_binding vals types (p, desugar e) bs
 
   and go_val_binding vals types (pat, e) bs = match (pat, e) with
-    | (SP.Var {v_var = v; v_type = None}, e) ->
+    | (SP.Var {v_var = v; v_type = None; _}, e) ->
         go ((v, e) :: vals) types bs
-    | ((SP.Const _) as p, _) ->
-        incomplete_pattern p
-    | (SP.Wild, e) ->
+    | ((SP.Const _), _) ->
+        incomplete_pattern ()
+    | (SP.Wild _, e) ->
         go ((Gensym.anon_var (), e) :: vals) types bs
-    | (SP.Var{v_var = v; v_type = Some ty}, e) ->
+    | (SP.Var{v_var = v; v_type = Some ty; _}, e) ->
         go
           (( v
            , D.WithType{
@@ -591,7 +590,7 @@ and desugar_let bs body =
           ) :: vals)
           types
           bs
-    | (SP.Ctor{c_lbl = lbl; c_arg = pat}, e) ->
+    | (SP.Ctor{c_lbl = lbl; c_arg = pat; _}, e) ->
         let bind_var = Gensym.anon_var () in
         let match_var = Gensym.anon_var () in
         let bind =

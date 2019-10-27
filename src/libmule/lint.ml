@@ -52,7 +52,7 @@ let check_duplicate_record_fields =
   and go_pat = function
     | Pattern.Const _ -> ()
     | Pattern.Ctor{c_arg; _} -> go_pat c_arg
-    | Pattern.Var {v_type = None; _} | Pattern.Wild -> ()
+    | Pattern.Var {v_type = None; _} | Pattern.Wild _ -> ()
     | Pattern.Var {v_type = Some ty; _} -> go_type ty
   and go_type = function
     | Type.Import _

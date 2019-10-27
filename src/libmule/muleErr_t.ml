@@ -40,7 +40,7 @@ type t =
   | `UnreachableCases of (Surface_ast.Pattern.t * Surface_ast.Expr.t) list
   | `EmptyMatch
   | `MalformedType of string
-  | `IncompletePattern of Surface_ast.Pattern.t
+  | `IncompletePattern
   | `IllegalAnnotatedType of Surface_ast.Type.t
   | `PathError of path_error
   | `Bug of string
