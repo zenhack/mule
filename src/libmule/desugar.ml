@@ -305,29 +305,29 @@ and desugar_type t =
   |> quantify_opaques
 and desugar = function
   | S.Import _ -> failwith "TODO: implement import"
-  | S.Embed {e_path; e_from} ->
+  | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
         e_value = Lwt_main.run (Paths.resolve_embed ~here:e_from ~target:e_path);
       }
-  | S.Const {const_val = c} -> D.Const {const_val = c}
-  | S.Var {v_var = v; v_loc = _} -> D.Var {v_var = v}
-  | S.App{app_fn = f; app_arg = x} -> D.App {
+  | S.Const {const_val = c; _} -> D.Const {const_val = c}
+  | S.Var {v_var = v; _} -> D.Var {v_var = v}
+  | S.App{app_fn = f; app_arg = x; _} -> D.App {
       app_fn = desugar f;
       app_arg = desugar x;
     }
-  | S.Lam{lam_params; lam_body} -> desugar_lambda lam_params lam_body
-  | S.Record {r_fields = []} -> D.EmptyRecord
-  | S.Record {r_fields = fields} -> desugar_record fields
-  | S.Update{up_arg; up_fields} -> desugar_update up_arg up_fields
-  | S.GetField {gf_arg = e; gf_lbl = l} ->
+  | S.Lam{lam_params; lam_body; _} -> desugar_lambda lam_params lam_body
+  | S.Record {r_fields = []; _} -> D.EmptyRecord
+  | S.Record {r_fields = fields; _} -> desugar_record fields
+  | S.Update{up_arg; up_fields; _} -> desugar_update up_arg up_fields
+  | S.GetField {gf_arg = e; gf_lbl = l; _} ->
       D.App {
         app_fn = D.GetField {
             gf_lbl = l;
           };
         app_arg = desugar e;
       }
-  | S.Ctor {c_lbl = label} ->
+  | S.Ctor {c_lbl = label; _} ->
       (* The choice of variable name here doesn't matter, since
        * there's nothing we need to worry about shadowing. *)
       let l_param = Ast.Var.of_string "x" in
@@ -338,12 +338,12 @@ and desugar = function
             c_arg = D.Var {v_var = l_param };
           };
       }
-  | S.Match {match_arg = e; match_cases = cases} ->
+  | S.Match {match_arg = e; match_cases = cases; _} ->
       D.App {
         app_fn = desugar_match cases;
         app_arg = desugar e;
       }
-  | S.WithType{wt_term = e; wt_type = ty} ->
+  | S.WithType{wt_term = e; wt_type = ty; _} ->
       D.WithType {
         wt_expr = desugar e;
         wt_type = desugar_type ty;
@@ -351,6 +351,7 @@ and desugar = function
   | S.Let {
       let_binds = bindings;
       let_body = body;
+      _;
     } ->
       desugar_let bindings body
 and desugar_update e fields =

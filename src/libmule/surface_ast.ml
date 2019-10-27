@@ -116,45 +116,60 @@ module Expr = struct
     | App of {
         app_fn : t;
         app_arg : t;
+        app_loc : Loc.t;
       }
     | Lam of {
         lam_params : Pattern.t list;
         lam_body : t;
+        lam_loc : Loc.t;
       }
     | Var of {
         v_var : Var.t;
         v_loc : Loc.t;
       }
-    | Record of {r_fields : field list}
+    | Record of {
+        r_fields : field list;
+        r_loc : Loc.t;
+      }
     | GetField of {
         gf_arg : t;
         gf_lbl : Label.t;
+        gf_loc : Loc.t;
       }
-    | Ctor of {c_lbl : Label.t}
+    | Ctor of {c_lbl : Label.t; c_loc : Loc.t}
     | Update of {
         up_arg : t;
         up_fields : field list;
+        up_loc : Loc.t;
       }
     | Match of {
         match_arg : t;
         match_cases : (Pattern.t * t) list;
+        match_loc : Loc.t;
       }
     | Let of {
         let_binds : binding list;
         let_body : t;
+        let_loc : Loc.t;
       }
     | WithType of {
         wt_term : t;
         wt_type : Type.t;
+        wt_loc : Loc.t;
       }
-    | Const of {const_val : Const.t}
+    | Const of {
+        const_val : Const.t;
+        const_loc : Loc.t;
+      }
     | Import of
         { i_path : string
         ; i_from : string
+        ; i_loc : Loc.t;
         }
     | Embed of {
         e_path : string;
         e_from : string;
+        e_loc : Loc.t;
       }
   [@@deriving sexp_of]
   and binding =
@@ -175,4 +190,19 @@ module Expr = struct
         )
     ]
   [@@deriving sexp_of]
+
+  let t_loc = function
+    | App{app_loc; _} -> app_loc
+    | Lam{lam_loc; _} -> lam_loc
+    | Var{v_loc; _} -> v_loc
+    | Record{r_loc; _} -> r_loc
+    | GetField{gf_loc; _} -> gf_loc
+    | Ctor{c_loc; _} -> c_loc
+    | Update{up_loc; _} -> up_loc
+    | Match{match_loc; _} -> match_loc
+    | Let{let_loc; _} -> let_loc
+    | WithType{wt_loc; _} -> wt_loc
+    | Const{const_loc; _} -> const_loc
+    | Import{i_loc; _} -> i_loc
+    | Embed{e_loc; _} -> e_loc
 end

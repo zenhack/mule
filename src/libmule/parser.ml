@@ -164,10 +164,11 @@ let import: (string -> string -> 'a) -> ('a, string) MParser.t
     let%map from = get_user_state in
     f path from
 
-let embed =
+let embed = with_loc (
   let%bind e_path = kwd "embed" >> text in
   let%map e_from = get_user_state in
-  Expr.Embed {e_path; e_from}
+  fun e_loc -> Expr.Embed {e_path; e_from; e_loc}
+)
 
 let label =
   var |>> var_to_label
@@ -297,29 +298,31 @@ and record_type = lazy (with_loc (
     end
   ) and typ = lazy (lazy_p typ_sum)
 
-let rec expr = lazy ((
+let rec expr = lazy ((with_loc (
   let%bind e = lazy_p ex0 in
   begin match%map option (kwd ":" >> lazy_p typ) with
-    | Some ty -> Expr.WithType{ wt_term = e; wt_type = ty }
-    | None -> e
+    | Some ty -> fun wt_loc -> Expr.WithType{ wt_term = e; wt_type = ty; wt_loc }
+    | None -> fun _ -> e
   end
-) <?> "expression")
+)) <?> "expression")
 and ex0 = lazy (
   let%bind t = lazy_p ex1 in
   let%map ts = many (lazy_p ex1) in
   List.fold_left ts ~init:t ~f:(fun f x -> Expr.App {
       app_fn = f;
       app_arg = x;
+      app_loc = Loc.spanning (Expr.t_loc f) (Expr.t_loc x);
     })
 )
 and ex1 = lazy (
   let%bind old = lazy_p ex2 in
   choice
-    [ begin
+    [ with_loc begin
       let%map fields = kwd "where" >> lazy_p record_fields in
-      Expr.Update {
+      fun up_loc -> Expr.Update {
         up_arg = old;
         up_fields = fields;
+        up_loc;
       }
     end
     ; return old
@@ -327,15 +330,16 @@ and ex1 = lazy (
 )
 and ex2 = lazy (
   let%bind head = lazy_p ex3 in
-  many (kwd "." >> label)
-  |>> List.fold_left ~init:head ~f:(fun e l -> Expr.GetField {
+  many (kwd "." >> with_loc (label |>> fun l loc -> (l, loc)))
+  |>> List.fold_left ~init:head ~f:(fun e (l, loc) -> Expr.GetField {
       gf_arg = e;
       gf_lbl = l;
+      gf_loc = Loc.spanning (Expr.t_loc e) loc
     })
 )
 and ex3 = lazy (
   choice
-    [ (import (fun i_path i_from -> Expr.Import {i_path; i_from}))
+    [ with_loc (import (fun i_path i_from i_loc -> Expr.Import {i_path; i_from; i_loc}))
     ; embed
     ; lazy_p lambda
     ; lazy_p match_expr
@@ -343,18 +347,19 @@ and ex3 = lazy (
     ; with_loc (var |>> fun v loc -> Expr.Var {v_var = v; v_loc = loc})
     ; parens (lazy_p expr)
     ; lazy_p record
-    ; (ctor |>> fun c -> Expr.Ctor {c_lbl = c})
-    ; (constant |>> fun n -> Expr.Const {const_val = n})
+    ; with_loc (ctor |>> fun c c_loc -> Expr.Ctor {c_lbl = c; c_loc})
+    ; with_loc (constant |>> fun n const_loc -> Expr.Const {const_val = n; const_loc})
     ]
 )
-and lambda = lazy ((
+and lambda = lazy ((with_loc (
   let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
   let%map body = kwd "." >> lazy_p expr in
-  Expr.Lam {
+  fun lam_loc -> Expr.Lam {
     lam_params = params;
     lam_body = body;
+    lam_loc;
   }
-) <?> "lambda")
+)) <?> "lambda")
 and binding = lazy (
   choice
     [ begin
@@ -370,16 +375,17 @@ and binding = lazy (
     end
     ]
 )
-and let_expr = lazy ((
+and let_expr = lazy ((with_loc (
   let%bind _ = kwd "let" in
   let%bind bindings = comma_list1 (lazy_p binding) in
   let%map body = kwd "in" >> lazy_p expr in
-  Expr.Let {
+  fun let_loc -> Expr.Let {
     let_binds = bindings;
     let_body = body;
+    let_loc;
   }
-) <?> "let expression")
-and match_expr = lazy ((
+)) <?> "let expression")
+and match_expr = lazy ((with_loc (
   let%bind e = kwd "match" >> lazy_p expr in
   let%bind cases =
     kwd "with"
@@ -387,11 +393,12 @@ and match_expr = lazy ((
     >> sep_by1 (lazy_p case) (kwd "|")
   in
   kwd "end"
-  >>$ Expr.Match {
+  >>$ fun match_loc -> Expr.Match {
     match_arg = e;
     match_cases = cases;
+    match_loc;
   }
-) <?> "match expression")
+)) <?> "match expression")
 and case = lazy (
   let%bind p = lazy_p pattern in
   let%map e = kwd "->" >> lazy_p expr in
@@ -416,10 +423,10 @@ and pattern = lazy ((
 ) <?> "pattern")
 and record_fields =
   lazy (braces (comma_list (lazy_p field_def)) <?> "record")
-and record = lazy (
+and record = lazy (with_loc(
   lazy_p record_fields
-  |>> fun fields -> Expr.Record {r_fields = fields}
-)
+  |>> fun fields r_loc -> Expr.Record {r_fields = fields; r_loc}
+))
 and field_def = lazy (lazy_p type_field_def <|> lazy_p value_field_def)
 and type_field_def = lazy (
   let%bind l = kwd "type" >> label in
