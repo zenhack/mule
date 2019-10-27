@@ -177,7 +177,7 @@ and quantify_row_opaques {row_info; row_fields; row_rest} =
   ; row_rest
   }
 
-let rec desugar_type' = function
+let rec desugar_type' ty = match ty with
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
   | ST.Fn{fn_param = ST.Annotated{anno_var; anno_ty = param; _}; fn_ret = ret; _} ->
@@ -194,7 +194,7 @@ let rec desugar_type' = function
         fn_param = desugar_type' param;
         fn_ret = desugar_type' ret;
       }
-  | ST.Quant{q_quant = q; q_vars = vs; q_body = body} ->
+  | ST.Quant{q_quant = q; q_vars = vs; q_body = body; _} ->
       List.fold_right
         vs
         ~init:(desugar_type' body)
@@ -205,7 +205,7 @@ let rec desugar_type' = function
             q_body = body;
           }
         )
-  | ST.Recur{recur_var = v; recur_body = body} ->
+  | ST.Recur{recur_var = v; recur_body = body; _} ->
       DT.Recur {
         mu_info = `Type;
         mu_var = v;
@@ -213,11 +213,11 @@ let rec desugar_type' = function
       }
   | ST.Var {v_var = v; v_loc = _} ->
       DT.Var{v_info = `Unknown; v_var = v}
-  | ST.Union {u_l; u_r} ->
+  | ST.Union {u_l; u_r; _} ->
       DT.Union {u_row = desugar_union_type None (u_l, u_r) }
-  | ST.Record {r_items = r} ->
-      desugar_record_type [] [] r
-  | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t} ->
+  | ST.Record {r_items = r; _} ->
+      desugar_record_type [] [] r (Some ty)
+  | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t; _} ->
       DT.Union {
         u_row = {
           row_info = `Type;
@@ -225,7 +225,7 @@ let rec desugar_type' = function
           row_rest = None;
         };
       }
-  | ST.RowRest {rr_var = v} ->
+  | ST.RowRest {rr_var = v; _} ->
       DT.Union {
         u_row = {
           row_info = `Type;
@@ -237,7 +237,7 @@ let rec desugar_type' = function
       MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {p_info = `Unknown; p_var; p_lbls}
-  | ST.App{app_fn = f; app_arg = x} ->
+  | ST.App{app_fn = f; app_arg = x; _} ->
       DT.App {
         app_info = `Unknown;
         app_fn = desugar_type' f;
@@ -265,8 +265,7 @@ and desugar_union_type tail (l, r) =
       MuleErr.throw
         (`MalformedType
             "Unions must be composed of ctors and at most one ...r")
-and desugar_record_type types fields r =
-  let r_src = Some (ST.Record {r_items = r}) in
+and desugar_record_type types fields r r_src =
   let rec go types fields = function
     (* TODO: how do we have variable fields for the type row? *)
     | (ST.Type(lbl, params, Some t) :: fs) ->

@@ -14,10 +14,12 @@ module Type = struct
         q_quant : quantifier;
         q_vars : Var.t list;
         q_body : t;
+        q_loc : Loc.t;
       }
     | Recur of {
         recur_var : Var.t;
         recur_body : t;
+        recur_loc : Loc.t;
       }
     | Var of {
         v_var : Var.t;
@@ -25,20 +27,25 @@ module Type = struct
       }
     | Record of {
         r_items : record_item list;
+        r_loc : Loc.t;
       }
     | Ctor of {
         c_lbl : Label.t;
+        c_loc : Loc.t;
       }
     | App of {
         app_fn : t;
         app_arg : t;
+        app_loc : Loc.t;
       }
     | Union of {
         u_l : t;
         u_r : t;
+        u_loc : Loc.t;
       }
     | RowRest of {
         rr_var : Var.t;
+        rr_loc : Loc.t;
       }
     | Annotated of {
         anno_var : Var.t;
@@ -53,6 +60,7 @@ module Type = struct
     | Import of {
         i_path : string;
         i_from : string;
+        i_loc : Loc.t;
       }
   [@@deriving sexp_of]
 
@@ -61,6 +69,20 @@ module Type = struct
     | Type of (Label.t * Var.t list * t option)
     | Rest of Var.t
   [@@deriving sexp_of]
+
+  let t_loc = function
+    | Fn{fn_loc; _} -> fn_loc
+    | Quant{q_loc; _} -> q_loc
+    | Recur{recur_loc; _} -> recur_loc
+    | Var{v_loc; _} -> v_loc
+    | Record{r_loc; _} -> r_loc
+    | Ctor{c_loc; _} -> c_loc
+    | App{app_loc; _} -> app_loc
+    | Union{u_loc; _} -> u_loc
+    | RowRest{rr_loc; _} -> rr_loc
+    | Annotated{anno_loc; _} -> anno_loc
+    | Path{p_loc; _} -> p_loc
+    | Import{i_loc; _} -> i_loc
 end
 
 module Pattern = struct

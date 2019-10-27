@@ -181,7 +181,7 @@ let ctor = token (
 let rec typ_term = lazy (
   choice
     [ lazy_p typ_factor
-    ; (ctor |>> fun c_lbl -> Type.Ctor {c_lbl})
+    ; with_loc (ctor |>> fun c_lbl c_loc -> Type.Ctor {c_lbl; c_loc})
     ; lazy_p record_type
     ; lazy_p recur_type
     ; lazy_p all_type
@@ -191,10 +191,10 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice
-    [ import (fun i_path i_from -> Type.Import {i_path; i_from})
-    ; begin
+    [ with_loc (import (fun i_path i_from i_loc -> Type.Import {i_path; i_from; i_loc}))
+    ; with_loc begin
       let%map v = attempt (kwd "...") >> var in
-      Type.RowRest {rr_var = v}
+      fun rr_loc -> Type.RowRest {rr_var = v; rr_loc}
     end
     ; with_loc begin
       let%bind v = var in
@@ -211,7 +211,11 @@ and typ_factor = lazy (
 and typ_app = lazy (
   let%bind t = lazy_p typ_term in
   many (lazy_p typ_term)
-  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App {app_fn = f; app_arg = x})
+  |>> List.fold_left ~init:t ~f:(fun f x -> Type.App {
+      app_fn = f;
+      app_arg = x;
+      app_loc = Loc.spanning (Type.t_loc f) (Type.t_loc x);
+    })
 )
 and typ_annotated = lazy (
   choice
@@ -227,30 +231,31 @@ and typ_annotated = lazy (
     ; lazy_p typ_app
     ]
 )
-and recur_type = lazy (
+and recur_type = lazy (with_loc (
   kwd "rec" >>
   let%bind v = var in
   kwd "." >>
   let%map ty = lazy_p typ in
-  Type.Recur{ recur_var = v; recur_body = ty }
-)
-and quantified_type binder quantifier = lazy (
+  fun recur_loc -> Type.Recur{ recur_loc; recur_var = v; recur_body = ty }
+))
+and quantified_type binder quantifier = lazy (with_loc (
   kwd binder >>
   let%bind vs = many1 var in
   kwd "." >>
   let%map ty = lazy_p typ in
-  Type.Quant {
+  fun q_loc -> Type.Quant {
     q_quant = quantifier;
     q_vars = vs;
     q_body = ty;
+    q_loc;
   }
-)
+))
 and all_type = lazy (lazy_p (quantified_type "all" `All))
 and exist_type = lazy (lazy_p (quantified_type "exist" `Exist))
-and record_type = lazy (
+and record_type = lazy (with_loc (
   let%map items = braces (comma_list (lazy_p record_item)) in
-  Type.Record {r_items = items}
-) and record_item: (Type.record_item, string) MParser.t Lazy.t = lazy (
+  fun r_loc -> Type.Record {r_items = items; r_loc}
+)) and record_item: (Type.record_item, string) MParser.t Lazy.t = lazy (
     choice
       [ lazy_p type_decl
       ; lazy_p field_decl
@@ -260,8 +265,7 @@ and record_type = lazy (
     let%bind l = kwd "type" >> label in
     let%bind vars = many var in
     let%bind () = optional text_const in
-    let%map ty = option (kwd "=" >> lazy_p typ)
-    in
+    let%map ty = option (kwd "=" >> lazy_p typ) in
     Type.Type(l, vars, ty)
   ) and field_decl: (Type.record_item, string) MParser.t Lazy.t = lazy (
     let%bind l = label in
@@ -285,7 +289,11 @@ and record_type = lazy (
     begin match%map sep_by1 (lazy_p typ_fn) (kwd "|") with
       | [] -> MuleErr.bug "impossible"
       | (t::ts) ->
-          List.fold_right ts ~init:t ~f:(fun r l -> Type.Union{u_l = l; u_r = r})
+          List.fold_right ts ~init:t ~f:(fun r l -> Type.Union{
+              u_l = l;
+              u_r = r;
+              u_loc = Loc.spanning (Type.t_loc l) (Type.t_loc r);
+            })
     end
   ) and typ = lazy (lazy_p typ_sum)
 
