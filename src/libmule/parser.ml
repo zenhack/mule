@@ -200,7 +200,8 @@ and typ_factor = lazy (
       let%bind v = var in
       match%map many (kwd "." >> label) with
       | [] -> fun v_loc -> Type.Var {v_var = v; v_loc}
-      | p_lbls -> fun _loc -> Type.Path {
+      | p_lbls -> fun p_loc -> Type.Path {
+          p_loc;
           p_var = v;
           p_lbls;
         }

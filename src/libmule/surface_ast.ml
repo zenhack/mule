@@ -45,6 +45,7 @@ module Type = struct
         anno_ty : t;
       }
     | Path of {
+        p_loc : Loc.t;
         p_var : Var.t;
         p_lbls : Label.t list;
       }
