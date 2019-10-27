@@ -103,11 +103,11 @@ let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK
               tl_body = go tl_body;
             }
       end
-  and go_row (info, fields, var) =
-    ( info
-    , List.map fields ~f:(fun (lbl, t) -> (lbl, go t))
-    , var
-    )
+  and go_row {row_info; row_fields; row_rest} =
+    { row_info
+    ; row_fields = List.map row_fields ~f:(fun (lbl, t) -> (lbl, go t))
+    ; row_rest
+    }
   in
   go
 
@@ -129,9 +129,9 @@ let rec quantify_opaques t = match t with
       }
   | DT.TypeLam{tl_info; tl_param; tl_body} ->
       DT.TypeLam{tl_info; tl_param; tl_body = quantify_opaques tl_body}
-  | DT.Record {r_src; r_info; r_types = (i, fields, rest); r_values} ->
+  | DT.Record {r_src; r_info; r_types = {row_info; row_fields; row_rest}; r_values} ->
       let vars = ref [] in
-      let fields' = List.map fields ~f:(fun (lbl, ty) ->
+      let row_fields = List.map row_fields ~f:(fun (lbl, ty) ->
           match quantify_opaques ty with
           | DT.Opaque {o_info} ->
               let var = Gensym.anon_var () in
@@ -144,7 +144,7 @@ let rec quantify_opaques t = match t with
         DT.Record
           { r_info
           ; r_src
-          ; r_types = (i, fields', rest)
+          ; r_types = {row_info; row_fields; row_rest}
           ; r_values = quantify_row_opaques r_values
           }
       in
@@ -169,13 +169,13 @@ let rec quantify_opaques t = match t with
   | DT.Union {u_row} -> DT.Union { u_row = quantify_row_opaques u_row }
   | DT.Quant{q_info; q_quant; q_var; q_body} ->
       DT.Quant{q_info; q_quant; q_var; q_body = quantify_opaques q_body}
-and quantify_row_opaques (i, fields, rest) =
-  ( i
-  , List.map
-      fields
+and quantify_row_opaques {row_info; row_fields; row_rest} =
+  { row_info
+  ; row_fields = List.map
+      row_fields
       ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty))
-  , rest
-  )
+  ; row_rest
+  }
 
 let rec desugar_type' = function
   | ST.Import _ ->
@@ -219,10 +219,20 @@ let rec desugar_type' = function
       desugar_record_type [] [] r
   | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t} ->
       DT.Union {
-        u_row = (`Type, [(c_lbl, desugar_type' t)], None);
+        u_row = {
+          row_info = `Type;
+          row_fields = [(c_lbl, desugar_type' t)];
+          row_rest = None;
+        };
       }
   | ST.RowRest {rr_var = v} ->
-      DT.Union { u_row = (`Type, [], Some v) }
+      DT.Union {
+        u_row = {
+          row_info = `Type;
+          row_fields = [];
+          row_rest = Some v;
+        };
+      }
   | (ST.Annotated _) as ty ->
       MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
@@ -237,12 +247,20 @@ let rec desugar_type' = function
       MuleErr.bug "ctors should be applied."
 and desugar_union_type tail (l, r) =
   match desugar_type' l, desugar_type' r, tail with
-  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, (Some v)
-  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, Some v)}, None
-  | DT.Union{u_row = (_, lbls_l, Some v)}, DT.Union{u_row = (_, lbls_r, None)}, None ->
-      (`Type, lbls_l @ lbls_r, Some v)
-  | DT.Union{u_row = (_, lbls_l, None)}, DT.Union{u_row = (_, lbls_r, None)}, None ->
-      (`Type, lbls_l @ lbls_r, None)
+  | DT.Union{u_row = {row_fields = lbls_l; row_rest = None; _}},
+    DT.Union{u_row = {row_fields = lbls_r; row_rest = None; _}},
+    (Some v)
+  | DT.Union{u_row = {row_fields = lbls_l; row_rest = None; _}},
+    DT.Union{u_row = {row_fields = lbls_r; row_rest = Some v; _}},
+    None
+  | DT.Union{u_row = {row_fields = lbls_l; row_rest = Some v; _}},
+    DT.Union{u_row = {row_fields = lbls_r; row_rest = None; _}},
+    None ->
+      {row_info = `Type; row_fields = lbls_l @ lbls_r; row_rest = Some v}
+  | DT.Union{u_row = {row_fields = lbls_l; row_rest = None; _}},
+    DT.Union{u_row = {row_fields = lbls_r; row_rest = None; _}},
+    None ->
+      {row_info = `Type; row_fields = lbls_l @ lbls_r; row_rest = None}
   | _ ->
       MuleErr.throw
         (`MalformedType
@@ -266,15 +284,15 @@ and desugar_record_type types fields r =
         DT.Record
           { r_src
           ; r_info = `Type
-          ; r_types = (`Row, types, None)
-          ; r_values = (`Row, fields, None)
+          ; r_types = {row_info = `Row; row_fields = types; row_rest = None}
+          ; r_values = {row_info = `Row; row_fields = fields; row_rest = None}
           }
     | [ST.Rest v] ->
         DT.Record
           { r_src
           ; r_info = `Type
-          ; r_types = (`Row, types, None)
-          ; r_values = (`Row, fields, Some v)
+          ; r_types = {row_info = `Row; row_fields = types; row_rest = None}
+          ; r_values = {row_info = `Row; row_fields = fields; row_rest = Some v}
           }
     | (ST.Field (l, t) :: rest) ->
         go types ((l, desugar_type' t)::fields) rest

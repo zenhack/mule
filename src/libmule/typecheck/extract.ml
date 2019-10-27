@@ -71,15 +71,29 @@ and go_row seen uv =
   let ty_id = get_ty_id r in
   match r with
   | `Free _ ->
-      ( (ty_id, [], Some (var_of_int ty_id))
+      ( DT.{
+          row_info = ty_id;
+          row_fields = [];
+          row_rest = Some (var_of_int ty_id);
+        }
       , IntSet.singleton ty_id
       )
   | `Const(_, `Named `Empty, _, _) ->
-      ((ty_id, [], None), IntSet.empty)
+      ( DT.{
+          row_info = ty_id;
+          row_fields = [];
+          row_rest = None;
+        }
+      , IntSet.empty
+      )
   | `Const(_, `Extend lbl, [h, _; t, _], _) ->
       let (h', hfv) = go seen h in
-      let ((_, fields, tail), tfv) = go_row seen t in
-      ( (ty_id, ((lbl, h') :: fields), tail)
+      let (DT.{row_fields; row_rest; _}, tfv) = go_row seen t in
+      ( DT.{
+          row_info = ty_id;
+          row_fields = ((lbl, h') :: row_fields);
+          row_rest;
+        }
       , Set.union hfv tfv
       )
   | _ ->

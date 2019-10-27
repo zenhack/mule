@@ -57,8 +57,11 @@ type 'i t =
       app_fn : 'i t;
       app_arg : 'i t;
     }
-and 'i row =
-  ('i * (Label.t * 'i t) list * Var.t option)
+and 'i row = {
+  row_info: 'i;
+  row_fields: (Label.t * 'i t) list;
+  row_rest: Var.t option;
+}
 
 let rec subst old new_ ty = match ty with
   | Fn {fn_info; fn_pvar = Some v; fn_param; fn_ret} when Var.equal v old ->
@@ -117,13 +120,14 @@ let rec subst old new_ ty = match ty with
         app_fn = subst old new_ app_fn;
         app_arg = subst old new_ app_arg;
       }
-and subst_row old new_ (i, ls, maybe_v) =
-  ( i
-  , List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
-  , match maybe_v with
-  | Some v when Var.equal v old -> MuleErr.bug "TODO"
-  | _ -> maybe_v
-  )
+and subst_row old new_ {row_info; row_fields = ls; row_rest} =
+  { row_info
+  ; row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
+  ; row_rest =
+      match row_rest with
+      | Some v when Var.equal v old -> MuleErr.bug "TODO"
+      | _ -> row_rest
+  }
 
 let rec sexp_of_t: 'i t -> Sexp.t = function
   | Fn{fn_pvar = None; fn_param; fn_ret; _} ->
@@ -168,13 +172,13 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
       sexp_of_t app_fn;
       sexp_of_t app_arg;
     ]
-and sexp_of_row (_, fields, rest) =
+and sexp_of_row {row_fields; row_rest; _} =
   let fields =
-    List.map fields ~f:(fun (l, t) ->
+    List.map row_fields ~f:(fun (l, t) ->
       Sexp.List [Label.sexp_of_t l; sexp_of_t t]
     )
   in
-  match rest with
+  match row_rest with
   | Some v -> Sexp.List (fields @ [Sexp.Atom ("..." ^ Var.to_string v)])
   | None -> Sexp.List fields
 
@@ -184,7 +188,7 @@ let get_info = function
   | Var{v_info; _} -> v_info
   | Path{p_info; _} -> p_info
   | Record{r_info; _} -> r_info
-  | Union{u_row = (x, _, _)} -> x
+  | Union{u_row = {row_info; _}} -> row_info
   | Quant{q_info; _} -> q_info
   | Named{n_info; _} -> n_info
   | Opaque {o_info; _} -> o_info
@@ -244,11 +248,11 @@ let rec map ty ~f = match ty with
         app_fn = map app_fn ~f;
         app_arg = map app_arg ~f;
       }
-and map_row (x, fields, rest) ~f =
-  ( f x
-  , List.map fields ~f:(fun(l, t) -> (l, map t ~f))
-  , rest
-  )
+and map_row {row_info; row_fields; row_rest} ~f =
+  { row_info = f row_info
+  ; row_fields = List.map row_fields ~f:(fun(l, t) -> (l, map t ~f))
+  ; row_rest
+  }
 
 let rec to_string = function
   | Fn {fn_pvar = Some p; fn_param; fn_ret; _} ->
@@ -271,7 +275,11 @@ let rec to_string = function
   | Var {v_var; _} -> Var.to_string v_var
   | Path {p_var; p_lbls; _} ->
       String.concat ~sep:"." (Var.to_string p_var :: List.map p_lbls ~f:Label.to_string)
-  | Record {r_types = (_, types, types_rest); r_values = (_, vals, vals_rest); _} ->
+  | Record {
+      r_types = {row_fields = types; row_rest = types_rest; _};
+      r_values = {row_fields = vals; row_rest = vals_rest; _};
+      _;
+    } ->
       List.concat [
         List.map types ~f:(fun (lbl, ty) -> format_type_member lbl ty);
         begin match types_rest with
@@ -286,9 +294,9 @@ let rec to_string = function
       ]
       |> String.concat ~sep:", "
       |> (fun s -> "{ " ^ s ^ " }")
-  | Union{u_row = (_, fields, rest)} ->
+  | Union{u_row = {row_fields; row_rest; _}} ->
       String.concat ~sep:"|" (
-        List.map fields ~f:(fun (lbl, ty) ->
+        List.map row_fields ~f:(fun (lbl, ty) ->
           String.concat [
             Label.to_string lbl;
             " (";
@@ -296,7 +304,7 @@ let rec to_string = function
             ")";
           ]
         )
-        @ begin match rest with
+        @ begin match row_rest with
           | None -> []
           | Some v -> ["..." ^ Var.to_string v]
         end)

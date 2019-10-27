@@ -44,11 +44,11 @@ let dict kvs =
   List.map kvs ~f:(fun (k, v) -> (Var.of_string k, v))
   |> Map.of_alist_exn (module Var)
 
-let row kvs =
-  ( krow
-  , List.map kvs ~f:(fun (k, v) -> (Label.of_string k, v))
-  , None
-  )
+let row kvs = D.Type.{
+  row_info = krow;
+  row_fields = List.map kvs ~f:(fun (k, v) -> (Label.of_string k, v));
+  row_rest = None;
+}
 
 let recordType tys vals =
   D.Type.Record

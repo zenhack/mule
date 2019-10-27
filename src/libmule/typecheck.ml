@@ -221,12 +221,12 @@ and strip_param_exists ctx pty =
       )
   | _ ->
       pty
-and make_row ctx (_, fields, v) =
-  let tail = match v with
+and make_row ctx {row_fields; row_rest; _} =
+  let tail = match row_rest with
     | None -> empty
     | Some v -> with_kind krow (find_bound ctx.type_env v)
   in
-  List.fold_right fields ~init:tail ~f:(fun (lbl, ty) rest ->
+  List.fold_right row_fields ~init:tail ~f:(fun (lbl, ty) rest ->
     extend lbl (make_type ctx ty) rest
   )
 and synth: context -> 'i DE.t -> u_var =
