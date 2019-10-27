@@ -43,6 +43,7 @@ module Type = struct
     | Annotated of {
         anno_var : Var.t;
         anno_ty : t;
+        anno_loc: Loc.t;
       }
     | Path of {
         p_loc : Loc.t;

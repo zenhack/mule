@@ -215,12 +215,13 @@ and typ_app = lazy (
 )
 and typ_annotated = lazy (
   choice
-    [ begin
+    [ with_loc begin
       let%bind anno_var = attempt (var << kwd ":") in
       let%map anno_ty = lazy_p typ_app in
-      Type.Annotated {
+      fun anno_loc -> Type.Annotated {
         anno_var;
         anno_ty;
+        anno_loc;
       }
     end
     ; lazy_p typ_app
