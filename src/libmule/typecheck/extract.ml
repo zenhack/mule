@@ -142,8 +142,90 @@ and make_const_type id c args =
   | `Extend _, _ ->
       MuleErr.bug "kind mismatch"
 
+let strip_unused_quantifiers ty =
+  let rec go ty = match ty with
+    (* These two cases may shadow a variable in the body, in which
+     * case we have to remove it from the free variables. Either
+     * way, we keep the type structure as-is (after recursing): *)
+    | DT.Fn{fn_pvar; fn_param; fn_ret; fn_info} ->
+        let fn_param, fv_param = go fn_param in
+        let fn_ret, fv_ret = go fn_ret in
+        let fv =
+          begin match fn_pvar with
+            | None -> Set.union fv_param fv_ret
+            | Some v -> Set.union fv_param (Set.remove fv_ret v)
+          end
+        in
+        (DT.Fn{fn_pvar; fn_param; fn_ret; fn_info}, fv)
+    | DT.TypeLam{tl_info; tl_param; tl_body} ->
+        let tl_body, fv_body = go tl_body in
+        ( DT.TypeLam {tl_info; tl_param; tl_body}
+        , Set.remove fv_body tl_param
+        )
+
+    (* If the body contains the bound variable, keep things as is,
+     * otherwise drop the binder: *)
+    | DT.Recur {mu_var; mu_body; mu_info} ->
+        let mu_body, fvs = go mu_body in
+        if Set.mem fvs mu_var then
+          ( DT.Recur{mu_var; mu_info; mu_body}
+          , Set.remove fvs mu_var
+          )
+        else
+          (mu_body, fvs)
+    | DT.Quant{q_info; q_quant; q_var; q_body} ->
+        let q_body, fvs = go q_body in
+        if Set.mem fvs q_var then
+          ( DT.Quant{q_info; q_quant; q_var; q_body}
+          , Set.remove fvs q_var
+          )
+        else
+          (q_body, fvs)
+
+    (* Leaves of the tree. *)
+    | DT.Var{v_var; _} -> (ty, VarSet.singleton v_var)
+    | DT.Path{p_var; _} -> (ty, VarSet.singleton p_var)
+    | DT.Named _ | DT.Opaque _ -> (ty, VarSet.empty)
+
+    (* These we just apply recursivley; no special logic for them. *)
+    | DT.Record{r_info; r_types; r_values; r_src} ->
+        let r_types, fv_types = go_row r_types in
+        let r_values, fv_values = go_row r_values in
+        ( DT.Record{r_info; r_types; r_values; r_src}
+        , Set.union fv_types fv_values
+        )
+    | DT.Union{u_row} ->
+        let u_row, fvs = go_row u_row in
+        (DT.Union{u_row}, fvs)
+    | DT.App{app_info; app_fn; app_arg} ->
+        let app_fn, fv_fn = go app_fn in
+        let app_arg, fv_arg = go app_arg in
+        ( DT.App{app_info; app_fn; app_arg}
+        , Set.union fv_fn fv_arg
+        )
+  and go_row {row_info; row_fields; row_rest} =
+    let row_fields, fv_fields =
+        List.fold_right
+          row_fields
+          ~init:([], VarSet.empty)
+          ~f:(fun (l, t) (fs, fvs) ->
+            let t, fv_t = go t in
+            ( ((l, t) :: fs)
+            , (Set.union fvs fv_t)
+            )
+          )
+    in
+    let fvs = match row_rest with
+      | None -> fv_fields
+      | Some v -> Set.add fv_fields v
+    in
+    ({row_info; row_fields; row_rest}, fvs)
+  in
+  fst (go ty)
+
 let get_var_type uv =
   fst (go IntSet.empty uv)
+  |> strip_unused_quantifiers
   |> Relabel.relabel_type ()
 
 let get_var_row uv =
