@@ -1,3 +1,4 @@
+open Common_ast
 module SP = Surface_ast.Pattern
 module SC = Surface_ast
 module S = Surface_ast.Expr
@@ -178,15 +179,19 @@ and quantify_row_opaques {row_info; row_fields; row_rest} =
   ; row_rest
   }
 
-let rec desugar_type' ty = match ty with
+let rec desugar_type' ty = match ty.Loc.l_value with
   | ST.Import _ ->
       failwith "TODO: implememnt import type"
-  | ST.Fn{fn_param = ST.Annotated{anno_var; anno_ty = param; _}; fn_ret = ret; _} ->
+  | ST.Fn{
+      fn_param = Loc.{l_value = ST.Annotated{anno_var; anno_ty = param; _}; _};
+      fn_ret;
+      _;
+    } ->
       DT.Fn {
         fn_info = `Type;
-        fn_pvar = Some anno_var.sv_var;
+        fn_pvar = Some anno_var.Loc.l_value;
         fn_param = desugar_type' param;
-        fn_ret = desugar_type' ret;
+        fn_ret = desugar_type' fn_ret;
       }
   | ST.Fn{fn_param = param; fn_ret = ret; _} ->
       DT.Fn {
@@ -201,28 +206,28 @@ let rec desugar_type' ty = match ty with
         ~init:(desugar_type' body)
         ~f:(fun v body -> DT.Quant {
             q_info = `Type;
-            q_quant = q;
-            q_var = v.sv_var;
+            q_quant = q.Loc.l_value;
+            q_var = v.Loc.l_value;
             q_body = body;
           }
         )
   | ST.Recur{recur_var = v; recur_body = body; _} ->
       DT.Recur {
         mu_info = `Type;
-        mu_var = v.sv_var;
+        mu_var = v.Loc.l_value ;
         mu_body = desugar_type' body;
       }
   | ST.Var {v_var = v; _} ->
-      DT.Var{v_info = `Unknown; v_var = v.sv_var}
+      DT.Var{v_info = `Unknown; v_var = v.Loc.l_value}
   | ST.Union {u_l; u_r; _} ->
       DT.Union {u_row = desugar_union_type None (u_l, u_r) }
   | ST.Record {r_items = r; _} ->
       desugar_record_type [] [] r (Some ty)
-  | ST.App{app_fn = ST.Ctor{c_lbl; _}; app_arg = t; _} ->
+  | ST.App{app_fn = Loc.{l_value = ST.Ctor{c_lbl; _}; _}; app_arg = t; _} ->
       DT.Union {
         u_row = {
           row_info = `Type;
-          row_fields = [(c_lbl.sl_label, desugar_type' t)];
+          row_fields = [(c_lbl.Loc.l_value, desugar_type' t)];
           row_rest = None;
         };
       }
@@ -231,16 +236,16 @@ let rec desugar_type' ty = match ty with
         u_row = {
           row_info = `Type;
           row_fields = [];
-          row_rest = Some v.sv_var;
+          row_rest = Some v.Loc.l_value;
         };
       }
-  | (ST.Annotated _) as ty ->
-      MuleErr.throw (`IllegalAnnotatedType ty)
+  | ST.Annotated _ ->
+      MuleErr.throw (`IllegalAnnotatedType ty.Loc.l_value)
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {
         p_info = `Unknown;
-        p_var = p_var.sv_var;
-        p_lbls = List.map p_lbls ~f:(fun l -> l.sl_label)
+        p_var = p_var.Loc.l_value;
+        p_lbls = List.map p_lbls ~f:(fun Loc.{l_value = l; _} -> l)
       }
   | ST.App{app_fn = f; app_arg = x; _} ->
       DT.App {
@@ -275,7 +280,7 @@ and desugar_record_type types fields r r_src =
     (* TODO: how do we have variable fields for the type row? *)
     | (ST.Type(lbl, params, Some t) :: fs) ->
         let (_, ty) = desugar_type_binding (SC.var_of_label lbl, params, t) in
-        go ((lbl.sl_label, ty)::types) fields fs
+        go ((lbl.Loc.l_value, ty)::types) fields fs
     | (ST.Type(lbl, params, None) :: fs) ->
         let kind =
           List.fold
@@ -283,7 +288,7 @@ and desugar_record_type types fields r r_src =
             ~init:`Unknown
             ~f:(fun k _ -> `Arrow(`Unknown, k))
         in
-        go ((lbl.sl_label, DT.Opaque {o_info = kind})::types) fields fs
+        go ((lbl.Loc.l_value, DT.Opaque {o_info = kind})::types) fields fs
     | [] ->
         DT.Record
           { r_src
@@ -296,19 +301,19 @@ and desugar_record_type types fields r r_src =
           { r_src
           ; r_info = `Type
           ; r_types = {row_info = `Row; row_fields = types; row_rest = None}
-          ; r_values = {row_info = `Row; row_fields = fields; row_rest = Some v.sv_var}
+          ; r_values = {row_info = `Row; row_fields = fields; row_rest = Some v.Loc.l_value}
           }
     | (ST.Field (l, t) :: rest) ->
-        go types ((l.sl_label, desugar_type' t)::fields) rest
+        go types ((l.Loc.l_value, desugar_type' t)::fields) rest
     | (ST.Rest _ :: _) ->
         MuleErr.throw
           (`MalformedType "row variable before the end of a record type.")
   in
-  go types fields r
+  go types fields (List.map r ~f:(fun {l_value = l; _} -> l))
 and desugar_type t =
   desugar_type' t
   |> quantify_opaques
-and desugar = function
+and desugar Loc.{l_value = e; _} = match e with
   | S.Import _ -> failwith "TODO: implement import"
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
@@ -316,7 +321,7 @@ and desugar = function
         e_value = Lwt_main.run (Paths.resolve_embed ~here:e_from ~target:e_path);
       }
   | S.Const {const_val = c; _} -> D.Const {const_val = c}
-  | S.Var {v_var = v; _} -> D.Var {v_var = v.sv_var}
+  | S.Var {v_var = v; _} -> D.Var {v_var = v.Loc.l_value}
   | S.App{app_fn = f; app_arg = x; _} -> D.App {
       app_fn = desugar f;
       app_arg = desugar x;
@@ -328,7 +333,7 @@ and desugar = function
   | S.GetField {gf_arg = e; gf_lbl = l; _} ->
       D.App {
         app_fn = D.GetField {
-            gf_lbl = l.sl_label;
+            gf_lbl = l.Loc.l_value;
           };
         app_arg = desugar e;
       }
@@ -339,7 +344,7 @@ and desugar = function
       D.Lam {
         l_param;
         l_body = D.Ctor {
-            c_lbl = label.sl_label;
+            c_lbl = label.Loc.l_value;
             c_arg = D.Var {v_var = l_param };
           };
       }
@@ -360,71 +365,75 @@ and desugar = function
     } ->
       desugar_let bindings body
 and desugar_update e fields =
-  match fields with
+  let rec go e = function
   | [] -> desugar e
   | `Value (l, _, v) :: fs ->
       D.App {
         app_fn = D.App {
             app_fn = D.UpdateVal {
-                uv_lbl = l.sl_label;
+                uv_lbl = l.Loc.l_value;
               };
-            app_arg = desugar_update e fs
+            app_arg = go e fs
           };
         app_arg = desugar v;
       }
   | `Type (lbl, params, ty) :: fs ->
       let (_, ty) = desugar_type_binding (SC.var_of_label lbl, params, ty) in
       D.UpdateType {
-        ut_lbl = lbl.sl_label;
+        ut_lbl = lbl.Loc.l_value;
         ut_type = ty;
-        ut_record = desugar_update e fs;
+        ut_record = go e fs;
       }
+  in
+  go e (List.map fields ~f:(fun Loc.{l_value = v; _} -> v))
 and desugar_lambda ps body =
-  match ps with
-  | [] -> desugar body
-  | (SP.Var {v_var; v_type = None; _} :: pats) ->
-      D.Lam {l_param = v_var.sv_var; l_body = desugar_lambda pats body}
-  | (SP.Wild _ :: pats) ->
-      D.Lam {
-        l_param = Gensym.anon_var ();
-        l_body = desugar_lambda pats body;
-      }
-  | (SP.Var {v_var; v_type = Some ty; _} :: pats) ->
-      let v_var = v_var.sv_var in
-      D.Lam {
-        l_param = v_var;
-        l_body = D.Let {
-            let_v = v_var;
-            let_e =
-              D.WithType {
-                wt_expr = D.Var {v_var};
-                wt_type = desugar_type ty;
-              };
-            let_body = desugar_lambda pats body;
-          };
-      }
-  | ((SP.Const _) :: _) -> incomplete_pattern ()
-  | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
-      let v = Gensym.anon_var () in
-      D.Match {
-        default = None;
-        cases = LabelMap.singleton
-            c_lbl.sl_label
-            ( v
-            , D.App {
-                app_fn = desugar_lambda (c_arg :: pats) body;
-                app_arg = D.Var {v_var = v}
-              }
-            )
-      }
+  let rec go = function
+    | [] -> desugar body
+    | (SP.Var {v_var; v_type = None; _} :: pats) ->
+        D.Lam {l_param = v_var.Loc.l_value; l_body = go pats}
+    | (SP.Wild :: pats) ->
+        D.Lam {
+          l_param = Gensym.anon_var ();
+          l_body = go pats;
+        }
+    | (SP.Var {v_var; v_type = Some ty; _} :: pats) ->
+        let v_var = v_var.Loc.l_value in
+        D.Lam {
+          l_param = v_var;
+          l_body = D.Let {
+              let_v = v_var;
+              let_e =
+                D.WithType {
+                  wt_expr = D.Var {v_var};
+                  wt_type = desugar_type ty;
+                };
+              let_body = go pats;
+            };
+        }
+    | ((SP.Const _) :: _) -> incomplete_pattern ()
+    | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
+        let v = Gensym.anon_var () in
+        D.Match {
+          default = None;
+          cases = LabelMap.singleton
+              c_lbl.Loc.l_value
+              ( v
+              , D.App {
+                  app_fn = go (c_arg.Loc.l_value :: pats);
+                  app_arg = D.Var {v_var = v}
+                }
+              )
+        }
+  in
+  go (List.map ps ~f:(fun p -> p.Loc.l_value))
 and desugar_record fields =
   let types, values =
     List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->
-      match bind with
-      | `Value(l, None, e) -> (types, ((Ast.var_of_label l.sl_label, desugar e) :: values))
+      match bind.Loc.l_value with
+      | `Value(l, None, e) -> (types, ((Ast.var_of_label l.Loc.l_value, desugar e) :: values))
       | `Value(l, Some ty, e) ->
           ( types
-          , ( Ast.var_of_label l.sl_label
+          , ( Ast.var_of_label l.Loc.l_value
             , D.WithType {
                 wt_expr = desugar e;
                 wt_type = desugar_type ty;
@@ -441,9 +450,9 @@ and desugar_record fields =
     )
   in
   let body = List.fold_right fields ~init:D.EmptyRecord ~f:(fun bind old ->
-      match bind with
+      match bind.Loc.l_value with
       | `Value (l, _, _) ->
-          let l = l.sl_label in
+          let l = l.Loc.l_value in
           D.App {
             app_fn = D.App {
                 app_fn = D.UpdateVal {
@@ -454,7 +463,7 @@ and desugar_record fields =
             app_arg = D.Var {v_var = Ast.var_of_label l};
           }
       | `Type (l, _, _) ->
-          let l = l.sl_label in
+          let l = l.Loc.l_value in
           D.UpdateType{
             ut_lbl = l;
             ut_type = DT.Var {
@@ -472,9 +481,9 @@ and desugar_record fields =
   }
 and desugar_match cases =
   begin match cases with
-    | ((SP.Ctor _, _) :: _) ->
+    | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
         desugar_lbl_match LabelMap.empty cases
-    | ((SP.Const _, _) :: _) ->
+    | (Loc.{l_value = SP.Const _; _}, _) :: _ ->
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
         desugar_lambda [pat] body
@@ -482,27 +491,27 @@ and desugar_match cases =
           { cases = LabelMap.empty
           ; default = None
           }
-    | ((SP.Wild _, _) :: cs) | ((SP.Var _, _) :: cs) ->
+    | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
         unreachable_cases cs
   end
 and desugar_const_match dict = function
-  | [(SP.Wild _, body)] -> D.ConstMatch
+  | [Loc.{l_value = SP.Wild; _}, body] -> D.ConstMatch
         { cm_default = D.Lam {
               l_param = Gensym.anon_var ();
               l_body = desugar body;
             }
         ; cm_cases = dict
         }
-  | ((SP.Wild _, _) :: cs) ->
+  | (Loc.{l_value = SP.Wild; _}, _) :: cs ->
       unreachable_cases cs
-  | [(SP.Var _) as p, body] ->
+  | [Loc.{l_value = (SP.Var _); _} as p, body] ->
       D.ConstMatch
         { cm_default = desugar_lambda [p] body
         ; cm_cases = dict
         }
-  | ((SP.Var _, _) :: cs) ->
+  | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
       unreachable_cases cs
-  | ((SP.Const {const_val = c; _}, body) as case :: rest) ->
+  | (Loc.{l_value = SP.Const {const_val = c; _}; _}, body) as case :: rest ->
       begin match Map.find dict c with
         | Some _ ->
             unreachable_cases [case]
@@ -513,26 +522,26 @@ and desugar_const_match dict = function
       end
   | [] ->
       incomplete_pattern ()
-  | ((SP.Ctor _, _) :: _) ->
+  | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
   | [] -> D.Match
         { default = None
         ; cases = finalize_dict dict
         }
-  | [(SP.Wild _, body)] -> D.Match
+  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match
         { default = Some (None, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var {v_var = v; v_type = None; _}, body] ->
+  | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
       D.Match
-        { default = Some (Some v.sv_var, desugar body)
+        { default = Some (Some v.Loc.l_value, desugar body)
         ; cases = finalize_dict dict
         }
-  | [SP.Var {v_var = v; v_type = Some ty; _}, body] ->
+  | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let
-          { let_v = v.sv_var
+          { let_v = v.Loc.l_value
           ; let_e =
               D.WithType{
                 wt_expr = D.Var {v_var = v'};
@@ -545,9 +554,9 @@ and desugar_lbl_match dict = function
         { default = Some(Some v', let_)
         ; cases = finalize_dict dict
         }
-  | (SP.Ctor {c_lbl = lbl; c_arg = p; _}, body) :: cases ->
+  | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
-        Map.update dict lbl.sl_label ~f:(function
+        Map.update dict lbl.Loc.l_value ~f:(function
           | None -> [(p, body)]
           | Some cases -> ((p, body) :: cases)
         )
@@ -580,18 +589,18 @@ and desugar_let bs body =
         let (v, ty) = desugar_type_binding t in
         go vals ((v, ty) :: types) bs
     | `BindVal (p, e) :: bs ->
-        go_val_binding vals types (p, desugar e) bs
+        go_val_binding vals types (p.Loc.l_value, desugar e) bs
 
   and go_val_binding vals types (pat, e) bs = match (pat, e) with
     | (SP.Var {v_var = v; v_type = None; _}, e) ->
-        go ((v.sv_var, e) :: vals) types bs
+        go ((v.Loc.l_value, e) :: vals) types bs
     | ((SP.Const _), _) ->
         incomplete_pattern ()
-    | (SP.Wild _, e) ->
+    | (SP.Wild, e) ->
         go ((Gensym.anon_var (), e) :: vals) types bs
     | (SP.Var{v_var = v; v_type = Some ty; _}, e) ->
         go
-          (( v.sv_var
+          (( v.Loc.l_value
            , D.WithType{
                wt_expr = e;
                wt_type = desugar_type ty
@@ -608,7 +617,7 @@ and desugar_let bs body =
               app_fn =
                 D.Match {
                   default = None;
-                  cases = LabelMap.singleton lbl.sl_label
+                  cases = LabelMap.singleton lbl.Loc.l_value
                       ( match_var
                       , D.Var {v_var = match_var}
                       )
@@ -620,14 +629,14 @@ and desugar_let bs body =
         go_val_binding
           (bind :: vals)
           types
-          (pat, D.Var {v_var = bind_var})
+          (pat.Loc.l_value, D.Var {v_var = bind_var})
           bs
   in
-  go [] [] bs
-and desugar_type_binding: (SC.var * SC.var list * ST.t) -> (Ast.Var.t * DK.maybe_kind DT.t) =
+  go [] [] (List.map bs ~f:(fun b -> b.Loc.l_value))
+and desugar_type_binding: (SC.var * SC.var list * ST.lt) -> (Ast.Var.t * DK.maybe_kind DT.t) =
   fun (v, params, ty) ->
-  let v = v.sv_var in
-  let params = List.map params ~f:(fun v -> v.sv_var) in
+  let v = v.Loc.l_value in
+  let params = List.map params ~f:(fun v -> v.Loc.l_value) in
   (* Here, we convert things like `type t a b = ... (t a b) ...` to
    * `lam a b. rec t. ... t ...`.
   *)

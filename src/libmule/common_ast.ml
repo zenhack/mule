@@ -80,4 +80,10 @@ module Loc = struct
     l_value : 'a;
     l_loc : t;
   }
+  [@@deriving sexp]
+
+  let map {l_value; l_loc} ~f = {
+    l_value = f l_value;
+    l_loc;
+  }
 end

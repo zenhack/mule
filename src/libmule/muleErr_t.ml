@@ -37,7 +37,7 @@ type t =
 
   | `TypeError of type_error
   | `DuplicateFields of (Label.t list)
-  | `UnreachableCases of (Surface_ast.Pattern.t * Surface_ast.Expr.t) list
+  | `UnreachableCases of (Surface_ast.Pattern.lt * Surface_ast.Expr.lt) list
   | `EmptyMatch
   | `MalformedType of string
   | `IncompletePattern

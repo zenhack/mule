@@ -1,3 +1,4 @@
+open Common_ast
 open Surface_ast
 open Surface_ast.Expr
 
@@ -6,7 +7,7 @@ let duplicate_fields dups =
 
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
-  let rec go_expr = function
+  let rec go_expr Loc.{l_value; _} = match l_value with
     | Import _ | Embed _ | Const _ -> ()
     | Record {r_fields = fields; _} ->
         go_fields fields
@@ -30,31 +31,31 @@ let check_duplicate_record_fields =
         go_expr e;
         go_type ty
   and go_let =
-    List.iter ~f:(function
+    List.iter ~f:(fun Loc.{l_value; _} -> match l_value with
       | `BindVal(pat, e) ->
           go_pat pat;
           go_expr e
       | `BindType(_, _, ty) -> go_type ty
     )
   and go_fields fields =
-    List.iter fields ~f:(function
+    List.iter fields ~f:(fun Loc.{l_value; _} -> match l_value with
       | `Value (_, ty, e) ->
           Option.iter ty ~f:go_type;
           go_expr e
       | `Type (_, _, ty) ->
           go_type ty
     );
-    let labels = List.map fields ~f:(function
+    let labels = List.map fields ~f:(fun Loc.{l_value; _} -> match l_value with
         | `Value (lbl, _, _) -> lbl
         | `Type (lbl, _, _) -> lbl
       ) in
     go_labels labels
-  and go_pat = function
+  and go_pat Loc.{l_value; _} = match l_value with
     | Pattern.Const _ -> ()
     | Pattern.Ctor{c_arg; _} -> go_pat c_arg
-    | Pattern.Var {v_type = None; _} | Pattern.Wild _ -> ()
+    | Pattern.Var {v_type = None; _} | Pattern.Wild -> ()
     | Pattern.Var {v_type = Some ty; _} -> go_type ty
-  and go_type = function
+  and go_type Loc.{l_value; _} = match l_value with
     | Type.Import _
     | Type.Var _
     | Type.Path _
@@ -64,7 +65,7 @@ let check_duplicate_record_fields =
     | Type.Recur{recur_body = ty; _} -> go_type ty
     | Type.Fn{fn_param; fn_ret; _} -> go_type fn_param; go_type fn_ret
     | Type.Record {r_items = fields; _} ->
-        List.map fields ~f:(function
+        List.map fields ~f:(fun Loc.{l_value; _} -> match l_value with
           | Type.Rest _ -> []
           | Type.Field(lbl, ty)
           | Type.Type(lbl, _, Some ty) ->
@@ -81,10 +82,10 @@ let check_duplicate_record_fields =
         go_type anno_ty
   and go_labels =
     let rec go all dups = function
-      | (l :: ls) when Set.mem all l.sl_label ->
-          go all (Set.add dups l.sl_label) ls
-      | (l :: ls) ->
-          go (Set.add all l.sl_label) dups ls
+      | (Loc.{l_value = l; _} :: ls) when Set.mem all l ->
+          go all (Set.add dups l) ls
+      | (Loc.{l_value = l; _} :: ls) ->
+          go (Set.add all l) dups ls
       | [] when Set.is_empty dups -> ()
       | [] -> duplicate_fields (Set.to_list dups)
     in go LabelSet.empty LabelSet.empty
