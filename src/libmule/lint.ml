@@ -81,10 +81,10 @@ let check_duplicate_record_fields =
         go_type anno_ty
   and go_labels =
     let rec go all dups = function
-      | (l :: ls) when Set.mem all l ->
-          go all (Set.add dups l) ls
+      | (l :: ls) when Set.mem all l.sl_label ->
+          go all (Set.add dups l.sl_label) ls
       | (l :: ls) ->
-          go (Set.add all l) dups ls
+          go (Set.add all l.sl_label) dups ls
       | [] when Set.is_empty dups -> ()
       | [] -> duplicate_fields (Set.to_list dups)
     in go LabelSet.empty LabelSet.empty

@@ -86,13 +86,16 @@ let identifier : (string, string) MParser.t = (
 ) <?> "identifier"
 
 (* A variable. *)
-let var = token (
+let var = token (with_loc (
     let%bind name = identifier in
     if Set.mem keywords name then
       fail "reserved word"
     else
-      return (Var.of_string name)
-  )
+      return (fun loc -> {
+          sv_var = Var.of_string name;
+          sv_loc = loc;
+        })
+  ))
 
 let int_const: (Const.t, string) MParser.t = token (
     let%bind sign = option (char '+' <|> char '-') in
@@ -171,18 +174,25 @@ let embed = with_loc (
 )
 
 let label =
-  var |>> var_to_label
+  let%map {sv_var; sv_loc} = var in
+  {
+    sl_label = var_to_label sv_var;
+    sl_loc = sv_loc;
+  }
 
-let ctor = token (
+let ctor = token (with_loc (
     let%bind c = uppercase in
     let%map cs = many_chars (letter <|> char '_' <|> digit) in
-    Label.of_string (String.make 1 c ^ cs)
-  ) <?> "constructor"
+    fun sl_loc -> {
+      sl_label = Label.of_string (String.make 1 c ^ cs);
+      sl_loc;
+    }
+)) <?> "constructor"
 
 let rec typ_term = lazy (
   choice
     [ lazy_p typ_factor
-    ; with_loc (ctor |>> fun c_lbl c_loc -> Type.Ctor {c_lbl; c_loc})
+    ; (ctor |>> fun c_lbl -> Type.Ctor {c_lbl})
     ; lazy_p record_type
     ; lazy_p recur_type
     ; lazy_p all_type
@@ -197,12 +207,11 @@ and typ_factor = lazy (
       let%map v = attempt (kwd "...") >> var in
       fun rr_loc -> Type.RowRest {rr_var = v; rr_loc}
     end
-    ; with_loc begin
+    ; begin
       let%bind v = var in
       match%map many (kwd "." >> label) with
-      | [] -> fun v_loc -> Type.Var {v_var = v; v_loc}
-      | p_lbls -> fun p_loc -> Type.Path {
-          p_loc;
+      | [] -> Type.Var {v_var = v}
+      | p_lbls -> Type.Path {
           p_var = v;
           p_lbls;
         }
@@ -344,10 +353,10 @@ and ex3 = lazy (
     ; lazy_p lambda
     ; lazy_p match_expr
     ; lazy_p let_expr
-    ; with_loc (var |>> fun v loc -> Expr.Var {v_var = v; v_loc = loc})
+    ; (var |>> fun v -> Expr.Var {v_var = v})
     ; parens (lazy_p expr)
     ; lazy_p record
-    ; with_loc (ctor |>> fun c c_loc -> Expr.Ctor {c_lbl = c; c_loc})
+    ; (ctor |>> fun c -> Expr.Ctor {c_lbl = c})
     ; with_loc (constant |>> fun n const_loc -> Expr.Const {const_val = n; const_loc})
     ]
 )

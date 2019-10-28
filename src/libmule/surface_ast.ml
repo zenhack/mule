@@ -1,5 +1,22 @@
 open Common_ast
 
+type var = {
+  sv_var : Var.t;
+  sv_loc : Loc.t;
+}
+[@@deriving sexp_of]
+
+type label = {
+  sl_label : Label.t;
+  sl_loc : Loc.t;
+}
+[@@deriving sexp_of]
+
+let var_of_label {sl_label; sl_loc} = {
+  sv_var = var_of_label sl_label;
+  sv_loc = sl_loc;
+}
+
 module Type = struct
   type quantifier = [ `All | `Exist ]
   [@@deriving sexp_of]
@@ -12,26 +29,24 @@ module Type = struct
       }
     | Quant of {
         q_quant : quantifier;
-        q_vars : Var.t list;
+        q_vars : var list;
         q_body : t;
         q_loc : Loc.t;
       }
     | Recur of {
-        recur_var : Var.t;
+        recur_var : var;
         recur_body : t;
         recur_loc : Loc.t;
       }
     | Var of {
-        v_var : Var.t;
-        v_loc : Loc.t;
+        v_var : var;
       }
     | Record of {
         r_items : record_item list;
         r_loc : Loc.t;
       }
     | Ctor of {
-        c_lbl : Label.t;
-        c_loc : Loc.t;
+        c_lbl : label;
       }
     | App of {
         app_fn : t;
@@ -44,18 +59,17 @@ module Type = struct
         u_loc : Loc.t;
       }
     | RowRest of {
-        rr_var : Var.t;
+        rr_var : var;
         rr_loc : Loc.t;
       }
     | Annotated of {
-        anno_var : Var.t;
+        anno_var : var;
         anno_ty : t;
         anno_loc: Loc.t;
       }
     | Path of {
-        p_loc : Loc.t;
-        p_var : Var.t;
-        p_lbls : Label.t list;
+        p_var : var;
+        p_lbls : label list;
       }
     | Import of {
         i_path : string;
@@ -65,35 +79,39 @@ module Type = struct
   [@@deriving sexp_of]
 
   and record_item =
-    | Field of (Label.t * t)
-    | Type of (Label.t * Var.t list * t option)
-    | Rest of Var.t
+    | Field of (label * t)
+    | Type of (label * var list * t option)
+    | Rest of var
   [@@deriving sexp_of]
 
   let t_loc = function
     | Fn{fn_loc; _} -> fn_loc
     | Quant{q_loc; _} -> q_loc
     | Recur{recur_loc; _} -> recur_loc
-    | Var{v_loc; _} -> v_loc
+    | Var{v_var = {sv_loc; _}} -> sv_loc
     | Record{r_loc; _} -> r_loc
-    | Ctor{c_loc; _} -> c_loc
+    | Ctor{c_lbl = {sl_loc; _}} -> sl_loc
     | App{app_loc; _} -> app_loc
     | Union{u_loc; _} -> u_loc
     | RowRest{rr_loc; _} -> rr_loc
     | Annotated{anno_loc; _} -> anno_loc
-    | Path{p_loc; _} -> p_loc
+    | Path{p_var; p_lbls} ->
+        List.fold
+          p_lbls
+          ~init:p_var.sv_loc
+          ~f:(fun loc {sl_loc; _} -> Loc.spanning loc sl_loc)
     | Import{i_loc; _} -> i_loc
 end
 
 module Pattern = struct
   type t =
     | Ctor of {
-        c_lbl : Label.t;
+        c_lbl : label;
         c_arg : t;
         c_loc : Loc.t;
       }
     | Var of {
-        v_var : Var.t;
+        v_var : var;
         v_type : Type.t option;
         v_loc : Loc.t;
       }
@@ -124,8 +142,7 @@ module Expr = struct
         lam_loc : Loc.t;
       }
     | Var of {
-        v_var : Var.t;
-        v_loc : Loc.t;
+        v_var : var;
       }
     | Record of {
         r_fields : field list;
@@ -133,10 +150,10 @@ module Expr = struct
       }
     | GetField of {
         gf_arg : t;
-        gf_lbl : Label.t;
+        gf_lbl : label;
         gf_loc : Loc.t;
       }
-    | Ctor of {c_lbl : Label.t; c_loc : Loc.t}
+    | Ctor of {c_lbl : label}
     | Update of {
         up_arg : t;
         up_fields : field list;
@@ -173,19 +190,19 @@ module Expr = struct
       }
   [@@deriving sexp_of]
   and binding =
-    [ `BindType of Var.t * Var.t list * Type.t
+    [ `BindType of var * var list * Type.t
     | `BindVal of Pattern.t * t
     ]
   [@@deriving sexp_of]
   and field =
     [ `Value of
-        ( Label.t
+        ( label
           * Type.t option
           * t
         )
     | `Type of
-        ( Label.t
-          * Var.t list
+        ( label
+          * var list
           * Type.t
         )
     ]
@@ -194,10 +211,10 @@ module Expr = struct
   let t_loc = function
     | App{app_loc; _} -> app_loc
     | Lam{lam_loc; _} -> lam_loc
-    | Var{v_loc; _} -> v_loc
+    | Var{v_var = {sv_loc; _}} -> sv_loc
     | Record{r_loc; _} -> r_loc
     | GetField{gf_loc; _} -> gf_loc
-    | Ctor{c_loc; _} -> c_loc
+    | Ctor{c_lbl = {sl_loc; _}} -> sl_loc
     | Update{up_loc; _} -> up_loc
     | Match{match_loc; _} -> match_loc
     | Let{let_loc; _} -> let_loc
