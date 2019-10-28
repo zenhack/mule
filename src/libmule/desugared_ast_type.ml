@@ -295,7 +295,7 @@ let rec to_string = function
       |> String.concat ~sep:", "
       |> (fun s -> "{ " ^ s ^ " }")
   | Union{u_row = {row_fields; row_rest; _}} ->
-      String.concat ~sep:"|" (
+      String.concat ~sep:" | " (
         List.map row_fields ~f:(fun (lbl, ty) ->
           String.concat [
             Label.to_string lbl;
