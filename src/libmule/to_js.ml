@@ -3,6 +3,14 @@ open Common_ast
 module Js = Js_pre
 module D = Desugared_ast
 
+let intrinsics_env =
+  ["int"; "text"; "char"]
+  |> List.map ~f:(fun v ->
+    let v = Var.of_string v in
+    (v, `Var v)
+  )
+  |> Map.of_alist_exn (module Var)
+
 let force e =
   Js.Call1(Js.Var (Var.of_string "$force"), e)
 
@@ -151,4 +159,4 @@ let translate_expr expr =
           ~init:(go env'' letrec_body)
           ~f:(fun f body -> f body)
   in
-  go VarMap.empty expr
+  go intrinsics_env expr

@@ -55,7 +55,7 @@ let interp_cmd = function
           |> Js_pre.cps (fun x -> x)
           |> Js_pre.to_js
           |> Js_ast.expr
-          |> Fmt.(fun x -> x ^ s "\n")
+          |> Fmt.(fun x -> s "const main = " ^ x ^ s "\n")
           |> Fmt.to_string
           |> Lwt_io.write out
         with
