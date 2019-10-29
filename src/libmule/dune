@@ -1,5 +1,12 @@
 (include_subdirs unqualified)
 
+(rule
+  (targets js_runtime_gen.ml)
+  (deps
+    (:gen ../gen-js-runtime/gen.exe)
+    (:runtime ./runtime.js))
+  (action (run %{gen} %{runtime} %{targets})))
+
 (library
   (name libmule)
   (public_name libmule)

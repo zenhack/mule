@@ -1,5 +1,4 @@
-
-let src = "'use strict';
+'use strict';
 const $update = (r, lbl, v) => {
   var ret = {};
   for(var k in Object.getOwnPropertyNames(r)) {
@@ -57,4 +56,3 @@ const text = {
   }),
   'from-int': $fn1(String),
 }
-"

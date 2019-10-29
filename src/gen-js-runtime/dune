@@ -1,0 +1,4 @@
+(executable
+  (name gen)
+  (flags (:standard -open Base))
+  (libraries base stdio))

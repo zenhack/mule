@@ -50,7 +50,7 @@ let interp_cmd = function
               file_name
           in
           let out = Lwt_io.stdout in
-          let%lwt _ = Lwt_io.write out Js_runtime.src in
+          let%lwt _ = Lwt_io.write out Js_runtime_gen.src in
           To_js.translate_expr dexp
           |> Js_pre.cps (fun x -> x)
           |> Js_pre.to_js
