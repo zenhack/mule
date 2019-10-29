@@ -137,7 +137,7 @@ let rec quantify_opaques t = match t with
           match quantify_opaques ty with
           | DT.Opaque {o_info} ->
               let var = Gensym.anon_var () in
-              vars := var :: !vars;
+              vars := (lbl, var) :: !vars;
               (lbl, DT.Var { v_info = o_info; v_var = var })
           | ty' -> (lbl, ty')
         )
@@ -150,12 +150,16 @@ let rec quantify_opaques t = match t with
           ; r_values = quantify_row_opaques r_values
           }
       in
-      List.fold !vars ~init ~f:(fun ty v ->
+      List.fold !vars ~init ~f:(fun ty (lbl, v) ->
         DT.Quant {
           q_info = `Unknown;
           q_quant = `Exist;
           q_var = v;
-          q_body = ty;
+          q_body =
+            DT.subst
+              (var_of_label lbl)
+              (DT.Var {v_var = v; v_info = `Unknown})
+              ty
         }
       )
   | DT.Opaque i -> DT.Opaque i
