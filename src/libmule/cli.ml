@@ -14,8 +14,8 @@ let debug_opts_block = `Blocks [
   ]
 
 let man_with_args = [
-  `S "OPTIONS";
   `S "ARGUMENTS";
+  `S "OPTIONS";
   debug_opts_block;
 ]
 
@@ -93,13 +93,22 @@ let run_term =
   |> with_debug_flags
 
 let build_js_term =
-  Term.(const (fun p -> `Build_js p) $
-        Arg.(required
+  Term.(const (fun src dest -> `Build_js (object
+      method src = src
+      method dest = dest
+    end))
+    $ Arg.(required
              & pos 0 (some non_dir_file) None
              & info []
                ~docv:"FILE"
                ~doc:"Compile the file $(docv)"
         )
+    $ Arg.(value
+            & opt (some string) None
+            & info ["o"; "output"]
+               ~docv:"OUTPUT"
+               ~doc:"Write the generated JavaScript to $(docv). Defaults to FILE.js"
+      )
   )
   |> with_debug_flags
 

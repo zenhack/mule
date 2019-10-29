@@ -9,7 +9,10 @@ type debug_flags = <
 type cmd =
   [ `Repl
   | `Eval of string
-  | `Build_js of string
+  | `Build_js of <
+      src: string;
+      dest: string option;
+    >
   | `Run of <runner: string; file: string>
   ]
 

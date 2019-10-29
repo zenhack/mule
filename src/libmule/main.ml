@@ -29,7 +29,12 @@ let interp_cmd = function
       let%lwt contents = Util.IO.slurp_file path in
       let%lwt _ = Run.run contents in
       Lwt.return ()
-  | `Build_js file_name ->
+  | `Build_js flags ->
+      let src = flags#src in
+      let dest = match flags#dest with
+        | Some d -> d
+        | None -> src ^ ".js"
+      in
       begin try%lwt
           let v = Var.of_string "t" in
           let%lwt dexp =
@@ -47,22 +52,23 @@ let interp_cmd = function
                   };
                 }
               )
-              file_name
+              src
           in
-          let out = Lwt_io.stdout in
-          To_js.translate_expr dexp
-          |> Js_pre.cps (fun x -> x)
-          |> Js_pre.to_js
-          |> Js_ast.expr
-          |> Fmt.(fun e -> concat [
-              s "const mule = (() => {";
-              s Js_runtime_gen.src; s "\n";
-              s "mule.main = "; e; s "\n";
-              s "return mule\n";
-              s "})()\n";
-            ])
-          |> Fmt.to_string
-          |> Lwt_io.write out
+          Lwt_io.with_file dest ~mode:Lwt_io.output (fun out ->
+            To_js.translate_expr dexp
+            |> Js_pre.cps (fun x -> x)
+            |> Js_pre.to_js
+            |> Js_ast.expr
+            |> Fmt.(fun e -> concat [
+                s "const mule = (() => {";
+                s Js_runtime_gen.src; s "\n";
+                s "mule.main = "; e; s "\n";
+                s "return mule\n";
+                s "})()\n";
+              ])
+            |> Fmt.to_string
+            |> Lwt_io.write out
+          )
         with
         | Invalid_argument _ ->
             let%lwt _ = Lwt_io.write Lwt_io.stderr "not enough arguments to build-js\n" in
