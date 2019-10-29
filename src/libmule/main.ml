@@ -55,9 +55,10 @@ let interp_cmd = function
           |> Js_pre.to_js
           |> Js_ast.expr
           |> Fmt.(fun e -> concat [
-              s "const main = (() => {";
-              s Js_runtime_gen.src;
-              s "return "; e; s "\n";
+              s "const mule = (() => {";
+              s Js_runtime_gen.src; s "\n";
+              s "mule.main = "; e; s "\n";
+              s "return mule\n";
               s "})()\n";
             ])
           |> Fmt.to_string

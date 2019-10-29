@@ -56,3 +56,5 @@ const text = {
   }),
   'from-int': $fn1(String),
 }
+
+var mule = {}
