@@ -2,7 +2,7 @@
 Desugared:
 
 	(letrec (types ((t (lam a (rec t int))))) (values ())
-	 ((: (t (record (types ()) (values ())))) (Integer 4)))
+	 (: (Integer 4) (t (record (types ()) (values ())))))
 
 inferred type:
 

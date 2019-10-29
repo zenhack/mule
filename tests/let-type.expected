@@ -2,7 +2,7 @@
 Desugared:
 
 	(letrec (types ((t (rec t (record (types ()) (values ())))))) (values ())
-	 ((: t) {}))
+	 (: {} t))
 
 inferred type:
 

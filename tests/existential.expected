@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((: (exist t (t -> t))) (fn x (Integer 4)))
+	(: (fn x (Integer 4)) (exist t (t -> t)))
 
 inferred type:
 

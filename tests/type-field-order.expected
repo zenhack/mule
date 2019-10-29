@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(letrec (types ((t (rec t int)))) (values ((x ((: t) (Integer 4)))))
-	 (((.= x) (((.type= t) {}) (type t))) x))
+	(letrec (types ((t (rec t int)))) (values ((x (: (Integer 4) t))))
+	 (((.= x) (.type= t {} t)) x))
 
 inferred type:
 
@@ -16,8 +16,7 @@ Runtime term:
 	   ((App
 	     ((Lam
 	       (0 () (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
-	      (App
-	       ((App ((Lam (0 () (Lam (1 () (Var 1))))) (Record ()))) (Record ())))))
+	      (Record ())))
 	    (Var 0)))))
 
 Evaluated:

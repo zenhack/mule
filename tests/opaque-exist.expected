@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((: (exist $0 (record (types ((t $0))) (values ())))) {})
+	(: {} (exist $5 (record (types ((t $5))) (values ()))))
 
 inferred type:
 

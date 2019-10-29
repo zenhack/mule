@@ -1,5 +1,5 @@
 
 Desugared:
 
-	((: (all a a)) (Integer 4))
+	(: (Integer 4) (all a a))
 Type error: could not instatiate rigid type variable

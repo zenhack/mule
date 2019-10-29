@@ -2,7 +2,7 @@
 Desugared:
 
 	(letrec (types ((t (rec t int)) (u (rec u t)))) (values ())
-	 (((.type= t) (((.type= u) {}) (type u))) (type t)))
+	 (.type= t (.type= u {} u) t))
 
 inferred type:
 
@@ -10,11 +10,7 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((App
-	   ((Lam (0 () (Lam (1 () (Var 1)))))
-	    (App ((App ((Lam (0 () (Lam (1 () (Var 1))))) (Record ()))) (Record ())))))
-	  (Record ())))
+	(Record ())
 
 Evaluated:
 

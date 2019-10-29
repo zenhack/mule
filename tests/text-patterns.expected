@@ -4,7 +4,7 @@ Desugared:
 	((match/const
 	  (((Text goodbye) (Integer 3)) ((Text hello) (Integer 1))
 	   ((Text hey!) (Integer 2)))
-	  (_ (fn $0 (Integer 4))))
+	  (_ (fn $5 (Integer 4))))
 	 (Text hey!))
 
 inferred type:

@@ -1,7 +1,6 @@
 
 Desugared:
 
-	((:
-	  ((e : (exist $0 (record (types ((t $0))) (values ())))) -> ((. e t) int)))
-	 (Integer 4))
+	(: (Integer 4)
+	 ((e : (exist $5 (record (types ((t $5))) (values ())))) -> ((. e t) int)))
 Type error: mismatched type constructors: int and ->
