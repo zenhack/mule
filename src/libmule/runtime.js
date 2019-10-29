@@ -57,4 +57,39 @@ const text = {
   'from-int': $fn1(String),
 }
 
-var mule = {}
+const $call1 = function(f, v) {
+	var result = null;
+	var next = f(v, (r) => {
+		result = r;
+		return null;
+	})
+	while(result === null) {
+		next = next()
+	}
+	return result;
+};
+
+const $call = function(f) {
+	for(var i = 1; i < arguments.length; i++) {
+		f = $call1(f, arguments[i]);
+	}
+	return f;
+};
+
+const $exec = function() {
+	return $call(...arguments)()
+};
+
+const $fn = (count, f) => {
+	let ret = $fn1(f);
+	for(var i = 3; i < arguments; i++) {
+		ret = (x, k) => () => k(f(x, $fn1))
+	}
+	return ret;
+};
+
+const mule = {
+	call: $call,
+	exec: $exec,
+	fn: $fn,
+}
