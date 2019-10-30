@@ -27,12 +27,12 @@ type 'i t =
       p_var : Var.t;
       p_lbls : Label.t list;
     }
-  | Record of
-      { r_info : 'i
-      ; r_types : 'i row
-      ; r_values : 'i row
-      ; r_src : Surface_ast.Type.lt option;
-      }
+  | Record of {
+      r_info : 'i;
+      r_types : 'i row;
+      r_values : 'i row;
+      r_src : Surface_ast.Type.lt option;
+    }
   | Union of {
       u_row : 'i row;
     }
@@ -120,24 +120,24 @@ let rec subst old new_ ty = match ty with
         app_fn = subst old new_ app_fn;
         app_arg = subst old new_ app_arg;
       }
-and subst_row old new_ {row_info; row_fields = ls; row_rest} =
-  { row_info
-  ; row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field))
-  ; row_rest =
-      match row_rest with
-      | Some v when Var.equal v old -> MuleErr.bug "TODO"
-      | _ -> row_rest
-  }
+and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
+  row_info;
+  row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field));
+  row_rest =
+    match row_rest with
+    | Some v when Var.equal v old -> MuleErr.bug "TODO"
+    | _ -> row_rest;
+}
 
 let rec sexp_of_t: 'i t -> Sexp.t = function
   | Fn{fn_pvar = None; fn_param; fn_ret; _} ->
       Sexp.List [sexp_of_t fn_param; Sexp.Atom "->"; sexp_of_t fn_ret]
   | Fn{fn_pvar = Some v; fn_param; fn_ret; _} ->
-      Sexp.List
-        [ Sexp.List [ Var.sexp_of_t v; Sexp.Atom ":"; sexp_of_t fn_param ]
-        ; Sexp.Atom "->"
-        ; sexp_of_t fn_ret
-        ]
+      Sexp.List [
+        Sexp.List [ Var.sexp_of_t v; Sexp.Atom ":"; sexp_of_t fn_param ];
+        Sexp.Atom "->";
+        sexp_of_t fn_ret;
+      ]
   | Recur{mu_var = v; mu_body = body; _} ->
       Sexp.List [Sexp.Atom "rec"; Var.sexp_of_t v; sexp_of_t body]
   | Var{v_var; _} ->
@@ -146,20 +146,20 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
       List ([Atom "."; Var.sexp_of_t p_var] @ List.map p_lbls ~f:Label.sexp_of_t)
     )
   | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
-      List
-        [ Atom "record"
-        ; List [Atom "types"; sexp_of_row r_types]
-        ; List [Atom "values"; sexp_of_row r_values]
-        ]
+      List [
+        Atom "record";
+        List [Atom "types"; sexp_of_row r_types];
+        List [Atom "values"; sexp_of_row r_values];
+      ]
     )
   | Union {u_row} ->
       Sexp.(List [Atom "union"; sexp_of_row u_row])
   | Quant {q_quant; q_var; q_body; _} ->
-      Sexp.List
-        [ sexp_of_quantifier q_quant
-        ; Sexp.Atom(Var.to_string q_var)
-        ; sexp_of_t q_body
-        ]
+      Sexp.List [
+        sexp_of_quantifier q_quant;
+        Sexp.Atom(Var.to_string q_var);
+        sexp_of_t q_body;
+      ]
   | TypeLam{tl_param; tl_body; _} ->
       Sexp.List [
         Sexp.Atom "lam";
@@ -221,12 +221,12 @@ let rec map ty ~f = match ty with
   | Var {v_info; v_var} ->
       Var{v_info = f v_info; v_var}
   | Record {r_info; r_types; r_values; r_src} ->
-      Record
-        { r_info = f r_info
-        ; r_src
-        ; r_types = map_row r_types ~f
-        ; r_values = map_row r_values ~f
-        }
+      Record {
+        r_info = f r_info;
+        r_src;
+        r_types = map_row r_types ~f;
+        r_values = map_row r_values ~f;
+      }
   | Union {u_row} ->
       Union {u_row = map_row u_row ~f}
   | Quant {q_info; q_quant; q_var; q_body} ->
@@ -248,11 +248,11 @@ let rec map ty ~f = match ty with
         app_fn = map app_fn ~f;
         app_arg = map app_arg ~f;
       }
-and map_row {row_info; row_fields; row_rest} ~f =
-  { row_info = f row_info
-  ; row_fields = List.map row_fields ~f:(fun(l, t) -> (l, map t ~f))
-  ; row_rest
-  }
+and map_row {row_info; row_fields; row_rest} ~f = {
+  row_info = f row_info;
+  row_fields = List.map row_fields ~f:(fun(l, t) -> (l, map t ~f));
+  row_rest;
+}
 
 let rec to_string = function
   | Fn {fn_pvar = Some p; fn_param; fn_ret; _} ->

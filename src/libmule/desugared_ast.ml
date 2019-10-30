@@ -81,14 +81,14 @@ module SubstRec = struct
     | Type.Named _
     | Type.Opaque _ -> ty
   and row: args -> 'i Type.row -> 'i Type.row =
-    fun args {row_info; row_fields; row_rest} ->
-    { row_info
-    ; row_fields = List.map row_fields ~f:(fun (l, t) -> (l, typ args t))
-    ; row_rest
-      (* FIXME: we should potentially do a substitution here, but it's
-       * not clear how since rest is [Var.t option], so we can't put another
-       * expr there. *)
-    }
+    fun args {row_info; row_fields; row_rest} -> {
+        row_info;
+        row_fields = List.map row_fields ~f:(fun (l, t) -> (l, typ args t));
+        row_rest;
+        (* FIXME: we should potentially do a substitution here, but it's
+         * not clear how since rest is [Var.t option], so we can't put another
+         * expr there. *)
+      }
   and expr: args -> 'i Expr.t -> 'i Expr.t = fun args e -> match e with
     | Expr.Var {v_var} when Set.mem args.val_vars v_var ->
         Expr.App {

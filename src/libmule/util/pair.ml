@@ -14,10 +14,10 @@ module Make(P:Pair) = struct
     type t = (P.Left.t * P.Right.t)
 
     let sexp_of_t (l, r) =
-      Sexp.List
-        [ P.Left.sexp_of_t l
-        ; P.Right.sexp_of_t r
-        ]
+      Sexp.List [
+        P.Left.sexp_of_t l;
+        P.Right.sexp_of_t r;
+      ]
 
     let t_of_sexp = function
       | Sexp.List [l; r] ->

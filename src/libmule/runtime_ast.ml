@@ -12,20 +12,20 @@ module Expr = struct
     | App of (t * t)
     | Record of t LabelMap.t
     | GetField of Label.t
-    | Update of
-        { old: t
-        ; label: Label.t
-        ; field: t
-        }
+    | Update of {
+        old: t;
+        label: Label.t;
+        field: t;
+      }
     | Ctor of (Label.t * t)
     | Match of {
         cases: t LabelMap.t;
         default: t option;
       }
-    | ConstMatch of
-        { cm_cases: t ConstMap.t
-        ; cm_default: t
-        }
+    | ConstMatch of {
+        cm_cases: t ConstMap.t;
+        cm_default: t;
+      }
     | Lazy of (lazy_state ref) Lazy.t
     | Vec of t array
     | Const of Const.t

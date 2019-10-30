@@ -105,11 +105,11 @@ let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK
               tl_body = go tl_body;
             }
       end
-  and go_row {row_info; row_fields; row_rest} =
-    { row_info
-    ; row_fields = List.map row_fields ~f:(fun (lbl, t) -> (lbl, go t))
-    ; row_rest
-    }
+  and go_row {row_info; row_fields; row_rest} = {
+    row_info;
+    row_fields = List.map row_fields ~f:(fun (lbl, t) -> (lbl, go t));
+    row_rest;
+  }
   in
   go
 
@@ -143,12 +143,12 @@ let rec quantify_opaques t = match t with
         )
       in
       let init =
-        DT.Record
-          { r_info
-          ; r_src
-          ; r_types = {row_info; row_fields; row_rest}
-          ; r_values = quantify_row_opaques r_values
-          }
+        DT.Record {
+          r_info;
+          r_src;
+          r_types = {row_info; row_fields; row_rest};
+          r_values = quantify_row_opaques r_values;
+        }
       in
       List.fold !vars ~init ~f:(fun ty (lbl, v) ->
         DT.Quant {
@@ -175,13 +175,13 @@ let rec quantify_opaques t = match t with
   | DT.Union {u_row} -> DT.Union { u_row = quantify_row_opaques u_row }
   | DT.Quant{q_info; q_quant; q_var; q_body} ->
       DT.Quant{q_info; q_quant; q_var; q_body = quantify_opaques q_body}
-and quantify_row_opaques {row_info; row_fields; row_rest} =
-  { row_info
-  ; row_fields = List.map
-        row_fields
-        ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty))
-  ; row_rest
-  }
+and quantify_row_opaques {row_info; row_fields; row_rest} = {
+  row_info;
+  row_fields = List.map
+      row_fields
+      ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty));
+  row_rest;
+}
 
 let rec desugar_type' ty = match ty.Loc.l_value with
   | ST.Import _ ->
@@ -294,19 +294,19 @@ and desugar_record_type types fields r r_src =
         in
         go ((lbl.Loc.l_value, DT.Opaque {o_info = kind})::types) fields fs
     | [] ->
-        DT.Record
-          { r_src
-          ; r_info = `Type
-          ; r_types = {row_info = `Row; row_fields = types; row_rest = None}
-          ; r_values = {row_info = `Row; row_fields = fields; row_rest = None}
-          }
+        DT.Record {
+          r_src;
+          r_info = `Type;
+          r_types = {row_info = `Row; row_fields = types; row_rest = None};
+          r_values = {row_info = `Row; row_fields = fields; row_rest = None};
+        }
     | [ST.Rest v] ->
-        DT.Record
-          { r_src
-          ; r_info = `Type
-          ; r_types = {row_info = `Row; row_fields = types; row_rest = None}
-          ; r_values = {row_info = `Row; row_fields = fields; row_rest = Some v.Loc.l_value}
-          }
+        DT.Record {
+          r_src;
+          r_info = `Type;
+          r_types = {row_info = `Row; row_fields = types; row_rest = None};
+          r_values = {row_info = `Row; row_fields = fields; row_rest = Some v.Loc.l_value};
+        }
     | (ST.Field (l, t) :: rest) ->
         go types ((l.Loc.l_value, desugar_type' t)::fields) rest
     | (ST.Rest _ :: _) ->
@@ -491,28 +491,28 @@ and desugar_match cases =
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
         desugar_lambda [pat] body
-    | [] -> D.Match
-          { match_cases = LabelMap.empty
-          ; match_default = None
-          }
+    | [] -> D.Match {
+        match_cases = LabelMap.empty;
+        match_default = None;
+      }
     | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
         unreachable_cases cs
   end
 and desugar_const_match dict = function
-  | [Loc.{l_value = SP.Wild; _}, body] -> D.ConstMatch
-        { cm_default = D.Lam {
-              l_param = Gensym.anon_var ();
-              l_body = desugar body;
-            }
-        ; cm_cases = dict
-        }
+  | [Loc.{l_value = SP.Wild; _}, body] -> D.ConstMatch {
+      cm_default = D.Lam {
+          l_param = Gensym.anon_var ();
+          l_body = desugar body;
+        };
+      cm_cases = dict;
+    }
   | (Loc.{l_value = SP.Wild; _}, _) :: cs ->
       unreachable_cases cs
   | [Loc.{l_value = (SP.Var _); _} as p, body] ->
-      D.ConstMatch
-        { cm_default = desugar_lambda [p] body
-        ; cm_cases = dict
-        }
+      D.ConstMatch {
+        cm_default = desugar_lambda [p] body;
+        cm_cases = dict;
+      }
   | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
       unreachable_cases cs
   | (Loc.{l_value = SP.Const {const_val = c; _}; _}, body) as case :: rest ->
@@ -529,35 +529,35 @@ and desugar_const_match dict = function
   | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
-  | [] -> D.Match
-        { match_default = None
-        ; match_cases = finalize_dict dict
-        }
-  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match
-        { match_default = Some (None, desugar body)
-        ; match_cases = finalize_dict dict
-        }
+  | [] -> D.Match {
+      match_default = None;
+      match_cases = finalize_dict dict;
+    }
+  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match {
+      match_default = Some (None, desugar body);
+      match_cases = finalize_dict dict;
+    }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
-      D.Match
-        { match_default = Some (Some v.Loc.l_value, desugar body)
-        ; match_cases = finalize_dict dict
-        }
+      D.Match {
+        match_default = Some (Some v.Loc.l_value, desugar body);
+        match_cases = finalize_dict dict;
+      }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
-      let let_ = D.Let
-          { let_v = v.Loc.l_value
-          ; let_e =
-              D.WithType{
-                wt_expr = D.Var {v_var = v'};
-                wt_type = desugar_type ty
-              }
-          ; let_body = desugar body
-          }
-      in
-      D.Match
-        { match_default = Some(Some v', let_)
-        ; match_cases = finalize_dict dict
+      let let_ = D.Let {
+          let_v = v.Loc.l_value;
+          let_e =
+            D.WithType {
+              wt_expr = D.Var {v_var = v'};
+              wt_type = desugar_type ty
+            };
+          let_body = desugar body;
         }
+      in
+      D.Match {
+        match_default = Some(Some v', let_);
+        match_cases = finalize_dict dict;
+      }
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl.Loc.l_value ~f:(function
@@ -573,10 +573,10 @@ and finalize_dict dict =
     ~f:( fun cases ->
       let v = Gensym.anon_var () in
       ( v
-      , D.App
-          { app_fn = desugar_match (List.rev cases)
-          ; app_arg = D.Var {v_var = v}
-          }
+      , D.App {
+          app_fn = desugar_match (List.rev cases);
+          app_arg = D.Var {v_var = v};
+        }
       )
     )
 and desugar_let bs body =

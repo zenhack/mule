@@ -32,14 +32,14 @@ and u_type =
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex | `Explicit ]
-and 'a bound =
-  { b_ty: bound_ty
-  ; b_at: 'a
-  }
-and tyvar =
-  { ty_id: int
-  ; ty_flag: bound_ty
-  }
+and 'a bound = {
+  b_ty: bound_ty;
+  b_at: 'a;
+}
+and tyvar = {
+  ty_id: int;
+  ty_flag: bound_ty;
+}
 and u_var = u_type UnionFind.var
 
 type sign = [ `Pos | `Neg ]

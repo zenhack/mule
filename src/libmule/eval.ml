@@ -57,18 +57,18 @@ and eval stack expr =
         *)
         Vec (Array.map arr ~f:(eval stack))
     | Match {cases; default} ->
-        Match
-          { cases = Map.map cases ~f:(eval stack)
-          ; default = Option.map default ~f:(eval stack)
-          }
+        Match {
+          cases = Map.map cases ~f:(eval stack);
+          default = Option.map default ~f:(eval stack);
+        }
     | ConstMatch {cm_cases; cm_default} ->
         (* TODO/XXX: we definitely don't want to evaluate cm_cases here,
          * but we probably still need to do something about embedded free
          * variables. *)
-        ConstMatch
-          { cm_cases
-          ; cm_default = eval stack cm_default
-          }
+        ConstMatch {
+          cm_cases;
+          cm_default = eval stack cm_default;
+        }
     | GetField l -> GetField l
     | Ctor (c, arg) -> Ctor (c, eval stack arg)
     | Record r ->

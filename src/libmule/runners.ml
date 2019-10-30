@@ -8,10 +8,10 @@ let type_of_string_exn s =
   | MParser.Failed (msg, _) -> failwith ("parse failed : " ^ msg)
   | MParser.Success ty -> Desugar.desugar_type ty
 
-type runner =
-  { want_type : Desugared_ast_kind.maybe_kind Desugared_ast_type.t
-  ; run : R.Expr.t -> R.Expr.t Lwt.t
-  }
+type runner = {
+  want_type : Desugared_ast_kind.maybe_kind Desugared_ast_type.t;
+  run : R.Expr.t -> R.Expr.t Lwt.t;
+}
 
 (* TODO: some of these helpers are duplicated from intrinsics.ml;
  * factor them out. *)
@@ -56,16 +56,16 @@ let mk_record fields =
   |> fun lblmap -> R.Expr.Record lblmap
 
 let root_io_val =
-  mk_record
-    [ "just", io_just
-    ; "then", io_then
-    ; "print", io_print
-    ; "get-line", io_get_line
-    ]
+  mk_record [
+    "just", io_just;
+    "then", io_then;
+    "print", io_print;
+    "get-line", io_get_line;
+  ]
 
-let root_io =
-  { want_type = type_of_string_exn
-        "(io : {
+let root_io = {
+  want_type = type_of_string_exn
+      "(io : {
         , type cmd a
         , just : all a. a -> cmd a
         , then : all a b. cmd a -> (a -> cmd b) -> cmd b
@@ -75,12 +75,12 @@ let root_io =
     )
     ->
     io.cmd {}
-    "
-  ; run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val))) ()
-  }
+    ";
+  run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val))) ();
+}
 
 
-let by_name =
-  [ "root-io", root_io
-  ]
-  |> Map.of_alist_exn (module String)
+let by_name = [
+  "root-io", root_io
+]
+              |> Map.of_alist_exn (module String)

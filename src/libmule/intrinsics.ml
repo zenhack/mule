@@ -51,12 +51,12 @@ let row kvs = D.Type.{
   }
 
 let recordType tys vals =
-  D.Type.Record
-    { r_src = None
-    ; r_info = ktype
-    ; r_types = row tys
-    ; r_values = row vals
-    }
+  D.Type.Record {
+    r_src = None;
+    r_info = ktype;
+    r_types = row tys;
+    r_values = row vals;
+  }
 
 let recordVal kvs =
   R.Expr.Record (
@@ -70,60 +70,57 @@ let unionVal c v = R.Expr.Ctor(Label.of_string c, v)
 
 let maybe t = unionType [ "Some", t; "None", (recordType [] []) ]
 
-let values = dict
-    [ "int",
-      ( recordType
-          [ "t", int_t ]
-          [ "add", int_binop_t
-          ; "sub", int_binop_t
-          ; "mul", int_binop_t
-          ; "div", int_binop_t
-          ; "rem", int_binop_t
-          ]
-      , recordVal
-          [ "add", int_binop_v Z.add
-          ; "sub", int_binop_v Z.sub
-          ; "mul", int_binop_v Z.mul
-          ; "div", int_binop_v Z.div
-          ; "rem", int_binop_v Z.rem
-          ]
-      )
-    ; "text",
-      ( recordType
-          [ "t", text_t ]
-          [ "append", fn_t text_t (fn_t text_t text_t)
-          ; "from-int", fn_t int_t text_t
-          ; "length", fn_t text_t int_t
-          ; "uncons", fn_t text_t (maybe (recordType [] ["head", char_t; "tail", text_t]))
-          ]
-      , recordVal
-          [ "append",
-            prim (fun l -> prim (fun r -> text (assert_text l ^ assert_text r)))
-          ; "from-int",
-            prim (fun x -> text (Z.to_string (assert_int x)))
-          ; "length",
-            prim (fun s -> int (Z.of_int (String.length (assert_text s))))
-          ; "uncons",
-            prim (fun s ->
-              match assert_text s with
-              | "" -> unionVal "None" (recordVal [])
-              | txt -> unionVal "Some"
-                    (recordVal
-                        [ "head", char (txt.[0])
-                        ; "tail", text (String.drop_prefix txt 1)
-                        ]
-                    )
-            )
-          ]
-      )
-    ; "char",
-      ( recordType [ "t", char_t ] []
-      , recordVal []
-      )
-    ]
+let values = dict [
+    "int",
+    ( recordType [ "t", int_t ] [
+          "add", int_binop_t;
+          "sub", int_binop_t;
+          "mul", int_binop_t;
+          "div", int_binop_t;
+          "rem", int_binop_t;
+        ]
+    , recordVal [
+          "add", int_binop_v Z.add;
+          "sub", int_binop_v Z.sub;
+          "mul", int_binop_v Z.mul;
+          "div", int_binop_v Z.div;
+          "rem", int_binop_v Z.rem;
+        ]
+    );
+    "text",
+    ( recordType [ "t", text_t ] [
+          "append", fn_t text_t (fn_t text_t text_t);
+          "from-int", fn_t int_t text_t;
+          "length", fn_t text_t int_t;
+          "uncons", fn_t text_t (maybe (recordType [] ["head", char_t; "tail", text_t]));
+        ]
+    , recordVal [
+          "append", prim (fun l -> prim (fun r -> text (assert_text l ^ assert_text r)));
+          "from-int",
+          prim (fun x -> text (Z.to_string (assert_int x)));
+          "length",
+          prim (fun s -> int (Z.of_int (String.length (assert_text s))));
+          "uncons",
+          prim (fun s ->
+            match assert_text s with
+            | "" -> unionVal "None" (recordVal [])
+            | txt -> unionVal "Some"
+                  (recordVal [
+                        "head", char (txt.[0]);
+                        "tail", text (String.drop_prefix txt 1);
+                      ]
+                  )
+          )
+        ]
+    );
+    "char",
+    ( recordType [ "t", char_t ] []
+    , recordVal []
+    );
+  ]
 
-let types = dict
-    [ "int", int_t
-    ; "text", text_t
-    ; "char", char_t
-    ]
+let types = dict [
+    "int", int_t;
+    "text", text_t;
+    "char", char_t;
+  ]

@@ -32,10 +32,10 @@ type 'i t =
       match_cases: (Var.t * 'i t) LabelMap.t;
       match_default: (Var.t option * 'i t) option;
     }
-  | ConstMatch of
-      { cm_cases : 'i t ConstMap.t
-      ; cm_default: 'i t
-      }
+  | ConstMatch of {
+      cm_cases : 'i t ConstMap.t;
+      cm_default: 'i t;
+    }
   | WithType of {
       wt_expr : 'i t;
       wt_type : 'i Type.t;
@@ -82,15 +82,15 @@ let rec sexp_of_t = function
       sexp_of_t c_arg;
     ]
   | Match {match_cases; match_default} ->
-      let cs =
-        [ Sexp.Atom "match"
-        ; Map.sexp_of_m__t
-            (module Label)
-            (fun (v, e) ->
-                  Sexp.List [Var.sexp_of_t v; sexp_of_t e]
-            )
-            match_cases
-        ]
+      let cs = [
+        Sexp.Atom "match";
+        Map.sexp_of_m__t
+          (module Label)
+          (fun (v, e) ->
+                Sexp.List [Var.sexp_of_t v; sexp_of_t e]
+          )
+          match_cases;
+      ]
       in
       begin match match_default with
         | None -> Sexp.List cs
@@ -102,40 +102,40 @@ let rec sexp_of_t = function
             Sexp.List (cs @ [Sexp.List [v; sexp_of_t def]])
       end
   | ConstMatch {cm_cases; cm_default} ->
-      Sexp.List
-        [ Sexp.Atom "match/const"
-        ; Map.sexp_of_m__t (module Const) sexp_of_t cm_cases
-        ; Sexp.List [Sexp.Atom "_"; sexp_of_t cm_default]
-        ]
+      Sexp.List [
+        Sexp.Atom "match/const";
+        Map.sexp_of_m__t (module Const) sexp_of_t cm_cases;
+        Sexp.List [Sexp.Atom "_"; sexp_of_t cm_default];
+      ]
   | WithType {wt_expr = e; wt_type = ty} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
-      Sexp.List
-        [ Sexp.Atom "let"
-        ; Sexp.List [Var.sexp_of_t v; sexp_of_t e]
-        ; sexp_of_t body
-        ]
+      Sexp.List [
+        Sexp.Atom "let";
+        Sexp.List [Var.sexp_of_t v; sexp_of_t e];
+        sexp_of_t body;
+      ]
   | LetRec{letrec_types; letrec_vals; letrec_body} ->
-      Sexp.List
-        [ Sexp.Atom "letrec"
-        ; Sexp.List
-            [ Sexp.Atom "types"
-            ; Sexp.List
-                ( List.map letrec_types ~f:(fun (v, ty) ->
-                      Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-                    )
+      Sexp.List [
+        Sexp.Atom "letrec";
+        Sexp.List [
+          Sexp.Atom "types";
+          Sexp.List
+            ( List.map letrec_types ~f:(fun (v, ty) ->
+                  Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
                 )
-            ]
-        ; Sexp.List
-            [ Sexp.Atom "values"
-            ; Sexp.List
-                ( List.map letrec_vals ~f:(fun (var, value) ->
-                      Sexp.List [Var.sexp_of_t var; sexp_of_t value]
-                    )
+            )
+        ];
+        Sexp.List [
+          Sexp.Atom "values";
+          Sexp.List
+            ( List.map letrec_vals ~f:(fun (var, value) ->
+                  Sexp.List [Var.sexp_of_t var; sexp_of_t value]
                 )
-            ]
-        ; sexp_of_t letrec_body
-        ]
+            )
+        ];
+        sexp_of_t letrec_body;
+      ]
   | Const {const_val = c} ->
       Const.sexp_of_t c
 
@@ -150,15 +150,15 @@ let apply_to_kids e ~f = match e with
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
   | Match {match_cases; match_default} ->
-      Match
-        { match_cases = Map.map match_cases ~f:(fun (k, v) -> (k, f v))
-        ; match_default = Option.map match_default ~f:(fun (k, v) -> (k, f v))
-        }
+      Match {
+        match_cases = Map.map match_cases ~f:(fun (k, v) -> (k, f v));
+        match_default = Option.map match_default ~f:(fun (k, v) -> (k, f v));
+      }
   | ConstMatch {cm_cases; cm_default} ->
-      ConstMatch
-        { cm_cases = Map.map cm_cases ~f
-        ; cm_default = f cm_default
-        }
+      ConstMatch {
+        cm_cases = Map.map cm_cases ~f;
+        cm_default = f cm_default;
+      }
   | Let{let_v; let_e; let_body} -> Let {
       let_v;
       let_e = f let_e;
@@ -208,15 +208,15 @@ let rec map e ~f =
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
   | Match {match_cases; match_default} ->
       let f' (k, v) = (k, map v ~f) in
-      Match
-        { match_cases = Map.map match_cases ~f:f'
-        ; match_default = Option.map match_default ~f:f'
-        }
+      Match {
+        match_cases = Map.map match_cases ~f:f';
+        match_default = Option.map match_default ~f:f';
+      }
   | ConstMatch {cm_cases; cm_default} ->
-      ConstMatch
-        { cm_cases = Map.map cm_cases ~f:(map ~f)
-        ; cm_default = map cm_default ~f
-        }
+      ConstMatch {
+        cm_cases = Map.map cm_cases ~f:(map ~f);
+        cm_default = map cm_default ~f;
+      }
   | Let{let_v; let_e; let_body} -> Let{
       let_v;
       let_e = map let_e ~f;
@@ -264,34 +264,34 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         app_arg = subst env x;
       }
   | Match {match_cases; match_default} ->
-      Match
-        { match_cases =
-            Map.map match_cases ~f:(fun (var, body) ->
-              let env' = Map.remove env var in
-              ( var
-              , subst env' body
-              )
+      Match {
+        match_cases =
+          Map.map match_cases ~f:(fun (var, body) ->
+            let env' = Map.remove env var in
+            ( var
+            , subst env' body
             )
-        ; match_default = Option.map match_default ~f:(function
-              | (None, body) -> (None, subst env body)
-              | (Some var, body) ->
-                  ( Some var
-                  , let env' = Map.remove env var in
-                    subst env' body
-                  )
-            )
-        }
+          );
+        match_default = Option.map match_default ~f:(function
+            | (None, body) -> (None, subst env body)
+            | (Some var, body) ->
+                ( Some var
+                , let env' = Map.remove env var in
+                  subst env' body
+                )
+          );
+      }
   | ConstMatch {cm_cases; cm_default} ->
-      ConstMatch
-        { cm_cases = Map.map cm_cases ~f:(subst env)
-        ; cm_default = subst env cm_default
-        }
+      ConstMatch {
+        cm_cases = Map.map cm_cases ~f:(subst env);
+        cm_default = subst env cm_default;
+      }
   | Let{let_v; let_e; let_body} ->
-      Let
-        { let_v
-        ; let_e = subst env let_e
-        ; let_body = subst (Map.remove env let_v) let_body
-        }
+      Let {
+        let_v;
+        let_e = subst env let_e;
+        let_body = subst (Map.remove env let_v) let_body;
+      }
   | LetRec _ ->
       MuleErr.bug "TODO"
   | UpdateType{ut_lbl; ut_type; ut_record} ->

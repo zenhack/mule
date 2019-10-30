@@ -53,10 +53,10 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             ~f:(fun ~key:_ ~data:(next, _) prev -> max next prev)
         in
         ( ncaps
-        , R.ConstMatch
-            { cm_cases = Map.map cases ~f:snd
-            ; cm_default = def
-            }
+        , R.ConstMatch {
+            cm_cases = Map.map cases ~f:snd;
+            cm_default = def;
+          }
         )
     | D.Match{match_cases; match_default} ->
         let cases' = Map.map
@@ -83,10 +83,10 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             (Map.map cases' ~f:fst)
         in
         ( ncaps
-        , R.Match
-            { cases = Map.map ~f:snd cases'
-            ; default = default'
-            }
+        , R.Match {
+            cases = Map.map ~f:snd cases';
+            default = default';
+          }
         )
     | D.Let {let_v = v; let_e = e; let_body = body} ->
         translate depth env (D.App {
