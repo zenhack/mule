@@ -154,3 +154,12 @@ module Expr = struct
     ]
   [@@deriving sexp_of]
 end
+
+module Module = struct
+  type t = {
+    path : string;
+    expr : Expr.t;
+    typ : Type.t option;
+  }
+  [@@deriving sexp_of]
+end
