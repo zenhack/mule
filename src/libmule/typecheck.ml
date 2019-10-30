@@ -9,6 +9,17 @@ type context = {
   type_env : u_var VarMap.t;
   vals_env : u_var VarMap.t;
   locals : (int * u_var) list ref;
+
+  (* [assumptions] is a list of subtyping constraints we've already seen.
+   * This is used when checking subtyping constraints that may involve
+   * recursive types -- if we are asked to check a subtyping constraint
+   * that's already in our assumptions, we just return.
+   *
+   * Note that from a logician's standpoint this sounds incredibly fishy
+   * -- but that's as expected; recursive types amount to circular
+   * reasoning.
+  *)
+  assumptions : IntPairSet.t ref;
 }
 
 let unbound_var v =
@@ -111,10 +122,12 @@ let find_bound env var = match Map.find env var with
 
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context () =
+  let assumptions = ref IntPairSet.empty in
   let dummy = {
     type_env = VarMap.empty;
     vals_env = VarMap.empty;
     locals = ref [];
+    assumptions;
   }
   in
   let type_env =
@@ -125,7 +138,7 @@ let rec make_initial_context () =
       make_type { dummy with type_env = type_env } ty
     )
   in
-  { type_env; vals_env; locals = ref [] }
+  { type_env; vals_env; locals = ref []; assumptions; }
 
 (* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
@@ -389,96 +402,101 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
     Caml.print_endline "Return."
 and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
-  begin match UnionFind.get sub, UnionFind.get super with
-    | _ when UnionFind.equal sub super -> ()
-    (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
-     * sure this can actually come up, but if it does, this is the behavior that
-     * makes sense. *)
-    | l, r when get_id l = get_id r -> UnionFind.merge (fun _ r -> r) sub super
+  let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
+  if not (Set.mem !(ctx.assumptions) (sub_id, super_id)) then
+    begin
+      ctx.assumptions := Set.add !(ctx.assumptions) (sub_id, super_id);
+      begin match UnionFind.get sub, UnionFind.get super with
+        | _ when UnionFind.equal sub super -> ()
+        (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
+         * sure this can actually come up, but if it does, this is the behavior that
+         * makes sense. *)
+        | _ when sub_id = super_id -> UnionFind.merge (fun _ r -> r) sub super
 
-    | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
-        (* Both sides are flexible variables; merge them, using the larger of their
-         * scopes. *)
-        require_kind kl kr;
-        UnionFind.merge
-          (fun _ _ ->
-              `Free
-                ( {
-                  ty_flag = `Flex;
-                  (* The variable with the greater scope will have been
-                   * created first, and therefore have a smaller id: *)
-                  ty_id = Int.min l_id r_id;
-                }
-                , kl
-                )
-          )
-          sub super
-    (* One side is flexible; set it equal to the other one. *)
-    | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
-    | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
+        | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
+            (* Both sides are flexible variables; merge them, using the larger of their
+             * scopes. *)
+            require_kind kl kr;
+            UnionFind.merge
+              (fun _ _ ->
+                  `Free
+                    ( {
+                      ty_flag = `Flex;
+                      (* The variable with the greater scope will have been
+                       * created first, and therefore have a smaller id: *)
+                      ty_id = Int.min l_id r_id;
+                    }
+                    , kl
+                    )
+              )
+              sub super
+        (* One side is flexible; set it equal to the other one. *)
+        | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
+        | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
 
-    | `Quant(_, q, id, k, body), _ ->
-        require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
-    | _, `Quant(_, q, id, k, body) ->
-        require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
+        | `Quant(_, q, id, k, body), _ ->
+            require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
+        | _, `Quant(_, q, id, k, body) ->
+            require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
 
-    (* Rigid variable should fail (If they were the same already, they would have been
-     * covered above): *)
-    | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
-        MuleErr.throw (`TypeError(`PermissionErr `Graft))
+        (* Rigid variable should fail (If they were the same already, they would have been
+         * covered above): *)
+        | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
+            MuleErr.throw (`TypeError(`PermissionErr `Graft))
 
-    (* Mismatched named constructors are never reconcilable: *)
-    | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
-        MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
+        (* Mismatched named constructors are never reconcilable: *)
+        | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
+            MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
 
-    (* All of the zero-argument consts unify with themselves; if the above case
-     * didn't cover this one, then we're good: *)
-    | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
+        (* All of the zero-argument consts unify with themselves; if the above case
+         * didn't cover this one, then we're good: *)
+        | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
 
-    (* Functions. *)
-    | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
-      `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
-        (* Note the flipped sub vs. super in the parameter case; this is standard
-         * contravariance. *)
-        require_subtype ctx ~sub:psuper ~super:psub;
-        require_subtype ctx ~sub:rsub ~super:rsuper
+        (* Functions. *)
+        | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
+          `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
+            (* Note the flipped sub vs. super in the parameter case; this is standard
+             * contravariance. *)
+            require_subtype ctx ~sub:psuper ~super:psub;
+            require_subtype ctx ~sub:rsub ~super:rsuper
 
-    | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
-        wrong_num_args `Fn 2 x y
+        | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
+            wrong_num_args `Fn 2 x y
 
-    | `Const(_, `Named `Union, [row_sub, _], _),
-      `Const(_, `Named `Union, [row_super, _], _) ->
-        (* Unions are contravariant in their arguments.
-         *
-         * TODO: I(isd) _think_ that's right, but I need to think about it a
-         * bit more deeply. *)
-        require_subtype ctx ~sub:row_super ~super:row_sub
+        | `Const(_, `Named `Union, [row_sub, _], _),
+          `Const(_, `Named `Union, [row_super, _], _) ->
+            (* Unions are contravariant in their arguments.
+             *
+             * TODO: I(isd) _think_ that's right, but I need to think about it a
+             * bit more deeply. *)
+            require_subtype ctx ~sub:row_super ~super:row_sub
 
-    | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
-        wrong_num_args `Union 1 x y
+        | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
+            wrong_num_args `Union 1 x y
 
-    | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
-      `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-        require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
-        require_subtype ctx ~sub:rvals_sub ~super:rvals_super
+        | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
+          `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
+            require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
+            require_subtype ctx ~sub:rvals_sub ~super:rvals_super
 
-    | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
-        wrong_num_args `Record 2 x y
+        | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
+            wrong_num_args `Record 2 x y
 
-    | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
-        MuleErr.throw
-          (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
-    | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
-        ()
-    | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
-        require_subtype_extend ctx ~sub ~super
+        | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
+            MuleErr.throw
+              (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
+        | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
+            ()
+        | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
+            require_subtype_extend ctx ~sub ~super
 
-    | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
-        MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
+        | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
+            MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
-    | _ ->
-        MuleErr.bug "TODO: require_subytpe"
-  end
+        | _ ->
+            MuleErr.bug "TODO: require_subytpe"
+      end
+    end
 and require_subtype_extend ctx ~sub ~super =
   let fold_row =
     let rec go m row =
