@@ -88,6 +88,13 @@ let apply: u_var -> u_var -> u_var = fun f x ->
               )
           )
   end
+let recur : (u_var -> u_var) -> u_var = fun mkbody ->
+  let ty_id = Gensym.gensym () in
+  let ty_flag = `Explicit in
+  let v = UnionFind.make (`Free({ty_id; ty_flag}, ktype)) in
+  let body = mkbody v in
+  UnionFind.merge (fun _ r -> r) v body;
+  body
 let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
   let q_id = Gensym.gensym () in
