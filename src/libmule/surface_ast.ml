@@ -1,9 +1,9 @@
 open Common_ast
 
 type var = Var.t Loc.located
-  [@@deriving sexp_of]
+[@@deriving sexp_of]
 type label = Label.t Loc.located
-  [@@deriving sexp_of]
+[@@deriving sexp_of]
 
 let var_of_label = Loc.map ~f:var_of_label
 

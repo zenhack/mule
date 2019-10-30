@@ -97,18 +97,18 @@ let build_js_term =
       method src = src
       method dest = dest
     end))
-    $ Arg.(required
-             & pos 0 (some non_dir_file) None
-             & info []
-               ~docv:"FILE"
-               ~doc:"Compile the file $(docv)"
-        )
-    $ Arg.(value
-            & opt (some string) None
-            & info ["o"; "output"]
-               ~docv:"OUTPUT"
-               ~doc:"Write the generated JavaScript to $(docv). Defaults to FILE.js"
-      )
+        $ Arg.(required
+               & pos 0 (some non_dir_file) None
+               & info []
+                 ~docv:"FILE"
+                 ~doc:"Compile the file $(docv)"
+          )
+        $ Arg.(value
+               & opt (some string) None
+               & info ["o"; "output"]
+                 ~docv:"OUTPUT"
+                 ~doc:"Write the generated JavaScript to $(docv). Defaults to FILE.js"
+          )
   )
   |> with_debug_flags
 

@@ -72,28 +72,28 @@ and go_row seen uv =
   match r with
   | `Free _ ->
       ( DT.{
-          row_info = ty_id;
-          row_fields = [];
-          row_rest = Some (var_of_int ty_id);
-        }
+            row_info = ty_id;
+            row_fields = [];
+            row_rest = Some (var_of_int ty_id);
+          }
       , IntSet.singleton ty_id
       )
   | `Const(_, `Named `Empty, _, _) ->
       ( DT.{
-          row_info = ty_id;
-          row_fields = [];
-          row_rest = None;
-        }
+            row_info = ty_id;
+            row_fields = [];
+            row_rest = None;
+          }
       , IntSet.empty
       )
   | `Const(_, `Extend lbl, [h, _; t, _], _) ->
       let (h', hfv) = go seen h in
       let (DT.{row_fields; row_rest; _}, tfv) = go_row seen t in
       ( DT.{
-          row_info = ty_id;
-          row_fields = ((lbl, h') :: row_fields);
-          row_rest;
-        }
+            row_info = ty_id;
+            row_fields = ((lbl, h') :: row_fields);
+            row_rest;
+          }
       , Set.union hfv tfv
       )
   | _ ->
@@ -205,15 +205,15 @@ let strip_unused_quantifiers ty =
         )
   and go_row {row_info; row_fields; row_rest} =
     let row_fields, fv_fields =
-        List.fold_right
-          row_fields
-          ~init:([], VarSet.empty)
-          ~f:(fun (l, t) (fs, fvs) ->
-            let t, fv_t = go t in
-            ( ((l, t) :: fs)
-            , (Set.union fvs fv_t)
-            )
+      List.fold_right
+        row_fields
+        ~init:([], VarSet.empty)
+        ~f:(fun (l, t) (fs, fvs) ->
+          let t, fv_t = go t in
+          ( ((l, t) :: fs)
+          , (Set.union fvs fv_t)
           )
+        )
     in
     let fvs = match row_rest with
       | None -> fv_fields

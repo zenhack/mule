@@ -178,8 +178,8 @@ let rec quantify_opaques t = match t with
 and quantify_row_opaques {row_info; row_fields; row_rest} =
   { row_info
   ; row_fields = List.map
-      row_fields
-      ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty))
+        row_fields
+        ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty))
   ; row_rest
   }
 
@@ -370,24 +370,24 @@ and desugar Loc.{l_value = e; _} = match e with
       desugar_let bindings body
 and desugar_update e fields =
   let rec go e = function
-  | [] -> desugar e
-  | `Value (l, _, v) :: fs ->
-      D.App {
-        app_fn = D.App {
-            app_fn = D.UpdateVal {
-                uv_lbl = l.Loc.l_value;
-              };
-            app_arg = go e fs
-          };
-        app_arg = desugar v;
-      }
-  | `Type (lbl, params, ty) :: fs ->
-      let (_, ty) = desugar_type_binding (SC.var_of_label lbl, params, ty) in
-      D.UpdateType {
-        ut_lbl = lbl.Loc.l_value;
-        ut_type = ty;
-        ut_record = go e fs;
-      }
+    | [] -> desugar e
+    | `Value (l, _, v) :: fs ->
+        D.App {
+          app_fn = D.App {
+              app_fn = D.UpdateVal {
+                  uv_lbl = l.Loc.l_value;
+                };
+              app_arg = go e fs
+            };
+          app_arg = desugar v;
+        }
+    | `Type (lbl, params, ty) :: fs ->
+        let (_, ty) = desugar_type_binding (SC.var_of_label lbl, params, ty) in
+        D.UpdateType {
+          ut_lbl = lbl.Loc.l_value;
+          ut_type = ty;
+          ut_record = go e fs;
+        }
   in
   go e (List.map fields ~f:(fun Loc.{l_value = v; _} -> v))
 and desugar_lambda ps body =

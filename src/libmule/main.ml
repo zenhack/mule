@@ -47,9 +47,9 @@ let interp_cmd = function
                   q_quant = `Exist;
                   q_var = v;
                   q_body = Var {
-                    v_info = `Unknown;
-                    v_var = v;
-                  };
+                      v_info = `Unknown;
+                      v_var = v;
+                    };
                 }
               )
               src

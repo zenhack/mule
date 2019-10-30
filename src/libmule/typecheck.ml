@@ -490,9 +490,9 @@ and require_subtype_extend ctx ~sub ~super =
           require_kind krow tk;
           go
             (Map.update m lbl ~f:(function
-              | None -> (h, hk)
-              | Some v -> v
-            ))
+                  | None -> (h, hk)
+                  | Some v -> v
+                ))
             t
       | _ ->
           (m, row)
