@@ -30,6 +30,7 @@ const $force = (l, k) => {
 
 const $fn1 = (f) => (x, k) => () => k(f(x))
 const $fn2 = (f) => (l, k) => () => k((r, k) => () => k(f(l, r)))
+const $fn3 = (f) => (x, k) => () => k((y, k) => () => k((z, k) => () => k(f(x, y, z))))
 
 const int = {
   add: $fn2((x, y) => x + y),
@@ -88,7 +89,67 @@ const $fn = (count, f) => {
 	return ret;
 };
 
+const $js = {
+	'value': {
+		'get-prop': $fn2((prop, obj) => () => obj[prop]),
+		'set-prop': $fn3((prop, val, obj) => () => {
+			obj[prop] = val
+			return {}
+		}),
+		'int': $fn1((x) => x),
+		'text': $fn1((x) => x),
+
+		'function': $fn1((f) => () => {
+			return $call1(f, arguments)
+		}),
+		'null': null,
+		'undefined': undefined,
+
+		'reflect': $fn1((v) => () => {
+    		var type = typeof(v)
+				switch(type) {
+				case 'bigint':
+					return ['Int', v]
+				case 'number':
+					return ['Number', v]
+				case 'string':
+					return ['Text', v]
+				case 'undefined':
+						return ['Undefined', v]
+				case 'object':
+						if(v === null) {
+							return ['Null', v]
+						}
+						return ['Object', v]
+				default:
+					return ['Unknown', v]
+			}
+		})
+	},
+
+	'call': $fn2((f, args) => () => f(...args)),
+	'try': $fn1((cmd) = () => {
+		try {
+			return ['Ok', cmd()]
+		} catch(e) {
+			return ['Err', e]
+		}
+	}),
+	'throw': $fn1((x) => () => throw(x)),
+	'finally': $fn2((cmd, cleanup) => () => {
+			try {
+				return cmd()
+			} finally {
+				cleanup()
+			}
+	}),
+
+	'just': $fn1((x) => () => x),
+	'then': $fn2((x, f) => () => $call1(f, x())()),
+}
+
 const mule = {
+	js: $js,
 	call: $call,
 	exec: $exec,
 	fn: $fn,
