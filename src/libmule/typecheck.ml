@@ -539,6 +539,24 @@ and require_subtype_extend ctx ~sub ~super =
         require_kind sub_k super_k;
         require_subtype ctx ~sub:sub_t ~super:super_t
   );
+  if Config.extra_sanity_checks () then
+    begin
+      let label_set ls =
+        List.map ls ~f:(fun (lbl, _) -> lbl)
+        |> Set.of_list (module Label)
+      in
+      let bad_common_labels =
+        Set.inter (label_set !super_only) (label_set !sub_only)
+      in
+      if not (Set.is_empty bad_common_labels) then
+        begin
+          MuleErr.bug
+            ("require_subtype_extend: bad common labels: " ^
+             Sexp.to_string_hum (
+              Set.sexp_of_m__t (module Label) bad_common_labels
+            ))
+        end
+    end;
   begin match UnionFind.get sub_tail with
     | `Free({ty_flag = `Flex; _}, _) ->
         UnionFind.merge (fun _ r -> r) sub_tail (unfold_row !super_only super_tail)

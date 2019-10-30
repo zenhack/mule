@@ -28,12 +28,13 @@ let debug_flag name ~doc =
 
 let with_debug_flags : cmd Term.t -> t Term.t =
   fun term ->
-  Term.(const (fun eval_steps stack_trace trace_require_subtype steps c -> object
+  Term.(const (fun eval_steps stack_trace trace_require_subtype steps extra_sanity_checks c -> object
       method debug_flags = object
         method print_eval_steps = eval_steps
         method always_print_stack_trace = stack_trace
         method trace_require_subtype = trace_require_subtype
         method debug_steps = steps
+        method extra_sanity_checks = extra_sanity_checks
       end
       method cmd = c
     end)
@@ -58,6 +59,8 @@ let with_debug_flags : cmd Term.t -> t Term.t =
             ^ " the runtime term,"
             ^ " and the final evaluated runtime term."
           )
+        $ debug_flag "extra-sanity-checks"
+          ~doc:"Do extra (possibly expensive) internal sanity checks."
         $ term
   )
 
