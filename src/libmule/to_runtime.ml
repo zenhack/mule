@@ -58,12 +58,12 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             ; cm_default = def
             }
         )
-    | D.Match{cases; default} ->
+    | D.Match{match_cases; match_default} ->
         let cases' = Map.map
-            cases
+            match_cases
             ~f:(fun (l_param, l_body) -> translate depth env (D.Lam{l_param; l_body}))
         in
-        let (defcaps, default') = match default with
+        let (defcaps, default') = match match_default with
           | None -> (0, None)
           | Some (None, body) ->
               let (ncaps, body') =

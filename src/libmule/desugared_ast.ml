@@ -118,13 +118,13 @@ module SubstRec = struct
           app_fn = expr args app_fn;
           app_arg = expr args app_arg;
         }
-    | Expr.Match{cases; default} ->
+    | Expr.Match{match_cases; match_default} ->
         Expr.Match {
-          cases = Map.map cases ~f:(fun (v, e) ->
+          match_cases = Map.map match_cases ~f:(fun (v, e) ->
               (v, expr (mask_val args v) e)
             );
-          default =
-            Option.map default ~f:(function
+          match_default =
+            Option.map match_default ~f:(function
               | (None, body) -> (None, expr args body)
               | (Some v, body) -> (Some v, expr (mask_val args v) body)
             )
