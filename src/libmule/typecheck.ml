@@ -319,7 +319,7 @@ and synth: context -> 'i DE.t -> u_var =
           let param_row =
             Map.fold map
               ~init:begin match match_default with
-                | None -> empty
+                | None -> all krow (fun r -> r)
                 | Some _ -> fresh_local ctx `Flex krow
               end
               ~f:(fun ~key ~data r -> extend key data r)
