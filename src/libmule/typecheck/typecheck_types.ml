@@ -56,8 +56,6 @@ let union: u_var -> u_var = fun row ->
   const (`Named `Union) [row, krow] ktype
 let record: u_var -> u_var -> u_var = fun r_types r_values ->
   const (`Named `Record) [r_types, krow; r_values, krow] ktype
-let empty: u_var =
-  const (`Named `Empty) [] krow
 let extend: Label.t -> u_var -> u_var -> u_var = fun lbl head tail ->
   const (`Extend lbl) [head, ktype; tail, krow] krow
 let apply: u_var -> u_var -> u_var = fun f x ->
@@ -108,6 +106,9 @@ let all : k_var -> (u_var -> u_var) -> u_var =
 
 let exist : k_var -> (u_var -> u_var) -> u_var =
   fun k mkbody -> quant `Exist k mkbody
+
+let empty: u_var =
+  exist krow (fun r -> r)
 
 let lambda : k_var -> (u_var -> u_var) -> u_var =
   fun kparam mkbody ->

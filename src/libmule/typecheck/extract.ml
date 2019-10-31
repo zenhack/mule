@@ -78,14 +78,6 @@ and go_row seen uv =
           }
       , IntSet.singleton ty_id
       )
-  | `Const(_, `Named `Empty, _, _) ->
-      ( DT.{
-            row_info = ty_id;
-            row_fields = [];
-            row_rest = None;
-          }
-      , IntSet.empty
-      )
   | `Const(_, `Extend lbl, [h, _; t, _], _) ->
       let (h', hfv) = go seen h in
       let (DT.{row_fields; row_rest; _}, tfv) = go_row seen t in

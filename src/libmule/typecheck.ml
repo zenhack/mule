@@ -482,11 +482,6 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
 
-        | `Const(_, `Named `Empty, _, _), `Const(_, `Extend l, _, _) ->
-            MuleErr.throw
-              (`TypeError (`MismatchedCtors(`Named `Empty, `Extend l)))
-        | `Const(_, `Extend _, _, _), `Const(_, `Named `Empty, _, _) ->
-            ()
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
             require_subtype_extend ctx ~sub ~super
 
@@ -578,33 +573,8 @@ and require_subtype_extend ctx ~sub ~super =
             ))
         end
     end;
-  begin match UnionFind.get sub_tail with
-    | `Free({ty_flag = `Flex; _}, _) ->
-        UnionFind.merge (fun _ r -> r) sub_tail (unfold_row !super_only super_tail)
-    | `Free({ty_flag = `Rigid; ty_id = sub_id}, _) ->
-        begin match !super_only, UnionFind.get super_tail with
-          | [], `Free({ty_flag = `Flex; _}, _) ->
-              UnionFind.merge (fun l _ -> l) sub_tail super_tail
-          | [], `Free({ty_id = super_id; _}, _) when sub_id = super_id ->
-              UnionFind.merge (fun l _ -> l) sub_tail super_tail
-          | _ ->
-              MuleErr.throw (`TypeError(`PermissionErr `Graft))
-        end
-    | `Const(_, `Named `Empty, _, _) ->
-        begin match !super_only, UnionFind.get super_tail with
-          | [], `Const(_, `Named `Empty, _, _) -> ()
-          | ((lbl, _) :: _), _ ->
-              MuleErr.throw (`TypeError (`MismatchedCtors (`Named `Empty, `Extend lbl)))
-          | [], `Free({ty_flag = `Flex; _}, _) ->
-              UnionFind.merge (fun _ r -> r) super_tail sub_tail
-          | _, `Free({ty_flag = `Rigid; _}, _) ->
-              MuleErr.throw (`TypeError(`PermissionErr `Graft))
-          | _ ->
-              MuleErr.bug "impossible"
-        end
-    | _ ->
-        MuleErr.bug "impossible"
-  end
+  require_subtype ctx ~sub:sub_tail ~super:(unfold_row !super_only super_tail);
+  require_subtype ctx ~sub:(unfold_row !sub_only sub_tail) ~super:super_tail
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin

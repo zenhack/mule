@@ -16,7 +16,6 @@ type typeconst_name =
   | `Fn
   | `Record
   | `Union
-  | `Empty
   | `Apply
   | `Lambda
   ]
@@ -53,7 +52,6 @@ let string_of_typeconst_name = function
   | `Fn -> "->"
   | `Record -> "{...}"
   | `Union -> "|"
-  | `Empty -> "<empty>"
   | `Apply -> "<apply>"
   | `Lambda -> "<lambda>"
 
