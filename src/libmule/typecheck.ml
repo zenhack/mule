@@ -278,7 +278,9 @@ and synth: context -> 'i DE.t -> u_var =
         let arg_t = synth ctx c_arg in
         union (extend c_lbl arg_t (all krow (fun r -> r)))
     | DE.WithType {wt_expr; wt_type} ->
-        check ctx wt_expr (make_type ctx wt_type |> with_kind ktype)
+        let want_ty = make_type ctx wt_type |> with_kind ktype in
+        let _ = check ctx wt_expr want_ty in
+        want_ty
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
         synth
@@ -298,7 +300,8 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let param = fresh_local ctx `Flex ktype in
           let result = fresh_local ctx `Flex ktype in
-          let ftype = check ctx cm_default (param **> result) in
+          let ftype = param **> result in
+          let _ = check ctx cm_default ftype in
           begin match Map.to_alist cm_cases with
             | [] -> ftype
             | cs ->
@@ -393,7 +396,7 @@ and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
   let ty_got = synth ctx e in
   require_subtype ctx ~sub:ty_got ~super:ty_want;
-  ty_want
+  ty_got
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
   trace_req_subtype ~sub ~super;
@@ -590,12 +593,12 @@ and require_subtype_extend ctx ~sub ~super =
     | `Const(_, `Named `Empty, _, _) ->
         begin match !super_only, UnionFind.get super_tail with
           | [], `Const(_, `Named `Empty, _, _) -> ()
-          | fields, `Free({ty_flag = `Flex; _}, _) ->
-              UnionFind.merge (fun _ r -> r) sub_tail (unfold_row fields super_tail)
-          | _, `Free({ty_flag = `Rigid; _}, _) ->
-              MuleErr.throw (`TypeError(`PermissionErr `Graft))
           | ((lbl, _) :: _), _ ->
               MuleErr.throw (`TypeError (`MismatchedCtors (`Named `Empty, `Extend lbl)))
+          | [], `Free({ty_flag = `Flex; _}, _) ->
+              UnionFind.merge (fun _ r -> r) super_tail sub_tail
+          | _, `Free({ty_flag = `Rigid; _}, _) ->
+              MuleErr.throw (`TypeError(`PermissionErr `Graft))
           | _ ->
               MuleErr.bug "impossible"
         end
