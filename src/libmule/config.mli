@@ -5,4 +5,3 @@ val print_eval_steps : unit -> bool
 val always_print_stack_trace : unit ->  bool
 val trace_require_subtype : unit -> bool
 val debug_steps : unit -> bool
-val extra_sanity_checks : unit -> bool

@@ -4,7 +4,6 @@ type debug_flags = <
   always_print_stack_trace : bool;
   trace_require_subtype : bool;
   debug_steps : bool;
-  extra_sanity_checks: bool;
 >
 
 type cmd =
