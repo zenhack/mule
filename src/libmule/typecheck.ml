@@ -501,7 +501,8 @@ and require_subtype_extend ctx ~sub ~super =
   let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
-      match UnionFind.get (whnf row) with
+      let row = whnf row in
+      match UnionFind.get row with
       | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
           require_kind krow k;
           require_kind krow tk;
