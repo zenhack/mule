@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((match/const (((Integer 1) (Integer 1))) (_ (fn $5 (Integer 0))))
+	((match/const (((Integer 1) (Integer 1))) (_ (fn $6 (Integer 0))))
 	 (Integer 1))
 
 inferred type:

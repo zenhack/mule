@@ -4,7 +4,7 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((rank3
-	    ((: (all b (((all a (a -> a)) -> b) -> b))) (fn rank2 (rank2 (fn x x)))))))
+	    (: (fn rank2 (rank2 (fn x x))) (all b (((all a (a -> a)) -> b) -> b))))))
 	 (rank3 (fn rank1 (rank1 (rank1 (Integer 4))))))
 
 inferred type:
