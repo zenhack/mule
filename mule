@@ -6,6 +6,6 @@ make
 mule=./_build/default/src/mule/mule.exe
 case "$1" in
 	'') rlwrap $mule $@;;
-	repl) rlwrap $mule $@;;
+	repl|-*) rlwrap $mule $@;;
 	*) $mule $@;;
 esac
