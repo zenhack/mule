@@ -273,10 +273,10 @@ and synth: context -> 'i DE.t -> u_var =
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
     | DE.EmptyRecord ->
-        record empty empty
+        record (all krow (fun r -> r)) empty
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
-        union (extend c_lbl arg_t empty)
+        union (extend c_lbl arg_t (all krow (fun r -> r)))
     | DE.WithType {wt_expr; wt_type} ->
         check ctx wt_expr (make_type ctx wt_type |> with_kind ktype)
     | DE.Let{let_v; let_e; let_body} ->
@@ -465,11 +465,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
 
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
-            (* Unions are contravariant in their arguments.
-             *
-             * TODO: I(isd) _think_ that's right, but I need to think about it a
-             * bit more deeply. *)
-            require_subtype ctx ~sub:row_super ~super:row_sub
+            require_subtype ctx ~sub:row_sub ~super:row_super
 
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
@@ -498,11 +494,13 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
       end
     end
 and require_subtype_extend ctx ~sub ~super =
-  let fold_row =
+  let fold_row side =
     let rec go m row =
       require_kind (get_kind row) krow;
       let row = whnf row in
       match UnionFind.get row with
+      | `Quant(_, q, v, k, body) ->
+          go m (unroll_quant ctx side q v k body)
       | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
           require_kind krow k;
           require_kind krow tk;
@@ -529,8 +527,8 @@ and require_subtype_extend ctx ~sub ~super =
         )
     )
   in
-  let (sub_fields, sub_tail) = fold_row sub in
-  let (super_fields, super_tail) = fold_row super in
+  let (sub_fields, sub_tail) = fold_row `Sub sub in
+  let (super_fields, super_tail) = fold_row `Super super in
   let sub_only = ref [] in
   let super_only = ref [] in
   Map.iter2 sub_fields super_fields ~f:(fun ~key ~data -> match data with

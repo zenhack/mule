@@ -6,7 +6,7 @@ Desugared:
 
 inferred type:
 
-	(all a (record (types ((t (lam b (rec c (c -> int)))) ...a)) (values ())))
+	(record (types ((t (lam a (rec b (b -> int)))))) (values ()))
 
 Runtime term:
 

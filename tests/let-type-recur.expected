@@ -9,16 +9,17 @@ Desugared:
 	      ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
 	       (Nil (record (types ()) (values ())))))))))
 	 (values ())
-	 ((: int-list)
+	 (:
 	  ((fn x (Cons x))
 	   (letrec (types ()) (values ((hd (Integer 4)) (tl ((fn x (Nil x)) {}))))
-	    (((.= hd) (((.= tl) {}) tl)) hd)))))
+	    (((.= hd) (((.= tl) {}) tl)) hd)))
+	  int-list))
 
 inferred type:
 
 	(rec a
 	 (union
-	  ((Cons (record (types ()) (values ((hd int) (tl a)))))
+	  ((Cons (record (types ()) (values ((tl a) (hd int)))))
 	   (Nil (record (types ()) (values ()))))))
 
 Runtime term:
