@@ -405,6 +405,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if not (Set.mem !(ctx.assumptions) (sub_id, super_id)) then
     begin
+      require_kind (get_kind sub) (get_kind super);
       ctx.assumptions := Set.add !(ctx.assumptions) (sub_id, super_id);
       begin match UnionFind.get sub, UnionFind.get super with
         | _ when UnionFind.equal sub super -> ()
@@ -486,6 +487,24 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
             require_subtype_extend ctx ~sub ~super
 
+        | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
+          `Const(_, `Named `Lambda, [pr, kpr; br, kbr], _) ->
+            require_kind kpl kpr;
+            require_kind kbl kbr;
+            (* Substitue the same rigid variable for both lambdas'
+             * parameters, and then check the bodies: *)
+            let p = fresh_local ctx `Rigid kpl in
+            require_subtype ctx
+              ~sub:(subst
+                ~target:(get_id (UnionFind.get pl))
+                ~replacement:p
+                bl
+              )
+              ~super:(subst
+                ~target:(get_id (UnionFind.get pr))
+                ~replacement:p
+                br
+              )
         | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
             MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 

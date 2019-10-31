@@ -1,3 +1,7 @@
+# TODO: the comments here refer to details of an earlier version of the
+# type checker, and are no longer meaningful. We should update the description
+# (and maybe the name of the test).
+#
 # The type inference algorithm requires merging types in a "top down"
 # manner. If you do bottom up instead (which is eaiser), you get something
 # that is sound, but incomplete. This test checks that merges are being
