@@ -1,43 +1,43 @@
 
 Desugared:
 
-	(let-type
-	 ((list
-	   (lam a
-	    (rec list
-	     (union
-	      ((Cons (record (types ()) (values ((tl list) (hd a)))))
-	       (Nil (record (types ()) (values ())))))))))
-	 (let
-	  (length
-	   (fix/let
-	    (fn length
-	     ((: (all a ((list a) -> int)))
+	(letrec
+	 (types
+	  ((list
+	    (lam a
+	     (rec list
+	      (union
+	       ((Cons (record (types ()) (values ((tl list) (hd a)))))
+	        (Nil (record (types ()) (values ()))))))))))
+	 (values ())
+	 (letrec (types ())
+	  (values
+	   ((length
+	     (:
 	      (fn lst
 	       ((match
 	         ((Cons
-	           ($3
-	            ((match () (l ((((. add) int) (Integer 1)) (length ((. tl) l)))))
-	             $3)))
-	          (Nil ($4 ((match () (_ (Integer 0))) $4)))))
-	        lst))))))
+	           ($5 ((fn l ((((. add) int) (Integer 1)) (length ((. tl) l)))) $5)))
+	          (Nil ($6 ((fn $7 (Integer 0)) $6)))))
+	        lst))
+	      (all a ((list a) -> int))))))
 	  (length
 	   ((fn x (Cons x))
-	    (fix/record
-	     (fn $0
-	      (((.= hd)
-	        (((.= tl) {})
-	         ((fn x (Cons x))
-	          (fix/record
-	           (fn $1
-	            (((.= hd)
-	              (((.= tl) {})
-	               ((fn x (Cons x))
-	                (fix/record
-	                 (fn $2
-	                  (((.= hd) (((.= tl) {}) ((fn x (Nil x)) {}))) (Integer 1)))))))
-	             (Integer 0)))))))
-	       (Integer 4))))))))
+	    (letrec (types ())
+	     (values
+	      ((hd (Integer 4))
+	       (tl
+	        ((fn x (Cons x))
+	         (letrec (types ())
+	          (values
+	           ((hd (Integer 0))
+	            (tl
+	             ((fn x (Cons x))
+	              (letrec (types ())
+	               (values ((hd (Integer 1)) (tl ((fn x (Nil x)) {}))))
+	               (((.= hd) (((.= tl) {}) tl)) hd))))))
+	          (((.= hd) (((.= tl) {}) tl)) hd))))))
+	     (((.= hd) (((.= tl) {}) tl)) hd))))))
 
 inferred type:
 
@@ -45,78 +45,99 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((Lam
-	   (0 ()
-	    (App
-	     ((Var 0)
-	      (App
-	       ((Lam (0 () (Ctor (Cons (Var 0)))))
-	        (App
-	         ((Fix Record)
-	          (Lam
-	           (0 ()
-	            (Record
-	             ((hd (Const (Integer 4)))
-	              (tl
-	               (App
-	                ((Lam (0 () (Ctor (Cons (Var 0)))))
-	                 (App
-	                  ((Fix Record)
-	                   (Lam
-	                    (0 ()
-	                     (Record
-	                      ((hd (Const (Integer 0)))
-	                       (tl
-	                        (App
-	                         ((Lam (0 () (Ctor (Cons (Var 0)))))
-	                          (App
-	                           ((Fix Record)
-	                            (Lam
-	                             (0 ()
-	                              (Record
-	                               ((hd (Const (Integer 1)))
-	                                (tl
-	                                 (App
-	                                  ((Lam (0 () (Ctor (Nil (Var 0)))))
-	                                   (Record ()))))))))))))))))))))))))))))))))))
-	  (App
-	   ((Fix Let)
+	(LetRec
+	 (((1
 	    (Lam
-	     (3 ()
-	      (Lam
-	       (3 ()
+	     (1 ()
+	      (App
+	       ((Match
+	         (cases
+	          ((Cons
+	            (Lam
+	             (2 ()
+	              (App
+	               ((Lam
+	                 (3 ()
+	                  (App
+	                   ((App
+	                     ((App
+	                       ((GetField add)
+	                        (Record
+	                         ((add (Prim <fun>)) (div (Prim <fun>))
+	                          (mul (Prim <fun>)) (rem (Prim <fun>))
+	                          (sub (Prim <fun>))))))
+	                      (Const (Integer 1))))
+	                    (App ((Var 3) (App ((GetField tl) (Var 0)))))))))
+	                (Var 0))))))
+	           (Nil
+	            (Lam (0 () (App ((Lam (0 () (Const (Integer 0)))) (Var 0))))))))
+	         (default ()))
+	        (Var 0)))))))
+	  (App
+	   ((Var 0)
+	    (App
+	     ((Lam (0 () (Ctor (Cons (Var 0)))))
+	      (LetRec
+	       (((0 (Const (Integer 4)))
+	         (0
+	          (App
+	           ((Lam (0 () (Ctor (Cons (Var 0)))))
+	            (LetRec
+	             (((0 (Const (Integer 0)))
+	               (0
+	                (App
+	                 ((Lam (0 () (Ctor (Cons (Var 0)))))
+	                  (LetRec
+	                   (((0 (Const (Integer 1)))
+	                     (0
+	                      (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ())))))
+	                    (App
+	                     ((App
+	                       ((Lam
+	                         (0 ()
+	                          (Lam
+	                           (1 ()
+	                            (Update (old (Var 1)) (label hd) (field (Var 0)))))))
+	                        (App
+	                         ((App
+	                           ((Lam
+	                             (0 ()
+	                              (Lam
+	                               (1 ()
+	                                (Update (old (Var 1)) (label tl)
+	                                 (field (Var 0)))))))
+	                            (Record ())))
+	                          (Var 1)))))
+	                      (Var 0)))))))))
+	              (App
+	               ((App
+	                 ((Lam
+	                   (0 ()
+	                    (Lam
+	                     (1 () (Update (old (Var 1)) (label hd) (field (Var 0)))))))
+	                  (App
+	                   ((App
+	                     ((Lam
+	                       (0 ()
+	                        (Lam
+	                         (1 ()
+	                          (Update (old (Var 1)) (label tl) (field (Var 0)))))))
+	                      (Record ())))
+	                    (Var 1)))))
+	                (Var 0)))))))))
 	        (App
-	         ((Match
-	           (cases
-	            ((Cons
-	              (Lam
-	               (3 ()
-	                (App
-	                 ((Match (cases ())
-	                   (default
-	                    ((Lam
-	                      (3 ()
-	                       (App
-	                        ((App
-	                          ((App
-	                            ((GetField (Strict add))
-	                             (Record
-	                              ((add (Prim <fun>)) (div (Prim <fun>))
-	                               (mul (Prim <fun>)) (rem (Prim <fun>))
-	                               (sub (Prim <fun>))))))
-	                           (Const (Integer 1))))
-	                         (App
-	                          ((Var 3) (App ((GetField (Strict tl)) (Var 0))))))))))))
-	                  (Var 0))))))
-	             (Nil
-	              (Lam
-	               (0 ()
-	                (App
-	                 ((Match (cases ())
-	                   (default ((Lam (0 () (Const (Integer 0)))))))
-	                  (Var 0))))))))
-	           (default ()))
+	         ((App
+	           ((Lam
+	             (0 ()
+	              (Lam (1 () (Update (old (Var 1)) (label hd) (field (Var 0)))))))
+	            (App
+	             ((App
+	               ((Lam
+	                 (0 ()
+	                  (Lam
+	                   (1 () (Update (old (Var 1)) (label tl) (field (Var 0)))))))
+	                (Record ())))
+	              (Var 1)))))
 	          (Var 0)))))))))))
 
 Evaluated:
