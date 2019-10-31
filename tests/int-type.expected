@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((: int) (Integer 4))
+	(: (Integer 4) int)
 
 inferred type:
 
