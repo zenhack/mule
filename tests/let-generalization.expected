@@ -7,14 +7,9 @@ Desugared:
 
 inferred type:
 
-	(all a
-	 (all b
-	  (all c
-	   (all d
-	    (record (types (...d))
-	     (values
-	      ((a (a -> a))
-	       (b (union ((Ok (record (types (...c)) (values ()))) ...b))))))))))
+	(record (types ())
+	 (values
+	  ((a (all a (a -> a))) (b (union ((Ok (record (types ()) (values ())))))))))
 
 Runtime term:
 

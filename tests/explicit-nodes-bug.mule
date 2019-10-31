@@ -1,11 +1,17 @@
-# This tests for a regression. The original bug was that the below would
-# erroneously fail to type check, because in the return value of
-# from-order, the constraint graph ends up with an equality constraint
-# on something bound inside the body of the type lambda, which fails
-# due to explicit binding permissions.
+# This tests for a regression. The original bug was found in the
+# constraint-based type checker that has since been replaced by the
+# bidirectional one we have now, so the original cause is unlikely to
+# crop up again -- but it still serves to provide more coverage.
 #
-# We want references like ord.t inside the body of lambdas to be bound
+# The problem was that the below would erroneously fail to type check,
+# because in the return value of from-order, the constraint graph ends
+# up with an equality constraint on something bound inside the body of
+# the type lambda, which fails due to explicit binding permissions.
+#
+# We wanted references like ord.t inside the body of lambdas to be bound
 # outside of it.
+#
+# These concepts don't really apply anymore though...
 let
   , type sig k = {
       , type t v

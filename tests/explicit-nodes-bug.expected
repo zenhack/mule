@@ -1,0 +1,26 @@
+
+Desugared:
+
+	(letrec
+	 (types
+	  ((sig (lam k (rec sig (exist $5 (record (types ((t $5))) (values ()))))))))
+	 (values
+	  ((from-order
+	    (:
+	     (fn ord
+	      (letrec (types ((t (lam v (rec t (. ord t)))))) (values ())
+	       (.type= t {} t)))
+	     (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))))))
+	 (Integer 0))
+
+inferred type:
+
+	int
+
+Runtime term:
+
+	(LetRec (((0 (Lam (0 () (Record ()))))) (Const (Integer 0))))
+
+Evaluated:
+
+	(Const (Integer 0))
