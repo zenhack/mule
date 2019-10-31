@@ -273,10 +273,10 @@ and synth: context -> 'i DE.t -> u_var =
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
     | DE.EmptyRecord ->
-        all krow (fun rtypes -> record rtypes empty)
+        record empty empty
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
-        all krow (fun r -> union (extend c_lbl arg_t r))
+        union (extend c_lbl arg_t empty)
     | DE.WithType {wt_expr; wt_type} ->
         check ctx wt_expr (make_type ctx wt_type |> with_kind ktype)
     | DE.Let{let_v; let_e; let_body} ->
