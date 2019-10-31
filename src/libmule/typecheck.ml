@@ -576,6 +576,8 @@ and require_subtype_extend ctx ~sub ~super =
               UnionFind.merge (fun _ r -> r) sub_tail (unfold_row fields super_tail)
           | _, `Free({ty_flag = `Rigid; _}, _) ->
               MuleErr.throw (`TypeError(`PermissionErr `Graft))
+          | ((lbl, _) :: _), _ ->
+              MuleErr.throw (`TypeError (`MismatchedCtors (`Named `Empty, `Extend lbl)))
           | _ ->
               MuleErr.bug "impossible"
         end
