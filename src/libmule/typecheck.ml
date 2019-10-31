@@ -494,14 +494,14 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             let p = fresh_local ctx `Rigid kpl in
             require_subtype ctx
               ~sub:(subst
-                ~target:(get_id (UnionFind.get pl))
-                ~replacement:p
-                bl
+                  ~target:(get_id (UnionFind.get pl))
+                  ~replacement:p
+                  bl
               )
               ~super:(subst
-                ~target:(get_id (UnionFind.get pr))
-                ~replacement:p
-                br
+                  ~target:(get_id (UnionFind.get pr))
+                  ~replacement:p
+                  br
               )
         | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
             MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
