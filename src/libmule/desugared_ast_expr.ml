@@ -28,10 +28,7 @@ type 'i t =
       c_lbl : Label.t;
       c_arg : 'i t;
     }
-  | Match of {
-      match_cases: (Var.t * 'i t) LabelMap.t;
-      match_default: (Var.t option * 'i t) option;
-    }
+  | Match of ('i, Label.t, Label.comparator_witness) decision_tree
   | ConstMatch of {
       cm_cases : 'i t ConstMap.t;
       cm_default: 'i t;
@@ -53,6 +50,11 @@ type 'i t =
   | Const of {
       const_val : Const.t;
     }
+and ('i, 'k, 'cmp) decision_tree = {
+  dt_cases : ('k, (Var.t * 'i t), 'cmp) Map.t;
+  dt_default : (Var.t option * 'i t) option;
+}
+
 
 let rec sexp_of_t = function
   | Embed { e_path; _ } ->
@@ -81,7 +83,7 @@ let rec sexp_of_t = function
       Label.sexp_of_t c_lbl;
       sexp_of_t c_arg;
     ]
-  | Match {match_cases; match_default} ->
+  | Match {dt_cases; dt_default} ->
       let cs = [
         Sexp.Atom "match";
         Map.sexp_of_m__t
@@ -89,10 +91,10 @@ let rec sexp_of_t = function
           (fun (v, e) ->
                 Sexp.List [Var.sexp_of_t v; sexp_of_t e]
           )
-          match_cases;
+          dt_cases;
       ]
       in
-      begin match match_default with
+      begin match dt_default with
         | None -> Sexp.List cs
         | Some (maybe_v, def) ->
             let v = match maybe_v with
@@ -149,10 +151,10 @@ let apply_to_kids e ~f = match e with
       app_arg = f app_arg;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
-  | Match {match_cases; match_default} ->
+  | Match {dt_cases; dt_default} ->
       Match {
-        match_cases = Map.map match_cases ~f:(fun (k, v) -> (k, f v));
-        match_default = Option.map match_default ~f:(fun (k, v) -> (k, f v));
+        dt_cases = Map.map dt_cases ~f:(fun (k, v) -> (k, f v));
+        dt_default = Option.map dt_default ~f:(fun (k, v) -> (k, f v));
       }
   | ConstMatch {cm_cases; cm_default} ->
       ConstMatch {
@@ -206,11 +208,11 @@ let rec map e ~f =
       app_arg = map app_arg ~f;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
-  | Match {match_cases; match_default} ->
+  | Match {dt_cases; dt_default} ->
       let f' (k, v) = (k, map v ~f) in
       Match {
-        match_cases = Map.map match_cases ~f:f';
-        match_default = Option.map match_default ~f:f';
+        dt_cases = Map.map dt_cases ~f:f';
+        dt_default = Option.map dt_default ~f:f';
       }
   | ConstMatch {cm_cases; cm_default} ->
       ConstMatch {
@@ -263,16 +265,16 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         app_fn = subst env f;
         app_arg = subst env x;
       }
-  | Match {match_cases; match_default} ->
+  | Match {dt_cases; dt_default} ->
       Match {
-        match_cases =
-          Map.map match_cases ~f:(fun (var, body) ->
+        dt_cases =
+          Map.map dt_cases ~f:(fun (var, body) ->
             let env' = Map.remove env var in
             ( var
             , subst env' body
             )
           );
-        match_default = Option.map match_default ~f:(function
+        dt_default = Option.map dt_default ~f:(function
             | (None, body) -> (None, subst env body)
             | (Some var, body) ->
                 ( Some var
