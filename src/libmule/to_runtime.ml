@@ -57,13 +57,13 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
           })
 and translate_branch depth env b =
   match b with
+  | D.BLeaf lf ->
+      let (n, lf) = translate_leaf depth env lf in
+      (n, R.BLeaf lf)
   | D.BLabel {lm_cases; lm_default} ->
       let cases' = Map.map
           lm_cases
-          ~f:(fun lf ->
-            let (n, t) = translate_leaf depth env lf in
-            (n, R.BLeaf t)
-          )
+          ~f:(translate_branch depth env)
       in
       let (defcaps, default') = match lm_default with
         | None -> (0, None)

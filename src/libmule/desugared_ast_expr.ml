@@ -48,13 +48,14 @@ type 'i t =
     }
 and 'i branch =
   | BLabel of {
-      lm_cases : 'i leaf LabelMap.t;
+      lm_cases : 'i branch LabelMap.t;
       lm_default : 'i leaf option;
     }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
       cm_default: 'i leaf;
     }
+  | BLeaf of 'i leaf
 and 'i leaf = {
   lf_var: Var.t option;
   lf_body: 'i t;
@@ -88,28 +89,10 @@ let rec sexp_of_t = function
       Label.sexp_of_t c_lbl;
       sexp_of_t c_arg;
     ]
-  | Match (BLabel {lm_cases; lm_default}) ->
-      let cs = [
-        Sexp.Atom "match";
-        Map.sexp_of_m__t
-          (module Label)
-          (fun {lf_var = v; lf_body = e} ->
-                Sexp.List [Option.sexp_of_t Var.sexp_of_t v; sexp_of_t e]
-          )
-          lm_cases;
-      ]
-      in
-      begin match lm_default with
-        | None -> Sexp.List cs
-        | Some lf ->
-            Sexp.List (cs @ [sexp_of_leaf lf])
-      end
-  | Match (BConst {cm_cases; cm_default}) ->
-      Sexp.List [
-        Sexp.Atom "match/const";
-        Map.sexp_of_m__t (module Const) sexp_of_t cm_cases;
-        sexp_of_leaf cm_default;
-      ]
+  | Match b -> Sexp.List [
+      Sexp.Atom "match";
+      sexp_of_branch b;
+    ]
   | WithType {wt_expr = e; wt_type = ty} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
@@ -141,6 +124,20 @@ let rec sexp_of_t = function
       ]
   | Const {const_val = c} ->
       Const.sexp_of_t c
+and sexp_of_branch = function
+  | BLabel {lm_cases; lm_default} ->
+      let cases = Map.sexp_of_m__t (module Label) sexp_of_branch lm_cases in
+      begin match lm_default with
+      | None -> cases
+      | Some def -> Sexp.List [cases; sexp_of_leaf def]
+      end
+  | BConst {cm_cases; cm_default} ->
+      Sexp.List [
+        Map.sexp_of_m__t (module Const) sexp_of_t cm_cases;
+        sexp_of_leaf cm_default;
+      ]
+  | BLeaf lf ->
+      sexp_of_leaf lf
 and sexp_of_leaf {lf_var; lf_body} =
   let v = match lf_var with
     | Some v -> Var.sexp_of_t v
@@ -150,6 +147,18 @@ and sexp_of_leaf {lf_var; lf_body} =
 
 let leaf_apply_kid lf ~f =
   { lf with lf_body = f lf.lf_body }
+
+let rec branch_apply_kids b ~f =
+  match b with
+  | BLeaf lf -> BLeaf (leaf_apply_kid lf ~f)
+  | BLabel {lm_cases; lm_default} -> BLabel {
+      lm_cases = Map.map lm_cases ~f:(branch_apply_kids ~f);
+      lm_default = Option.map lm_default ~f:(leaf_apply_kid ~f);
+    }
+  | BConst {cm_cases; cm_default} -> BConst {
+      cm_cases = Map.map cm_cases ~f;
+      cm_default = leaf_apply_kid cm_default ~f;
+    }
 
 let apply_to_kids e ~f = match e with
   | Lam {l_param; l_body} -> Lam {
@@ -161,16 +170,7 @@ let apply_to_kids e ~f = match e with
       app_arg = f app_arg;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
-  | Match (BLabel {lm_cases; lm_default}) ->
-      Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:(leaf_apply_kid ~f);
-        lm_default = Option.map lm_default ~f:(leaf_apply_kid ~f);
-      })
-  | Match (BConst {cm_cases; cm_default}) ->
-      Match (BConst{
-        cm_cases = Map.map cm_cases ~f;
-        cm_default = leaf_apply_kid cm_default ~f;
-      })
+  | Match b -> Match (branch_apply_kids b ~f)
   | Let{let_v; let_e; let_body} -> Let {
       let_v;
       let_e = f let_e;
@@ -218,16 +218,7 @@ let rec map e ~f =
       app_arg = map app_arg ~f;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
-  | Match (BLabel {lm_cases; lm_default}) ->
-      Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:(map_leaf ~f);
-        lm_default = Option.map lm_default ~f:(map_leaf ~f);
-      })
-  | Match (BConst {cm_cases; cm_default}) ->
-      Match (BConst {
-        cm_cases = Map.map cm_cases ~f:(map ~f);
-        cm_default = map_leaf cm_default ~f;
-      })
+  | Match b -> Match (map_branch b ~f)
   | Let{let_v; let_e; let_body} -> Let{
       let_v;
       let_e = map let_e ~f;
@@ -251,6 +242,16 @@ let rec map e ~f =
   | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
+and map_branch b ~f = match b with
+  | BLeaf lf -> BLeaf (map_leaf lf ~f)
+  | BLabel {lm_cases; lm_default} -> BLabel {
+      lm_cases = Map.map lm_cases ~f:(map_branch ~f);
+      lm_default = Option.map lm_default ~f:(map_leaf ~f);
+    }
+  | BConst {cm_cases; cm_default} -> BConst {
+      cm_cases = Map.map cm_cases ~f:(map ~f);
+      cm_default = map_leaf cm_default ~f;
+    }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 
 let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
@@ -275,16 +276,7 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         app_fn = subst env f;
         app_arg = subst env x;
       }
-  | Match (BLabel {lm_cases; lm_default}) ->
-      Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:(subst_leaf env);
-        lm_default = Option.map lm_default ~f:(subst_leaf env);
-      })
-  | Match (BConst {cm_cases; cm_default}) ->
-      Match (BConst {
-        cm_cases = Map.map cm_cases ~f:(subst env);
-        cm_default = subst_leaf env cm_default;
-      })
+  | Match b -> Match (subst_branch env b)
   | Let{let_v; let_e; let_body} ->
       Let {
         let_v;
@@ -301,6 +293,16 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
       }
   | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Embed _ ->
       expr
+and subst_branch env b = match b with
+  | BLeaf lf -> BLeaf (subst_leaf env lf)
+  | BLabel {lm_cases; lm_default} -> BLabel {
+      lm_cases = Map.map lm_cases ~f:(subst_branch env);
+      lm_default = Option.map lm_default ~f:(subst_leaf env);
+    }
+  | BConst {cm_cases; cm_default} -> BConst {
+      cm_cases = Map.map cm_cases ~f:(subst env);
+      cm_default = subst_leaf env cm_default;
+    }
 and subst_leaf env lf =
   match lf.lf_var with
   | None -> leaf_apply_kid lf ~f:(subst env)

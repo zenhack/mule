@@ -296,54 +296,10 @@ and synth: context -> 'i DE.t -> u_var =
           let _ = check ctx app_arg p in
           r
         )
-    | DE.Match (DE.BConst {cm_cases; cm_default}) ->
+    | DE.Match b ->
         with_locals ctx (fun ctx ->
-          let param = fresh_local ctx `Flex ktype in
-          let result = fresh_local ctx `Flex ktype in
-          let ftype = param **> result in
-          let _ = check_leaf ctx cm_default ftype in
-          begin match Map.to_alist cm_cases with
-            | [] -> ftype
-            | cs ->
-                List.iter cs ~f:(fun (p, body) ->
-                  let _ = check_const ctx p param in
-                  let _ = check ctx body result in
-                  ()
-                );
-                ftype
-          end
-        )
-    | DE.Match (DE.BLabel {lm_cases; lm_default}) ->
-        with_locals ctx (fun ctx ->
-          let map = Map.map lm_cases ~f:(fun _ -> fresh_local ctx `Flex ktype) in
-          let param_row =
-            Map.fold map
-              ~init:begin match lm_default with
-                | None -> all krow (fun r -> r)
-                | Some _ -> fresh_local ctx `Flex krow
-              end
-              ~f:(fun ~key ~data r -> extend key data r)
-          in
-          let param = union param_row in
-          let result = match lm_default with
-            | None -> fresh_local ctx `Flex ktype
-            | Some {lf_var = None; lf_body} ->
-                synth ctx lf_body
-            | Some {lf_var = Some v; lf_body} ->
-                synth
-                  { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:param }
-                  lf_body
-          in
-          Map.iteri map ~f:(fun ~key ~data ->
-            let DE.{lf_var = v; lf_body = body} = Util.find_exn lm_cases key in
-            let ctx' = match v with
-              | None -> ctx
-              | Some v ->
-                  { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data }
-            in
-            ignore (check ctx' body result)
-          );
-          (param **> result)
+          let (p, r) = synth_branch ctx b in
+          p **> r
         )
     | DE.LetRec{letrec_types; letrec_vals; letrec_body} ->
         (* TODO: mutual recursion among types.
@@ -392,6 +348,49 @@ and synth: context -> 'i DE.t -> u_var =
           in
           synth ctx letrec_body
         )
+and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b =
+  let result = match result with
+    | None -> fresh_local ctx `Flex ktype
+    | Some r -> r
+  in
+  match b with
+  | DE.BLeaf lf ->
+      let param = fresh_local ctx `Flex ktype in
+      ignore (check_leaf ctx lf (param **> result));
+      (param, result)
+  | DE.BConst {cm_cases; cm_default} ->
+      let param = fresh_local ctx `Flex ktype in
+      ignore (check_leaf ctx cm_default (param **> result));
+      begin match Map.to_alist cm_cases with
+        | [] -> (param, result)
+        | cs ->
+            List.iter cs ~f:(fun (p, body) ->
+              ignore (check_const ctx p param);
+              ignore (check ctx body result)
+            );
+            (param, result)
+      end
+  | DE.BLabel {lm_cases; lm_default} ->
+      let map = Map.map lm_cases ~f:(
+          synth_branch
+            ctx
+            ~have_default:(have_default || Option.is_some lm_default)
+            ~result:(Some result)
+        )
+      in
+      let param_row =
+        Map.fold map
+          ~init:begin match lm_default with
+            | None when have_default -> empty
+            | None -> all krow (fun r -> r)
+            | Some lf ->
+                let row = fresh_local ctx `Flex krow in
+                ignore (check_leaf ctx lf (union row **> result));
+                row
+          end
+          ~f:(fun ~key ~data:(param, _) r -> extend key param r)
+      in
+      (union param_row, result)
 and synth_leaf ctx DE.{lf_var; lf_body} =
   with_locals ctx (fun ctx ->
     let pat = fresh_local ctx `Flex ktype in

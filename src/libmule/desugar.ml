@@ -421,13 +421,13 @@ and desugar_lambda ps body =
           lm_default = None;
           lm_cases = LabelMap.singleton
               c_lbl.Loc.l_value
-              D.{
+              D.(BLeaf {
                 lf_var = Some v;
                 lf_body = D.App {
                     app_fn = go (c_arg.Loc.l_value :: pats);
                     app_arg = D.Var {v_var = v}
                   }
-              };
+              });
         })
   in
   go (List.map ps ~f:(fun p -> p.Loc.l_value))
@@ -582,13 +582,13 @@ and desugar_lbl_match dict = function
 and finalize_dict dict =
   Map.map dict
     ~f:(fun cases ->
-      let v = Gensym.anon_var () in D.{
+      let v = Gensym.anon_var () in D.(BLeaf {
         lf_var = Some v;
         lf_body = D.App {
             app_fn = desugar_match (List.rev cases);
             app_arg = D.Var {v_var = v};
           }
-      }
+      })
     )
 and desugar_let bs body =
   (* As part of the desugaring process, we have to remove all "complex" patterns;
@@ -632,10 +632,10 @@ and desugar_let bs body =
               app_fn =
                 D.Match (D.BLabel {
                   lm_default = None;
-                  lm_cases = LabelMap.singleton lbl.Loc.l_value D.{
-                      lf_var = Some match_var;
-                      lf_body = Var {v_var = match_var}
-                    };
+                  lm_cases = LabelMap.singleton lbl.Loc.l_value D.(BLeaf {
+                    lf_var = Some match_var;
+                    lf_body = Var {v_var = match_var}
+                  });
                 });
               app_arg = e;
             }
