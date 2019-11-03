@@ -335,7 +335,7 @@ and synth: context -> 'i DE.t -> u_var =
                   body
           in
           Map.iteri map ~f:(fun ~key ~data ->
-            let (v, body) = Util.find_exn lm_cases key in
+            let DE.{lf_var = v; lf_body = body} = Util.find_exn lm_cases key in
             let _ = check
                 { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data }
                 body

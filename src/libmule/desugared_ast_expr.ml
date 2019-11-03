@@ -48,13 +48,17 @@ type 'i t =
     }
 and 'i branch =
   | BLabel of {
-      lm_cases : (Var.t * 'i t) LabelMap.t;
+      lm_cases : 'i leaf LabelMap.t;
       lm_default : (Var.t option * 'i t) option;
     }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
       cm_default: 'i t;
     }
+and 'i leaf = {
+  lf_var: Var.t;
+  lf_body: 'i t;
+}
 
 
 let rec sexp_of_t = function
@@ -89,7 +93,7 @@ let rec sexp_of_t = function
         Sexp.Atom "match";
         Map.sexp_of_m__t
           (module Label)
-          (fun (v, e) ->
+          (fun {lf_var = v; lf_body = e} ->
                 Sexp.List [Var.sexp_of_t v; sexp_of_t e]
           )
           lm_cases;
@@ -154,7 +158,7 @@ let apply_to_kids e ~f = match e with
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
   | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:(fun (k, v) -> (k, f v));
+        lm_cases = Map.map lm_cases ~f:(fun lf -> { lf with lf_body = f lf.lf_body });
         lm_default = Option.map lm_default ~f:(fun (k, v) -> (k, f v));
       })
   | Match (BConst {cm_cases; cm_default}) ->
@@ -210,10 +214,9 @@ let rec map e ~f =
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
   | Match (BLabel {lm_cases; lm_default}) ->
-      let f' (k, v) = (k, map v ~f) in
       Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:f';
-        lm_default = Option.map lm_default ~f:f';
+        lm_cases = Map.map lm_cases ~f:(map_leaf ~f);
+        lm_default = Option.map lm_default ~f:(fun (k, v) -> (k, map v ~f));
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst {
@@ -243,6 +246,7 @@ let rec map e ~f =
   | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
+and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 
 let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
   match expr with
@@ -269,11 +273,9 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
   | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
         lm_cases =
-          Map.map lm_cases ~f:(fun (var, body) ->
-            let env' = Map.remove env var in
-            ( var
-            , subst env' body
-            )
+          Map.map lm_cases ~f:(fun lf ->
+            let env' = Map.remove env lf.lf_var in
+            { lf with lf_body = subst env' lf.lf_body }
           );
         lm_default = Option.map lm_default ~f:(function
             | (None, body) -> (None, subst env body)
