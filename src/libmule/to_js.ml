@@ -100,14 +100,18 @@ let translate_expr expr =
           , Js.Switch
               ( Js.GetTag (Js.Var (Var.of_string "p"))
               , Map.to_alist lm_cases
-                |> List.map ~f:(fun (lbl, lf) ->
+                |> List.map ~f:(fun (lbl, D.Expr.{lf_var; lf_body}) ->
                   ( Const.Text (Label.to_string lbl)
-                  , let (name, env') = add_var env lf.D.Expr.lf_var in
-                      Js.Let
-                        ( name
-                        , Js.GetTagArg (Js.Var (Var.of_string "p"))
-                        , go env' lf.D.Expr.lf_body
-                        )
+                  , begin match lf_var with
+                      | None -> go env lf_body
+                      | Some v ->
+                          let (name, env') = add_var env v in
+                          Js.Let
+                            ( name
+                            , Js.GetTagArg (Js.Var (Var.of_string "p"))
+                            , go env' lf_body
+                            )
+                    end
                   )
                 )
               , Option.map lm_default ~f:(fun (v, body) ->

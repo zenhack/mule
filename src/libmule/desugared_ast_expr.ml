@@ -56,7 +56,7 @@ and 'i branch =
       cm_default: 'i t;
     }
 and 'i leaf = {
-  lf_var: Var.t;
+  lf_var: Var.t option;
   lf_body: 'i t;
 }
 
@@ -94,7 +94,7 @@ let rec sexp_of_t = function
         Map.sexp_of_m__t
           (module Label)
           (fun {lf_var = v; lf_body = e} ->
-                Sexp.List [Var.sexp_of_t v; sexp_of_t e]
+                Sexp.List [Option.sexp_of_t Var.sexp_of_t v; sexp_of_t e]
           )
           lm_cases;
       ]
@@ -274,7 +274,10 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
       Match (BLabel {
         lm_cases =
           Map.map lm_cases ~f:(fun lf ->
-            let env' = Map.remove env lf.lf_var in
+            let env' = match lf.lf_var with
+              | Some v -> Map.remove env v
+              | None -> env
+            in
             { lf with lf_body = subst env' lf.lf_body }
           );
         lm_default = Option.map lm_default ~f:(function

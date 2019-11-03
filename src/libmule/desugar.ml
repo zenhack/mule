@@ -422,7 +422,7 @@ and desugar_lambda ps body =
           lm_cases = LabelMap.singleton
               c_lbl.Loc.l_value
               D.{
-                lf_var = v;
+                lf_var = Some v;
                 lf_body = D.App {
                     app_fn = go (c_arg.Loc.l_value :: pats);
                     app_arg = D.Var {v_var = v}
@@ -571,9 +571,9 @@ and desugar_lbl_match dict = function
       unreachable_cases cs
 and finalize_dict dict =
   Map.map dict
-    ~f:( fun cases ->
+    ~f:(fun cases ->
       let v = Gensym.anon_var () in D.{
-        lf_var = v;
+        lf_var = Some v;
         lf_body = D.App {
             app_fn = desugar_match (List.rev cases);
             app_arg = D.Var {v_var = v};
@@ -623,7 +623,7 @@ and desugar_let bs body =
                 D.Match (D.BLabel {
                   lm_default = None;
                   lm_cases = LabelMap.singleton lbl.Loc.l_value D.{
-                      lf_var = match_var;
+                      lf_var = Some match_var;
                       lf_body = Var {v_var = match_var}
                     };
                 });

@@ -61,7 +61,11 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Match (D.BLabel {lm_cases; lm_default}) ->
         let cases' = Map.map
             lm_cases
-            ~f:(fun {lf_var = l_param; lf_body = l_body} ->
+            ~f:(fun {lf_var; lf_body = l_body} ->
+              let l_param = match lf_var with
+                | None -> Gensym.anon_var ()
+                | Some v -> v
+              in
               translate depth env (D.Lam{l_param; l_body})
             )
         in
