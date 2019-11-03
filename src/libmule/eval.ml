@@ -56,19 +56,7 @@ and eval stack expr =
          * arrays; should avoid re-scanning.
         *)
         Vec (Array.map arr ~f:(eval stack))
-    | Match {cases; default} ->
-        Match {
-          cases = Map.map cases ~f:(eval stack);
-          default = Option.map default ~f:(eval stack);
-        }
-    | ConstMatch {cm_cases; cm_default} ->
-        (* TODO/XXX: we definitely don't want to evaluate cm_cases here,
-         * but we probably still need to do something about embedded free
-         * variables. *)
-        ConstMatch {
-          cm_cases;
-          cm_default = eval stack cm_default;
-        }
+    | Match b -> Match (eval_branch stack b)
     | GetField l -> GetField l
     | Ctor (c, arg) -> Ctor (c, eval stack arg)
     | Record r ->
@@ -79,6 +67,20 @@ and eval stack expr =
           | e -> bug "Tried to set field on non-record" e
         end
   end
+and eval_branch stack = function
+  | BLeaf l -> BLeaf (eval stack l)
+  | BLabel {lm_cases; lm_default} -> BLabel {
+      lm_cases = Map.map lm_cases ~f:(eval_branch stack);
+      lm_default = Option.map lm_default ~f:(eval stack);
+    }
+  | BConst {cm_cases; cm_default} ->
+      (* TODO/XXX: we definitely don't want to evaluate cm_cases here,
+       * but we probably still need to do something about embedded free
+       * variables. *)
+      BConst {
+        cm_cases;
+        cm_default = Option.map cm_default ~f:(eval stack);
+      }
 and apply stack f arg =
   report "apply" stack (App(f, arg));
   begin match f with
@@ -86,14 +88,10 @@ and apply stack f arg =
         prim arg
     | Lam (_, env, body) ->
         eval (arg :: (env @ stack)) body
-    | Match {cases; default} ->
-        eval_match stack cases default arg
-    | ConstMatch {cm_cases; cm_default} ->
-        begin match arg with
-          | Const c ->
-              eval_const_match stack cm_cases cm_default c
-          | e ->
-              bug "ConstMatch matched against non constant" e
+    | Match b ->
+        begin match apply_branch stack b arg with
+          | Some v -> v ()
+          | None -> MuleErr.bug "Incomplete match"
         end
     | GetField label ->
         begin match arg with
@@ -105,30 +103,26 @@ and apply stack f arg =
     | e ->
         bug "Tried to call non-function" e
   end
-and eval_match stack cases default =
-  function
-  | Ctor (lbl, value) ->
-      begin match Map.find cases lbl with
+and apply_branch stack b arg = match b, arg with
+  | BLabel {lm_cases; lm_default}, Ctor (lbl, value) ->
+      begin match Map.find lm_cases lbl with
         | Some f ->
-            eval stack (App(f, value))
+            apply_branch stack f value
         | None ->
-            begin match default with
-              | Some f ->
-                  eval stack (App(f, Ctor(lbl, value)))
-              | None ->
-                  bug "Match failed" (Match{cases; default})
-            end
+            Option.map lm_default ~f:(fun f ->
+              (fun () -> eval stack (App(f, Ctor(lbl, value))))
+            )
       end
-  | value ->
-      begin match default with
-        | Some f ->
-            eval stack (App(f, value))
-        | None ->
-            bug "Match failed" (Match{cases; default})
+  | BLabel _, _ ->
+      MuleErr.bug "Matched label pattern against non-union."
+  | BConst {cm_cases; cm_default}, Const c ->
+      begin match Map.find cm_cases c with
+        | Some v -> Some (fun () -> eval stack v)
+        | None -> Option.map cm_default ~f:(fun f ->
+            (fun () -> eval stack (App(f, arg)))
+          )
       end
-and eval_const_match stack cases default c =
-  begin match Map.find cases c with
-    | Some v -> eval stack v
-    | None -> eval stack (App(default, Const c))
-  end
+  | BConst _, _ ->
+      MuleErr.bug "Matched literal pattern against non-literal."
+  | BLeaf f, _ -> Some (fun () -> eval stack (App (f, arg)))
 let eval e = eval [] e

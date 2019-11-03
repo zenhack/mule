@@ -18,19 +18,22 @@ module Expr = struct
         field: t;
       }
     | Ctor of (Label.t * t)
-    | Match of {
-        cases: t LabelMap.t;
-        default: t option;
-      }
-    | ConstMatch of {
-        cm_cases: t ConstMap.t;
-        cm_default: t;
-      }
+    | Match of branch
     | Lazy of (lazy_state ref) Lazy.t
     | Vec of t array
     | Const of Const.t
     | Prim of (t -> t)
     | PrimIO of (t io)
+  and branch =
+    | BLabel of {
+        lm_cases: branch LabelMap.t;
+        lm_default: t option;
+      }
+    | BConst of {
+        cm_cases: t ConstMap.t;
+        cm_default: t option;
+      }
+    | BLeaf of t
   [@@deriving sexp_of]
   and lazy_state =
     | Delayed of (t list * t)
@@ -48,7 +51,7 @@ module Expr = struct
    *   include code that has been transformed.
   *)
   let rec to_string = function
-    | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ | ConstMatch _ ->
+    | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ ->
         "<non-value>"
     | Lam _ -> "<lambda>"
     | Record fields ->

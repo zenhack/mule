@@ -44,42 +44,9 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Ctor { c_lbl = label; c_arg = e } ->
         let (ncap, e') = translate depth env e in
         (ncap, R.Ctor(label, e'))
-    | D.Match (D.BConst {cm_cases; cm_default}) ->
-        let cases = Map.map cm_cases ~f:(translate depth env) in
-        let (n, def) = translate_leaf depth env cm_default in
-        let ncaps = Map.fold
-            cases
-            ~init:n
-            ~f:(fun ~key:_ ~data:(next, _) prev -> max next prev)
-        in
-        ( ncaps
-        , R.ConstMatch {
-            cm_cases = Map.map cases ~f:snd;
-            cm_default = def;
-          }
-        )
-    | D.Match (D.BLabel {lm_cases; lm_default}) ->
-        let cases' = Map.map
-            lm_cases
-            ~f:(translate_leaf depth env)
-        in
-        let (defcaps, default') = match lm_default with
-          | None -> (0, None)
-          | Some lf ->
-              let (ncaps, body') = translate_leaf depth env lf in
-              (ncaps, Some body')
-        in
-        let ncaps = Map.fold
-            ~init:defcaps
-            ~f:(fun ~key:_ ~data -> max data)
-            (Map.map cases' ~f:fst)
-        in
-        ( ncaps
-        , R.Match {
-            cases = Map.map ~f:snd cases';
-            default = default';
-          }
-        )
+    | D.Match b ->
+        let (n, b) = translate_branch depth env b in
+        (n, R.Match b)
     | D.Let {let_v = v; let_e = e; let_body = body} ->
         translate depth env (D.App {
             app_fn = D.Lam {
@@ -88,7 +55,49 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
               };
             app_arg = e;
           })
-and translate_leaf depth env lf =
+and translate_branch depth env b =
+  match b with
+  | D.BLabel {lm_cases; lm_default} ->
+      let cases' = Map.map
+          lm_cases
+          ~f:(fun lf ->
+            let (n, t) = translate_leaf depth env lf in
+            (n, R.BLeaf t)
+          )
+      in
+      let (defcaps, default') = match lm_default with
+        | None -> (0, None)
+        | Some lf ->
+            let (ncaps, body') = translate_leaf depth env lf in
+            (ncaps, Some body')
+      in
+      let ncaps = Map.fold
+          ~init:defcaps
+          ~f:(fun ~key:_ ~data -> max data)
+          (Map.map cases' ~f:fst)
+      in
+      ( ncaps
+      , R.BLabel {
+          lm_cases = Map.map ~f:snd cases';
+          lm_default = default';
+        }
+      )
+  | D.BConst {cm_cases; cm_default} ->
+      let cases = Map.map cm_cases ~f:(translate depth env) in
+      let (n, def) = translate_leaf depth env cm_default in
+      let ncaps = Map.fold
+          cases
+          ~init:n
+          ~f:(fun ~key:_ ~data:(next, _) prev -> max next prev)
+      in
+      ( ncaps
+      , R.BConst {
+          cm_cases = Map.map cases ~f:snd;
+          cm_default = Some def;
+        }
+      )
+and translate_leaf: int -> binding VarMap.t -> 'i D.leaf -> (int * R.t) =
+ fun depth env lf ->
   let l_param =
     match lf.lf_var with
     | Some v -> v
