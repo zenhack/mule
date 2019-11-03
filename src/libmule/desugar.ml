@@ -535,12 +535,18 @@ and desugar_lbl_match dict = function
       lm_cases = finalize_dict dict;
     })
   | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match (D.BLabel {
-      lm_default = Some (None, desugar body);
+      lm_default = Some {
+          lf_var = None;
+          lf_body = desugar body;
+        };
       lm_cases = finalize_dict dict;
     })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
       D.Match (D.BLabel {
-        lm_default = Some (Some v.Loc.l_value, desugar body);
+        lm_default = Some D.{
+            lf_var = Some v.Loc.l_value;
+            lf_body = desugar body;
+          };
         lm_cases = finalize_dict dict;
       })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
@@ -556,7 +562,7 @@ and desugar_lbl_match dict = function
         }
       in
       D.Match (D.BLabel {
-        lm_default = Some(Some v', let_);
+        lm_default = Some{lf_var = Some v'; lf_body = let_};
         lm_cases = finalize_dict dict;
       })
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->

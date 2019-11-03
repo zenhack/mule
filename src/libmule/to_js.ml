@@ -114,15 +114,15 @@ let translate_expr expr =
                     end
                   )
                 )
-              , Option.map lm_default ~f:(fun (v, body) ->
-                    match v with
-                    | None -> go env body
+              , Option.map lm_default ~f:(fun {lf_var; lf_body} ->
+                    match lf_var with
+                    | None -> go env lf_body
                     | Some v ->
                         let (name, env') = add_var env v in
                         Js.Let
                           ( name
                           , Js.Var (Var.of_string "p")
-                          , go env' body
+                          , go env' lf_body
                           )
                   )
               )

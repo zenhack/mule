@@ -49,7 +49,7 @@ type 'i t =
 and 'i branch =
   | BLabel of {
       lm_cases : 'i leaf LabelMap.t;
-      lm_default : (Var.t option * 'i t) option;
+      lm_default : 'i leaf option;
     }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
@@ -101,7 +101,7 @@ let rec sexp_of_t = function
       in
       begin match lm_default with
         | None -> Sexp.List cs
-        | Some (maybe_v, def) ->
+        | Some {lf_var = maybe_v; lf_body = def} ->
             let v = match maybe_v with
               | Some v -> Var.sexp_of_t v
               | None -> Sexp.Atom "_"
@@ -157,9 +157,10 @@ let apply_to_kids e ~f = match e with
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
   | Match (BLabel {lm_cases; lm_default}) ->
+      let f' {lf_var; lf_body} = {lf_var; lf_body = f lf_body} in
       Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:(fun lf -> { lf with lf_body = f lf.lf_body });
-        lm_default = Option.map lm_default ~f:(fun (k, v) -> (k, f v));
+        lm_cases = Map.map lm_cases ~f:f';
+        lm_default = Option.map lm_default ~f:f';
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst{
@@ -216,7 +217,7 @@ let rec map e ~f =
   | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
         lm_cases = Map.map lm_cases ~f:(map_leaf ~f);
-        lm_default = Option.map lm_default ~f:(fun (k, v) -> (k, map v ~f));
+        lm_default = Option.map lm_default ~f:(map_leaf ~f);
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst {
@@ -281,12 +282,14 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
             { lf with lf_body = subst env' lf.lf_body }
           );
         lm_default = Option.map lm_default ~f:(function
-            | (None, body) -> (None, subst env body)
-            | (Some var, body) ->
-                ( Some var
-                , let env' = Map.remove env var in
-                  subst env' body
-                )
+            | {lf_var = None; lf_body} as lf ->
+                { lf with lf_body = subst env lf_body}
+            | {lf_var = Some var; lf_body} -> {
+                lf_var = Some var;
+                lf_body =
+                  let env' = Map.remove env var in
+                  subst env' lf_body;
+              }
           );
       })
   | Match (BConst {cm_cases; cm_default}) ->

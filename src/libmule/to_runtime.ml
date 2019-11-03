@@ -71,15 +71,15 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         in
         let (defcaps, default') = match lm_default with
           | None -> (0, None)
-          | Some (None, body) ->
+          | Some {lf_var = None; lf_body} ->
               let (ncaps, body') =
                 translate depth env (D.Lam {
                     l_param = Gensym.anon_var();
-                    l_body = body;
+                    l_body = lf_body;
                   })
               in
               (ncaps, Some body')
-          | Some(Some l_param, l_body) ->
+          | Some{lf_var = Some l_param; lf_body = l_body} ->
               let (ncaps, body') = translate depth env (D.Lam{l_param; l_body}) in
               (ncaps, Some body')
         in

@@ -327,12 +327,12 @@ and synth: context -> 'i DE.t -> u_var =
           let param = union param_row in
           let result = match lm_default with
             | None -> fresh_local ctx `Flex ktype
-            | Some (None, body) ->
-                synth ctx body
-            | Some (Some v, body) ->
+            | Some {lf_var = None; lf_body} ->
+                synth ctx lf_body
+            | Some {lf_var = Some v; lf_body} ->
                 synth
                   { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:param }
-                  body
+                  lf_body
           in
           Map.iteri map ~f:(fun ~key ~data ->
             let DE.{lf_var = v; lf_body = body} = Util.find_exn lm_cases key in
