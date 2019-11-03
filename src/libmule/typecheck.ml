@@ -301,7 +301,7 @@ and synth: context -> 'i DE.t -> u_var =
           let param = fresh_local ctx `Flex ktype in
           let result = fresh_local ctx `Flex ktype in
           let ftype = param **> result in
-          let _ = check ctx cm_default ftype in
+          let _ = check_leaf ctx cm_default ftype in
           begin match Map.to_alist cm_cases with
             | [] -> ftype
             | cs ->
@@ -392,9 +392,25 @@ and synth: context -> 'i DE.t -> u_var =
           in
           synth ctx letrec_body
         )
+and synth_leaf ctx DE.{lf_var; lf_body} =
+  with_locals ctx (fun ctx ->
+    let pat = fresh_local ctx `Flex ktype in
+    match lf_var with
+    | None -> pat **> synth ctx lf_body
+    | Some v ->
+        pat
+        **> synth
+          { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:pat }
+          lf_body
+  )
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
   let ty_got = synth ctx e in
+  require_subtype ctx ~sub:ty_got ~super:ty_want;
+  ty_got
+and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
+  fun ctx lf ty_want ->
+  let ty_got = synth_leaf ctx lf in
   require_subtype ctx ~sub:ty_got ~super:ty_want;
   ty_got
 and require_subtype: context -> sub:u_var -> super:u_var -> unit =

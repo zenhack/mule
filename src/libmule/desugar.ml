@@ -501,17 +501,21 @@ and desugar_match cases =
   end
 and desugar_const_match dict = function
   | [Loc.{l_value = SP.Wild; _}, body] -> D.Match (D.BConst {
-      cm_default = D.Lam {
-          l_param = Gensym.anon_var ();
-          l_body = desugar body;
+      cm_default = D.{
+          lf_var = None;
+          lf_body = desugar body;
         };
       cm_cases = dict;
     })
   | (Loc.{l_value = SP.Wild; _}, _) :: cs ->
       unreachable_cases cs
-  | [Loc.{l_value = (SP.Var _); _} as p, body] ->
+  | [Loc.{l_value = (SP.Var {v_var = {l_value; _}; v_type = _}); _}, body] ->
+      (* FIXME: Don't drop the type annotation *)
       D.Match (D.BConst {
-        cm_default = desugar_lambda [p] body;
+        cm_default = D.{
+          lf_var = Some l_value;
+          lf_body = desugar body;
+        };
         cm_cases = dict;
       })
   | (Loc.{l_value = SP.Var _; _}, _) :: cs ->

@@ -53,7 +53,7 @@ and 'i branch =
     }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
-      cm_default: 'i t;
+      cm_default: 'i leaf;
     }
 and 'i leaf = {
   lf_var: Var.t option;
@@ -101,18 +101,14 @@ let rec sexp_of_t = function
       in
       begin match lm_default with
         | None -> Sexp.List cs
-        | Some {lf_var = maybe_v; lf_body = def} ->
-            let v = match maybe_v with
-              | Some v -> Var.sexp_of_t v
-              | None -> Sexp.Atom "_"
-            in
-            Sexp.List (cs @ [Sexp.List [v; sexp_of_t def]])
+        | Some lf ->
+            Sexp.List (cs @ [sexp_of_leaf lf])
       end
   | Match (BConst {cm_cases; cm_default}) ->
       Sexp.List [
         Sexp.Atom "match/const";
         Map.sexp_of_m__t (module Const) sexp_of_t cm_cases;
-        Sexp.List [Sexp.Atom "_"; sexp_of_t cm_default];
+        sexp_of_leaf cm_default;
       ]
   | WithType {wt_expr = e; wt_type = ty} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
@@ -145,6 +141,15 @@ let rec sexp_of_t = function
       ]
   | Const {const_val = c} ->
       Const.sexp_of_t c
+and sexp_of_leaf {lf_var; lf_body} =
+  let v = match lf_var with
+    | Some v -> Var.sexp_of_t v
+    | None -> Sexp.Atom "_"
+  in
+  Sexp.List [v; sexp_of_t lf_body]
+
+let leaf_apply_kid lf ~f =
+  { lf with lf_body = f lf.lf_body }
 
 let apply_to_kids e ~f = match e with
   | Lam {l_param; l_body} -> Lam {
@@ -157,15 +162,14 @@ let apply_to_kids e ~f = match e with
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
   | Match (BLabel {lm_cases; lm_default}) ->
-      let f' {lf_var; lf_body} = {lf_var; lf_body = f lf_body} in
       Match (BLabel {
-        lm_cases = Map.map lm_cases ~f:f';
-        lm_default = Option.map lm_default ~f:f';
+        lm_cases = Map.map lm_cases ~f:(leaf_apply_kid ~f);
+        lm_default = Option.map lm_default ~f:(leaf_apply_kid ~f);
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst{
         cm_cases = Map.map cm_cases ~f;
-        cm_default = f cm_default;
+        cm_default = leaf_apply_kid cm_default ~f;
       })
   | Let{let_v; let_e; let_body} -> Let {
       let_v;
@@ -222,7 +226,7 @@ let rec map e ~f =
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst {
         cm_cases = Map.map cm_cases ~f:(map ~f);
-        cm_default = map cm_default ~f;
+        cm_default = map_leaf cm_default ~f;
       })
   | Let{let_v; let_e; let_body} -> Let{
       let_v;
@@ -273,29 +277,13 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
       }
   | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
-        lm_cases =
-          Map.map lm_cases ~f:(fun lf ->
-            let env' = match lf.lf_var with
-              | Some v -> Map.remove env v
-              | None -> env
-            in
-            { lf with lf_body = subst env' lf.lf_body }
-          );
-        lm_default = Option.map lm_default ~f:(function
-            | {lf_var = None; lf_body} as lf ->
-                { lf with lf_body = subst env lf_body}
-            | {lf_var = Some var; lf_body} -> {
-                lf_var = Some var;
-                lf_body =
-                  let env' = Map.remove env var in
-                  subst env' lf_body;
-              }
-          );
+        lm_cases = Map.map lm_cases ~f:(subst_leaf env);
+        lm_default = Option.map lm_default ~f:(subst_leaf env);
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst {
         cm_cases = Map.map cm_cases ~f:(subst env);
-        cm_default = subst env cm_default;
+        cm_default = subst_leaf env cm_default;
       })
   | Let{let_v; let_e; let_body} ->
       Let {
@@ -313,3 +301,7 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
       }
   | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Embed _ ->
       expr
+and subst_leaf env lf =
+  match lf.lf_var with
+  | None -> leaf_apply_kid lf ~f:(subst env)
+  | Some v -> leaf_apply_kid lf ~f:(subst (Map.remove env v))

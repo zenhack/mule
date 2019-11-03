@@ -46,7 +46,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
         (ncap, R.Ctor(label, e'))
     | D.Match (D.BConst {cm_cases; cm_default}) ->
         let cases = Map.map cm_cases ~f:(translate depth env) in
-        let (n, def) = translate depth env cm_default in
+        let (n, def) = translate_leaf depth env cm_default in
         let ncaps = Map.fold
             cases
             ~init:n
@@ -61,26 +61,12 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Match (D.BLabel {lm_cases; lm_default}) ->
         let cases' = Map.map
             lm_cases
-            ~f:(fun {lf_var; lf_body = l_body} ->
-              let l_param = match lf_var with
-                | None -> Gensym.anon_var ()
-                | Some v -> v
-              in
-              translate depth env (D.Lam{l_param; l_body})
-            )
+            ~f:(translate_leaf depth env)
         in
         let (defcaps, default') = match lm_default with
           | None -> (0, None)
-          | Some {lf_var = None; lf_body} ->
-              let (ncaps, body') =
-                translate depth env (D.Lam {
-                    l_param = Gensym.anon_var();
-                    l_body = lf_body;
-                  })
-              in
-              (ncaps, Some body')
-          | Some{lf_var = Some l_param; lf_body = l_body} ->
-              let (ncaps, body') = translate depth env (D.Lam{l_param; l_body}) in
+          | Some lf ->
+              let (ncaps, body') = translate_leaf depth env lf in
               (ncaps, Some body')
         in
         let ncaps = Map.fold
@@ -102,6 +88,13 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
               };
             app_arg = e;
           })
+and translate_leaf depth env lf =
+  let l_param =
+    match lf.lf_var with
+    | Some v -> v
+    | None -> Gensym.anon_var ()
+  in
+  translate depth env (D.Lam{l_param; l_body = lf.lf_body})
 and translate_letrec depth env bindings body =
   let env' =
     bindings

@@ -64,12 +64,7 @@ let translate_expr expr =
               ( Js.Var (Var.of_string "v")
               , Map.to_alist cm_cases
                 |> List.map ~f:(fun (c, body) -> (c, go env body))
-              , Some
-                    (Js.Call1
-                        ( go env cm_default
-                        , Js.Var (Var.of_string "v")
-                        )
-                    );
+              , Some (go_leaf env cm_default (Js.Var (Var.of_string "v")))
               )
           )
     | D.Expr.Let {let_v; let_e; let_body} ->
@@ -100,31 +95,14 @@ let translate_expr expr =
           , Js.Switch
               ( Js.GetTag (Js.Var (Var.of_string "p"))
               , Map.to_alist lm_cases
-                |> List.map ~f:(fun (lbl, D.Expr.{lf_var; lf_body}) ->
+                |> List.map ~f:(fun (lbl, lf) ->
                   ( Const.Text (Label.to_string lbl)
-                  , begin match lf_var with
-                      | None -> go env lf_body
-                      | Some v ->
-                          let (name, env') = add_var env v in
-                          Js.Let
-                            ( name
-                            , Js.GetTagArg (Js.Var (Var.of_string "p"))
-                            , go env' lf_body
-                            )
-                    end
+                  , go_leaf env lf (Js.GetTagArg (Js.Var (Var.of_string "p")))
                   )
                 )
-              , Option.map lm_default ~f:(fun {lf_var; lf_body} ->
-                    match lf_var with
-                    | None -> go env lf_body
-                    | Some v ->
-                        let (name, env') = add_var env v in
-                        Js.Let
-                          ( name
-                          , Js.Var (Var.of_string "p")
-                          , go env' lf_body
-                          )
-                  )
+              , Option.map lm_default ~f:(fun lf ->
+                  go_leaf env lf (Js.Var (Var.of_string "p"))
+                )
               )
           )
     | D.Expr.LetRec {letrec_vals; letrec_body; _} ->
@@ -162,5 +140,16 @@ let translate_expr expr =
           (decls @ redecls)
           ~init:(go env'' letrec_body)
           ~f:(fun f body -> f body)
+  and go_leaf env {lf_var; lf_body} arg =
+    begin match lf_var with
+      | None -> go env lf_body
+      | Some v ->
+          let (name, env') = add_var env v in
+          Js.Let
+            ( name
+            , arg
+            , go env' lf_body
+            )
+    end
   in
   go intrinsics_env expr
