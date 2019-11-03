@@ -47,15 +47,14 @@ type 'i t =
       const_val : Const.t;
     }
 and 'i branch =
-  | BLabel of ('i, Label.t, Label.comparator_witness) decision_tree
+  | BLabel of {
+      lm_cases : (Var.t * 'i t) LabelMap.t;
+      lm_default : (Var.t option * 'i t) option;
+    }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
       cm_default: 'i t;
     }
-and ('i, 'k, 'cmp) decision_tree = {
-  dt_cases : ('k, (Var.t * 'i t), 'cmp) Map.t;
-  dt_default : (Var.t option * 'i t) option;
-}
 
 
 let rec sexp_of_t = function
@@ -85,7 +84,7 @@ let rec sexp_of_t = function
       Label.sexp_of_t c_lbl;
       sexp_of_t c_arg;
     ]
-  | Match (BLabel {dt_cases; dt_default}) ->
+  | Match (BLabel {lm_cases; lm_default}) ->
       let cs = [
         Sexp.Atom "match";
         Map.sexp_of_m__t
@@ -93,10 +92,10 @@ let rec sexp_of_t = function
           (fun (v, e) ->
                 Sexp.List [Var.sexp_of_t v; sexp_of_t e]
           )
-          dt_cases;
+          lm_cases;
       ]
       in
-      begin match dt_default with
+      begin match lm_default with
         | None -> Sexp.List cs
         | Some (maybe_v, def) ->
             let v = match maybe_v with
@@ -153,10 +152,10 @@ let apply_to_kids e ~f = match e with
       app_arg = f app_arg;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
-  | Match (BLabel {dt_cases; dt_default}) ->
+  | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
-        dt_cases = Map.map dt_cases ~f:(fun (k, v) -> (k, f v));
-        dt_default = Option.map dt_default ~f:(fun (k, v) -> (k, f v));
+        lm_cases = Map.map lm_cases ~f:(fun (k, v) -> (k, f v));
+        lm_default = Option.map lm_default ~f:(fun (k, v) -> (k, f v));
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst{
@@ -210,11 +209,11 @@ let rec map e ~f =
       app_arg = map app_arg ~f;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
-  | Match (BLabel {dt_cases; dt_default}) ->
+  | Match (BLabel {lm_cases; lm_default}) ->
       let f' (k, v) = (k, map v ~f) in
       Match (BLabel {
-        dt_cases = Map.map dt_cases ~f:f';
-        dt_default = Option.map dt_default ~f:f';
+        lm_cases = Map.map lm_cases ~f:f';
+        lm_default = Option.map lm_default ~f:f';
       })
   | Match (BConst {cm_cases; cm_default}) ->
       Match (BConst {
@@ -267,16 +266,16 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         app_fn = subst env f;
         app_arg = subst env x;
       }
-  | Match (BLabel {dt_cases; dt_default}) ->
+  | Match (BLabel {lm_cases; lm_default}) ->
       Match (BLabel {
-        dt_cases =
-          Map.map dt_cases ~f:(fun (var, body) ->
+        lm_cases =
+          Map.map lm_cases ~f:(fun (var, body) ->
             let env' = Map.remove env var in
             ( var
             , subst env' body
             )
           );
-        dt_default = Option.map dt_default ~f:(function
+        lm_default = Option.map lm_default ~f:(function
             | (None, body) -> (None, subst env body)
             | (Some var, body) ->
                 ( Some var

@@ -418,8 +418,8 @@ and desugar_lambda ps body =
     | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
         let v = Gensym.anon_var () in
         D.Match (D.BLabel {
-          dt_default = None;
-          dt_cases = LabelMap.singleton
+          lm_default = None;
+          lm_cases = LabelMap.singleton
               c_lbl.Loc.l_value
               ( v
               , D.App {
@@ -492,8 +492,8 @@ and desugar_match cases =
     | [(pat, body)] ->
         desugar_lambda [pat] body
     | [] -> D.Match (D.BLabel {
-        dt_cases = LabelMap.empty;
-        dt_default = None;
+        lm_cases = LabelMap.empty;
+        lm_default = None;
       })
     | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
         unreachable_cases cs
@@ -530,17 +530,17 @@ and desugar_const_match dict = function
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
   | [] -> D.Match (D.BLabel {
-      dt_default = None;
-      dt_cases = finalize_dict dict;
+      lm_default = None;
+      lm_cases = finalize_dict dict;
     })
   | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match (D.BLabel {
-      dt_default = Some (None, desugar body);
-      dt_cases = finalize_dict dict;
+      lm_default = Some (None, desugar body);
+      lm_cases = finalize_dict dict;
     })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
       D.Match (D.BLabel {
-        dt_default = Some (Some v.Loc.l_value, desugar body);
-        dt_cases = finalize_dict dict;
+        lm_default = Some (Some v.Loc.l_value, desugar body);
+        lm_cases = finalize_dict dict;
       })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
@@ -555,8 +555,8 @@ and desugar_lbl_match dict = function
         }
       in
       D.Match (D.BLabel {
-        dt_default = Some(Some v', let_);
-        dt_cases = finalize_dict dict;
+        lm_default = Some(Some v', let_);
+        lm_cases = finalize_dict dict;
       })
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
@@ -620,8 +620,8 @@ and desugar_let bs body =
           , D.App {
               app_fn =
                 D.Match (D.BLabel {
-                  dt_default = None;
-                  dt_cases = LabelMap.singleton lbl.Loc.l_value
+                  lm_default = None;
+                  lm_cases = LabelMap.singleton lbl.Loc.l_value
                       ( match_var
                       , D.Var {v_var = match_var}
                       )

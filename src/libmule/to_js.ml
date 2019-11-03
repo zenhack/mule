@@ -94,12 +94,12 @@ let translate_expr expr =
                   )
               )
           )
-    | D.Expr.Match (BLabel {dt_cases; dt_default}) ->
+    | D.Expr.Match (BLabel {lm_cases; lm_default}) ->
         Js.Lam1
           ( Var.of_string "p"
           , Js.Switch
               ( Js.GetTag (Js.Var (Var.of_string "p"))
-              , Map.to_alist dt_cases
+              , Map.to_alist lm_cases
                 |> List.map ~f:(fun (lbl, (v, body)) ->
                   ( Const.Text (Label.to_string lbl)
                   , let (name, env') = add_var env v in
@@ -110,7 +110,7 @@ let translate_expr expr =
                         )
                   )
                 )
-              , Option.map dt_default ~f:(fun (v, body) ->
+              , Option.map lm_default ~f:(fun (v, body) ->
                     match v with
                     | None -> go env body
                     | Some v ->
