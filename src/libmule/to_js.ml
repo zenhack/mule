@@ -57,7 +57,7 @@ let translate_expr expr =
           )
     | D.Expr.Ctor{c_lbl; c_arg} ->
         Js.Tagged (c_lbl, go env c_arg)
-    | D.Expr.ConstMatch {cm_cases; cm_default} ->
+    | D.Expr.Match (D.Expr.BConst {cm_cases; cm_default}) ->
         Js.Lam1
           ( Var.of_string "v"
           , Js.Switch
@@ -94,7 +94,7 @@ let translate_expr expr =
                   )
               )
           )
-    | D.Expr.Match {dt_cases; dt_default} ->
+    | D.Expr.Match (BLabel {dt_cases; dt_default}) ->
         Js.Lam1
           ( Var.of_string "p"
           , Js.Switch

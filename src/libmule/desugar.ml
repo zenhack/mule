@@ -417,7 +417,7 @@ and desugar_lambda ps body =
     | ((SP.Const _) :: _) -> incomplete_pattern ()
     | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
         let v = Gensym.anon_var () in
-        D.Match {
+        D.Match (D.BLabel {
           dt_default = None;
           dt_cases = LabelMap.singleton
               c_lbl.Loc.l_value
@@ -427,7 +427,7 @@ and desugar_lambda ps body =
                   app_arg = D.Var {v_var = v}
                 }
               )
-        }
+        })
   in
   go (List.map ps ~f:(fun p -> p.Loc.l_value))
 and desugar_record fields =
@@ -491,28 +491,28 @@ and desugar_match cases =
         desugar_const_match ConstMap.empty cases
     | [(pat, body)] ->
         desugar_lambda [pat] body
-    | [] -> D.Match {
+    | [] -> D.Match (D.BLabel {
         dt_cases = LabelMap.empty;
         dt_default = None;
-      }
+      })
     | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
         unreachable_cases cs
   end
 and desugar_const_match dict = function
-  | [Loc.{l_value = SP.Wild; _}, body] -> D.ConstMatch {
+  | [Loc.{l_value = SP.Wild; _}, body] -> D.Match (D.BConst {
       cm_default = D.Lam {
           l_param = Gensym.anon_var ();
           l_body = desugar body;
         };
       cm_cases = dict;
-    }
+    })
   | (Loc.{l_value = SP.Wild; _}, _) :: cs ->
       unreachable_cases cs
   | [Loc.{l_value = (SP.Var _); _} as p, body] ->
-      D.ConstMatch {
+      D.Match (D.BConst {
         cm_default = desugar_lambda [p] body;
         cm_cases = dict;
-      }
+      })
   | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
       unreachable_cases cs
   | (Loc.{l_value = SP.Const {const_val = c; _}; _}, body) as case :: rest ->
@@ -529,19 +529,19 @@ and desugar_const_match dict = function
   | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
-  | [] -> D.Match {
+  | [] -> D.Match (D.BLabel {
       dt_default = None;
       dt_cases = finalize_dict dict;
-    }
-  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match {
+    })
+  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match (D.BLabel {
       dt_default = Some (None, desugar body);
       dt_cases = finalize_dict dict;
-    }
+    })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
-      D.Match {
+      D.Match (D.BLabel {
         dt_default = Some (Some v.Loc.l_value, desugar body);
         dt_cases = finalize_dict dict;
-      }
+      })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let {
@@ -554,10 +554,10 @@ and desugar_lbl_match dict = function
           let_body = desugar body;
         }
       in
-      D.Match {
+      D.Match (D.BLabel {
         dt_default = Some(Some v', let_);
         dt_cases = finalize_dict dict;
-      }
+      })
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl.Loc.l_value ~f:(function
@@ -619,13 +619,13 @@ and desugar_let bs body =
           ( bind_var
           , D.App {
               app_fn =
-                D.Match {
+                D.Match (D.BLabel {
                   dt_default = None;
                   dt_cases = LabelMap.singleton lbl.Loc.l_value
                       ( match_var
                       , D.Var {v_var = match_var}
                       )
-                };
+                });
               app_arg = e;
             }
           )

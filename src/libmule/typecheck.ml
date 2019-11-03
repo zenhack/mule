@@ -296,7 +296,7 @@ and synth: context -> 'i DE.t -> u_var =
           let _ = check ctx app_arg p in
           r
         )
-    | DE.ConstMatch {cm_cases; cm_default} ->
+    | DE.Match (DE.BConst {cm_cases; cm_default}) ->
         with_locals ctx (fun ctx ->
           let param = fresh_local ctx `Flex ktype in
           let result = fresh_local ctx `Flex ktype in
@@ -313,7 +313,7 @@ and synth: context -> 'i DE.t -> u_var =
                 ftype
           end
         )
-    | DE.Match {dt_cases; dt_default} ->
+    | DE.Match (DE.BLabel {dt_cases; dt_default}) ->
         with_locals ctx (fun ctx ->
           let map = Map.map dt_cases ~f:(fun _ -> fresh_local ctx `Flex ktype) in
           let param_row =

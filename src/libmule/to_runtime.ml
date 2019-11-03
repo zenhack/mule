@@ -44,7 +44,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.Ctor { c_lbl = label; c_arg = e } ->
         let (ncap, e') = translate depth env e in
         (ncap, R.Ctor(label, e'))
-    | D.ConstMatch{cm_cases; cm_default} ->
+    | D.Match (D.BConst {cm_cases; cm_default}) ->
         let cases = Map.map cm_cases ~f:(translate depth env) in
         let (n, def) = translate depth env cm_default in
         let ncaps = Map.fold
@@ -58,7 +58,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
             cm_default = def;
           }
         )
-    | D.Match{dt_cases; dt_default} ->
+    | D.Match (D.BLabel {dt_cases; dt_default}) ->
         let cases' = Map.map
             dt_cases
             ~f:(fun (l_param, l_body) -> translate depth env (D.Lam{l_param; l_body}))
