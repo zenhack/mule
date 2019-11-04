@@ -98,7 +98,7 @@ and translate_opt_leaf depth env lf =
       let (ncaps, body) = translate_leaf depth env lf in
       (ncaps, Some body)
 and translate_leaf: int -> binding VarMap.t -> 'i D.leaf -> (int * R.t) =
- fun depth env lf ->
+  fun depth env lf ->
   let l_param =
     match lf.lf_var with
     | Some v -> v

@@ -418,17 +418,17 @@ and desugar_lambda ps body =
     | (SP.Ctor{c_lbl; c_arg; _} :: pats) ->
         let v = Gensym.anon_var () in
         D.Match (D.BLabel {
-          lm_default = None;
-          lm_cases = LabelMap.singleton
-              c_lbl.Loc.l_value
-              D.(BLeaf {
-                lf_var = Some v;
-                lf_body = D.App {
-                    app_fn = go (c_arg.Loc.l_value :: pats);
-                    app_arg = D.Var {v_var = v}
-                  }
-              });
-        })
+            lm_default = None;
+            lm_cases = LabelMap.singleton
+                c_lbl.Loc.l_value
+                D.(BLeaf {
+                    lf_var = Some v;
+                    lf_body = D.App {
+                        app_fn = go (c_arg.Loc.l_value :: pats);
+                        app_arg = D.Var {v_var = v}
+                      }
+                  });
+          })
   in
   go (List.map ps ~f:(fun p -> p.Loc.l_value))
 and desugar_record fields =
@@ -512,12 +512,12 @@ and desugar_const_match dict = function
   | [Loc.{l_value = (SP.Var {v_var = {l_value; _}; v_type = _}); _}, body] ->
       (* FIXME: Don't drop the type annotation *)
       D.Match (D.BConst {
-        cm_default = Some D.{
-          lf_var = Some l_value;
-          lf_body = desugar body;
-        };
-        cm_cases = dict;
-      })
+          cm_default = Some D.{
+              lf_var = Some l_value;
+              lf_body = desugar body;
+            };
+          cm_cases = dict;
+        })
   | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
       unreachable_cases cs
   | (Loc.{l_value = SP.Const {const_val = c; _}; _}, body) as case :: rest ->
@@ -547,12 +547,12 @@ and desugar_lbl_match dict = function
     })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
       D.Match (D.BLabel {
-        lm_default = Some D.{
-            lf_var = Some v.Loc.l_value;
-            lf_body = desugar body;
-          };
-        lm_cases = finalize_dict dict;
-      })
+          lm_default = Some D.{
+              lf_var = Some v.Loc.l_value;
+              lf_body = desugar body;
+            };
+          lm_cases = finalize_dict dict;
+        })
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let {
@@ -566,9 +566,9 @@ and desugar_lbl_match dict = function
         }
       in
       D.Match (D.BLabel {
-        lm_default = Some{lf_var = Some v'; lf_body = let_};
-        lm_cases = finalize_dict dict;
-      })
+          lm_default = Some{lf_var = Some v'; lf_body = let_};
+          lm_cases = finalize_dict dict;
+        })
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl.Loc.l_value ~f:(function
@@ -583,12 +583,12 @@ and finalize_dict dict =
   Map.map dict
     ~f:(fun cases ->
       let v = Gensym.anon_var () in D.(BLeaf {
-        lf_var = Some v;
-        lf_body = D.App {
-            app_fn = desugar_match (List.rev cases);
-            app_arg = D.Var {v_var = v};
-          }
-      })
+          lf_var = Some v;
+          lf_body = D.App {
+              app_fn = desugar_match (List.rev cases);
+              app_arg = D.Var {v_var = v};
+            }
+        })
     )
 and desugar_let bs body =
   (* As part of the desugaring process, we have to remove all "complex" patterns;
@@ -631,12 +631,12 @@ and desugar_let bs body =
           , D.App {
               app_fn =
                 D.Match (D.BLabel {
-                  lm_default = None;
-                  lm_cases = LabelMap.singleton lbl.Loc.l_value D.(BLeaf {
-                    lf_var = Some match_var;
-                    lf_body = Var {v_var = match_var}
+                    lm_default = None;
+                    lm_cases = LabelMap.singleton lbl.Loc.l_value D.(BLeaf {
+                        lf_var = Some match_var;
+                        lf_body = Var {v_var = match_var}
+                      });
                   });
-                });
               app_arg = e;
             }
           )
