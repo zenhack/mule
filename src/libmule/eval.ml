@@ -99,9 +99,12 @@ and apply stack f arg =
   end
 and apply_branch stack b arg = match b, arg with
   | BLabel {lm_cases; lm_default}, Ctor (lbl, value) ->
-      begin match Map.find lm_cases lbl with
-        | Some f ->
-            apply_branch stack f value
+      let ret =
+        Map.find lm_cases lbl
+        |> Option.bind ~f:(fun f -> apply_branch stack f value)
+      in
+      begin match ret with
+        | Some v -> Some v
         | None ->
             Option.map lm_default ~f:(fun f ->
               (fun () -> eval stack (App(f, Ctor(lbl, value))))
@@ -110,8 +113,12 @@ and apply_branch stack b arg = match b, arg with
   | BLabel _, _ ->
       MuleErr.bug "Matched label pattern against non-union."
   | BConst {cm_cases; cm_default}, Const c ->
-      begin match Map.find cm_cases c with
-        | Some v -> Some (fun () -> eval stack v)
+      let ret =
+        Map.find cm_cases c
+        |> Option.map ~f:(fun v () -> eval stack v)
+      in
+      begin match ret with
+        | Some v -> Some v
         | None -> Option.map cm_default ~f:(fun f ->
             (fun () -> eval stack (App(f, arg)))
           )

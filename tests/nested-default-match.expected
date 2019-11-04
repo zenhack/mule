@@ -1,0 +1,27 @@
+
+Desugared:
+
+	((match (((A ((B (_ (Integer 1)))))) (_ (Integer 0))))
+	 ((fn x (A x)) ((fn x (A x)) (Text ""))))
+
+inferred type:
+
+	int
+
+Runtime term:
+
+	(App
+	 ((Match
+	   (BLabel
+	    (lm_cases
+	     ((A
+	       (BLabel (lm_cases ((B (BLeaf (Lam (0 () (Const (Integer 1))))))))
+	        (lm_default ())))))
+	    (lm_default ((Lam (0 () (Const (Integer 0))))))))
+	  (App
+	   ((Lam (0 () (Ctor (A (Var 0)))))
+	    (App ((Lam (0 () (Ctor (A (Var 0))))) (Const (Text ""))))))))
+
+Evaluated:
+
+	(Const (Integer 0))
