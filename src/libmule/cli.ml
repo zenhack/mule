@@ -28,12 +28,13 @@ let debug_flag name ~doc =
 
 let with_debug_flags : cmd Term.t -> t Term.t =
   fun term ->
-  Term.(const (fun eval_steps stack_trace trace_require_subtype steps c -> object
+  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps c -> object
       method debug_flags = object
         method print_eval_steps = eval_steps
         method always_print_stack_trace = stack_trace
         method trace_require_subtype = trace_require_subtype
         method debug_steps = steps
+        method no_js_cps = no_js_cps
       end
       method cmd = c
     end)
@@ -57,6 +58,12 @@ let with_debug_flags : cmd Term.t -> t Term.t =
             ^ " the inferred type, "
             ^ " the runtime term,"
             ^ " and the final evaluated runtime term."
+          )
+        $ debug_flag "no-js-cps"
+          ~doc:(
+            "When emitting javascript, don't cps-transform the output."
+            ^ " This can result in broken code, but it can sometimes be"
+            ^ " easier to read."
           )
         $ term
   )

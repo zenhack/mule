@@ -4,6 +4,7 @@ type debug_flags = <
   always_print_stack_trace : bool;
   trace_require_subtype : bool;
   debug_steps : bool;
+  no_js_cps : bool;
 >
 
 type cmd =

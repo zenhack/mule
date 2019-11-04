@@ -56,7 +56,12 @@ let interp_cmd = function
           in
           Lwt_io.with_file dest ~mode:Lwt_io.output (fun out ->
             To_js.translate_expr dexp
-            |> Js_pre.cps (fun x -> x)
+            |> (fun e ->
+                  if Config.no_js_cps () then
+                    e
+                  else
+                    Js_pre.cps (fun x -> x) e
+                )
             |> Js_pre.to_js
             |> Js_ast.expr
             |> Fmt.(fun e -> concat [
