@@ -20,7 +20,6 @@ module Expr = struct
     | Ctor of (Label.t * t)
     | Match of branch
     | Lazy of (lazy_state ref) Lazy.t
-    | Vec of t array
     | Const of Const.t
     | Prim of (t -> t)
     | PrimIO of (t io)
@@ -62,11 +61,6 @@ module Expr = struct
     | Ctor(lbl, arg) ->
         Label.to_string lbl ^ " (" ^ to_string arg ^ ")"
     | Lazy _ -> "<lazy>"
-    | Vec v ->
-        Array.to_list v
-        |> List.map ~f:to_string
-        |> String.concat ~sep:", "
-        |> fun s -> "[" ^ s ^ "]"
     | Const c ->
         begin match c with
           | Const.Text txt -> String.concat [

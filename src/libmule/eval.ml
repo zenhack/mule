@@ -50,12 +50,6 @@ and eval stack expr =
               r := Ready ret;
               ret
         end
-
-    | Vec arr ->
-        (* XXX: this is O(n) even for already-evaluated
-         * arrays; should avoid re-scanning.
-        *)
-        Vec (Array.map arr ~f:(eval stack))
     | Match b -> Match (eval_branch stack b)
     | GetField l -> GetField l
     | Ctor (c, arg) -> Ctor (c, eval stack arg)
