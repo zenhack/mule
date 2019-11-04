@@ -2,20 +2,16 @@
 Desugared:
 
 	(fn choice
-	 (let (choice ((: (all a (a -> (a -> a)))) choice))
+	 (let (choice (: choice (all a (a -> (a -> a)))))
 	  (letrec (types ())
 	   (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
 	   (((.= x) (((.= y) {}) y)) x))))
 
 inferred type:
 
-	(all a
-	 (all b
-	  (all c
-	   (exist d
-	    ((d -> (d -> d)) ->
-	     (record (types (...c))
-	      (values ((x (record (types (...b)) (values ()))) (y (a -> a))))))))))
+	((all a (a -> (a -> a))) ->
+	 (record (types ())
+	  (values ((x (record (types ()) (values ()))) (y (all b (b -> b)))))))
 
 Runtime term:
 
