@@ -79,3 +79,36 @@ module Expr = struct
     | Prim _ -> "<primitive-function>"
     | PrimIO _ -> "<primitive-io>"
 end
+
+(* Misc helpers for putting together ASTs: *)
+let int n = Expr.Const (Const.Integer n)
+let text s = Expr.Const (Const.Text s)
+let char c = Expr.Const (Const.Char c)
+
+let prim x =
+  Expr.Prim x
+
+let prim_io x =
+  Expr.PrimIO x
+
+let assert_io = function
+  | Expr.PrimIO io -> io
+  | _ -> MuleErr.bug "run-time type error."
+
+let assert_const = function
+  | Expr.Const c -> c
+  | _ -> MuleErr.bug "run-time type error."
+
+let assert_int e = match assert_const e with
+  | Const.Integer n -> n
+  | _ -> MuleErr.bug "run-time type error."
+
+let assert_text e = match assert_const e with
+  | Const.Text s -> s
+  | _ -> MuleErr.bug "run-time type error."
+
+let mk_record fields =
+  fields
+  |> List.map ~f:(fun (k, v) -> (Label.of_string k, v))
+  |> Map.of_alist_exn (module Label)
+  |> fun lblmap -> Expr.Record lblmap

@@ -13,50 +13,28 @@ type runner = {
   run : R.Expr.t -> R.Expr.t Lwt.t;
 }
 
-(* TODO: some of these helpers are duplicated from intrinsics.ml;
- * factor them out. *)
-let prim x =
-  R.Expr.Prim x
-
-let prim_io x =
-  R.Expr.PrimIO x
-
-let assert_io = function
-  | R.Expr.PrimIO io -> io
-  | _ -> failwith "BUG: run-time type error."
-
-let assert_text = function
-  | R.Expr.Const (C.Text s) -> s
-  | _ -> failwith "BUG: run-time type error."
-
 let ignore_io io =
-  prim_io (fun () -> Lwt.map (fun _ -> R.Expr.Record LabelMap.empty) (io ()))
+  R.prim_io (fun () -> Lwt.map (fun _ -> R.Expr.Record LabelMap.empty) (io ()))
 
-let io_just = prim (fun x ->
-    prim_io (fun () -> Lwt.return x)
+let io_just = R.prim (fun x ->
+    R.prim_io (fun () -> Lwt.return x)
   )
 
-let io_then = prim (fun x -> prim(fun f -> prim_io (fun () ->
-    let%lwt x' = assert_io x () in
-    assert_io (Eval.eval(App(f, x'))) ()
+let io_then = R.prim (fun x -> R.prim (fun f -> R.prim_io (fun () ->
+    let%lwt x' = R.assert_io x () in
+    R.assert_io (Eval.eval(App(f, x'))) ()
   )))
 
 let io_print =
-  prim (fun s -> ignore_io (fun () -> Lwt_io.write Lwt_io.stdout (assert_text s)))
+  R.prim (fun s -> ignore_io (fun () -> Lwt_io.write Lwt_io.stdout (R.assert_text s)))
 
-let io_get_line = prim_io (fun () ->
+let io_get_line = R.prim_io (fun () ->
     Lwt_io.read_line Lwt_io.stdin
-    |> Lwt.map (fun s -> R.Expr.Const (C.Text s))
+    |> Lwt.map R.text
   )
 
-let mk_record fields =
-  fields
-  |> List.map ~f:(fun (k, v) -> (Label.of_string k, v))
-  |> Map.of_alist_exn (module Label)
-  |> fun lblmap -> R.Expr.Record lblmap
-
 let root_io_val =
-  mk_record [
+  R.mk_record [
     "just", io_just;
     "then", io_then;
     "print", io_print;
@@ -76,11 +54,10 @@ let root_io = {
     ->
     io.cmd {}
     ";
-  run = fun f -> assert_io (Eval.eval (R.Expr.App (f, root_io_val))) ();
+  run = fun f -> R.assert_io (Eval.eval (R.Expr.App (f, root_io_val))) ();
 }
 
-
-let by_name = [
-  "root-io", root_io
-]
-              |> Map.of_alist_exn (module String)
+let by_name =
+  Map.of_alist_exn (module String) [
+    "root-io", root_io;
+  ]
