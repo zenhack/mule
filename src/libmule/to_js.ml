@@ -139,7 +139,7 @@ let translate_expr expr =
           ( arg
           , Map.to_alist cm_cases
             |> List.map ~f:(fun (c, body) -> (c, go env body))
-          , Some (go_leaf env cm_default arg)
+          , Option.map cm_default ~f:(fun lf -> go_leaf env lf arg)
           )
   and go_leaf env {lf_var; lf_body} arg =
     begin match lf_var with

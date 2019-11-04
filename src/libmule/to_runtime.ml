@@ -65,12 +65,7 @@ and translate_branch depth env b =
           lm_cases
           ~f:(translate_branch depth env)
       in
-      let (defcaps, default') = match lm_default with
-        | None -> (0, None)
-        | Some lf ->
-            let (ncaps, body') = translate_leaf depth env lf in
-            (ncaps, Some body')
-      in
+      let (defcaps, default') = translate_opt_leaf depth env lm_default in
       let ncaps = Map.fold
           ~init:defcaps
           ~f:(fun ~key:_ ~data -> max data)
@@ -84,7 +79,7 @@ and translate_branch depth env b =
       )
   | D.BConst {cm_cases; cm_default} ->
       let cases = Map.map cm_cases ~f:(translate depth env) in
-      let (n, def) = translate_leaf depth env cm_default in
+      let (n, def) = translate_opt_leaf depth env cm_default in
       let ncaps = Map.fold
           cases
           ~init:n
@@ -93,9 +88,15 @@ and translate_branch depth env b =
       ( ncaps
       , R.BConst {
           cm_cases = Map.map cases ~f:snd;
-          cm_default = Some def;
+          cm_default = def;
         }
       )
+and translate_opt_leaf depth env lf =
+  match lf with
+  | None -> (0, None)
+  | Some lf ->
+      let (ncaps, body) = translate_leaf depth env lf in
+      (ncaps, Some body)
 and translate_leaf: int -> binding VarMap.t -> 'i D.leaf -> (int * R.t) =
  fun depth env lf ->
   let l_param =

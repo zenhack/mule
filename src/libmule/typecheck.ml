@@ -360,7 +360,9 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
       (param, result)
   | DE.BConst {cm_cases; cm_default} ->
       let param = fresh_local ctx `Flex ktype in
-      ignore (check_leaf ctx cm_default (param **> result));
+      Option.iter cm_default ~f:(fun lf ->
+        ignore (check_leaf ctx lf (param **> result))
+      );
       begin match Map.to_alist cm_cases with
         | [] -> (param, result)
         | cs ->

@@ -53,7 +53,7 @@ and 'i branch =
     }
   | BConst of {
       cm_cases : 'i t ConstMap.t;
-      cm_default: 'i leaf;
+      cm_default: 'i leaf option;
     }
   | BLeaf of 'i leaf
 and 'i leaf = {
@@ -124,18 +124,21 @@ let rec sexp_of_t = function
       ]
   | Const {const_val = c} ->
       Const.sexp_of_t c
-and sexp_of_branch = function
+and sexp_of_branch =
+  let and_def cases def =
+    match def with
+    | None -> cases
+    | Some lf -> Sexp.List [cases; sexp_of_leaf lf]
+  in
+  function
   | BLabel {lm_cases; lm_default} ->
-      let cases = Map.sexp_of_m__t (module Label) sexp_of_branch lm_cases in
-      begin match lm_default with
-      | None -> cases
-      | Some def -> Sexp.List [cases; sexp_of_leaf def]
-      end
+      and_def
+        (Map.sexp_of_m__t (module Label) sexp_of_branch lm_cases)
+        lm_default
   | BConst {cm_cases; cm_default} ->
-      Sexp.List [
-        Map.sexp_of_m__t (module Const) sexp_of_t cm_cases;
-        sexp_of_leaf cm_default;
-      ]
+      and_def
+        (Map.sexp_of_m__t (module Const) sexp_of_t cm_cases)
+        cm_default
   | BLeaf lf ->
       sexp_of_leaf lf
 and sexp_of_leaf {lf_var; lf_body} =
@@ -157,7 +160,7 @@ let rec branch_apply_kids b ~f =
     }
   | BConst {cm_cases; cm_default} -> BConst {
       cm_cases = Map.map cm_cases ~f;
-      cm_default = leaf_apply_kid cm_default ~f;
+      cm_default = Option.map cm_default ~f:(leaf_apply_kid ~f);
     }
 
 let apply_to_kids e ~f = match e with
@@ -250,7 +253,7 @@ and map_branch b ~f = match b with
     }
   | BConst {cm_cases; cm_default} -> BConst {
       cm_cases = Map.map cm_cases ~f:(map ~f);
-      cm_default = map_leaf cm_default ~f;
+      cm_default = Option.map cm_default ~f:(map_leaf ~f);
     }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 
@@ -301,7 +304,7 @@ and subst_branch env b = match b with
     }
   | BConst {cm_cases; cm_default} -> BConst {
       cm_cases = Map.map cm_cases ~f:(subst env);
-      cm_default = subst_leaf env cm_default;
+      cm_default = Option.map cm_default ~f:(subst_leaf env);
     }
 and subst_leaf env lf =
   match lf.lf_var with
