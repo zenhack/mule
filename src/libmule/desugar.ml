@@ -354,7 +354,7 @@ and desugar Loc.{l_value = e; _} = match e with
       }
   | S.Match {match_arg = e; match_cases = cases; _} ->
       D.App {
-        app_fn = desugar_match cases;
+        app_fn = D.Match (desugar_match cases);
         app_arg = desugar e;
       }
   | S.WithType{wt_term = e; wt_type = ty; _} ->
@@ -393,6 +393,7 @@ and desugar_update e fields =
 and desugar_lambda ps body =
   let rec go = function
     | [] -> desugar body
+
     | (SP.Var {v_var; v_type = None; _} :: pats) ->
         D.Lam {l_param = v_var.Loc.l_value; l_body = go pats}
     | (SP.Wild :: pats) ->
@@ -490,34 +491,47 @@ and desugar_match cases =
         desugar_lbl_match LabelMap.empty cases
     | (Loc.{l_value = SP.Const _; _}, _) :: _ ->
         desugar_const_match ConstMap.empty cases
-    | [(pat, body)] ->
-        desugar_lambda [pat] body
-    | [] -> D.Match (D.BLabel {
+    | [Loc.{l_value = SP.Wild; _}, body] ->
+        D.BLeaf {
+          lf_var = None;
+          lf_body = desugar body;
+        }
+    | [Loc.{l_value = SP.Var{v_var = {l_value; _}; _}; _}, body] ->
+        (* FIXME: Don't drop the type annotation *)
+        D.BLeaf {
+          lf_var = Some l_value;
+          lf_body = desugar body;
+        }
+    | [] -> D.BLabel {
         lm_cases = LabelMap.empty;
         lm_default = None;
-      })
+      }
     | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
         unreachable_cases cs
   end
 and desugar_const_match dict = function
-  | [Loc.{l_value = SP.Wild; _}, body] -> D.Match (D.BConst {
+  | [] -> D.BConst {
+      cm_default = None;
+      cm_cases = dict;
+    }
+  | [Loc.{l_value = SP.Wild; _}, body] -> D.BConst {
       cm_default = Some D.{
           lf_var = None;
           lf_body = desugar body;
         };
       cm_cases = dict;
-    })
+    }
   | (Loc.{l_value = SP.Wild; _}, _) :: cs ->
       unreachable_cases cs
   | [Loc.{l_value = (SP.Var {v_var = {l_value; _}; v_type = _}); _}, body] ->
       (* FIXME: Don't drop the type annotation *)
-      D.Match (D.BConst {
-          cm_default = Some D.{
-              lf_var = Some l_value;
-              lf_body = desugar body;
-            };
-          cm_cases = dict;
-        })
+      D.BConst {
+        cm_default = Some D.{
+            lf_var = Some l_value;
+            lf_body = desugar body;
+          };
+        cm_cases = dict;
+      }
   | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
       unreachable_cases cs
   | (Loc.{l_value = SP.Const {const_val = c; _}; _}, body) as case :: rest ->
@@ -529,30 +543,28 @@ and desugar_const_match dict = function
               (Map.set dict ~key:c ~data:(desugar body))
               rest
       end
-  | [] ->
-      incomplete_pattern ()
   | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
       MuleErr.throw `MatchDesugarMismatch
 and desugar_lbl_match dict = function
-  | [] -> D.Match (D.BLabel {
+  | [] -> D.BLabel {
       lm_default = None;
       lm_cases = finalize_dict dict;
-    })
-  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.Match (D.BLabel {
+    }
+  | [(Loc.{l_value = SP.Wild; _}, body)] -> D.BLabel {
       lm_default = Some {
           lf_var = None;
           lf_body = desugar body;
         };
       lm_cases = finalize_dict dict;
-    })
+    }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
-      D.Match (D.BLabel {
+      D.BLabel {
           lm_default = Some D.{
               lf_var = Some v.Loc.l_value;
               lf_body = desugar body;
             };
           lm_cases = finalize_dict dict;
-        })
+        }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let {
@@ -565,10 +577,10 @@ and desugar_lbl_match dict = function
           let_body = desugar body;
         }
       in
-      D.Match (D.BLabel {
+      D.BLabel {
           lm_default = Some{lf_var = Some v'; lf_body = let_};
           lm_cases = finalize_dict dict;
-        })
+        }
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl.Loc.l_value ~f:(function
@@ -580,16 +592,7 @@ and desugar_lbl_match dict = function
   | (_ :: cs) ->
       unreachable_cases cs
 and finalize_dict dict =
-  Map.map dict
-    ~f:(fun cases ->
-      let v = Gensym.anon_var () in D.(BLeaf {
-          lf_var = Some v;
-          lf_body = D.App {
-              app_fn = desugar_match (List.rev cases);
-              app_arg = D.Var {v_var = v};
-            }
-        })
-    )
+  Map.map dict ~f:(fun cases -> desugar_match (List.rev cases))
 and desugar_let bs body =
   (* As part of the desugaring process, we have to remove all "complex" patterns;
    * in the desugared AST, let bindings only have simple variables as patterns. *)
