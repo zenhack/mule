@@ -128,14 +128,14 @@ const $js = {
 	},
 
 	'call': $fn2((f, args) => () => f(...args)),
-	'try': $fn1((cmd) = () => {
+	'try': $fn1((cmd) => () => {
 		try {
 			return ['Ok', cmd()]
 		} catch(e) {
 			return ['Err', e]
 		}
 	}),
-	'throw': $fn1((x) => () => throw(x)),
+	'throw': $fn1((x) => () => { throw(x) }),
 	'finally': $fn2((cmd, cleanup) => () => {
 			try {
 				return cmd()
