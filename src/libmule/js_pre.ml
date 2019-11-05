@@ -64,7 +64,7 @@ let rec cps k e = match e with
           fun ls -> e |> cps (fun e -> acc ((l, e) :: ls))
         )
   | Tagged(l, e) ->
-      e |> cps (fun e -> Tagged(l, e))
+      e |> cps (fun e -> k (Tagged(l, e)))
   | Index (e, i) -> e |> cps (fun e -> i |> cps (fun i -> k (Index (e, i))))
   | GetTag    e -> e |> cps (fun e -> k (GetTag    e))
   | GetTagArg e -> e |> cps (fun e -> k (GetTagArg e))
