@@ -559,12 +559,12 @@ and desugar_lbl_match dict = function
     }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = None; _}; _}, body] ->
       D.BLabel {
-          lm_default = Some D.{
-              lf_var = Some v.Loc.l_value;
-              lf_body = desugar body;
-            };
-          lm_cases = finalize_dict dict;
-        }
+        lm_default = Some D.{
+            lf_var = Some v.Loc.l_value;
+            lf_body = desugar body;
+          };
+        lm_cases = finalize_dict dict;
+      }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let {
@@ -578,9 +578,9 @@ and desugar_lbl_match dict = function
         }
       in
       D.BLabel {
-          lm_default = Some{lf_var = Some v'; lf_body = let_};
-          lm_cases = finalize_dict dict;
-        }
+        lm_default = Some{lf_var = Some v'; lf_body = let_};
+        lm_cases = finalize_dict dict;
+      }
   | (Loc.{l_value = SP.Ctor {c_lbl = lbl; c_arg = p; _}; _}, body) :: cases ->
       let dict' =
         Map.update dict lbl.Loc.l_value ~f:(function

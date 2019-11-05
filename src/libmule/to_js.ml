@@ -91,7 +91,7 @@ let translate_expr expr =
                 Js.Switch (go_const_match env cm_cases cm_default arg)
             | D.Expr.BLabel {lm_cases; lm_default} ->
                 Js.Switch (go_lbl_match env lm_cases lm_default arg)
-            end
+          end
           )
     | D.Expr.LetRec {letrec_vals; letrec_body; _} ->
         let env' =
@@ -139,14 +139,14 @@ let translate_expr expr =
     sw_arg = Js.GetTag arg;
     sw_cases =
       Map.to_alist lm_cases
-        |> List.map ~f:(fun (lbl, b') ->
-          ( Const.Text (Label.to_string lbl)
-          , go_branch env b' (Js.GetTagArg arg)
-          )
-        );
+      |> List.map ~f:(fun (lbl, b') ->
+        ( Const.Text (Label.to_string lbl)
+        , go_branch env b' (Js.GetTagArg arg)
+        )
+      );
     sw_default =
       Option.map lm_default ~f:(fun lf ->
-          go_leaf env lf arg
+        go_leaf env lf arg
       );
   }
   and go_const_match env cm_cases cm_default arg = {

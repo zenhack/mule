@@ -21,10 +21,10 @@ type expr =
   | Continue of expr
   | Let of (Var.t * expr * expr)
 and switch = {
-    sw_arg: expr;
-    sw_cases: (Const.t * branch) list;
-    sw_default: expr option;
-  }
+  sw_arg: expr;
+  sw_cases: (Const.t * branch) list;
+  sw_default: expr option;
+}
 and branch =
   | BLeaf of expr
   | BBranch of switch
