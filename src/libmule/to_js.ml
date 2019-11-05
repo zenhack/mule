@@ -81,7 +81,18 @@ let translate_expr expr =
           )
     | D.Expr.Match b ->
         let v = Var.of_string "p" in
-        Js.Lam1 (v, go_branch env b (Js.Var v))
+        let arg = Js.Var v in
+        Js.Lam1
+          ( v
+          , begin match b with
+            | D.Expr.BLeaf lf ->
+                go_leaf env lf arg
+            | D.Expr.BConst {cm_cases; cm_default} ->
+                Js.Switch (go_const_match env cm_cases cm_default arg)
+            | D.Expr.BLabel {lm_cases; lm_default} ->
+                Js.Switch (go_lbl_match env lm_cases lm_default arg)
+            end
+          )
     | D.Expr.LetRec {letrec_vals; letrec_body; _} ->
         let env' =
           List.fold letrec_vals ~init:env ~f:(fun env (v, _) ->
@@ -118,29 +129,34 @@ let translate_expr expr =
           ~init:(go env'' letrec_body)
           ~f:(fun f body -> f body)
   and go_branch env b arg =
-    (* FIXME: correctly handle backtracking (re: issue #10). *)
     match b with
-    | D.Expr.BLeaf lf -> go_leaf env lf arg
+    | D.Expr.BLeaf lf -> Js.BLeaf (go_leaf env lf arg)
     | D.Expr.BLabel {lm_cases; lm_default} ->
-        Js.Switch
-          ( Js.GetTag arg
-          , Map.to_alist lm_cases
-            |> List.map ~f:(fun (lbl, b') ->
-              ( Const.Text (Label.to_string lbl)
-              , go_branch env b' (Js.GetTagArg arg)
-              )
-            )
-          , Option.map lm_default ~f:(fun lf ->
-              go_leaf env lf arg
-            )
-          )
+        Js.BBranch (go_lbl_match env lm_cases lm_default arg)
     | D.Expr.BConst {cm_cases; cm_default} ->
-        Js.Switch
-          ( arg
-          , Map.to_alist cm_cases
-            |> List.map ~f:(fun (c, body) -> (c, go env body))
-          , Option.map cm_default ~f:(fun lf -> go_leaf env lf arg)
+        Js.BBranch (go_const_match env cm_cases cm_default arg)
+  and go_lbl_match env lm_cases lm_default arg = {
+    sw_arg = Js.GetTag arg;
+    sw_cases =
+      Map.to_alist lm_cases
+        |> List.map ~f:(fun (lbl, b') ->
+          ( Const.Text (Label.to_string lbl)
+          , go_branch env b' (Js.GetTagArg arg)
           )
+        );
+    sw_default =
+      Option.map lm_default ~f:(fun lf ->
+          go_leaf env lf arg
+      );
+  }
+  and go_const_match env cm_cases cm_default arg = {
+    sw_arg = arg;
+    sw_cases =
+      Map.to_alist cm_cases
+      |> List.map ~f:(fun (c, body) -> (c, Js.BLeaf (go env body)));
+    sw_default =
+      Option.map cm_default ~f:(fun lf -> go_leaf env lf arg);
+  }
   and go_leaf env {lf_var; lf_body} arg =
     begin match lf_var with
       | None -> go env lf_body

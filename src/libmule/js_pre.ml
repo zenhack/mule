@@ -8,7 +8,7 @@ type expr =
   | Const of Const.t
   | Lam1 of (Var.t * expr)
   | Lam2 of (Var.t * Var.t * expr)
-  | Switch of (expr * (Const.t * expr) list * expr option)
+  | Switch of switch
   | Call1 of (expr * expr)
   | Call2 of (expr * expr * expr)
   | Object of (Label.t * expr) list
@@ -20,6 +20,14 @@ type expr =
   | Update of (expr * Label.t * expr)
   | Continue of expr
   | Let of (Var.t * expr * expr)
+and switch = {
+    sw_arg: expr;
+    sw_cases: (Const.t * branch) list;
+    sw_default: expr option;
+  }
+and branch =
+  | BLeaf of expr
+  | BBranch of switch
 
 let lam1 f =
   let v = Gensym.anon_var () in
@@ -40,13 +48,9 @@ let rec cps k e = match e with
       f |> cps (fun f' ->
         x |> cps (fun x' ->
           Continue(Call2(f', x', lam1 k))))
-  | Switch(e, arms, def) ->
-      e |> cps (fun e ->
-        Switch
-          ( e
-          , List.map arms ~f:(fun (l, v) -> (l, cps k v))
-          , Option.map def ~f:(cps k)
-          )
+  | Switch {sw_arg; sw_cases; sw_default} ->
+      sw_arg |> cps (fun e ->
+        Switch (cps_switch k {sw_arg = e; sw_cases; sw_default})
       )
   | Lazy e ->
       let k' = Gensym.anon_var () in
@@ -74,6 +78,14 @@ let rec cps k e = match e with
       (* We shouldn't see these, since we only generate them via cps itself,
        * which we only call once. *)
       failwith "BUG"
+and cps_switch k {sw_arg; sw_cases; sw_default} = {
+  sw_arg;
+  sw_cases = List.map sw_cases ~f:(fun (c, b) -> (c, cps_branch k b));
+  sw_default = Option.map sw_default ~f:(cps k)
+}
+and cps_branch k = function
+  | BLeaf e -> BLeaf (cps k e)
+  | BBranch sw -> BBranch (cps_switch k sw)
 
 let const_to_js = function
   | Const.Integer n -> Js.BigInt n
@@ -89,26 +101,10 @@ let rec to_js = function
       Js.Lam([Var.to_string v], `E (to_js body))
   | Lam2(v, k, body) ->
       Js.Lam([Var.to_string v; Var.to_string k], `E (to_js body))
-  | Switch(e, cases, default) ->
+  | Switch sw ->
       Js.Call
         ( Js.Lam
-            ( []
-            , `S [
-              Js.Switch {
-                sw_scrutinee = to_js e;
-                sw_cases =
-                  List.map cases
-                    ~f:(fun (k, v) ->
-                      ( const_to_js k
-                      , [Js.Return (to_js v)]
-                      )
-                    );
-                sw_default = Option.map default ~f:(fun e ->
-                    [Js.Return (to_js e)]
-                  );
-              }
-            ]
-            )
+            ([], `S [switch_to_js sw])
         , []
         )
   | Lazy e ->
@@ -135,3 +131,20 @@ let rec to_js = function
         ])
   | Continue(e) ->
       Js.Lam([], `E (to_js e))
+and switch_to_js {sw_arg; sw_cases; sw_default} =
+  Js.Switch {
+    sw_scrutinee = to_js sw_arg;
+    sw_cases =
+      List.map sw_cases
+        ~f:(fun (k, v) ->
+          ( const_to_js k
+          , [branch_to_js v]
+          )
+        );
+    sw_default = Option.map sw_default ~f:(fun e ->
+        [Js.Return (to_js e)]
+      )
+  }
+and branch_to_js = function
+  | BLeaf e -> Js.Return (to_js e)
+  | BBranch sw -> switch_to_js sw
