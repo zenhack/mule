@@ -1,5 +1,5 @@
 
 Desugared:
 
-	((match ((Err ($6 ((fn x x) $6))))) ((fn x (Ok x)) {}))
+	((match ((Err (x x)))) ((fn x (Ok x)) {}))
 Type error: could not instatiate rigid type variable
