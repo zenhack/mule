@@ -509,17 +509,15 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             (* Substitue the same rigid variable for both lambdas'
              * parameters, and then check the bodies: *)
             let p = fresh_local ctx `Rigid kpl in
+            let check p_old b_old =
+                subst
+                  ~target:(get_id (UnionFind.get p_old))
+                  ~replacement:p
+                  b_old
+            in
             require_subtype ctx
-              ~sub:(subst
-                  ~target:(get_id (UnionFind.get pl))
-                  ~replacement:p
-                  bl
-              )
-              ~super:(subst
-                  ~target:(get_id (UnionFind.get pr))
-                  ~replacement:p
-                  br
-              )
+              ~sub:(check pl bl)
+              ~super:(check pr br)
         | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
             MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
