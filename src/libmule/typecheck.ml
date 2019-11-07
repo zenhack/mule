@@ -526,13 +526,11 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
       end
     end
 and require_subtype_extend ctx ~sub ~super =
-  let fold_row side =
+  let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
       let row = whnf row in
       match UnionFind.get row with
-      | `Quant(_, q, v, k, body) ->
-          go m (unroll_quant ctx side q v k body)
       | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
           require_kind krow k;
           require_kind krow tk;
@@ -559,8 +557,8 @@ and require_subtype_extend ctx ~sub ~super =
         )
     )
   in
-  let (sub_fields, sub_tail) = fold_row `Sub sub in
-  let (super_fields, super_tail) = fold_row `Super super in
+  let (sub_fields, sub_tail) = fold_row sub in
+  let (super_fields, super_tail) = fold_row super in
   let sub_only = ref [] in
   let super_only = ref [] in
   Map.iter2 sub_fields super_fields ~f:(fun ~key ~data -> match data with
