@@ -4,12 +4,6 @@ module DT = Desugared_ast_type
 module DK = Desugared_ast_kind
 module ST = Surface_ast.Type
 
-let get_ty_id: u_type -> int = function
-  | `Free({ty_id; _}, _) -> ty_id
-  | `Bound(ty_id, _) -> ty_id
-  | `Const(ty_id, _, _, _) -> ty_id
-  | `Quant(ty_id, _, _, _, _) -> ty_id
-
 let var_of_int n =
   Common_ast.Var.of_string ("$$" ^ Int.to_string n)
 let mk_var id =
@@ -22,7 +16,7 @@ let mk_var id =
 
 let rec go seen uv =
   let t = UnionFind.get uv in
-  let ty_id = get_ty_id t in
+  let ty_id = get_id t in
   if Set.mem seen ty_id then
     mk_var ty_id
   else
@@ -69,7 +63,7 @@ let rec go seen uv =
     end
 and go_row seen uv =
   let r = UnionFind.get uv in
-  let ty_id = get_ty_id r in
+  let ty_id = get_id r in
   match r with
   | `Free _ | `Bound _ ->
       ( DT.{
