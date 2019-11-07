@@ -8,7 +8,7 @@ module Label = Common_ast.Label
 type context = {
   type_env : u_var VarMap.t;
   vals_env : u_var VarMap.t;
-  locals : (int * u_var) list ref;
+  locals : u_var list ref;
 
   (* [assumptions] is a list of subtyping constraints we've already seen.
    * This is used when checking subtyping constraints that may involve
@@ -87,29 +87,34 @@ let with_locals ctx f =
   let new_locals = ref [] in
   let scope = Scope.make_child ctx.scope in
   let result = f { ctx with locals = new_locals; scope } in
-  let remaining = List.filter_map !new_locals ~f:(fun (id, v) -> match UnionFind.get v with
-      | `Free({ty_id; ty_flag}, k) when id = ty_id ->
+  let (_grafted, raised, to_generalize) =
+    List.partition3_map !new_locals ~f:(fun v ->
+      match UnionFind.get v with
+      | `Free({ty_id; ty_scope; ty_flag}, k) when Scope.equal ty_scope scope ->
           let q = match ty_flag with
             | `Flex -> `All
             | `Rigid -> `Exist
           in
           let replacement = UnionFind.make (`Bound(ty_id, k)) in
-          Some (fun acc ->
+          `Trd (fun acc ->
             UnionFind.make
               (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
                         ~target:ty_id
                         ~replacement))
           )
-      | _ -> None
+      | `Free _ -> `Snd v
+      | _ -> `Fst ()
     )
   in
-  List.fold remaining ~init:result ~f:(fun acc f -> f acc)
+  ctx.locals := raised @ !(ctx.locals);
+  List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
 
 (* Create a new local with the given flag and kind. *)
 let fresh_local ctx ty_flag k =
   let ty_id = Gensym.gensym () in
-  let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
-  ctx.locals := (ty_id, v) :: !(ctx.locals);
+  let ty_scope = ctx.scope in
+  let v = UnionFind.make (`Free({ty_id; ty_flag; ty_scope}, k)) in
+  ctx.locals := v :: !(ctx.locals);
   v
 
 let synth_const: C.t -> u_var = function
@@ -437,8 +442,9 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
          * makes sense. *)
         | _ when sub_id = super_id -> UnionFind.merge (fun _ r -> r) sub super
 
-        | `Free({ty_flag = `Flex; ty_id = l_id}, kl), `Free({ty_flag = `Flex; ty_id = r_id }, kr) ->
-            (* Both sides are flexible variables; merge them, using the larger of their
+        | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope}, kl),
+          `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope}, kr) ->
+            (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
             require_kind kl kr;
             UnionFind.merge
@@ -446,9 +452,8 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
                   `Free
                     ( {
                       ty_flag = `Flex;
-                      (* The variable with the greater scope will have been
-                       * created first, and therefore have a smaller id: *)
-                      ty_id = Int.min l_id r_id;
+                      ty_id = l_id;
+                      ty_scope = Scope.lca l_scope r_scope;
                     }
                     , kl
                     )

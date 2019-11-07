@@ -143,9 +143,10 @@ and sexp_of_quantifier: quantifier -> Sexp.t = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
 and sexp_of_u_type: IntSet.t -> u_type -> Sexp.t = fun seen -> function
-  | `Free({ty_id; ty_flag}, k) -> Sexp.List [
+  | `Free({ty_id; ty_flag; ty_scope}, k) -> Sexp.List [
       sexp_of_flag ty_flag;
       Int.sexp_of_t ty_id;
+      Scope.sexp_of_t ty_scope;
       sexp_of_kvar k;
     ]
   | `Bound(id, k) ->

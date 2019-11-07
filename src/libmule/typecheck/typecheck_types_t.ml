@@ -39,6 +39,7 @@ and 'a bound = {
 and tyvar = {
   ty_id: int;
   ty_flag: bound_ty;
+  ty_scope: Scope.t;
 }
 and u_var = u_type UnionFind.var
 
