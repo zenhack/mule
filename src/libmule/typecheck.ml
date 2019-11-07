@@ -298,9 +298,8 @@ and synth: context -> 'i DE.t -> u_var =
           let_body
     | DE.App{app_fn; app_arg} ->
         with_locals ctx (fun ctx ->
-          let p = fresh_local ctx `Flex ktype in
+          let p = synth ctx app_arg in
           let r = fresh_local ctx `Flex ktype in
-          let _ = check ctx app_arg p in
           let _ = check ctx app_fn (p **> r) in
           r
         )
