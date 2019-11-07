@@ -27,10 +27,11 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * k_var)
+  | `Bound of (int * k_var)
   | `Quant of (int * [`All|`Exist] * int * k_var * u_var)
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
   ]
-and bound_ty = [ `Rigid | `Flex | `Explicit ]
+and bound_ty = [ `Rigid | `Flex ]
 and 'a bound = {
   b_ty: bound_ty;
   b_at: 'a;

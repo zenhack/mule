@@ -12,6 +12,7 @@ let gen_k: unit -> k_var =
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
   | `Free (_, k) -> k
+  | `Bound (_, k) -> k
   | `Quant(_, _, _, _, t) -> get_kind t
 
 let flip_sign = function
@@ -31,6 +32,7 @@ let get_id = function
   | `Const(ty_id, _, _, _) -> ty_id
   | `Quant(ty_id, _, _, _, _) -> ty_id
   | `Free({ty_id; _}, _) -> ty_id
+  | `Bound(ty_id, _) -> ty_id
 
 let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
   | `Type -> `Type
@@ -88,8 +90,7 @@ let apply: u_var -> u_var -> u_var = fun f x ->
   end
 let recur : (u_var -> u_var) -> u_var = fun mkbody ->
   let ty_id = Gensym.gensym () in
-  let ty_flag = `Explicit in
-  let v = UnionFind.make (`Free({ty_id; ty_flag}, ktype)) in
+  let v = UnionFind.make (`Bound(ty_id, ktype)) in
   let body = mkbody v in
   UnionFind.merge (fun _ r -> r) v body;
   body
@@ -97,8 +98,7 @@ let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
-  let ty_flag = `Explicit in
-  let v = UnionFind.make (`Free({ty_id; ty_flag}, k)) in
+  let v = UnionFind.make (`Bound(ty_id, k)) in
   UnionFind.make (`Quant(q_id, q, ty_id, k, mkbody v))
 
 let all : k_var -> (u_var -> u_var) -> u_var =
@@ -113,13 +113,7 @@ let empty: u_var =
 let lambda : k_var -> (u_var -> u_var) -> u_var =
   fun kparam mkbody ->
   let id = Gensym.gensym () in
-  let param = UnionFind.make (
-      `Free
-        ( {ty_id = Gensym.gensym (); ty_flag = `Explicit}
-        , kparam
-        )
-    )
-  in
+  let param = UnionFind.make (`Bound(Gensym.gensym(), kparam)) in
   let body = mkbody param in
   let kbody = get_kind body in
   UnionFind.make
@@ -145,7 +139,6 @@ and sexp_of_u_typeconst: u_typeconst -> Sexp.t = function
 and sexp_of_flag: bound_ty -> Sexp.t = function
   | `Flex -> Sexp.Atom "flex"
   | `Rigid -> Sexp.Atom "rigid"
-  | `Explicit -> Sexp.Atom "explicit"
 and sexp_of_quantifier: quantifier -> Sexp.t = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
@@ -155,6 +148,12 @@ and sexp_of_u_type: IntSet.t -> u_type -> Sexp.t = fun seen -> function
       Int.sexp_of_t ty_id;
       sexp_of_kvar k;
     ]
+  | `Bound(id, k) ->
+      Sexp.List [
+        Sexp.Atom "bound";
+        Int.sexp_of_t id;
+        sexp_of_kvar k;
+      ]
   | `Const(id, c, args, k) ->
       if Set.mem seen id then
         Sexp.List [Sexp.Atom "const"; Int.sexp_of_t id]

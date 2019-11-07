@@ -6,6 +6,7 @@ module ST = Surface_ast.Type
 
 let get_ty_id: u_type -> int = function
   | `Free({ty_id; _}, _) -> ty_id
+  | `Bound(ty_id, _) -> ty_id
   | `Const(ty_id, _, _, _) -> ty_id
   | `Quant(ty_id, _, _, _, _) -> ty_id
 
@@ -26,7 +27,7 @@ let rec go seen uv =
     mk_var ty_id
   else
     begin match t with
-      | `Free _ -> mk_var ty_id
+      | `Free _ | `Bound _ -> mk_var ty_id
       | `Quant(q_id, q, v_id, _, body) ->
           let (body', fvs) = go (Set.add seen q_id) body in
           maybe_add_recur
@@ -70,7 +71,7 @@ and go_row seen uv =
   let r = UnionFind.get uv in
   let ty_id = get_ty_id r in
   match r with
-  | `Free _ ->
+  | `Free _ | `Bound _ ->
       ( DT.{
             row_info = ty_id;
             row_fields = [];

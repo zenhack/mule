@@ -29,6 +29,7 @@ let unbound_var v =
 let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
   fun  t ~f -> match t with
     | `Free _ -> t
+    | `Bound _ -> t
     | `Quant(q_id, q, v, k, body) -> `Quant(q_id, q, v, k, f body)
     | `Const(c_id, c, args, k) ->
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
@@ -41,7 +42,7 @@ let rec subst ~target ~replacement uv =
     begin match UnionFind.get uv with
       | u when get_id u = target -> replacement
       | u when Map.mem !seen (get_id u) -> Util.find_exn !seen (get_id u)
-      | `Free _ -> uv
+      | `Free _ | `Bound _ -> uv
       | `Quant(_, _, v, _, _) when v = target ->
           (* Shadowing the target; stop here. *)
           uv
@@ -57,15 +58,14 @@ let rec subst ~target ~replacement uv =
   in
   go uv
 and copy = function
-  | `Free _ -> MuleErr.bug "impossible"
+  | `Free _ | `Bound _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
   | `Quant(_, q, v, k, body) ->
       let qid = Gensym.gensym () in
       let v' = Gensym.gensym () in
-      `Quant(qid, q, v', k, subst body ~target:v ~replacement:(UnionFind.make (`Free
-            ( {ty_flag = `Explicit; ty_id = v'}
-            , k
-            ))))
+      `Quant(qid, q, v', k, subst body
+               ~target:v
+               ~replacement:(UnionFind.make (`Bound(v', k))))
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
@@ -92,9 +92,8 @@ let with_locals ctx f =
           let q = match ty_flag with
             | `Flex -> `All
             | `Rigid -> `Exist
-            | `Explicit -> MuleErr.bug "impossible"
           in
-          let replacement = UnionFind.make (`Free({ty_id; ty_flag = `Explicit}, k)) in
+          let replacement = UnionFind.make (`Bound(ty_id, k)) in
           Some (fun acc ->
             UnionFind.make
               (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
