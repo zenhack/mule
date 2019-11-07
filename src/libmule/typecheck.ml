@@ -518,10 +518,10 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
              * parameters, and then check the bodies: *)
             let p = fresh_local ctx `Rigid kpl in
             let check p_old b_old =
-                subst
-                  ~target:(get_id (UnionFind.get p_old))
-                  ~replacement:p
-                  b_old
+              subst
+                ~target:(get_id (UnionFind.get p_old))
+                ~replacement:p
+                b_old
             in
             require_subtype ctx
               ~sub:(check pl bl)
