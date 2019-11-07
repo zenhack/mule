@@ -20,6 +20,7 @@ type context = {
    * reasoning.
   *)
   assumptions : IntPairSet.t ref;
+  scope : Scope.t;
 }
 
 let unbound_var v =
@@ -84,7 +85,8 @@ let wrong_num_args ctor want gotl gotr =
  * any locals created that remain un-substituted. *)
 let with_locals ctx f =
   let new_locals = ref [] in
-  let result = f { ctx with locals = new_locals } in
+  let scope = Scope.make_child ctx.scope in
+  let result = f { ctx with locals = new_locals; scope } in
   let remaining = List.filter_map !new_locals ~f:(fun (id, v) -> match UnionFind.get v with
       | `Free({ty_id; ty_flag}, k) when id = ty_id ->
           let q = match ty_flag with
@@ -123,11 +125,13 @@ let find_bound env var = match Map.find env var with
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context () =
   let assumptions = ref IntPairSet.empty in
+  let scope = Scope.empty in
   let dummy = {
     type_env = VarMap.empty;
     vals_env = VarMap.empty;
     locals = ref [];
     assumptions;
+    scope;
   }
   in
   let type_env =
@@ -138,7 +142,7 @@ let rec make_initial_context () =
       make_type { dummy with type_env = type_env } ty
     )
   in
-  { type_env; vals_env; locals = ref []; assumptions; }
+  { type_env; vals_env; locals = ref []; assumptions; scope; }
 
 (* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
