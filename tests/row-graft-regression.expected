@@ -7,11 +7,11 @@ inferred type:
 
 	(all a
 	 (all b
-	  (all c
-	   (all d
-	    ((c -> a) ->
-	     ((record (types (...d)) (values ((z c) ...b))) ->
-	      (record (types (...d)) (values ((y a) (z c) ...b)))))))))
+	  ((a -> b) ->
+	   (all c
+	    (all d
+	     ((record (types (...d)) (values ((z a) ...c))) ->
+	      (record (types (...d)) (values ((y b) (z a) ...c)))))))))
 
 Runtime term:
 

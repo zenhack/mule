@@ -34,6 +34,31 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
     | `Const(c_id, c, args, k) ->
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
+(* [hoist_scope scope uv] adjusts [uv] so that all of the free
+ * variables underneath it have a scope at least as great as [scope]. *)
+let hoist_scope: Scope.t -> u_var -> unit =
+  fun scope uv ->
+    let seen = ref IntSet.empty in
+    let rec go uv =
+      let u = UnionFind.get uv in
+      let id = get_id u in
+      if not (Set.mem !seen id) then
+        begin
+          seen := Set.add !seen id;
+          match u with
+          | `Free(tv, k) ->
+              UnionFind.set
+                (`Free({tv with ty_scope = Scope.lca scope tv.ty_scope}, k))
+                uv
+          | `Bound _ -> ()
+          | `Quant(_, _, _, _, body) ->
+              go body
+          | `Const(_, _, args, _) ->
+              List.iter args ~f:(fun (t, _) -> go t)
+        end
+    in
+    go uv
+
 let rec subst ~target ~replacement uv =
   (* Nodes we've already seen, to detect cycles and avoid traversing
    * shared sub-graphs. *)
@@ -459,8 +484,12 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
               )
               sub super
         (* One side is flexible; set it equal to the other one. *)
-        | `Free({ty_flag = `Flex; _}, _), _ -> UnionFind.merge (fun _ r -> r) sub super
-        | _, `Free({ty_flag = `Flex; _}, _) -> UnionFind.merge (fun l _ -> l) sub super
+        | `Free({ty_flag = `Flex; ty_scope; _}, _), _ ->
+            hoist_scope ty_scope super;
+            UnionFind.merge (fun _ r -> r) sub super
+        | _, `Free({ty_flag = `Flex; ty_scope; _}, _) ->
+            hoist_scope ty_scope sub;
+            UnionFind.merge (fun l _ -> l) sub super
 
         | `Quant(_, q, id, k, body), _ ->
             require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super

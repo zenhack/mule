@@ -14,16 +14,10 @@ Desugared:
 
 inferred type:
 
-	(all a
-	 (all b
-	  (all c
-	   (all d
-	    (record (types (...d))
-	     (values
-	      ((a (record (types (...a)) (values ())))
-	       (b
-	        (record (types (...c))
-	         (values ((z (record (types (...b)) (values ()))))))))))))))
+	(record (types ())
+	 (values
+	  ((a (record (types ()) (values ())))
+	   (b (record (types ()) (values ((z (record (types ()) (values ()))))))))))
 
 Runtime term:
 
