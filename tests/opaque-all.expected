@@ -1,15 +1,14 @@
 
 Desugared:
 
-	((:
-	  ((exist $0 (record (types ((t $0))) (values ()))) ->
-	   (record (types ()) (values ()))))
-	 (fn x {}))
+	(: (fn x {})
+	 ((exist $6 (record (types ((t $6))) (values ()))) ->
+	  (record (types ()) (values ()))))
 
 inferred type:
 
-	(all a
-	 ((record (types ((t a))) (values ())) -> (record (types ()) (values ()))))
+	((exist a (record (types ((t a))) (values ()))) ->
+	 (record (types ()) (values ())))
 
 Runtime term:
 

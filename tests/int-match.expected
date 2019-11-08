@@ -1,8 +1,7 @@
 
 Desugared:
 
-	((match/const (((Integer 1) (Integer 1))) (_ (fn $6 (Integer 0))))
-	 (Integer 1))
+	((match ((((Integer 1) (Integer 1))) (_ (Integer 0)))) (Integer 1))
 
 inferred type:
 
@@ -11,8 +10,9 @@ inferred type:
 Runtime term:
 
 	(App
-	 ((ConstMatch (cm_cases (((Integer 1) (Const (Integer 1)))))
-	   (cm_default (Lam (0 () (Const (Integer 0))))))
+	 ((Match
+	   (BConst (cm_cases (((Integer 1) (Const (Integer 1)))))
+	    (cm_default ((Lam (0 () (Const (Integer 0))))))))
 	  (Const (Integer 1))))
 
 Evaluated:

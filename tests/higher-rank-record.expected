@@ -3,17 +3,14 @@ Desugared:
 
 	(letrec (types ())
 	 (values ((r (letrec (types ()) (values ((y (fn x x)))) (((.= y) {}) y)))))
-	 (letrec (types ()) (values ((f ((: (all a (a -> a))) ((. y) r)))))
+	 (letrec (types ()) (values ((f (: ((. y) r) (all a (a -> a))))))
 	  (letrec (types ()) (values ((l (f {})) (k (f (fn z z)))))
 	   (((.= l) (((.= k) {}) k)) l))))
 
 inferred type:
 
-	(all a
-	 (all b
-	  (all c
-	   (record (types (...c))
-	    (values ((k (b -> b)) (l (record (types (...a)) (values ())))))))))
+	(record (types ())
+	 (values ((l (record (types ()) (values ()))) (k (all a (a -> a))))))
 
 Runtime term:
 

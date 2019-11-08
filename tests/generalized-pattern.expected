@@ -3,18 +3,15 @@ Desugared:
 
 	(letrec (types ())
 	 (values
-	  ((x ((: (all a (a -> a))) $0))
-	   ($0 ((match ((Ok ($1 $1)))) ((fn x (Ok x)) (fn x x))))))
+	  ((x (: $6 (all a (a -> a))))
+	   ($6 ((match ((Ok ($7 $7)))) ((fn x (Ok x)) (fn x x))))))
 	 (letrec (types ()) (values ((k (x {})) (v (x (fn y y)))))
 	  (((.= k) (((.= v) {}) v)) k)))
 
 inferred type:
 
-	(all a
-	 (all b
-	  (all c
-	   (record (types (...c))
-	    (values ((k (record (types (...a)) (values ()))) (v (b -> b))))))))
+	(record (types ())
+	 (values ((k (record (types ()) (values ()))) (v (all a (a -> a))))))
 
 Runtime term:
 
@@ -22,7 +19,9 @@ Runtime term:
 	 (((2 (Var 1))
 	   (0
 	    (App
-	     ((Match (cases ((Ok (Lam (0 () (Var 0)))))) (default ()))
+	     ((Match
+	       (BLabel (lm_cases ((Ok (BLeaf (Lam (0 () (Var 0)))))))
+	        (lm_default ())))
 	      (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Lam (0 () (Var 0)))))))))
 	  (LetRec
 	   (((3 (App ((Var 2) (Record ()))))

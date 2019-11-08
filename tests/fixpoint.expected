@@ -5,7 +5,7 @@ Desugared:
 
 inferred type:
 
-	(all a (all b (((b -> a) -> (b -> a)) -> (b -> a))))
+	(all a (all b (((a -> b) -> (a -> b)) -> (a -> b))))
 
 Runtime term:
 

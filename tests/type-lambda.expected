@@ -5,7 +5,7 @@ Desugared:
 
 inferred type:
 
-	(all a (record (types ((t (lam b int)) ...a)) (values ())))
+	(record (types ((t (lam a int)))) (values ()))
 
 Runtime term:
 

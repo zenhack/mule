@@ -1,5 +1,5 @@
 
 Desugared:
 
-	(fn x ((match/const (((Text Hey!) x) ((Integer 1) x)) (_ (fn $5 x))) x))
+	(fn x ((match ((((Text Hey!) x) ((Integer 1) x)) (_ x))) x))
 Type error: mismatched type constructors: int and text

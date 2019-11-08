@@ -5,7 +5,7 @@ Desugared:
 
 inferred type:
 
-	(all a (all b (union ((Ok (record (types (...a)) (values ()))) ...b))))
+	(union ((Ok (record (types ()) (values ())))))
 
 Runtime term:
 
