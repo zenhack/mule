@@ -33,7 +33,7 @@ syntax match muleOperator "\v\|"
 
 syntax match muleCtor "\v<[A-Z][a-zA-Z0-9_]*"
 
-syntax match muleUnQuote "\v\~(\@?)[a-z_][a-zA-Z0-9_?!-]*"
+syntax match muleUnQuote "\v\~(\@?)[a-z_][.a-zA-Z0-9_?!-]*"
 
 syntax match muleNumber "\v<[0-9]([_0-9]*)(\.[0-9]+)?([eE][0-9]+)?"
 syntax region muleString start=/\v"/ skip=/v\\./ end=/\v"/
