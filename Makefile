@@ -10,7 +10,7 @@ all:
 install: all
 	dune build @install
 	dune install libmule
-check: $(checks)
+check: runtest $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*
 	@./_build/default/$(main_exe) eval --debug-steps $*.mule > $*.actual || true
@@ -20,5 +20,7 @@ clean:
 	rm -rf _build tests/*.check tests/*.actual
 format:
 	find src/ -type f -name '*.ml*' -exec ocp-indent -i \{} \;
+runtest:
+	dune runtest
 
-.PHONY: all repl check format
+.PHONY: all repl check format runtest
