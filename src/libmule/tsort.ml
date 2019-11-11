@@ -164,7 +164,7 @@ end = struct
   let compare_result ~want ~got =
     let ok = Poly.equal want got in
     if not ok then
-      Caml.print_endline (String.concat [
+      Stdio.print_endline (String.concat [
           "Wanted : "; result_to_string want; "\n";
           "But got : "; result_to_string got;
         ]);

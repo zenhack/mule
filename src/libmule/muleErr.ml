@@ -73,7 +73,7 @@ let show = function
 let throw e =
   if Config.always_print_stack_trace () then
     begin
-      Caml.print_endline ("Mule Exception: " ^ show e);
+      Stdio.print_endline ("Mule Exception: " ^ show e);
       Caml.Printexc.print_raw_backtrace
         Caml.stdout
         (Caml.Printexc.get_callstack 25);

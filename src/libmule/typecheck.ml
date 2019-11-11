@@ -451,7 +451,7 @@ and require_subtype: context -> sub:u_var -> super:u_var -> unit =
   trace_req_subtype ~sub ~super;
   require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super);
   if Config.trace_require_subtype () then
-    Caml.print_endline "Return."
+    Stdio.print_endline "Return."
 and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
   fun ctx ~sub ~super ->
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
@@ -609,7 +609,7 @@ and require_subtype_extend ctx ~sub ~super =
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
-      Caml.print_endline "";
+      Stdio.print_endline "";
       (Sexp.List [
             Sexp.Atom "require_subtype";
             Sexp.List [
@@ -622,8 +622,8 @@ and trace_req_subtype ~sub ~super =
             ];
           ])
       |> Sexp.to_string_hum
-      |> Caml.print_endline;
-      Caml.print_endline ""
+      |> Stdio.print_endline;
+      Stdio.print_endline ""
     end
 and unroll_quant ctx side q id k body =
   subst
