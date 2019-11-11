@@ -13,10 +13,10 @@
   (flags (:standard -open Base))
   (libraries
     base
+    stdio
     lwt
     lwt.unix
     mparser
-    topological_sort
     yojson
     zarith
 
