@@ -322,7 +322,7 @@ and desugar Loc.{l_value = e; _} = match e with
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
-        e_value = Lwt_main.run (Paths.resolve_embed ~here:e_from ~target:e_path);
+        e_value = Paths.resolve_embed ~here:e_from ~target:e_path;
       }
   | S.Const {const_val = c; _} -> D.Const {const_val = c}
   | S.Var {v_var = v; _} -> D.Var {v_var = v.Loc.l_value}

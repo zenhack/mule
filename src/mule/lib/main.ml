@@ -1,7 +1,7 @@
 open Common_ast
 
 let load_and_typecheck typ file_name =
-  let%lwt input = Util.IO.slurp_file file_name in
+  let input = Stdio.In_channel.read_all file_name in
   let full_path = Caml.Filename.current_dir_name ^ "/" ^ file_name in
   match MParser.parse_string Parser.expr_file input full_path with
   | Failed(msg, _) ->
@@ -26,7 +26,7 @@ let load_and_typecheck typ file_name =
 let interp_cmd = function
   | `Repl -> Repl.loop ()
   | `Eval path ->
-      let%lwt contents = Util.IO.slurp_file path in
+      let contents = Stdio.In_channel.read_all path in
       let%lwt _ = Run.run contents in
       Lwt.return ()
   | `Build_js flags ->

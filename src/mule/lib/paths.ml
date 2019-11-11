@@ -46,4 +46,4 @@ let resolve_embed ~here ~target =
         })
     )
   | `Relative path ->
-      Util.IO.slurp_file path
+      Stdio.In_channel.read_all path
