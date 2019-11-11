@@ -141,3 +141,64 @@ let sort (type n) (module Node : Comparator.S with type t = n) ~nodes ~edges =
     ret := (Set.to_list ns) :: !ret
   );
   List.rev !ret
+
+
+(*** TESTS ***)
+
+
+module TestHelpers : sig
+
+  val expect
+    : nodes:(string list)
+    -> edges:(string edge list)
+    -> result:(string list list)
+    -> bool
+
+end = struct
+
+  let result_to_string result =
+    result
+    |> List.sexp_of_t (List.sexp_of_t String.sexp_of_t)
+    |> Sexp.to_string_hum
+
+  let compare_result ~want ~got =
+    let ok = Poly.equal want got in
+    if not ok then
+      Caml.print_endline (String.concat [
+          "Wanted : "; result_to_string want; "\n";
+          "But got : "; result_to_string got;
+        ]);
+    ok
+
+  let expect ~nodes ~edges ~result =
+    compare_result
+      ~want:result
+      ~got:(sort (module String) ~nodes ~edges)
+end
+
+module Tests = struct
+  (* Actual tests *)
+  let expect = TestHelpers.expect
+
+  let%test _ =
+    expect ~nodes:[] ~edges:[] ~result:[]
+
+  let%test _ =
+    expect
+      ~nodes:["A"; "B"]
+      ~edges:[{from = "A"; to_ = "B"}]
+      ~result:[["B"]; ["A"]]
+
+  let%test _ =
+    expect
+      ~nodes:["A"; "B"; "C"]
+      ~edges:[
+        {from = "A"; to_ = "B"};
+        {from = "B"; to_ = "C"};
+        {from = "B"; to_ = "A"};
+      ]
+      ~result:[
+        ["C"];
+        ["A"; "B"];
+      ]
+end
