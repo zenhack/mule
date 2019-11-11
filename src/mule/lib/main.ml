@@ -5,10 +5,10 @@ let load_and_typecheck typ file_name =
   let full_path = Caml.Filename.current_dir_name ^ "/" ^ file_name in
   match MParser.parse_string Parser.expr_file input full_path with
   | Failed(msg, _) ->
-      let%lwt _ = Lwt_io.write Lwt_io.stderr ("Parse error: " ^ msg ^ "\n") in
+      Stdio.eprintf "Parse error : %s\n" msg;
       Caml.exit 1
   | Success expr ->
-      begin try%lwt
+      begin try
           let _ = Lint.check expr in
           let dexp = Desugared_ast_expr.WithType {
               wt_expr = Desugar.desugar expr;
@@ -16,28 +16,30 @@ let load_and_typecheck typ file_name =
             }
           in
           let _ = Typecheck.typecheck dexp in
-          Lwt.return dexp
+          dexp
         with
         | MuleErr.MuleExn err ->
-            let%lwt _ = Lwt_io.write Lwt_io.stderr (MuleErr.show err ^ "\n") in
+            Stdio.eprintf "%s\n" (MuleErr.show err);
             Caml.exit 1
       end
 
+let exec_lwt lwt = ignore (Lwt_main.run lwt)
+
 let interp_cmd = function
-  | `Repl -> Repl.loop ()
+  | `Repl ->
+      exec_lwt (Repl.loop ())
   | `Eval path ->
       let contents = Stdio.In_channel.read_all path in
-      let%lwt _ = Run.run contents in
-      Lwt.return ()
+      exec_lwt (Run.run contents)
   | `Build_js flags ->
       let src = flags#src in
       let dest = match flags#dest with
         | Some d -> d
         | None -> src ^ ".js"
       in
-      begin try%lwt
+      begin try
           let v = Var.of_string "t" in
-          let%lwt dexp =
+          let dexp =
             load_and_typecheck
               Desugared_ast_type.(
                 (* For now we're not imposing any particular type,
@@ -54,7 +56,7 @@ let interp_cmd = function
               )
               src
           in
-          Lwt_io.with_file dest ~mode:Lwt_io.output (fun out ->
+          let text =
             To_js.translate_expr dexp
             |> (fun e ->
               if Config.no_js_cps () then
@@ -72,11 +74,11 @@ let interp_cmd = function
                 s "})()\n";
               ])
             |> Fmt.to_string
-            |> Lwt_io.write out
-          )
+          in
+          Stdio.Out_channel.write_all dest ~data:text
         with
         | Invalid_argument _ ->
-            let%lwt _ = Lwt_io.write Lwt_io.stderr "not enough arguments to build-js\n" in
+            Stdio.eprintf "not enough arguments to build-js\n";
             Caml.exit 1
         | e ->
             raise e
@@ -86,13 +88,12 @@ let interp_cmd = function
       let file_name = targ#file in
       begin match Map.find Runners.by_name runner_name with
         | None ->
-            let%lwt _ = Lwt_io.write Lwt_io.stderr "no such runner\n" in
+            Stdio.eprintf "no such runner\n";
             Caml.exit 1
         | Some runner ->
-            let%lwt dexp = load_and_typecheck runner.Runners.want_type file_name in
+            let dexp = load_and_typecheck runner.Runners.want_type file_name in
             let rt_expr = To_runtime.translate dexp in
-            let%lwt _ = runner.Runners.run rt_expr in
-            Lwt.return ()
+            exec_lwt (runner.Runners.run rt_expr)
       end
 
 let main () =
@@ -102,6 +103,3 @@ let main () =
       interp_cmd result#cmd
   | `Version | `Help -> Caml.exit 0
   | `Error _ -> Caml.exit 1
-
-let main () =
-  Lwt_main.run (main ())
