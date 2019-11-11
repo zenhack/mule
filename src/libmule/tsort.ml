@@ -80,8 +80,64 @@ let join_cycles comparator map =
   let empty_set = Set.empty comparator in
   Map.iter_keys map ~f:(go ~parents:empty_set)
 
+(* Remove all items from [map] whose keys are not the representative for
+ * their set, and change all references in [ns_to] fields to refer to
+ * representatives.
+ *
+ * [map] is a map from nodes to [node_set UnionFind.var]s, the return
+ * value is a map from nodes to [node_set]s.
+ * *)
+let prune_non_reprs comparator map =
+  let reprs =
+    Map.fold
+      map
+      ~init:(Set.empty comparator)
+      ~f:(fun ~key:_ ~data old ->
+        Set.add old (UnionFind.get data).ns_repr
+      )
+  in
+  Map.filter_mapi map ~f:(fun ~key ~data ->
+    let ns = UnionFind.get data in
+    if Set.mem reprs key then
+      let ns_to = Set.map comparator ns.ns_to ~f:(fun n ->
+          Util.find_exn map n
+          |> UnionFind.get
+          |> fun {ns_repr; _} -> ns_repr
+        )
+      in
+      Some { ns with ns_to }
+    else
+      None
+  )
+
+(* Do a depth-first traversal of the graph, and call f on each set of
+ * nodes.
+ *
+ * [map] should be a map as returned by [prune_non_reprs].
+ *)
+let iter_depth_first comparator map ~f =
+  let seen = ref (Set.empty comparator) in
+  let rec go {ns_nodes; ns_repr; ns_to} =
+    if Set.mem !seen ns_repr then
+      ()
+    else
+      begin
+        seen := Set.add !seen ns_repr;
+        Set.iter ns_to ~f:(fun n ->
+          go (Util.find_exn map n)
+        );
+        f ns_nodes
+      end
+  in
+  Map.iter map ~f:go
+
 let sort (type n) (module Node : Comparator.S with type t = n) ~nodes ~edges =
   let map = make_init_map (module Node) ~nodes in
   add_edges map ~edges;
   join_cycles (module Node) map;
-  failwith "TODO"
+  let map = prune_non_reprs (module Node) map in
+  let ret = ref [] in
+  iter_depth_first (module Node) map ~f:(fun ns ->
+    ret := (Set.to_list ns) :: !ret
+  );
+  List.rev !ret
