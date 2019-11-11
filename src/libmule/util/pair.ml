@@ -1,15 +1,9 @@
-module type Elt = sig
-  include Comparable.S
-  val sexp_of_t : t -> Sexp.t
-  val t_of_sexp : Sexp.t -> t
+module type S = sig
+  module Left : Elt.S
+  module Right : Elt.S
 end
 
-module type Pair = sig
-  module Left : Elt
-  module Right : Elt
-end
-
-module Make(P:Pair) = struct
+module Make(P:S) = struct
   module T = struct
     type t = (P.Left.t * P.Right.t)
 

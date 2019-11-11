@@ -1,6 +1,4 @@
-(* TODO: factor out Elt; it makes no sense to have it in Pair if we're
- * using it here. *)
-module Make(E:Pair.Elt) = struct
+module Make(E:Elt.S) = struct
   module T = struct
     type t = E.t list
 
