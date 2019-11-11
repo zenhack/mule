@@ -39,7 +39,7 @@ let make_init_map comparator ~nodes =
  *)
 let add_edges map ~edges =
   List.iter edges ~f:(fun {to_; from} ->
-    let fsv = Util.find_exn map from in
+    let fsv = Map.find_exn map from in
     let fs = UnionFind.get fsv in
     UnionFind.set
       { fs with ns_to = Set.add fs.ns_to to_ }
@@ -55,7 +55,7 @@ let add_edges map ~edges =
  *)
 let join_cycles comparator map =
   let rec go ~parents node =
-    let nsv = Util.find_exn map node in
+    let nsv = Map.find_exn map node in
     let ns = UnionFind.get nsv in
     if Set.mem parents node then
       ignore (Set.fold
@@ -67,7 +67,7 @@ let join_cycles comparator map =
               ns_to = Set.union l.ns_to r.ns_to;
             })
             lsv
-            (Util.find_exn map r);
+            (Map.find_exn map r);
             lsv
         ))
     else
@@ -100,7 +100,7 @@ let prune_non_reprs comparator map =
     let ns = UnionFind.get data in
     if Set.mem reprs key then
       let ns_to = Set.map comparator ns.ns_to ~f:(fun n ->
-          Util.find_exn map n
+          Map.find_exn map n
           |> UnionFind.get
           |> fun {ns_repr; _} -> ns_repr
         )
@@ -124,7 +124,7 @@ let iter_depth_first comparator map ~f =
       begin
         seen := Set.add !seen ns_repr;
         Set.iter ns_to ~f:(fun n ->
-          go (Util.find_exn map n)
+          go (Map.find_exn map n)
         );
         f ns_nodes
       end
@@ -164,7 +164,7 @@ end = struct
   let compare_result ~want ~got =
     let ok = Poly.equal want got in
     if not ok then
-      Stdio.print_endline (String.concat [
+      Caml.print_endline (String.concat [
           "Wanted : "; result_to_string want; "\n";
           "But got : "; result_to_string got;
         ]);

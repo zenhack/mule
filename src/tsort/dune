@@ -1,0 +1,11 @@
+(library
+  (name tsort)
+  (public_name tsort)
+  (flags (:standard -open Base))
+  (inline_tests)
+  (preprocess (pps ppx_inline_test))
+  (libraries
+    ;; Elsewhere in this repo:
+    unionFind
+
+    base))

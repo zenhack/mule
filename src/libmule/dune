@@ -12,6 +12,10 @@
   (public_name libmule)
   (flags (:standard -open Base))
   (libraries
+    ;; Elsewhere in this repo:
+    unionFind
+    tsort
+
     base
     stdio
     lwt
@@ -19,7 +23,6 @@
     mparser
     yojson
     zarith
-
     cmdliner)
   (inline_tests)
   (preprocess

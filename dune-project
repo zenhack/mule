@@ -10,3 +10,9 @@
 
 (package
   (name libmule))
+
+(package
+  (name unionFind))
+
+(package
+  (name tsort))
