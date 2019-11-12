@@ -346,3 +346,35 @@ and format_type_member lbl ty =
     | Opaque _ -> ""
     | _ -> " = " ^ to_string body
   end
+
+(* Collect the free type variables in a type *)
+let rec ftv = function
+  | Var {v_var; _} -> VarSet.singleton v_var
+  | Path{p_var; _} -> VarSet.singleton p_var
+
+  | TypeLam {tl_param; tl_body; _} -> Set.remove (ftv tl_body) tl_param
+  | Quant   {q_var;    q_body;  _} -> Set.remove (ftv  q_body) q_var
+  | Recur   {mu_var;   mu_body; _} -> Set.remove (ftv mu_body) mu_var
+
+  | Fn {fn_pvar = None; fn_param; fn_ret; _} ->
+      Set.union (ftv fn_param) (ftv fn_ret)
+  | Fn {fn_pvar = Some v; fn_param; fn_ret; _} ->
+      Set.union (ftv fn_param) (Set.remove (ftv fn_ret) v)
+
+  | Record {r_types; r_values; _} ->
+      Set.union (ftv_row r_types) (ftv_row r_values)
+  | Union {u_row} -> ftv_row u_row
+
+  | App {app_fn; app_arg; _} -> Set.union (ftv app_fn) (ftv app_arg)
+
+  | Opaque _ | Named _ -> VarSet.empty
+(*  Like ftv, but for rows: *)
+and ftv_row {row_fields; row_rest; _} =
+  let rest_ftv = match row_rest with
+    | None -> VarSet.empty
+    | Some v -> VarSet.singleton v
+  in
+  List.fold
+    row_fields
+    ~init:rest_ftv
+    ~f:(fun vs (_, t) -> Set.union vs (ftv t))

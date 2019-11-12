@@ -15,6 +15,50 @@ let incomplete_pattern () =
 let unreachable_cases cases =
   MuleErr.throw (`UnreachableCases cases)
 
+let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
+  fun nodes ->
+    let vars =
+      List.fold nodes ~init:VarSet.empty ~f:(fun set (v, _) -> Set.add set v)
+    in
+    let edges =
+      List.map nodes ~f:(fun (from, t) ->
+        Set.inter vars (DT.ftv t)
+        |> Set.to_list
+        |> List.map ~f:(fun to_ -> Tsort.{from; to_})
+      )
+      |> List.concat
+    in
+    let sorted_vars =
+      Tsort.sort
+        (module Var)
+        ~nodes:(Set.to_list vars)
+        ~edges
+    in
+    let map = Map.of_alist_exn (module Var) nodes in
+    List.map
+      sorted_vars
+      ~f:(List.map ~f:(fun v -> (v, Util.find_exn map v)))
+
+let sort_let ~letrec_types ~letrec_vals ~letrec_body =
+  let types = sort_let_types letrec_types in
+  List.fold_right
+    types
+    ~init:(
+      match letrec_vals with
+      | _ :: _ -> D.LetRec{
+          letrec_types = [];
+          letrec_vals;
+          letrec_body;
+        }
+      | [] ->
+          letrec_body
+    )
+    ~f:(fun letrec_types letrec_body -> D.LetRec {
+        letrec_types;
+        letrec_vals = [];
+        letrec_body;
+      })
+
 (* [substitute_type_apps f params ty] replaces occurances of [f] applied to
  * the list of parameters in [ty] with just [f]. *)
 let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK.maybe_kind DT.t =
@@ -480,11 +524,10 @@ and desugar_record fields =
           }
     )
   in
-  D.LetRec {
-    letrec_vals = values;
-    letrec_types = types;
-    letrec_body = body;
-  }
+  sort_let
+    ~letrec_vals:values
+    ~letrec_types:types
+    ~letrec_body:body
 and desugar_match cases =
   begin match cases with
     | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
@@ -598,11 +641,10 @@ and desugar_let bs body =
    * in the desugared AST, let bindings only have simple variables as patterns. *)
   let rec go vals types = function
     | [] ->
-        D.LetRec {
-          letrec_types = types;
-          letrec_vals = vals;
-          letrec_body = desugar body;
-        }
+        sort_let
+          ~letrec_types:types
+          ~letrec_vals:vals
+          ~letrec_body:(desugar body)
     | `BindType t :: bs ->
         let (v, ty) = desugar_type_binding t in
         go vals ((v, ty) :: types) bs
