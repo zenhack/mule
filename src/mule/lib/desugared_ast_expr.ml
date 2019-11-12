@@ -191,11 +191,15 @@ let apply_to_kids e ~f = match e with
         ut_type;
         ut_record = f ut_record;
       }
+  | WithType{wt_expr; wt_type} ->
+      WithType {
+        wt_expr = f wt_expr;
+        wt_type;
+      }
   | Var _
   | EmptyRecord
   | GetField _
   | UpdateVal _
-  | WithType _
   | Embed _
   | Const _ -> e
 
@@ -294,7 +298,12 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         ut_type;
         ut_record = subst env ut_record;
       }
-  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | WithType _ | Embed _ ->
+  | WithType {wt_expr; wt_type} ->
+      WithType {
+        wt_expr = subst env wt_expr;
+        wt_type;
+      }
+  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | Embed _ ->
       expr
 and subst_branch env b = match b with
   | BLeaf lf -> BLeaf (subst_leaf env lf)

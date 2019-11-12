@@ -43,16 +43,11 @@ let sort_let ~letrec_types ~letrec_vals ~letrec_body =
   let types = sort_let_types letrec_types in
   List.fold_right
     types
-    ~init:(
-      match letrec_vals with
-      | _ :: _ -> D.LetRec{
-          letrec_types = [];
-          letrec_vals;
-          letrec_body;
-        }
-      | [] ->
-          letrec_body
-    )
+    ~init:(D.LetRec{
+      letrec_types = [];
+      letrec_vals;
+      letrec_body;
+    })
     ~f:(fun letrec_types letrec_body -> D.LetRec {
         letrec_types;
         letrec_vals = [];
@@ -722,3 +717,15 @@ and desugar_type_binding: (SC.var * SC.var list * ST.lt) -> (Ast.Var.t * DK.mayb
       )
   in
   (v, ty)
+
+let rec simplify = function
+  | D.LetRec{
+      letrec_types = [];
+      letrec_vals = [];
+      letrec_body;
+    } ->
+      simplify letrec_body
+  | e ->
+      D.apply_to_kids e ~f:simplify
+
+let desugar e = simplify (desugar e)
