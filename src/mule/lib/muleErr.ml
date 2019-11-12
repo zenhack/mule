@@ -63,7 +63,13 @@ let show = function
            "  - `";
            Label.to_string lbl;
            "` at:\n";
-           List.map locs ~f:(fun l -> String.concat [
+           List.sort locs ~compare:(fun
+             (* Sort so that earliest occurances are first. *)
+             Loc.{ start = (x, _, _); _}
+             Loc.{ start = (y, _, _); _} ->
+              Int.compare x y
+           )
+          |> List.map ~f:(fun l -> String.concat [
                "    - ";
                Loc.pretty_t l;
                "\n";
