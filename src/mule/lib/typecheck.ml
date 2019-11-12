@@ -665,7 +665,7 @@ and whnf: u_var -> u_var =
   | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->
       require_kind (UnionFind.make(`Arrow(xk, k))) fk;
       apply_type t f x;
-      whnf t
+      t
   | _ -> t
 and apply_type app f arg =
   match UnionFind.get (whnf f) with
@@ -673,7 +673,8 @@ and apply_type app f arg =
       let result =
         subst body ~target:(get_id (UnionFind.get p)) ~replacement:arg
       in
-      UnionFind.merge (fun _ r -> r) app result
+      UnionFind.merge (fun _ r -> r) app result;
+      ignore (whnf result)
   | _ -> ()
 
 let rec gen_kind = function
