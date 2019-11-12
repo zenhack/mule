@@ -1,8 +1,9 @@
 
 Desugared:
 
-	(letrec (types ((t (rec t int)))) (values ((x (: (Integer 4) t))))
-	 (((.= x) (.type= t {} t)) x))
+	(letrec (types ((t (rec t int)))) (values ())
+	 (letrec (types ()) (values ((x (: (Integer 4) t))))
+	  (((.= x) (.type= t {} t)) x)))
 
 inferred type:
 
