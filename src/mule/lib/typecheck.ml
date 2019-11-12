@@ -554,6 +554,13 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             require_subtype ctx
               ~sub:(check pl bl)
               ~super:(check pr br)
+        | `Const(_, `Named `Apply, [fl, flk; argl, arglk], retlk),
+          `Const(_, `Named `Apply, [fr, frk; argr, argrk], retrk) ->
+            require_kind flk frk;
+            require_kind arglk argrk;
+            require_kind retlk retrk;
+            require_type_eq ctx fl fr;
+            require_type_eq ctx argl argr
         | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
             MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
@@ -676,6 +683,9 @@ and apply_type app f arg =
       UnionFind.merge (fun _ r -> r) app result;
       ignore (whnf result)
   | _ -> ()
+and require_type_eq ctx l r =
+  require_subtype ctx ~sub:l ~super:r;
+  require_subtype ctx ~sub:r ~super:l
 
 let rec gen_kind = function
   | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
