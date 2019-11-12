@@ -52,11 +52,27 @@ let show = function
       "Type error: " ^ show_type_error e
   | `UnreachableCases _ ->
       "Unreachable cases in match"
-  | `DuplicateFields fields ->
-      "Duplicate fields:\n" ^
+  | `DuplicateFields (level, fields) ->
+      let level_name = match level with
+        | `Type -> "associated types"
+        | `Value -> "record fields"
+      in
+      "Duplicate " ^ level_name ^ ":\n\n" ^
       (fields
-       |> List.map ~f:Label.to_string
-       |> String.concat ~sep:",")
+       |> List.map ~f:(fun (lbl, locs) -> String.concat [
+           "  - `";
+           Label.to_string lbl;
+           "` at:\n";
+           List.map locs ~f:(fun l -> String.concat [
+               "    - ";
+               Loc.pretty_t l;
+               "\n";
+             ]
+           )
+           |> String.concat
+         ]
+       )
+      |> String.concat)
   | `EmptyMatch ->
       "Empty match expression."
   | `IncompletePattern ->

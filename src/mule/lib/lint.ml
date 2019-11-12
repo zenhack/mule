@@ -2,8 +2,8 @@ open Common_ast
 open Surface_ast
 open Surface_ast.Expr
 
-let duplicate_fields dups =
-  MuleErr.throw (`DuplicateFields dups)
+let duplicate_fields level dups =
+  MuleErr.throw (`DuplicateFields (level, dups))
 
 (* Check for duplicate record fields (in both expressions and types) *)
 let check_duplicate_record_fields =
@@ -51,8 +51,8 @@ let check_duplicate_record_fields =
         | `Type (lbl, _, _) -> `Snd lbl
       )
     in
-    go_labels val_lbls;
-    go_labels type_lbls
+    go_labels `Value val_lbls;
+    go_labels `Type type_lbls
   and go_pat Loc.{l_value; _} = match l_value with
     | Pattern.Const _ -> ()
     | Pattern.Ctor{c_arg; _} -> go_pat c_arg
@@ -68,30 +68,47 @@ let check_duplicate_record_fields =
     | Type.Recur{recur_body = ty; _} -> go_type ty
     | Type.Fn{fn_param; fn_ret; _} -> go_type fn_param; go_type fn_ret
     | Type.Record {r_items = fields; _} ->
-        List.map fields ~f:(fun Loc.{l_value; _} -> match l_value with
-          | Type.Rest _ -> []
-          | Type.Field(lbl, ty)
-          | Type.Type(lbl, _, Some ty) ->
-              go_type ty;
-              [lbl]
-          | Type.Type (lbl, _, None) ->
-              [lbl]
-        )
-        |> List.concat
-        |> go_labels
+        let (val_lbls, type_lbls, _) =
+          List.partition3_map fields ~f:(fun loc_lbl -> match loc_lbl.Loc.l_value with
+            | Type.Rest _ -> `Trd ()
+            | Type.Field(lbl, ty) ->
+                go_type ty;
+                `Fst lbl
+            | Type.Type(lbl, _, Some ty) ->
+                go_type ty;
+                `Snd lbl
+            | Type.Type (lbl, _, None) ->
+                `Snd lbl
+          )
+        in
+        go_labels `Value val_lbls;
+        go_labels `Type type_lbls
     | Type.Union{u_l = l; u_r = r; _} -> go_type l; go_type r
     | Type.App{app_fn = f; app_arg = x; _} -> go_type f; go_type x
     | Type.Annotated{anno_ty; _} ->
         go_type anno_ty
-  and go_labels =
-    let rec go all dups = function
-      | (Loc.{l_value = l; _} :: ls) when Set.mem all l ->
-          go all (Set.add dups l) ls
-      | (Loc.{l_value = l; _} :: ls) ->
-          go (Set.add all l) dups ls
-      | [] when Set.is_empty dups -> ()
-      | [] -> duplicate_fields (Set.to_list dups)
-    in go LabelSet.empty LabelSet.empty
+  and go_labels: [`Type|`Value] -> Label.t Loc.located list -> unit =
+    fun level lst ->
+    let map =
+      List.fold
+        lst
+        ~init:LabelMap.empty
+        ~f:(fun map {l_value; l_loc} ->
+          Map.update map l_value ~f:(function
+            | None -> [l_loc]
+            | Some locs -> (l_loc :: locs)
+          )
+        )
+    in
+    let dups = Map.filter map ~f:(function
+        | [] | [_] -> false
+        | _ -> true
+      )
+    in
+    begin match Map.to_alist dups with
+      | [] -> ()
+      | dups_list -> duplicate_fields level dups_list
+    end
   and go_case (pat, body) =
     go_pat pat;
     go_expr body

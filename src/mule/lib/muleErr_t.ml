@@ -36,7 +36,7 @@ type t =
   | `LazyLoop
 
   | `TypeError of type_error
-  | `DuplicateFields of (Label.t list)
+  | `DuplicateFields of [`Type|`Value] * (Label.t * Loc.t list) list
   | `UnreachableCases of (Surface_ast.Pattern.lt * Surface_ast.Expr.lt) list
   | `EmptyMatch
   | `MalformedType of string

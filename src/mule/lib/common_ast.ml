@@ -71,6 +71,35 @@ module Loc = struct
   }
   [@@deriving sexp]
 
+  let pretty_pos (_, line, col) =
+    String.concat [
+      "line ";
+      Int.to_string line;
+      ", character ";
+      Int.to_string col;
+    ]
+
+  let pretty_t {
+      start = (_, start_line, start_col) as start;
+      stop = (_, stop_line, stop_col) as stop;
+    } =
+    if start_line = stop_line then
+      String.concat [
+        "line ";
+        Int.to_string start_line;
+        ", characters ";
+        Int.to_string start_col;
+        "-";
+        Int.to_string stop_col;
+      ]
+    else
+      String.concat [
+        pretty_pos start;
+        " to ";
+        pretty_pos stop;
+      ]
+
+
   let spanning l r = {
     start = l.start;
     stop = r.stop;
