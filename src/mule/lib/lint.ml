@@ -45,11 +45,14 @@ let check_duplicate_record_fields =
       | `Type (_, _, ty) ->
           go_type ty
     );
-    let labels = List.map fields ~f:(fun Loc.{l_value; _} -> match l_value with
-        | `Value (lbl, _, _) -> lbl
-        | `Type (lbl, _, _) -> lbl
-      ) in
-    go_labels labels
+    let (val_lbls, type_lbls) =
+      List.partition_map fields ~f:(fun Loc.{l_value; _} -> match l_value with
+        | `Value (lbl, _, _) -> `Fst lbl
+        | `Type (lbl, _, _) -> `Snd lbl
+      )
+    in
+    go_labels val_lbls;
+    go_labels type_lbls
   and go_pat Loc.{l_value; _} = match l_value with
     | Pattern.Const _ -> ()
     | Pattern.Ctor{c_arg; _} -> go_pat c_arg
