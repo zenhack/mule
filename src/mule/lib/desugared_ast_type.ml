@@ -347,6 +347,47 @@ and format_type_member lbl ty =
     | _ -> " = " ^ to_string body
   end
 
+let rec apply_to_kids t ~f = match t with
+  | Var _ | Path _ | Named _ | Opaque _ -> t
+  | Fn {fn_info; fn_pvar; fn_param; fn_ret} -> Fn {
+      fn_info;
+      fn_pvar;
+      fn_param = f fn_param;
+      fn_ret = f fn_ret;
+    }
+  | Recur {mu_info; mu_var; mu_body} ->
+      Recur{mu_info; mu_var; mu_body = f mu_body}
+  | Record {r_info; r_types; r_values; r_src} ->
+      Record {
+        r_src;
+        r_info;
+        r_types = apply_to_row r_types ~f;
+        r_values = apply_to_row r_values ~f;
+      }
+  | Union {u_row} -> Union {
+      u_row = apply_to_row u_row ~f;
+    }
+  | Quant{q_info; q_quant; q_var; q_body} ->
+      Quant {
+        q_info;
+        q_quant;
+        q_var;
+        q_body = f q_body;
+      }
+  | TypeLam{tl_info; tl_param; tl_body} ->
+      TypeLam {tl_info; tl_param; tl_body = f tl_body}
+  | App{app_info; app_fn; app_arg} ->
+      App {
+        app_info;
+        app_fn = f app_fn;
+        app_arg = f app_arg;
+      }
+and apply_to_row {row_info; row_fields; row_rest} ~f = {
+  row_info;
+  row_fields = List.map row_fields ~f:(fun (l, t) -> (l, f t));
+  row_rest;
+}
+
 (* Collect the free type variables in a type *)
 let rec ftv = function
   | Var {v_var; _} -> VarSet.singleton v_var
