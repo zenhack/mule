@@ -1,6 +1,7 @@
 
 let print_endline s =
-  Lwt_io.write Lwt_io.stdout (s ^ "\n")
+  let%lwt _ = Lwt_io.write Lwt_io.stdout (s ^ "\n") in
+  Lwt_io.flush Lwt_io.stdout
 
 let display_always label text =
   let text =
