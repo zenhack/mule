@@ -8,7 +8,7 @@
       , set-prop : text -> t -> t -> cmd {}
       , int : int -> t
       , text : text -> t
-      , function (t -> cmd t) -> t
+      , function : (t -> cmd t) -> t
       , null : t
       , undefined : t
     }
