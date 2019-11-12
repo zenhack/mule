@@ -152,7 +152,18 @@ let substitue_type_apps: Ast.Var.t -> Ast.Var.t list -> DK.maybe_kind DT.t -> DK
   in
   go
 
-let rec quantify_opaques t = match t with
+let rec hoist_assoc_types t = match DT.apply_to_kids t ~f:hoist_assoc_types with
+  | (DT.Record {r_types; _}) as init ->
+      List.fold r_types.row_fields ~init ~f:(fun old (lbl, ty) ->
+        DT.subst
+          (var_of_label lbl)
+          ty
+          old
+      )
+  | t -> t
+
+
+let rec quantify_opaques t = match DT.apply_to_kids t ~f:quantify_opaques with
   (* Transform opaque type members into existentials, e.g.
    *
    * { type t }
@@ -161,22 +172,13 @@ let rec quantify_opaques t = match t with
    *
    * exist a. { type t = a }
   *)
-  | DT.Named _ | DT.Path _ | DT.Var _ -> t
-  | DT.App{app_info; app_fn; app_arg} ->
-      DT.App {
-        app_info;
-        app_fn = quantify_opaques app_fn;
-        app_arg = quantify_opaques app_arg;
-      }
-  | DT.TypeLam{tl_info; tl_param; tl_body} ->
-      DT.TypeLam{tl_info; tl_param; tl_body = quantify_opaques tl_body}
   | DT.Record {r_src; r_info; r_types = {row_info; row_fields; row_rest}; r_values} ->
       let vars = ref [] in
       let row_fields = List.map row_fields ~f:(fun (lbl, ty) ->
-          match quantify_opaques ty with
+          match ty with
           | DT.Opaque {o_info} ->
               let var = Gensym.anon_var () in
-              vars := (lbl, var) :: !vars;
+              vars := var :: !vars;
               (lbl, DT.Var { v_info = o_info; v_var = var })
           | ty' -> (lbl, ty')
         )
@@ -185,42 +187,19 @@ let rec quantify_opaques t = match t with
         DT.Record {
           r_info;
           r_src;
+          r_values;
           r_types = {row_info; row_fields; row_rest};
-          r_values = quantify_row_opaques r_values;
         }
       in
-      List.fold !vars ~init ~f:(fun ty (lbl, v) ->
+      List.fold !vars ~init ~f:(fun ty v ->
         DT.Quant {
           q_info = `Unknown;
           q_quant = `Exist;
           q_var = v;
-          q_body =
-            DT.subst
-              (var_of_label lbl)
-              (DT.Var {v_var = v; v_info = `Unknown})
-              ty
+          q_body = ty;
         }
       )
-  | DT.Opaque i -> DT.Opaque i
-  | DT.Fn {fn_info; fn_pvar; fn_param; fn_ret} ->
-      DT.Fn {
-        fn_info;
-        fn_pvar;
-        fn_param = quantify_opaques fn_param;
-        fn_ret = quantify_opaques fn_ret;
-      }
-  | DT.Recur {mu_info; mu_var; mu_body} ->
-      DT.Recur{mu_info; mu_var; mu_body = quantify_opaques mu_body}
-  | DT.Union {u_row} -> DT.Union { u_row = quantify_row_opaques u_row }
-  | DT.Quant{q_info; q_quant; q_var; q_body} ->
-      DT.Quant{q_info; q_quant; q_var; q_body = quantify_opaques q_body}
-and quantify_row_opaques {row_info; row_fields; row_rest} = {
-  row_info;
-  row_fields = List.map
-      row_fields
-      ~f:(fun (lbl, ty) -> (lbl, quantify_opaques ty));
-  row_rest;
-}
+  | t -> t
 
 let rec desugar_type' ty = match ty.Loc.l_value with
   | ST.Import _ ->
@@ -356,6 +335,7 @@ and desugar_record_type types fields r r_src =
 and desugar_type t =
   desugar_type' t
   |> quantify_opaques
+  |> hoist_assoc_types
 and desugar Loc.{l_value = e; _} = match e with
   | S.Import _ -> failwith "TODO: implement import"
   | S.Embed {e_path; e_from; _} ->

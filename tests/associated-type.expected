@@ -1,10 +1,9 @@
 
 Desugared:
 
-	((:
-	  (record (types ((t (rec t (record (types ()) (values ()))))))
-	   (values ((x t)))))
-	 (letrec (types ()) (values ((x {}))) (((.= x) {}) x)))
+	(: (letrec (types ()) (values ((x {}))) (((.= x) {}) x))
+	 (record (types ((t (rec t (record (types ()) (values ()))))))
+	  (values ((x (rec t (record (types ()) (values ()))))))))
 
 inferred type:
 
