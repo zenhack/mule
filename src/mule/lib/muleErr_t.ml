@@ -1,5 +1,28 @@
 open Common_ast
 
+(* A segment in a path through a type. See the disucssion for the `Cascade
+ * variant of [subtype_reason] *)
+type type_path =
+  [ `RowLabel of Label.t
+  | `RowTail
+  | `Fn of [ `Param | `Result ]
+  | `RecordPart of [ `Type | `Value ]
+  | `UnionRow
+  | `TypeLamBody
+  ]
+
+(* A reason for a subtyping constraint. *)
+type subtype_reason =
+  [ (* This subtyping constraint is a result of another subtyping constraint.
+     * It checks if some smaller part of a type matches. The path describes
+     * how we got here from the parent constraint. *)
+    `Cascaded of (subtype_reason * type_path)
+
+  (* No reason given. Eventually this will go away, but for now it exists so
+   * we don't have to add reasons everywhere all at once. *)
+  | `Unspecified
+  ]
+
 type ctor = Typecheck_types_t.u_typeconst
 type kind =
   [ `Row

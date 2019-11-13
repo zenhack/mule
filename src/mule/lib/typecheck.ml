@@ -244,7 +244,11 @@ and make_type ctx ty = match ty with
       in
       let result_type = fresh_local ctx `Flex (gen_k ()) in
       let path_type = make_path_type result_type p_lbls in
-      require_subtype ctx ~sub:var_type ~super:path_type;
+      require_subtype
+        ctx
+        ~reason:`Unspecified
+        ~sub:var_type
+        ~super:path_type;
       result_type
 and make_path_type result_type lbls =
   begin match List.rev lbls with
@@ -454,21 +458,39 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
 and check: context -> 'i DE.t -> u_var -> u_var =
   fun ctx e ty_want ->
   let ty_got = synth ctx e in
-  require_subtype ctx ~sub:ty_got ~super:ty_want;
+  require_subtype
+    ctx
+    ~reason:`Unspecified
+    ~sub:ty_got
+    ~super:ty_want;
   ty_got
 and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   fun ctx lf ty_want ->
   let ty_got = synth_leaf ctx lf in
-  require_subtype ctx ~sub:ty_got ~super:ty_want;
+  require_subtype
+    ctx
+    ~reason:`Unspecified
+    ~sub:ty_got
+    ~super:ty_want;
   ty_got
-and require_subtype: context -> sub:u_var -> super:u_var -> unit =
-  fun ctx ~sub ~super ->
+and require_subtype
+  : context
+    -> reason:MuleErr.subtype_reason
+    -> sub:u_var
+    -> super:u_var
+    -> unit =
+  fun ctx ~reason ~sub ~super ->
   trace_req_subtype ~sub ~super;
-  require_subtype_already_whnf ctx ~sub:(whnf sub) ~super:(whnf super);
+  require_subtype_already_whnf ctx ~reason ~sub:(whnf sub) ~super:(whnf super);
   if Config.trace_require_subtype () then
     Stdio.print_endline "Return."
-and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
-  fun ctx ~sub ~super ->
+and require_subtype_already_whnf
+  : context
+    -> reason:MuleErr.subtype_reason
+    -> sub:u_var
+    -> super:u_var
+    -> unit =
+  fun ctx ~reason ~sub ~super ->
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if not (Set.mem !(ctx.assumptions) (sub_id, super_id)) then
     begin
@@ -507,9 +529,15 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             UnionFind.merge (fun l _ -> l) sub super
 
         | `Quant(_, q, id, k, body), _ ->
-            require_subtype ctx ~sub:(unroll_quant ctx `Sub q id k body) ~super
+            require_subtype
+              ctx
+              ~reason:`Unspecified
+              ~sub:(unroll_quant ctx `Sub q id k body) ~super
         | _, `Quant(_, q, id, k, body) ->
-            require_subtype ctx ~sub ~super:(unroll_quant ctx `Super q id k body)
+            require_subtype ctx
+              ~reason:`Unspecified
+              ~sub
+              ~super:(unroll_quant ctx `Super q id k body)
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
@@ -529,29 +557,29 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
           `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
             (* Note the flipped sub vs. super in the parameter case; this is standard
              * contravariance. *)
-            require_subtype ctx ~sub:psuper ~super:psub;
-            require_subtype ctx ~sub:rsub ~super:rsuper
+            require_subtype ctx ~sub:psuper ~super:psub ~reason:(`Cascaded(reason, `Fn `Param));
+            require_subtype ctx ~sub:rsub ~super:rsuper ~reason:(`Cascaded(reason, `Fn `Result))
 
         | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
             wrong_num_args `Fn 2 x y
 
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
-            require_subtype ctx ~sub:row_sub ~super:row_super
+            require_subtype ctx ~sub:row_sub ~super:row_super ~reason:(`Cascaded(reason, `UnionRow))
 
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
 
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-            require_subtype ctx ~sub:rtype_sub ~super:rtype_super;
-            require_subtype ctx ~sub:rvals_sub ~super:rvals_super
+            require_subtype ctx ~sub:rtype_sub ~super:rtype_super ~reason:(`Cascaded(reason, `RecordPart `Type));
+            require_subtype ctx ~sub:rvals_sub ~super:rvals_super ~reason:(`Cascaded(reason, `RecordPart `Value))
 
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
 
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
-            require_subtype_extend ctx ~sub ~super
+            require_subtype_extend ctx ~sub ~super ~reason
 
         | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
           `Const(_, `Named `Lambda, [pr, kpr; br, kbr], _) ->
@@ -569,6 +597,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             require_subtype ctx
               ~sub:(check pl bl)
               ~super:(check pr br)
+              ~reason:(`Cascaded(reason, `TypeLamBody))
         | `Const(_, `Named `Apply, [fl, flk; argl, arglk], retlk),
           `Const(_, `Named `Apply, [fr, frk; argr, argrk], retrk) ->
             require_kind flk frk;
@@ -583,7 +612,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
             MuleErr.bug "TODO: require_subytpe"
       end
     end
-and require_subtype_extend ctx ~sub ~super =
+and require_subtype_extend ctx ~reason ~sub ~super =
   let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
@@ -624,10 +653,22 @@ and require_subtype_extend ctx ~sub ~super =
     | `Right v -> super_only := (key, v) :: !super_only
     | `Both ((sub_t, sub_k), (super_t, super_k)) ->
         require_kind sub_k super_k;
-        require_subtype ctx ~sub:sub_t ~super:super_t
+        require_subtype
+          ctx
+          ~reason:(`Cascaded(reason, `RowLabel key))
+          ~sub:sub_t
+          ~super:super_t
   );
-  require_subtype ctx ~sub:sub_tail ~super:(unfold_row !super_only super_tail);
-  require_subtype ctx ~sub:(unfold_row !sub_only sub_tail) ~super:super_tail
+  require_subtype
+    ctx
+    ~reason:`Unspecified
+    ~sub:sub_tail
+    ~super:(unfold_row !super_only super_tail);
+  require_subtype
+    ctx
+    ~reason:`Unspecified
+    ~sub:(unfold_row !sub_only sub_tail)
+    ~super:super_tail
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
@@ -654,7 +695,7 @@ and unroll_quant ctx side q id k body =
     body
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
-  require_subtype ctx ~sub:ty_got ~super:ty_want
+  require_subtype ctx ~reason:`Unspecified ~sub:ty_got ~super:ty_want
 and with_kind k u = require_kind k (get_kind u); u
 and require_kind l r = UnionFind.merge unify_kind l r
 and unify_kind l r =
@@ -699,8 +740,8 @@ and apply_type app f arg =
       ignore (whnf result)
   | _ -> ()
 and require_type_eq ctx l r =
-  require_subtype ctx ~sub:l ~super:r;
-  require_subtype ctx ~sub:r ~super:l
+  require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
+  require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
 
 let rec gen_kind = function
   | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
