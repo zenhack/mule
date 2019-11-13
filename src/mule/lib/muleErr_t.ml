@@ -17,6 +17,7 @@ type type_error =
 
 type path_error =  {
   pe_path: string;
+  pe_loc: Loc.t;
   pe_problem :
     [ `AbsoluteEmbed
     | `IllegalChar of char

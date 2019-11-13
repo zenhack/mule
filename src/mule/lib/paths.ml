@@ -1,12 +1,13 @@
 
 include Paths_t
 
-let validate_parts parts =
+let validate_parts ~loc parts =
   let path = String.concat ~sep:"/" parts in
   List.iter parts ~f:(fun part -> match part with
     | "" | "." | ".." -> MuleErr.(
         throw
           (`PathError {
+                pe_loc = loc;
                 pe_path = path;
                 pe_problem = `BadPathPart part;
               })
@@ -18,6 +19,7 @@ let validate_parts parts =
             | _ -> MuleErr.(
                 throw
                   (`PathError {
+                        pe_loc = loc;
                         pe_path = path;
                         pe_problem = `IllegalChar c;
                       })
@@ -26,21 +28,22 @@ let validate_parts parts =
       )
   )
 
-let resolve_path ~here ~target =
+let resolve_path ~here ~loc ~target =
   let parts = String.split ~on:'/' target in
   begin match parts with
     | ("." :: rest) ->
-        validate_parts rest;
+        validate_parts rest ~loc;
         `Relative (String.concat ~sep:"/" (Caml.Filename.dirname here :: rest))
     | _ ->
-        validate_parts parts;
+        validate_parts ~loc parts;
         `Absolute target
   end
 
-let resolve_embed ~here ~target =
-  match resolve_path ~here ~target with
+let resolve_embed ~here ~loc ~target =
+  match resolve_path ~loc ~here ~target with
   | `Absolute path -> MuleErr.(
       throw (`PathError {
+          pe_loc = loc;
           pe_path = path;
           pe_problem = `AbsoluteEmbed;
         })

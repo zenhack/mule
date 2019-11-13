@@ -30,16 +30,32 @@ let show_type_error err = match err with
   | `PermissionErr op ->
       "permission error during " ^ show_op op
 
-let show_path_error {pe_path; pe_problem} =
+let show_path_error {pe_path; pe_loc; pe_problem} =
   let path = String.escaped pe_path in
   match pe_problem with
-  | `AbsoluteEmbed ->
-      "Illegal embed path: " ^ path ^ "; embeds must use " ^
-      "relative paths."
-  | `IllegalChar c ->
-      "Illegal character " ^ Char.escaped c ^ " in path " ^ path
-  | `BadPathPart part ->
-      "Illegal path segment " ^ String.escaped part ^ " in path " ^ path
+  | `AbsoluteEmbed -> String.concat [
+      "Illegal embed path ";
+      String.escaped path;
+      " at ";
+      Loc.pretty_t pe_loc;
+      ": embed expressions must use relative paths."
+    ]
+  | `IllegalChar c -> String.concat [
+      "Illegal character ";
+      Char.escaped c;
+      " in path ";
+      path;
+      " at ";
+      Loc.pretty_t pe_loc;
+    ]
+  | `BadPathPart part -> String.concat [
+      "Illegal path segment ";
+      String.escaped part;
+      " in path ";
+      path;
+      " at ";
+      Loc.pretty_t pe_loc;
+    ]
 
 let show = function
   | `UnboundVar Loc.{l_value; l_loc} -> String.concat [

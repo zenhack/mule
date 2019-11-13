@@ -361,12 +361,15 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
   |> hoist_assoc_types
-and desugar Loc.{l_value = e; _} = match e with
+and desugar Loc.{l_value = e; l_loc} = match e with
   | S.Import _ -> failwith "TODO: implement import"
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
-        e_value = Paths.resolve_embed ~here:e_from ~target:e_path;
+        e_value = Paths.resolve_embed
+            ~loc:l_loc
+            ~here:e_from
+            ~target:e_path;
       }
   | S.Const {const_val = c; _} -> D.Const {const_val = c}
   | S.Var {v_var = v; _} ->
