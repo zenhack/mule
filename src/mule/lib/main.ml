@@ -19,7 +19,7 @@ let load_and_typecheck typ file_name =
           dexp
         with
         | MuleErr.MuleExn err ->
-            Stdio.eprintf "%s\n" (MuleErr.show err);
+            Stdio.eprintf "%s\n" (Pretty.error err);
             Caml.exit 1
       end
 

@@ -23,6 +23,12 @@ type subtype_reason =
   | `Unspecified
   ]
 
+type subtype_error = {
+  se_sub : int Desugared_ast_type_t.t;
+  se_super : int Desugared_ast_type_t.t;
+  se_reason : subtype_reason;
+}
+
 type ctor = Typecheck_types_t.u_typeconst
 type kind =
   [ `Row
@@ -31,7 +37,7 @@ type kind =
   | `Arrow of kind * kind
   ]
 type type_error =
-  [ `MismatchedCtors of (ctor * ctor)
+  [ `MismatchedCtors of subtype_error
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
   | `CantInstantiate

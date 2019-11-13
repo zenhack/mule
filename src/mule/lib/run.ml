@@ -85,6 +85,6 @@ let run : string -> unit LwtResult.t = fun input ->
           Lwt.return (Ok ())
         with
         | MuleErr.MuleExn e ->
-            let%lwt _ = print_endline (MuleErr.show e) in
+            let%lwt _ = print_endline (Pretty.error e) in
             Lwt.return (Error e)
       end

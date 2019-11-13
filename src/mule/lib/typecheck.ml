@@ -546,7 +546,13 @@ and require_subtype_already_whnf
 
         (* Mismatched named constructors are never reconcilable: *)
         | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
-            MuleErr.throw (`TypeError (`MismatchedCtors (`Named n, `Named m)))
+            MuleErr.throw
+              (`TypeError
+                  (`MismatchedCtors {
+                        se_sub = Extract.get_var_type sub;
+                        se_super = Extract.get_var_type super;
+                        se_reason = reason;
+                      }))
 
         (* All of the zero-argument consts unify with themselves; if the above case
          * didn't cover this one, then we're good: *)

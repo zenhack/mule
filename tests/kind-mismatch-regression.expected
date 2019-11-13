@@ -3,4 +3,4 @@ Desugared:
 
 	(: (Integer 4)
 	 ((e : (exist $6 (record (types ((t $6))) (values ())))) -> ((. e t) int)))
-Type error: mismatched type constructors: int and ->
+Type error: Mismatched type constructors: int is not a subtype of ({type t = a}) -> (a) int
