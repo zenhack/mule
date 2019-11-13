@@ -97,8 +97,11 @@ let show = function
       "Empty match expression."
   | `IncompletePattern ->
       "Incomplete pattern"
-  | `IllegalAnnotatedType _ ->
-      "Illegal annotated type: only types of function parameters may be annotated."
+  | `IllegalAnnotatedType Loc.{l_loc; _} -> String.concat [
+      "Illegal annotated type at ";
+      Loc.pretty_t l_loc;
+      ": only types of function parameters may be annotated.";
+    ]
   | `PathError pe ->
       show_path_error pe
   | `LazyLoop ->

@@ -41,7 +41,7 @@ type t =
   | `EmptyMatch
   | `MalformedType of string
   | `IncompletePattern
-  | `IllegalAnnotatedType of Surface_ast.Type.t
+  | `IllegalAnnotatedType of Surface_ast.Type.lt
   | `PathError of path_error
   | `Bug of string
   ]

@@ -282,7 +282,7 @@ let rec desugar_type' ty = match ty.Loc.l_value with
         };
       }
   | ST.Annotated _ ->
-      MuleErr.throw (`IllegalAnnotatedType ty.Loc.l_value)
+      MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
       DT.Path {
         p_info = `Unknown;
