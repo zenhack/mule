@@ -110,8 +110,6 @@ let show = function
          ]
        )
       |> String.concat)
-  | `EmptyMatch ->
-      "Empty match expression."
   | `IncompletePattern ->
       "Incomplete pattern"
   | `IllegalAnnotatedType Loc.{l_loc; _} -> String.concat [

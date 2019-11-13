@@ -39,7 +39,6 @@ type t =
   | `TypeError of type_error
   | `DuplicateFields of [`Type|`Value] * (Label.t * Loc.t list) list
   | `UnreachableCases of (Surface_ast.Pattern.lt * Surface_ast.Expr.lt) list
-  | `EmptyMatch
   | `MalformedType of string
   | `IncompletePattern
   | `IllegalAnnotatedType of Surface_ast.Type.lt
