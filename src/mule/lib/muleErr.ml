@@ -38,7 +38,8 @@ let show_path_error {pe_path; pe_loc; pe_problem} =
       String.escaped path;
       " at ";
       Loc.pretty_t pe_loc;
-      ": embed expressions must use relative paths."
+      ": embed expressions must use relative paths ";
+      "(which start with './')."
     ]
   | `IllegalChar c -> String.concat [
       "Illegal character ";
