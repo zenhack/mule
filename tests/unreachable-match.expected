@@ -1,1 +1,4 @@
-Unreachable cases in match
+Unreachable match cases at:
+
+  - line 3, characters 8-10
+
