@@ -6,7 +6,13 @@ type 'i t =
       e_path: string;
       e_value: string;
     }
-  | Var of { v_var : Var.t }
+  | Var of {
+      v_var : Var.t;
+      v_src :
+        [ `Generated
+        | `Sourced of Var.t Loc.located
+        ]
+    }
   | Lam of { l_param : Var.t; l_body : 'i t }
   | App of {
       app_fn : 'i t;
@@ -65,7 +71,7 @@ and 'i leaf = {
 let rec sexp_of_t = function
   | Embed { e_path; _ } ->
       Sexp.List [Sexp.Atom "embed"; Sexp.Atom e_path]
-  | Var { v_var = v } -> Sexp.Atom (Var.to_string v)
+  | Var { v_var = v; _ } -> Sexp.Atom (Var.to_string v)
   | Lam{ l_param = v; l_body = body } ->
       Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
   | App{app_fn; app_arg} ->
@@ -264,7 +270,7 @@ and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
   match expr with
   (* TODO: do stuff with type variables *)
-  | Var {v_var = v} ->
+  | Var {v_var = v; _} ->
       begin match Map.find env v with
         | None -> expr
         | Some e -> e

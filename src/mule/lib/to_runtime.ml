@@ -14,7 +14,7 @@ let rec translate: int -> binding VarMap.t -> 'i D.t -> (int * R.t) =
     | D.LetRec {letrec_vals; letrec_body; _} ->
         translate_letrec depth env letrec_vals letrec_body
     | D.Const {const_val = c} -> (0, R.Const c)
-    | D.Var {v_var = v} ->
+    | D.Var {v_var = v; _} ->
         begin match Util.find_exn env v with
           | `Index m ->
               let n = depth - m in

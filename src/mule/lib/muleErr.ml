@@ -42,8 +42,12 @@ let show_path_error {pe_path; pe_problem} =
       "Illegal path segment " ^ String.escaped part ^ " in path " ^ path
 
 let show = function
-  | `UnboundVar var ->
-      "unbound variable: " ^ Var.to_string var
+  | `UnboundVar Loc.{l_value; l_loc} -> String.concat [
+      "Unbound variable `";
+      Var.to_string l_value;
+      "` at ";
+      Loc.pretty_t l_loc;
+    ]
   | `MalformedType msg ->
       "malformed_type: " ^ msg
   | `MatchDesugarMismatch ->

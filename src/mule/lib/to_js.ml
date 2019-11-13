@@ -37,7 +37,7 @@ let translate_expr expr =
   let rec go env = function
     | D.Expr.Embed {e_value; _} ->
         Js.Const (Const.Text e_value)
-    | D.Expr.Var {v_var} ->
+    | D.Expr.Var {v_var; _} ->
         translate_var env v_var
     | D.Expr.Lam{l_param; l_body} ->
         let (param, env') = add_var env l_param in

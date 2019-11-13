@@ -52,7 +52,7 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
         let v' = get mu_var in
         let body' = go mu_body in
         Recur {mu_info; mu_var = v'; mu_body = body'}
-    | Var {v_info; v_var} -> Var{v_info; v_var = get v_var}
+    | Var {v_info; v_var; v_src} -> Var{v_info; v_var = get v_var; v_src}
     | Record {r_info; r_types; r_values; r_src} ->
         let r_types = go_row r_types in
         let r_values = go_row r_values in
@@ -62,14 +62,15 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
         let v' = get v in
         let body' = go q_body in
         Quant {q_info; q_quant; q_var = v'; q_body = body'}
-    | Path{p_info; p_var; p_lbls} -> Path {
+    | Path{p_info; p_var; p_lbls; p_src} -> Path {
         p_info;
         p_var = get p_var;
         p_lbls;
+        p_src;
       }
   and go_row {row_info; row_fields; row_rest} =
     let row_fields  = List.map row_fields ~f:(fun (l, ty) -> (l, go ty)) in
-    let row_rest = Option.map row_rest ~f:get in
+    let row_rest = Option.map row_rest ~f:(fun (v, s) -> (get v, s)) in
     {row_info; row_fields; row_rest}
   in
   go

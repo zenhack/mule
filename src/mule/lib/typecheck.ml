@@ -4,6 +4,7 @@ module DE = Desugared_ast_expr
 module DT = Desugared_ast_type
 module C = Common_ast.Const
 module Label = Common_ast.Label
+module Var = Common_ast.Var
 
 type context = {
   type_env : u_var VarMap.t;
@@ -147,9 +148,14 @@ let synth_const: C.t -> u_var = function
   | C.Text _ -> text
   | C.Char _ -> char
 
-let find_bound env var = match Map.find env var with
+let find_bound ~env ~var ~src = match Map.find env var with
   | Some value -> value
-  | None -> unbound_var var
+  | None ->
+      begin match src with
+      | `Sourced v -> unbound_var v
+      | `Generated ->
+          MuleErr.bug ("Unbound internally-generated variable: " ^ Var.to_string var)
+      end
 
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context () =
@@ -175,8 +181,11 @@ let rec make_initial_context () =
 
 (* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
-  | DT.Var {v_var; _} ->
-      find_bound ctx.type_env v_var
+  | DT.Var {v_var; v_src; _} ->
+      find_bound
+        ~env:ctx.type_env
+        ~var:v_var
+        ~src:v_src
   | DT.Quant {q_quant; q_var; q_body; _} ->
       quant q_quant (gen_k ()) (fun v ->
         make_type
@@ -228,10 +237,10 @@ and make_type ctx ty = match ty with
          |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
         )
         arg
-  | DT.Path{p_var; p_lbls; _} ->
-      let var_type = match Map.find ctx.vals_env p_var with
-        | Some ty -> ty |> with_kind ktype
-        | None -> unbound_var p_var
+  | DT.Path{p_var; p_lbls; p_src; _} ->
+      let var_type =
+        find_bound ~env:ctx.vals_env ~var:p_var ~src:p_src
+        |> with_kind ktype
       in
       let result_type = fresh_local ctx `Flex (gen_k ()) in
       let path_type = make_path_type result_type p_lbls in
@@ -269,7 +278,13 @@ and strip_param_exists ctx pty =
 and make_row ctx {row_fields; row_rest; _} =
   let tail = match row_rest with
     | None -> empty
-    | Some v -> with_kind krow (find_bound ctx.type_env v)
+    | Some (v, vsrc) -> with_kind
+          krow
+          (find_bound
+              ~env:ctx.type_env
+              ~var:v
+              ~src:vsrc
+          )
   in
   List.fold_right row_fields ~init:tail ~f:(fun (lbl, ty) rest ->
     extend lbl (make_type ctx ty) rest
@@ -278,8 +293,8 @@ and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
     | DE.Embed _ -> text
-    | DE.Var {v_var} ->
-        find_bound ctx.vals_env v_var
+    | DE.Var {v_var; v_src} ->
+        find_bound ~env:ctx.vals_env ~var:v_var ~src:v_src
     | DE.Lam{l_param; l_body} ->
         with_locals ctx (fun ctx ->
           let p = fresh_local ctx `Flex ktype in

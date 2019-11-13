@@ -51,6 +51,7 @@ let interp_cmd = function
                   q_body = Var {
                       v_info = `Unknown;
                       v_var = v;
+                      v_src = `Generated;
                     };
                 }
               )

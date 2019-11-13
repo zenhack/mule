@@ -6,6 +6,11 @@ let sexp_of_quantifier = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
 
+type var_src =
+  [ `Generated
+  | `Sourced of Var.t Loc.located
+  ]
+
 type 'i t =
   | Fn of {
       fn_info : 'i;
@@ -21,10 +26,12 @@ type 'i t =
   | Var of {
       v_info : 'i;
       v_var : Var.t;
+      v_src : var_src;
     }
   | Path of {
       p_info : 'i;
       p_var : Var.t;
+      p_src : var_src;
       p_lbls : Label.t list;
     }
   | Record of {
@@ -60,7 +67,7 @@ type 'i t =
 and 'i row = {
   row_info: 'i;
   row_fields: (Label.t * 'i t) list;
-  row_rest: Var.t option;
+  row_rest: (Var.t * var_src) option;
 }
 
 let rec subst old new_ ty = match ty with
@@ -83,16 +90,16 @@ let rec subst old new_ ty = match ty with
         Recur{mu_info; mu_var; mu_body}
       else
         Recur{mu_info; mu_var; mu_body = subst old new_ mu_body}
-  | Var{v_info; v_var} ->
+  | Var{v_var; _} ->
       if Var.equal v_var old then
         new_
       else
-        Var{v_info; v_var}
-  | Path{p_info; p_var; p_lbls} ->
+        ty
+  | Path{p_var; _} ->
       if Var.equal p_var old then
         MuleErr.bug "TODO"
       else
-        Path{p_info; p_var; p_lbls}
+        ty
   | Record {r_info; r_types; r_values; r_src} ->
       Record {
         r_info;
@@ -125,7 +132,7 @@ and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
   row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field));
   row_rest =
     match row_rest with
-    | Some v when Var.equal v old -> MuleErr.bug "TODO"
+    | Some (v, _) when Var.equal v old -> MuleErr.bug "TODO"
     | _ -> row_rest;
 }
 
@@ -179,7 +186,7 @@ and sexp_of_row {row_fields; row_rest; _} =
     )
   in
   match row_rest with
-  | Some v -> Sexp.List (fields @ [Sexp.Atom ("..." ^ Var.to_string v)])
+  | Some (v, _) -> Sexp.List (fields @ [Sexp.Atom ("..." ^ Var.to_string v)])
   | None -> Sexp.List fields
 
 let get_info = function
@@ -212,14 +219,15 @@ let rec map ty ~f = match ty with
         mu_var;
         mu_body = map mu_body ~f;
       }
-  | Path{p_info; p_var; p_lbls} ->
+  | Path{p_info; p_var; p_lbls; p_src} ->
       Path{
         p_info = f p_info;
         p_var;
         p_lbls;
+        p_src;
       }
-  | Var {v_info; v_var} ->
-      Var{v_info = f v_info; v_var}
+  | Var {v_info; v_var; v_src} ->
+      Var{v_info = f v_info; v_var; v_src}
   | Record {r_info; r_types; r_values; r_src} ->
       Record {
         r_info = f r_info;
@@ -284,12 +292,12 @@ let rec to_string = function
         List.map types ~f:(fun (lbl, ty) -> format_type_member lbl ty);
         begin match types_rest with
           | None -> []
-          | Some v -> ["...type " ^ Var.to_string v]
+          | Some (v, _) -> ["...type " ^ Var.to_string v]
         end;
         List.map vals ~f:(fun (lbl, ty) -> Label.to_string lbl ^ " : " ^ to_string ty);
         begin match vals_rest with
           | None -> []
-          | Some v -> ["..." ^ Var.to_string v]
+          | Some (v, _) -> ["..." ^ Var.to_string v]
         end;
       ]
       |> String.concat ~sep:", "
@@ -306,7 +314,7 @@ let rec to_string = function
         )
         @ begin match row_rest with
           | None -> []
-          | Some v -> ["..." ^ Var.to_string v]
+          | Some (v, _) -> ["..." ^ Var.to_string v]
         end)
   | Quant{q_quant; q_var; q_body; _} ->
       let q = match q_quant with `All -> "all" | `Exist -> "exist" in
@@ -413,7 +421,7 @@ let rec ftv = function
 and ftv_row {row_fields; row_rest; _} =
   let rest_ftv = match row_rest with
     | None -> VarSet.empty
-    | Some v -> VarSet.singleton v
+    | Some (v, _) -> VarSet.singleton v
   in
   List.fold
     row_fields

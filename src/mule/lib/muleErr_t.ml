@@ -25,7 +25,7 @@ type path_error =  {
 }
 
 type t =
-  [ `UnboundVar of Var.t
+  [ `UnboundVar of Var.t Loc.located
 
   (* We hit int/text etc. literals in the same match expression as patterns
    * that match sum types. This is conceptually a type error, but it's easier

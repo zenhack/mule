@@ -10,6 +10,7 @@ let mk_var id =
   ( DT.Var {
         v_info = id;
         v_var = var_of_int id;
+        v_src = `Generated;
       }
   , IntSet.singleton id
   )
@@ -69,7 +70,7 @@ and go_row seen uv =
       ( DT.{
             row_info = ty_id;
             row_fields = [];
-            row_rest = Some (var_of_int ty_id);
+            row_rest = Some (var_of_int ty_id, `Generated);
           }
       , IntSet.singleton ty_id
       )
@@ -210,7 +211,7 @@ let strip_unused_quantifiers ty =
     in
     let fvs = match row_rest with
       | None -> fv_fields
-      | Some v -> Set.add fv_fields v
+      | Some (v, _) -> Set.add fv_fields v
     in
     ({row_info; row_fields; row_rest}, fvs)
   in
