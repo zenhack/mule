@@ -54,8 +54,13 @@ let show = function
       "Type error: constant and union patterns in the same match expression."
   | `TypeError e ->
       "Type error: " ^ show_type_error e
-  | `UnreachableCases _ ->
-      "Unreachable cases in match"
+  | `UnreachableCases cases ->
+      "Unreachable match cases at:\n\n" ^
+      String.concat (
+        List.map cases ~f:(fun (Loc.{l_loc; _}, _) ->
+          "  - " ^ Loc.pretty_t l_loc ^ "\n"
+        )
+      )
   | `DuplicateFields (level, fields) ->
       let level_name = match level with
         | `Type -> "associated types"
