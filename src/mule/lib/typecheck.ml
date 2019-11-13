@@ -514,7 +514,7 @@ and require_subtype_already_whnf: context -> sub:u_var -> super:u_var -> unit =
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
         | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
-            MuleErr.throw (`TypeError(`PermissionErr `Graft))
+            MuleErr.throw (`TypeError `CantInstantiate)
 
         (* Mismatched named constructors are never reconcilable: *)
         | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->

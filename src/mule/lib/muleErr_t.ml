@@ -1,6 +1,5 @@
 open Common_ast
 
-type op = [ `Graft | `Merge | `Raise | `Weaken ]
 type ctor = Typecheck_types_t.u_typeconst
 type kind =
   [ `Row
@@ -12,7 +11,7 @@ type type_error =
   [ `MismatchedCtors of (ctor * ctor)
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
-  | `PermissionErr of op
+  | `CantInstantiate
   ]
 
 type path_error =  {

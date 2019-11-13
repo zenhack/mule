@@ -5,12 +5,6 @@ let show_ctor = function
   | `Named name -> Typecheck_types_t.string_of_typeconst_name name
   | `Extend lbl -> "row containing " ^ Label.to_string lbl
 
-let show_op = function
-  | `Graft -> "graft"
-  | `Merge -> "merge"
-  | `Raise -> "raise"
-  | `Weaken -> "weaken"
-
 let rec show_kind = function
   | `Type -> "type"
   | `Row -> "row"
@@ -25,10 +19,8 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `PermissionErr `Graft ->
+  | `CantInstantiate ->
       "could not instatiate rigid type variable"
-  | `PermissionErr op ->
-      "permission error during " ^ show_op op
 
 let show_path_error {pe_path; pe_loc; pe_problem} =
   let path = String.escaped pe_path in
