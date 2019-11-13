@@ -608,8 +608,8 @@ and desugar_const_match dict = function
               (Map.set dict ~key:c ~data:(desugar body))
               rest
       end
-  | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
-      MuleErr.throw `MatchDesugarMismatch
+  | (Loc.{l_value = SP.Ctor _; _} as p, _) :: _ ->
+      MuleErr.throw (`MatchDesugarMismatch p)
 and desugar_lbl_match dict = function
   | [] -> D.BLabel {
       lm_default = None;

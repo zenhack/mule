@@ -31,7 +31,7 @@ type t =
    * that match sum types. This is conceptually a type error, but it's easier
    * to have a separate variant for it since it's caught earlier in the
    * pipeline. *)
-  | `MatchDesugarMismatch
+  | `MatchDesugarMismatch of Surface_ast.Pattern.lt
 
   | `LazyLoop
 

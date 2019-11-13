@@ -50,8 +50,13 @@ let show = function
     ]
   | `MalformedType msg ->
       "malformed_type: " ^ msg
-  | `MatchDesugarMismatch ->
-      "Type error: constant and union patterns in the same match expression."
+  | `MatchDesugarMismatch pat -> String.concat [
+      "Type error at ";
+      Loc.pretty_t pat.Loc.l_loc;
+      ":\n\n";
+      "  this pattern matches a union, but all of the ";
+      "previous patterns match constants.";
+    ]
   | `TypeError e ->
       "Type error: " ^ show_type_error e
   | `UnreachableCases cases ->
