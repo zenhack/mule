@@ -44,7 +44,9 @@ let keywords = Set.of_list (module String) [
 let with_loc p =
   let%bind start = MParser.get_pos in
   let%bind f = p in
-  let%map stop = MParser.get_pos in
+  let%map (off, line, char) = MParser.get_pos in
+  (* We want an inclusive range, so step back a character: *)
+  let stop = (off, line, char-1) in
   f (Loc.{start; stop})
 
 let located p =

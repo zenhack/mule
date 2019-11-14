@@ -75,7 +75,7 @@ module Loc = struct
     String.concat [
       "line ";
       Int.to_string line;
-      ", character ";
+      ", column ";
       Int.to_string col;
     ]
 
@@ -87,10 +87,18 @@ module Loc = struct
       String.concat [
         "line ";
         Int.to_string start_line;
-        ", characters ";
-        Int.to_string start_col;
-        "-";
-        Int.to_string stop_col;
+        if start_col = stop_col then
+          String.concat [
+            ", column ";
+            Int.to_string start_col;
+          ]
+        else
+          String.concat [
+            ", columns ";
+            Int.to_string start_col;
+            "-";
+            Int.to_string stop_col;
+          ]
       ]
     else
       String.concat [
