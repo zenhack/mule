@@ -13,6 +13,23 @@ let rec show_kind = function
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
+let show_path_type_error ~var ~path ~sub ~super =
+  match path, super with
+  | [], DT.Record _ ->
+      String.concat [
+        Loc.pretty_t var.Loc.l_loc;
+        ": variable ";
+        Var.to_string var.Loc.l_value;
+        " is not a record; it cannot have associated types.";
+      ]
+  | _ ->
+      String.concat [
+        "Mismatched type constructors: ";
+        Desugared_ast_type.to_string sub;
+        " is not a subtype of ";
+        Desugared_ast_type.to_string super;
+      ]
+
 let show_type_error err = match err with
   | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
@@ -20,13 +37,37 @@ let show_type_error err = match err with
       "inferring kinds: occurs check failed"
   | `CantInstantiate ->
       "could not instatiate rigid type variable"
-  | `MismatchedCtors {se_sub; se_super; se_reason = _} -> String.concat [
-      "Mismatched type constructors: ";
-      Desugared_ast_type.to_string se_sub;
-      " is not a subtype of ";
-      Desugared_ast_type.to_string se_super;
-      (* TODO: use se_reason *)
-    ]
+  | `MismatchedCtors {se_sub; se_super; se_reason} ->
+      let rec unwrap_reason path = function
+        | `Cascaded(rsn, next) ->
+            unwrap_reason (next :: path) rsn
+        | rsn -> (path, rsn)
+      in
+      let path, rsn = unwrap_reason [] se_reason in
+      begin match rsn with
+        | `Path (`Sourced v) -> String.concat [
+            show_path_type_error
+              ~var:v
+              ~path
+              ~sub:se_sub
+              ~super:se_super
+          ]
+        | `TypeAnnotation(_, ty) ->
+            String.concat [
+              "This expression does not match its type annotation; ";
+              "its type is ";
+              "... ";
+              "but the annotation says it should be ";
+              Desugared_ast_type.to_string ty;
+            ]
+        | _ ->
+            String.concat [
+              "Mismatched type constructors: ";
+              Desugared_ast_type.to_string se_sub;
+              " is not a subtype of ";
+              Desugared_ast_type.to_string se_super;
+            ]
+      end
 
 let show_path_error {pe_path; pe_loc; pe_problem} =
   let path = String.escaped pe_path in

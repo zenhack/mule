@@ -246,7 +246,7 @@ and make_type ctx ty = match ty with
       let path_type = make_path_type result_type p_lbls in
       require_subtype
         ctx
-        ~reason:`Unspecified
+        ~reason:(`Path p_src)
         ~sub:var_type
         ~super:path_type;
       result_type
@@ -333,7 +333,7 @@ and synth: context -> 'i DE.t -> u_var =
         union (extend c_lbl arg_t (all krow (fun r -> r)))
     | DE.WithType {wt_expr; wt_type} ->
         let want_ty = make_type ctx wt_type |> with_kind ktype in
-        let _ = check ctx wt_expr want_ty ~reason:`Unspecified in
+        let _ = check ctx wt_expr want_ty ~reason:(`TypeAnnotation(wt_expr, wt_type)) in
         want_ty
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
@@ -346,7 +346,7 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let p = synth ctx app_arg in
           let r = fresh_local ctx `Flex ktype in
-          let _ = check ctx app_fn (p **> r) ~reason:`Unspecified in
+          let _ = check ctx app_fn (p **> r) ~reason:(`ApplyFn(app_fn, app_arg)) in
           r
         )
     | DE.Match b ->

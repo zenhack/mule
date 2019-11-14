@@ -24,6 +24,10 @@ type subtype_reason =
     `Cascaded of (subtype_reason * type_path)
 
   | `RecordUpdate of k_var DE.t
+  | `TypeAnnotation of  (k_var DE.t * k_var DT.t)
+  | `ApplyFn of (k_var DE.t * k_var DE.t)
+
+  | `Path of DT.var_src
 
   (* No reason given. Eventually this will go away, but for now it exists so
    * we don't have to add reasons everywhere all at once. *)
