@@ -322,7 +322,7 @@ and synth: context -> 'i DE.t -> u_var =
           let rv = fresh_local ctx `Flex krow in
           let rt = fresh_local ctx `Flex krow in
           let _ =
-            check ctx ut_record (record rt rv) ~reason:`Unspecified
+            check ctx ut_record (record rt rv) ~reason:(`RecordUpdate e)
           in
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )

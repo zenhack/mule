@@ -1,5 +1,10 @@
 open Common_ast
 
+module DT = Desugared_ast_type_t
+module DE = Desugared_ast_expr_t
+
+type k_var = Typecheck_types_t.k_var
+
 (* A segment in a path through a type. See the disucssion for the `Cascade
  * variant of [subtype_reason] *)
 type type_path =
@@ -18,14 +23,16 @@ type subtype_reason =
      * how we got here from the parent constraint. *)
     `Cascaded of (subtype_reason * type_path)
 
+  | `RecordUpdate of k_var DE.t
+
   (* No reason given. Eventually this will go away, but for now it exists so
    * we don't have to add reasons everywhere all at once. *)
   | `Unspecified
   ]
 
 type subtype_error = {
-  se_sub : int Desugared_ast_type_t.t;
-  se_super : int Desugared_ast_type_t.t;
+  se_sub : int DT.t;
+  se_super : int DT.t;
   se_reason : subtype_reason;
 }
 
