@@ -321,7 +321,9 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let rv = fresh_local ctx `Flex krow in
           let rt = fresh_local ctx `Flex krow in
-          let _ = check ctx ut_record (record rt rv) in
+          let _ =
+            check ctx ut_record (record rt rv) ~reason:`Unspecified
+          in
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
     | DE.EmptyRecord ->
@@ -331,7 +333,7 @@ and synth: context -> 'i DE.t -> u_var =
         union (extend c_lbl arg_t (all krow (fun r -> r)))
     | DE.WithType {wt_expr; wt_type} ->
         let want_ty = make_type ctx wt_type |> with_kind ktype in
-        let _ = check ctx wt_expr want_ty in
+        let _ = check ctx wt_expr want_ty ~reason:`Unspecified in
         want_ty
     | DE.Let{let_v; let_e; let_body} ->
         let ty = synth ctx let_e in
@@ -344,7 +346,7 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let p = synth ctx app_arg in
           let r = fresh_local ctx `Flex ktype in
-          let _ = check ctx app_fn (p **> r) in
+          let _ = check ctx app_fn (p **> r) ~reason:`Unspecified in
           r
         )
     | DE.Match b ->
@@ -383,7 +385,7 @@ and synth: context -> 'i DE.t -> u_var =
           let checked_vals =
             List.map letrec_vals ~f:(fun (v, e) ->
               with_locals ctx' (fun ctx ->
-                check ctx e (Util.find_exn ctx.vals_env v)
+                check ctx e (Util.find_exn ctx.vals_env v) ~reason:`Unspecified
               )
             )
           in
@@ -419,7 +421,7 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
         | cs ->
             List.iter cs ~f:(fun (p, body) ->
               ignore (check_const ctx p param);
-              ignore (check ctx body result)
+              ignore (check ctx body result ~reason:`Unspecified)
             );
             (param, result)
       end
@@ -455,12 +457,12 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
           { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:pat }
           lf_body
   )
-and check: context -> 'i DE.t -> u_var -> u_var =
-  fun ctx e ty_want ->
+and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var =
+  fun ctx ~reason e ty_want ->
   let ty_got = synth ctx e in
   require_subtype
     ctx
-    ~reason:`Unspecified
+    ~reason
     ~sub:ty_got
     ~super:ty_want;
   ty_got
