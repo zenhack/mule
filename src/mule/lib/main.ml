@@ -19,8 +19,8 @@ let interp_cmd = function
   | `Repl ->
       Repl.loop ()
   | `Eval path ->
-      let contents = Stdio.In_channel.read_all path in
-      Run.run contents
+      Load.load_file ~base_path:path ~types:[]
+      |> Run.run_load_result
   | `Build_js Cli.{src; dest}->
       let dest = match dest with
         | Some d -> d
