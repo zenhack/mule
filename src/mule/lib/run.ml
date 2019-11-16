@@ -1,6 +1,6 @@
 
 let desugar_typecheck expr =
-  let _ = Lint.check expr in
+  let _ = Lint.check_expr expr in
   let dexp = Desugar.desugar expr in
   let _ = Report.display "Desugared" (Pretty.expr dexp) in
   let ty_var =

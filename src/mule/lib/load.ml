@@ -6,21 +6,21 @@ type result = {
 }
 
 let load_surface_ast ~typ ~expr =
-  let expr = match typ with
-    | None -> expr
-    | Some t -> Common_ast.Loc.{
-        l_value = Surface_ast.Expr.WithType {
-          wt_type = t;
-          wt_term = expr;
-        };
-        l_loc = expr.l_loc;
-      }
-  in
-  Lint.check expr;
+  Lint.check_expr expr;
+  Option.iter typ ~f:Lint.check_type;
   let dexp = Desugar.desugar expr in
   Report.display "Desugared" (Pretty.expr dexp);
+  let dtyp = Option.map typ ~f:(fun t ->
+      let ret = Desugar.desugar_type t in
+      Report.display "Desugared type signature" (Pretty.typ ret);
+      ret
+    )
+  in
   let typ_var =
-    Typecheck.typecheck dexp ~get_import_type:(fun _ -> failwith "TODO: imports")
+    Typecheck.typecheck
+      dexp
+      ?want:dtyp
+      ~get_import_type:(fun _ -> failwith "TODO: imports")
   in
   let typ = Extract.get_var_type typ_var in
   Report.display "inferred type"  (Pretty.typ typ);

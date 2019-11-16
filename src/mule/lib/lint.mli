@@ -6,4 +6,7 @@
   * This is invoked by the type checker, before doing the more principled
   * type inference algorithm.
 *)
-val check : Surface_ast.Expr.lt -> unit
+val check_expr : Surface_ast.Expr.lt -> unit
+
+(* Same thing, but for types: *)
+val check_type : Surface_ast.Type.lt -> unit

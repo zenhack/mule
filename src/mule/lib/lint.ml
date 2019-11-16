@@ -2,11 +2,10 @@ open Common_ast
 open Surface_ast
 open Surface_ast.Expr
 
-let duplicate_fields level dups =
-  MuleErr.throw (`DuplicateFields (level, dups))
+module Dup_fields = struct
+  let duplicate_fields level dups =
+    MuleErr.throw (`DuplicateFields (level, dups))
 
-(* Check for duplicate record fields (in both expressions and types) *)
-let check_duplicate_record_fields =
   let rec go_expr Loc.{l_value; _} = match l_value with
     | Import _ | Embed _ | Const _ -> ()
     | Record {r_fields = fields; _} ->
@@ -112,9 +111,8 @@ let check_duplicate_record_fields =
   and go_case (pat, body) =
     go_pat pat;
     go_expr body
-  in
-  go_expr
+end
 
-let check expr =
-  check_duplicate_record_fields expr
 (* TODO: check for duplicate bound variables (in recursive lets). *)
+let check_expr = Dup_fields.go_expr
+let check_type = Dup_fields.go_type

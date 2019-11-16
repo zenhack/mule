@@ -6,7 +6,7 @@ let load_and_typecheck typ file_name =
       Stdio.eprintf "Parse error : %s\n" msg;
       Caml.exit 1
   | Success expr ->
-      let _ = Lint.check expr in
+      let _ = Lint.check_expr expr in
       let dexp = Desugared_ast_expr.WithType {
           wt_expr = Desugar.desugar expr;
           wt_type = typ;
