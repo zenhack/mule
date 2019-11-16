@@ -1,7 +1,7 @@
 
 let print_endline s =
-  let%lwt _ = Lwt_io.write Lwt_io.stdout (s ^ "\n") in
-  Lwt_io.flush Lwt_io.stdout
+  Stdio.print_endline s;
+  Stdio.Out_channel.flush Stdio.stdout
 
 let display_always label text =
   let text =
@@ -14,77 +14,40 @@ let display_always label text =
 let display label text =
   if Config.debug_steps () then
     display_always label text
-  else
-    Lwt.return ()
-
-module LwtResult = struct
-  type 'a t = ('a, MuleErr.t) Result.t Lwt.t
-
-  let return x =
-    Lwt.return (Ok x)
-
-  let bind x ~f =
-    Lwt.bind x (function
-      | Ok x' -> f x'
-      | Error e -> Lwt.return (Error e)
-    )
-
-  let both x y =
-    let (>>=) x f = bind x ~f in
-    x
-    >>= fun x' -> y
-    >>= fun y' -> return (x', y')
-
-  let map x ~f =
-    Lwt.map (Result.map ~f) x
-
-  let lwt: 'a Lwt.t -> 'a t =
-    fun x -> Lwt.map Result.return x
-
-  let result: ('a, MuleErr.t) Result.t -> 'a t =
-    Lwt.return
-end
 
 let desugar_typecheck expr =
   let _ = Lint.check expr in
   let dexp = Desugar.desugar expr in
-  let%lwt _ = display "Desugared" (Pretty.expr dexp) in
+  let _ = display "Desugared" (Pretty.expr dexp) in
   let ty = Typecheck.typecheck dexp in
-  let%lwt _ = display "inferred type"  (Pretty.typ ty) in
-  Lwt.return (ty, dexp)
+  let _ = display "inferred type"  (Pretty.typ ty) in
+  (ty, dexp)
 
-let run : string -> unit LwtResult.t = fun input ->
+let run : string -> unit = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
    * regardless of whether we're at the repl: *)
   let path = Caml.Filename.current_dir_name ^ "/<repl>" in
   match MParser.parse_string Parser.repl_line input path with
   | MParser.Failed (msg, _) ->
-      let%lwt _ = display_always "Parse Error" msg in
-      Lwt.return (Ok ())
+      display_always "Parse Error" msg
   | MParser.Success None ->
       (* empty input *)
-      Lwt.return (Ok ())
+      ()
   | MParser.Success (Some expr) ->
-      begin
-        try%lwt
-          let%lwt (ty, dexp) = desugar_typecheck expr in
+      try
+        begin
+          let (ty, dexp) = desugar_typecheck expr in
           let rexp = To_runtime.translate dexp in
-          let%lwt _ = display "Runtime term" (Pretty.runtime_expr rexp) in
+          display "Runtime term" (Pretty.runtime_expr rexp);
           let ret = Eval.eval rexp in
-          let%lwt _ = display "Evaluated" (Pretty.runtime_expr ret) in
-          let%lwt _ =
-            if Config.debug_steps () then
-              Lwt.return ()
-            else
-              print_endline
-                (Runtime_ast.Expr.to_string ret
-                 ^ " : "
-                 ^ Desugared_ast_type.to_string ty
-                )
-          in
-          Lwt.return (Ok ())
-        with
-        | MuleErr.MuleExn e ->
-            let%lwt _ = print_endline (Pretty.error e) in
-            Lwt.return (Error e)
-      end
+          display "Evaluated" (Pretty.runtime_expr ret);
+          if not (Config.debug_steps ()) then
+            print_endline
+              (Runtime_ast.Expr.to_string ret
+               ^ " : "
+               ^ Desugared_ast_type.to_string ty
+              )
+        end
+      with
+      | MuleErr.MuleExn e ->
+          print_endline (Pretty.error e)

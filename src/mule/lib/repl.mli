@@ -1,1 +1,1 @@
-val loop : unit -> 'a Lwt.t
+val loop : unit -> 'a

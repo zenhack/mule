@@ -23,14 +23,12 @@ let load_and_typecheck typ file_name =
             Caml.exit 1
       end
 
-let exec_lwt lwt = ignore (Lwt_main.run lwt)
-
 let interp_cmd = function
   | `Repl ->
-      exec_lwt (Repl.loop ())
+      Repl.loop ()
   | `Eval path ->
       let contents = Stdio.In_channel.read_all path in
-      exec_lwt (Run.run contents)
+      Run.run contents
   | `Build_js Cli.{src; dest}->
       let dest = match dest with
         | Some d -> d
@@ -91,7 +89,7 @@ let interp_cmd = function
         | Some runner ->
             let dexp = load_and_typecheck runner.Runners.want_type file in
             let rt_expr = To_runtime.translate dexp in
-            exec_lwt (runner.Runners.run rt_expr)
+            ignore (Lwt_main.run (runner.Runners.run rt_expr))
       end
 
 let main () =

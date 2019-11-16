@@ -1,7 +1,7 @@
 
 let rec loop : unit -> 'a = fun () ->
-  ignore (Stdio.print_string "#mule> ");
-  ignore (Stdio.Out_channel.flush Stdio.stdout);
+  Stdio.print_string "#mule> ";
+  Stdio.Out_channel.flush Stdio.stdout;
   let line =
     try
       Caml.read_line ()
@@ -13,5 +13,5 @@ let rec loop : unit -> 'a = fun () ->
       | e ->
           raise e
   in
-  let%lwt _ = Run.run line in
+  Run.run line;
   loop ()
