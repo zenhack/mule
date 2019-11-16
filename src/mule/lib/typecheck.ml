@@ -22,6 +22,8 @@ type context = {
   *)
   assumptions : IntPairSet.t ref;
   scope : Scope.t;
+
+  get_import_type : string -> u_var;
 }
 
 let unbound_var v =
@@ -158,7 +160,7 @@ let find_bound ~env ~var ~src = match Map.find env var with
       end
 
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
-let rec make_initial_context () =
+let rec make_initial_context ~get_import_type =
   let assumptions = ref IntPairSet.empty in
   let scope = Scope.empty in
   let dummy = {
@@ -167,6 +169,7 @@ let rec make_initial_context () =
     locals = ref [];
     assumptions;
     scope;
+    get_import_type;
   }
   in
   let type_env =
@@ -177,7 +180,14 @@ let rec make_initial_context () =
       make_type { dummy with type_env = type_env } ty
     )
   in
-  { type_env; vals_env; locals = ref []; assumptions; scope; }
+  {
+    type_env;
+    vals_env;
+    locals = ref [];
+    assumptions;
+    scope;
+    get_import_type;
+  }
 
 (* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
@@ -757,6 +767,6 @@ let rec gen_kind = function
   | `Row -> krow
   | `Unknown -> gen_k ()
 
-let typecheck exp =
+let typecheck ~get_import_type exp =
   DE.map exp ~f:gen_kind
-  |> synth (make_initial_context ())
+  |> synth (make_initial_context ~get_import_type)

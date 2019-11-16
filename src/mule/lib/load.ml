@@ -19,7 +19,9 @@ let load_surface_ast ~typ ~expr =
   Lint.check expr;
   let dexp = Desugar.desugar expr in
   Report.display "Desugared" (Pretty.expr dexp);
-  let typ_var = Typecheck.typecheck dexp in
+  let typ_var =
+    Typecheck.typecheck dexp ~get_import_type:(fun _ -> failwith "TODO: imports")
+  in
   let typ = Extract.get_var_type typ_var in
   Report.display "inferred type"  (Pretty.typ typ);
   let rt_expr = lazy (To_runtime.translate dexp) in

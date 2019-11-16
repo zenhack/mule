@@ -3,7 +3,11 @@ let desugar_typecheck expr =
   let _ = Lint.check expr in
   let dexp = Desugar.desugar expr in
   let _ = Report.display "Desugared" (Pretty.expr dexp) in
-  let ty_var = Typecheck.typecheck dexp in
+  let ty_var =
+    Typecheck.typecheck dexp ~get_import_type:(fun _ ->
+      failwith "TODO: imports"
+    )
+  in
   let ty = Extract.get_var_type ty_var in
   let _ = Report.display "inferred type"  (Pretty.typ ty) in
   (ty, dexp)
