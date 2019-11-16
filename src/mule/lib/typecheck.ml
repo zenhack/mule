@@ -767,6 +767,13 @@ let rec gen_kind = function
   | `Row -> krow
   | `Unknown -> gen_k ()
 
-let typecheck ~get_import_type exp =
-  DE.map exp ~f:gen_kind
-  |> synth (make_initial_context ~get_import_type)
+let typecheck ~get_import_type ?want exp =
+  let ctx = make_initial_context ~get_import_type in
+  let exp = DE.map exp ~f:gen_kind in
+  match want with
+  | None ->
+      synth ctx exp
+  | Some t ->
+      let t = DT.map t ~f:gen_kind in
+      let t = make_type ctx t in
+      check ctx ~reason:`Unspecified exp t
