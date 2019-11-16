@@ -1,6 +1,10 @@
 include Load_t
 
-let load_surface_ast ~typ ~expr ~extra_types =
+type loader = unit
+
+let new_loader () = ()
+
+let load_surface_ast () ~typ ~expr ~extra_types =
   Lint.check_expr expr;
   Option.iter typ ~f:Lint.check_type;
   let dexp = Desugar.desugar expr in
@@ -41,7 +45,7 @@ let maybe_chop_suffix str suffix =
   else
     str
 
-let load_file ~base_path ~types =
+let load_file () ~base_path ~types =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
     let src = Stdio.In_channel.read_all path in
@@ -71,4 +75,4 @@ let load_file ~base_path ~types =
     else
       None
   in
-  load_surface_ast ~typ ~expr ~extra_types:types
+  load_surface_ast () ~typ ~expr ~extra_types:types

@@ -19,14 +19,16 @@ let interp_cmd = function
   | `Repl ->
       Repl.loop ()
   | `Eval path ->
-      Load.load_file ~base_path:path ~types:[]
+      Load.load_file (Load.new_loader ()) ~base_path:path ~types:[]
       |> Run.run_load_result
   | `Build_js Cli.{src; dest}->
       let dest = match dest with
         | Some d -> d
         | None -> src ^ ".js"
       in
-      let Load.{js_expr; _} = Load.load_file ~base_path:src ~types:[] in
+      let Load.{js_expr; _} =
+        Load.load_file (Load.new_loader ()) ~base_path:src ~types:[]
+      in
       let text =
         Lazy.force js_expr
         |> Js_ast.expr
@@ -47,7 +49,10 @@ let interp_cmd = function
             Caml.exit 1
         | Some runner ->
             let Load.{rt_expr; _} =
-              Load.load_file ~base_path:file ~types:[runner.Runners.want_type]
+              Load.load_file
+                (Load.new_loader ())
+                ~base_path:file
+                ~types:[runner.Runners.want_type]
             in
             Lazy.force rt_expr
             |> runner.Runners.run
