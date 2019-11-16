@@ -1,9 +1,4 @@
-
-type result = {
-  typ: int Desugared_ast_type_t.t;
-  rt_expr: Runtime_ast.Expr.t Lazy.t;
-  js_expr: Js_ast_t.expr Lazy.t;
-}
+include Load_t
 
 let load_surface_ast ~typ ~expr ~extra_types =
   Lint.check_expr expr;
