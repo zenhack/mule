@@ -19,7 +19,7 @@ let run_line : string -> unit =
         (* empty input *)
         ()
     | MParser.Success (Some expr) ->
-        Run.run_load_result (Load.load_surface_ast ~typ:None ~expr)
+        Run.run_load_result (Load.load_surface_ast ~typ:None ~expr ~extra_types:[])
 
 let rec loop : unit -> 'a = fun () ->
   Report.print_string "#mule> ";

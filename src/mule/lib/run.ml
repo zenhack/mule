@@ -20,4 +20,4 @@ let run : string -> unit = fun input ->
       (* empty input *)
       ()
   | MParser.Success (Some expr) ->
-      run_load_result (Load.load_surface_ast ~typ:None ~expr)
+      run_load_result (Load.load_surface_ast ~typ:None ~expr ~extra_types:[])

@@ -5,7 +5,7 @@ type result = {
   js_expr: Js_ast_t.expr Lazy.t;
 }
 
-let load_surface_ast ~typ ~expr =
+let load_surface_ast ~typ ~expr ~extra_types =
   Lint.check_expr expr;
   Option.iter typ ~f:Lint.check_type;
   let dexp = Desugar.desugar expr in
@@ -19,7 +19,7 @@ let load_surface_ast ~typ ~expr =
   let typ_var =
     Typecheck.typecheck
       dexp
-      ~want:(Option.to_list dtyp)
+      ~want:(Option.to_list dtyp @ extra_types)
       ~get_import_type:(fun _ -> failwith "TODO: imports")
   in
   let typ = Extract.get_var_type typ_var in
@@ -46,7 +46,7 @@ let maybe_chop_suffix str suffix =
   else
     str
 
-let load_file ~base_path =
+let load_file ~base_path ~types =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
     let src = Stdio.In_channel.read_all path in
@@ -76,4 +76,4 @@ let load_file ~base_path =
     else
       None
   in
-  load_surface_ast ~typ ~expr
+  load_surface_ast ~typ ~expr ~extra_types:types

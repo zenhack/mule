@@ -26,7 +26,7 @@ let interp_cmd = function
         | Some d -> d
         | None -> src ^ ".js"
       in
-      let Load.{js_expr; _} = Load.load_file ~base_path:src in
+      let Load.{js_expr; _} = Load.load_file ~base_path:src ~types:[] in
       let text =
         Lazy.force js_expr
         |> Js_ast.expr
@@ -46,9 +46,13 @@ let interp_cmd = function
             Stdio.eprintf "no such runner\n";
             Caml.exit 1
         | Some runner ->
-            let dexp = load_and_typecheck runner.Runners.want_type file in
-            let rt_expr = To_runtime.translate dexp in
-            ignore (Lwt_main.run (runner.Runners.run rt_expr))
+            let Load.{rt_expr; _} =
+              Load.load_file ~base_path:file ~types:[runner.Runners.want_type]
+            in
+            Lazy.force rt_expr
+            |> runner.Runners.run
+            |> Lwt_main.run
+            |> ignore
       end
 
 let main () =
