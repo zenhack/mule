@@ -19,7 +19,7 @@ let load_surface_ast ~typ ~expr =
   let typ_var =
     Typecheck.typecheck
       dexp
-      ?want:dtyp
+      ~want:(Option.to_list dtyp)
       ~get_import_type:(fun _ -> failwith "TODO: imports")
   in
   let typ = Extract.get_var_type typ_var in
