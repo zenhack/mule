@@ -1,6 +1,21 @@
 
 include Paths_t
 
+let sexp_of_t = function
+  | `Relative s -> Sexp.List [Sexp.Atom "Relative"; Sexp.Atom s]
+  | `Absolute s -> Sexp.List [Sexp.Atom "Absolute"; Sexp.Atom s]
+
+let base_filepath = function
+  | `Relative p -> p
+  | `Absolute p ->
+      let mule_path =
+        match Caml.Sys.getenv_opt "MULE_PATH" with
+        | Some p -> p
+        | None ->
+            Caml.Sys.getenv "HOME" ^ "/mule-src"
+      in
+      mule_path ^ "/" ^ p
+
 let validate_parts ~loc parts =
   let path = String.concat ~sep:"/" parts in
   List.iter parts ~f:(fun part -> match part with

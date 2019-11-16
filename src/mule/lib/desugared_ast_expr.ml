@@ -5,6 +5,12 @@ module Type = Desugared_ast_type
 let rec sexp_of_t = function
   | Embed { e_path; _ } ->
       Sexp.List [Sexp.Atom "embed"; Sexp.Atom e_path]
+  | Import { i_orig_path; i_resolved_path; _} ->
+      Sexp.List [
+        Sexp.Atom "import";
+        String.sexp_of_t i_orig_path;
+        Paths.sexp_of_t i_resolved_path;
+      ]
   | Var { v_var = v; _ } -> Sexp.Atom (Var.to_string v)
   | Lam{ l_param = v; l_body = body } ->
       Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
@@ -141,6 +147,7 @@ let apply_to_kids e ~f = match e with
   | GetField _
   | UpdateVal _
   | Embed _
+  | Import _
   | Const _ -> e
 
 let rec subst_ty old new_ = function
@@ -189,6 +196,7 @@ let rec map e ~f =
   | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
+  | Import x -> Import x
 and map_branch b ~f = match b with
   | BLeaf lf -> BLeaf (map_leaf lf ~f)
   | BLabel {lm_cases; lm_default} -> BLabel {
@@ -243,7 +251,7 @@ let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
         wt_expr = subst env wt_expr;
         wt_type;
       }
-  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | Embed _ ->
+  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | Embed _ | Import _ ->
       expr
 and subst_branch env b = match b with
   | BLeaf lf -> BLeaf (subst_leaf env lf)

@@ -1,8 +1,12 @@
 include Load_t
 
-type loader = result StringMap.t ref
+type loader = {
+  results: result StringMap.t ref;
+}
 
-let new_loader () = ref StringMap.empty
+let new_loader () = {
+  results = ref StringMap.empty;
+}
 
 let maybe_chop_suffix str suffix =
   let suffix_len = String.length suffix in
@@ -10,6 +14,7 @@ let maybe_chop_suffix str suffix =
     String.prefix str (String.length str - suffix_len)
   else
     str
+
 
 let rec load_surface_ast loader ~typ ~expr ~extra_types =
   Lint.check_expr expr;
@@ -27,20 +32,29 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
       dexp
       ~want:(Option.to_list dtyp @ extra_types)
       ~get_import_type:(fun path ->
-        (* FIXME/TODO: canonicalize the path. *)
-        match Map.find !loader path with
-        | Some {typ_var; _} -> typ_var
-        | None ->
-            let {typ_var; _} = load_file loader ~base_path:path ~types:[] in
-            typ_var
+        let {typ_var; _} = get_or_load loader path in
+        typ_var
       )
   in
   let typ = Extract.get_var_type typ_var in
   Report.display "inferred type"  (Pretty.typ typ);
-  let rt_expr = lazy (To_runtime.translate dexp) in
+  let rt_expr = lazy (
+    To_runtime.translate
+      dexp
+      ~get_import:(fun path ->
+        let {rt_expr; _} = get_or_load loader path in
+        Lazy.force rt_expr
+      )
+    )
+  in
   let js_expr =
     lazy (
-      let e = To_js.translate_expr dexp in
+      let e =
+        To_js.translate_expr dexp ~get_import:(fun path ->
+          let {var; _} = get_or_load loader path in
+          var
+        )
+      in
       let e =
         if Config.no_js_cps () then
           e
@@ -50,7 +64,8 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
       Js_pre.to_js e
     )
   in
-  {typ; typ_var; rt_expr; js_expr}
+  let var = Gensym.anon_var () in
+  {typ; typ_var; rt_expr; js_expr; var}
 and load_file loader ~base_path ~types =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
@@ -83,5 +98,11 @@ and load_file loader ~base_path ~types =
   in
   let result = load_surface_ast loader ~typ ~expr ~extra_types:types in
   (* TODO: normalize the path; right now it's still relative. *)
-  loader := Map.set !loader ~key:base_path ~data:result;
+  loader.results := Map.set !(loader.results) ~key:base_path ~data:result;
   result
+and get_or_load loader path =
+  let path = Paths.base_filepath path in
+  match Map.find !(loader.results) path with
+  | Some r -> r
+  | None ->
+      load_file loader ~base_path:path ~types:[]

@@ -6,6 +6,11 @@ type 'i t =
       e_path: string;
       e_value: string;
     }
+  | Import of {
+      i_orig_path: string;
+      i_resolved_path: Paths_t.t;
+      i_loc : Loc.t;
+    }
   | Var of {
       v_var : Var.t;
       v_src :

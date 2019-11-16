@@ -33,10 +33,12 @@ let add_lazy_var env v =
   let name = Gensym.anon_var () in
   (name, Map.set env ~key:v ~data:(`LazyVar name))
 
-let translate_expr expr =
+let translate_expr ~get_import expr =
   let rec go env = function
     | D.Expr.Embed {e_value; _} ->
         Js.Const (Const.Text e_value)
+    | D.Expr.Import {i_resolved_path; _} ->
+        Js.Var (get_import i_resolved_path)
     | D.Expr.Var {v_var; _} ->
         translate_var env v_var
     | D.Expr.Lam{l_param; l_body} ->

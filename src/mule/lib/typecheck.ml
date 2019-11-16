@@ -23,7 +23,7 @@ type context = {
   assumptions : IntPairSet.t ref;
   scope : Scope.t;
 
-  get_import_type : string -> u_var;
+  get_import_type : Paths_t.t -> u_var;
 }
 
 let unbound_var v =
@@ -307,6 +307,8 @@ and synth: context -> 'i DE.t -> u_var =
   fun ctx e -> match e with
     | DE.Const {const_val} -> synth_const const_val
     | DE.Embed _ -> text
+    | DE.Import {i_resolved_path; _} ->
+        ctx.get_import_type i_resolved_path
     | DE.Var {v_var; v_src} ->
         find_bound ~env:ctx.vals_env ~var:v_var ~src:v_src
     | DE.Lam{l_param; l_body} ->

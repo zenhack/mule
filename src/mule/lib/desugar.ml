@@ -362,7 +362,16 @@ and desugar_type t =
   |> quantify_opaques
   |> hoist_assoc_types
 and desugar Loc.{l_value = e; l_loc} = match e with
-  | S.Import _ -> failwith "TODO: implement import"
+  | S.Import {i_path; i_from} ->
+      D.Import {
+        i_loc = l_loc;
+        i_orig_path = i_path;
+        i_resolved_path =
+          Paths.resolve_path
+            ~here:i_from
+            ~loc:l_loc
+            ~target:i_path;
+      }
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
