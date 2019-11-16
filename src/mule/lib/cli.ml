@@ -28,16 +28,16 @@ let debug_flag name ~doc =
 
 let with_debug_flags : cmd Term.t -> t Term.t =
   fun term ->
-  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps c -> object
-      method debug_flags = object
-        method print_eval_steps = eval_steps
-        method always_print_stack_trace = stack_trace
-        method trace_require_subtype = trace_require_subtype
-        method debug_steps = steps
-        method no_js_cps = no_js_cps
-      end
-      method cmd = c
-    end)
+  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps c -> {
+      debug_flags = {
+        print_eval_steps = eval_steps;
+        always_print_stack_trace = stack_trace;
+        trace_require_subtype = trace_require_subtype;
+        debug_steps = steps;
+        no_js_cps = no_js_cps;
+      };
+      cmd = c;
+    })
         $ debug_flag "print-eval-steps"
           ~doc:"Print each step when evaluating a term."
         $ debug_flag "always-print-stack-trace"
@@ -80,10 +80,10 @@ let eval_term =
   |> with_debug_flags
 
 let run_term =
-  Term.(const (fun r f -> `Run (object
-      method runner = r
-      method file = f
-    end))
+  Term.(const (fun r f -> `Run {
+      runner = r;
+      file = f;
+    })
         $ Arg.(required
                & pos 0 (some string) None
                & info []
@@ -100,10 +100,10 @@ let run_term =
   |> with_debug_flags
 
 let build_js_term =
-  Term.(const (fun src dest -> `Build_js (object
-      method src = src
-      method dest = dest
-    end))
+  Term.(const (fun src dest -> `Build_js ({
+      src = src;
+      dest = dest;
+    }))
         $ Arg.(required
                & pos 0 (some non_dir_file) None
                & info []

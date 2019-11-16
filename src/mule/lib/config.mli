@@ -1,5 +1,5 @@
 
-val set : Cli.debug_flags -> unit
+val set : Cli.Debug_flags.t -> unit
 
 val print_eval_steps : unit -> bool
 val always_print_stack_trace : unit ->  bool

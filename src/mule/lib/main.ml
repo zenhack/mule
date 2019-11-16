@@ -31,9 +31,8 @@ let interp_cmd = function
   | `Eval path ->
       let contents = Stdio.In_channel.read_all path in
       exec_lwt (Run.run contents)
-  | `Build_js flags ->
-      let src = flags#src in
-      let dest = match flags#dest with
+  | `Build_js Cli.{src; dest}->
+      let dest = match dest with
         | Some d -> d
         | None -> src ^ ".js"
       in
@@ -84,15 +83,13 @@ let interp_cmd = function
         | e ->
             raise e
       end
-  | `Run targ ->
-      let runner_name = targ#runner in
-      let file_name = targ#file in
-      begin match Map.find Runners.by_name runner_name with
+  | `Run Cli.{runner; file} ->
+      begin match Map.find Runners.by_name runner with
         | None ->
             Stdio.eprintf "no such runner\n";
             Caml.exit 1
         | Some runner ->
-            let dexp = load_and_typecheck runner.Runners.want_type file_name in
+            let dexp = load_and_typecheck runner.Runners.want_type file in
             let rt_expr = To_runtime.translate dexp in
             exec_lwt (runner.Runners.run rt_expr)
       end
@@ -100,7 +97,7 @@ let interp_cmd = function
 let main () =
   match Cli.parse_cmd () with
   | `Ok result ->
-      Config.set result#debug_flags;
-      interp_cmd result#cmd
+      Config.set result.debug_flags;
+      interp_cmd result.cmd
   | `Version | `Help -> Caml.exit 0
   | `Error _ -> Caml.exit 1
