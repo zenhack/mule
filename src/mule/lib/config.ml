@@ -1,10 +1,10 @@
 let config = ref Cli.Debug_flags.{
-  print_eval_steps = false;
-  always_print_stack_trace = false;
-  trace_require_subtype = false;
-  debug_steps = false;
-  no_js_cps = false;
-}
+    print_eval_steps = false;
+    always_print_stack_trace = false;
+    trace_require_subtype = false;
+    debug_steps = false;
+    no_js_cps = false;
+  }
 
 let set new_cfg =
   config := new_cfg

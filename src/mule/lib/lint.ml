@@ -89,26 +89,26 @@ let check_duplicate_record_fields =
         go_type anno_ty
   and go_labels: [`Type|`Value] -> Label.t Loc.located list -> unit =
     fun level lst ->
-    let map =
-      List.fold
-        lst
-        ~init:LabelMap.empty
-        ~f:(fun map {l_value; l_loc} ->
-          Map.update map l_value ~f:(function
-            | None -> [l_loc]
-            | Some locs -> (l_loc :: locs)
+      let map =
+        List.fold
+          lst
+          ~init:LabelMap.empty
+          ~f:(fun map {l_value; l_loc} ->
+            Map.update map l_value ~f:(function
+              | None -> [l_loc]
+              | Some locs -> (l_loc :: locs)
+            )
           )
+      in
+      let dups = Map.filter map ~f:(function
+          | [] | [_] -> false
+          | _ -> true
         )
-    in
-    let dups = Map.filter map ~f:(function
-        | [] | [_] -> false
-        | _ -> true
-      )
-    in
-    begin match Map.to_alist dups with
-      | [] -> ()
-      | dups_list -> duplicate_fields level dups_list
-    end
+      in
+      begin match Map.to_alist dups with
+        | [] -> ()
+        | dups_list -> duplicate_fields level dups_list
+      end
   and go_case (pat, body) =
     go_pat pat;
     go_expr body

@@ -2,12 +2,12 @@ include Tsort_t
 
 (* Most of the things declared in this module are helpers for [sort],
  * defined at the bottom of the file.
- *)
+*)
 
 (* A set of nodes which are (possibly) part of a cycle.
  *
  * If ns_nodes is a singleton set, there may not actually be a cycle.
- *)
+*)
 type ('n, 'cmp) node_set = {
   ns_nodes: ('n, 'cmp) Set.t; (* The actual set. *)
   ns_repr: 'n; (* A distinguished "representative" of the set. *)
@@ -36,7 +36,7 @@ let make_init_map comparator ~nodes =
  *
  * add_edges will populate the [ns_to] field of the values with
  * each edge that it finds.
- *)
+*)
 let add_edges map ~edges =
   List.iter edges ~f:(fun {to_; from} ->
     let fsv = Map.find_exn map from in
@@ -52,24 +52,24 @@ let add_edges map ~edges =
  *
  * [join_cycles] merges values that are part of a cycle in the
  * graph, based on the [ns_to] fields
- *)
+*)
 let join_cycles comparator map =
   let rec go ~parents node =
     let nsv = Map.find_exn map node in
     let ns = UnionFind.get nsv in
     if Set.mem parents node then
       ignore (Set.fold
-        parents
-        ~init:nsv
-        ~f:(fun lsv r -> UnionFind.merge (fun l r -> {
-              ns_nodes = Set.union l.ns_nodes r.ns_nodes;
-              ns_repr = l.ns_repr;
-              ns_to = Set.union l.ns_to r.ns_to;
-            })
+          parents
+          ~init:nsv
+          ~f:(fun lsv r -> UnionFind.merge (fun l r -> {
+                ns_nodes = Set.union l.ns_nodes r.ns_nodes;
+                ns_repr = l.ns_repr;
+                ns_to = Set.union l.ns_to r.ns_to;
+              })
+              lsv
+              (Map.find_exn map r);
             lsv
-            (Map.find_exn map r);
-            lsv
-        ))
+          ))
     else
       Set.iter ns.ns_to ~f:(fun to_ ->
         go
@@ -114,7 +114,7 @@ let prune_non_reprs comparator map =
  * nodes.
  *
  * [map] should be a map as returned by [prune_non_reprs].
- *)
+*)
 let iter_depth_first comparator map ~f =
   let seen = ref (Set.empty comparator) in
   let rec go {ns_nodes; ns_repr; ns_to} =

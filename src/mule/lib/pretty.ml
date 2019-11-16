@@ -137,9 +137,9 @@ let error = function
              (* Sort so that earliest occurances are first. *)
              Loc.{ start = (x, _, _); _}
              Loc.{ start = (y, _, _); _} ->
-              Int.compare x y
+             Int.compare x y
            )
-          |> List.map ~f:(fun l -> String.concat [
+           |> List.map ~f:(fun l -> String.concat [
                "    - ";
                Loc.pretty_t l;
                "\n";
@@ -148,7 +148,7 @@ let error = function
            |> String.concat
          ]
        )
-      |> String.concat)
+       |> String.concat)
   | `IncompletePattern ->
       "Incomplete pattern"
   | `IllegalAnnotatedType Loc.{l_loc; _} -> String.concat [

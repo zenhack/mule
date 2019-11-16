@@ -9,7 +9,7 @@ include module type of Tsort_t
  *
  * The result will be sorted with nodes that have no outgoing
  * edges first, followed by nodes that point to them.
- *)
+*)
 val sort
   : 'n comparator
   -> nodes:('n list)

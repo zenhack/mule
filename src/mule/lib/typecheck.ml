@@ -39,26 +39,26 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
  * variables underneath it have a scope at least as great as [scope]. *)
 let hoist_scope: Scope.t -> u_var -> unit =
   fun scope uv ->
-    let seen = ref IntSet.empty in
-    let rec go uv =
-      let u = UnionFind.get uv in
-      let id = get_id u in
-      if not (Set.mem !seen id) then
-        begin
-          seen := Set.add !seen id;
-          match u with
-          | `Free(tv, k) ->
-              UnionFind.set
-                (`Free({tv with ty_scope = Scope.lca scope tv.ty_scope}, k))
-                uv
-          | `Bound _ -> ()
-          | `Quant(_, _, _, _, body) ->
-              go body
-          | `Const(_, _, args, _) ->
-              List.iter args ~f:(fun (t, _) -> go t)
-        end
-    in
-    go uv
+  let seen = ref IntSet.empty in
+  let rec go uv =
+    let u = UnionFind.get uv in
+    let id = get_id u in
+    if not (Set.mem !seen id) then
+      begin
+        seen := Set.add !seen id;
+        match u with
+        | `Free(tv, k) ->
+            UnionFind.set
+              (`Free({tv with ty_scope = Scope.lca scope tv.ty_scope}, k))
+              uv
+        | `Bound _ -> ()
+        | `Quant(_, _, _, _, body) ->
+            go body
+        | `Const(_, _, args, _) ->
+            List.iter args ~f:(fun (t, _) -> go t)
+      end
+  in
+  go uv
 
 let rec subst ~target ~replacement uv =
   (* Nodes we've already seen, to detect cycles and avoid traversing
@@ -152,9 +152,9 @@ let find_bound ~env ~var ~src = match Map.find env var with
   | Some value -> value
   | None ->
       begin match src with
-      | `Sourced v -> unbound_var v
-      | `Generated ->
-          MuleErr.bug ("Unbound internally-generated variable: " ^ Var.to_string var)
+        | `Sourced v -> unbound_var v
+        | `Generated ->
+            MuleErr.bug ("Unbound internally-generated variable: " ^ Var.to_string var)
       end
 
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
