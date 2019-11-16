@@ -7,6 +7,19 @@ let desugar_typecheck expr =
   let _ = Report.display "inferred type"  (Pretty.typ ty) in
   (ty, dexp)
 
+let run_load_result: Load.result -> unit =
+  fun Load.{typ; rt_expr; _} ->
+    let rt_expr = Lazy.force rt_expr in
+    Report.display "Runtime term" (Pretty.runtime_expr rt_expr);
+    let ret = Eval.eval rt_expr in
+    Report.display "Evaluated" (Pretty.runtime_expr ret);
+    if not (Config.debug_steps ()) then
+      Report.print_endline
+        (Runtime_ast.Expr.to_string ret
+         ^ " : "
+         ^ Desugared_ast_type.to_string typ
+        )
+
 let run : string -> unit = fun input ->
   (* We really ought to rename repl line, since it's actually what we want
    * regardless of whether we're at the repl: *)
@@ -19,19 +32,7 @@ let run : string -> unit = fun input ->
       ()
   | MParser.Success (Some expr) ->
       try
-        begin
-          let (ty, dexp) = desugar_typecheck expr in
-          let rexp = To_runtime.translate dexp in
-          Report.display "Runtime term" (Pretty.runtime_expr rexp);
-          let ret = Eval.eval rexp in
-          Report.display "Evaluated" (Pretty.runtime_expr ret);
-          if not (Config.debug_steps ()) then
-            Report.print_endline
-              (Runtime_ast.Expr.to_string ret
-               ^ " : "
-               ^ Desugared_ast_type.to_string ty
-              )
-        end
+        run_load_result (Load.load_surface_ast ~typ:None ~expr)
       with
       | MuleErr.MuleExn e ->
           Report.print_endline (Pretty.error e)
