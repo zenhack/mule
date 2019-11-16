@@ -1,10 +1,17 @@
 include Load_t
 
-type loader = unit
+type loader = result StringMap.t ref
 
-let new_loader () = ()
+let new_loader () = ref StringMap.empty
 
-let load_surface_ast () ~typ ~expr ~extra_types =
+let maybe_chop_suffix str suffix =
+  let suffix_len = String.length suffix in
+  if String.equal (String.suffix str suffix_len) suffix then
+    String.prefix str (String.length str - suffix_len)
+  else
+    str
+
+let rec load_surface_ast loader ~typ ~expr ~extra_types =
   Lint.check_expr expr;
   Option.iter typ ~f:Lint.check_type;
   let dexp = Desugar.desugar expr in
@@ -19,7 +26,14 @@ let load_surface_ast () ~typ ~expr ~extra_types =
     Typecheck.typecheck
       dexp
       ~want:(Option.to_list dtyp @ extra_types)
-      ~get_import_type:(fun _ -> failwith "TODO: imports")
+      ~get_import_type:(fun path ->
+        (* FIXME/TODO: canonicalize the path. *)
+        match Map.find !loader path with
+        | Some {typ_var; _} -> typ_var
+        | None ->
+            let {typ_var; _} = load_file loader ~base_path:path ~types:[] in
+            typ_var
+      )
   in
   let typ = Extract.get_var_type typ_var in
   Report.display "inferred type"  (Pretty.typ typ);
@@ -37,15 +51,7 @@ let load_surface_ast () ~typ ~expr ~extra_types =
     )
   in
   {typ; typ_var; rt_expr; js_expr}
-
-let maybe_chop_suffix str suffix =
-  let suffix_len = String.length suffix in
-  if String.equal (String.suffix str suffix_len) suffix then
-    String.prefix str (String.length str - suffix_len)
-  else
-    str
-
-let load_file () ~base_path ~types =
+and load_file loader ~base_path ~types =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
     let src = Stdio.In_channel.read_all path in
@@ -75,4 +81,7 @@ let load_file () ~base_path ~types =
     else
       None
   in
-  load_surface_ast () ~typ ~expr ~extra_types:types
+  let result = load_surface_ast loader ~typ ~expr ~extra_types:types in
+  (* TODO: normalize the path; right now it's still relative. *)
+  loader := Map.set !loader ~key:base_path ~data:result;
+  result
