@@ -760,4 +760,3 @@ let rec gen_kind = function
 let typecheck exp =
   DE.map exp ~f:gen_kind
   |> synth (make_initial_context ())
-  |> Extract.get_var_type
