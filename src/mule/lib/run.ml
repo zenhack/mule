@@ -12,8 +12,6 @@ let run_load_result: Load.result -> unit =
         )
 
 let run : string -> unit = fun input ->
-  (* We really ought to rename repl line, since it's actually what we want
-   * regardless of whether we're at the repl: *)
   let path = Caml.Filename.current_dir_name ^ "/<repl>" in
   match MParser.parse_string Parser.repl_line input path with
   | MParser.Failed (msg, _) ->
