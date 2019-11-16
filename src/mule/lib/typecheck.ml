@@ -207,7 +207,9 @@ and make_type ctx ty = match ty with
   | DT.Named{n_name; _} ->
       const_ty n_name
   | DT.Record{r_types; r_values; _} ->
-      record (make_row ctx r_types) (make_row ctx r_values)
+      record
+        (make_row ctx `Record r_types)
+        (make_row ctx `Record r_values)
   | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
       with_kind ktype (make_type ctx fn_param) **> with_kind ktype (make_type ctx fn_ret)
   | DT.Fn{fn_param; fn_ret; fn_pvar = Some pvar; _} ->
@@ -223,7 +225,7 @@ and make_type ctx ty = match ty with
         param_type **> ret_type
       )
   | DT.Union{u_row} ->
-      union (make_row ctx u_row)
+      union (make_row ctx `Union u_row)
   | DT.Recur{mu_var; mu_body; _} ->
       let t = recur (fun v ->
           make_type
@@ -289,10 +291,11 @@ and strip_param_exists ctx pty =
       )
   | _ ->
       pty
-and make_row ctx {row_fields; row_rest; _} =
-  let tail = match row_rest with
-    | None -> empty
-    | Some (v, vsrc) -> with_kind
+and make_row ctx parent {row_fields; row_rest; _} =
+  let tail = match row_rest, parent with
+    | None, `Record -> empty
+    | None, `Union -> all krow (fun x -> x)
+    | Some (v, vsrc), _ -> with_kind
           krow
           (find_bound
               ~env:ctx.type_env
