@@ -36,7 +36,7 @@ let load_surface_ast () ~typ ~expr ~extra_types =
       Js_pre.to_js e
     )
   in
-  {typ; rt_expr; js_expr}
+  {typ; typ_var; rt_expr; js_expr}
 
 let maybe_chop_suffix str suffix =
   let suffix_len = String.length suffix in
