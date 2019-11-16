@@ -26,6 +26,10 @@ type context = {
   get_import_type : Paths_t.t -> u_var;
 }
 
+let flip_dir = function
+  | `Sub -> `Super
+  | `Super -> `Sub
+
 let unbound_var v =
   MuleErr.throw (`UnboundVar v)
 
@@ -496,20 +500,21 @@ and require_subtype
     -> sub:u_var
     -> super:u_var
     -> unit =
-  fun ctx ~reason ~sub ~super -> unify ctx ~reason ~sub ~super
-and unify =
   fun ctx ~reason ~sub ~super ->
+  unify ctx ~reason (sub, `Sub) (super, `Super)
+and unify =
+  fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
   trace_req_subtype ~sub ~super;
-  unify_already_whnf ctx ~reason ~sub:(whnf sub) ~super:(whnf super);
+  unify_already_whnf ctx ~reason (whnf sub, sub_dir) (whnf super, super_dir);
   if Config.trace_require_subtype () then
     Stdio.print_endline "Return."
 and unify_already_whnf
   : context
     -> reason:MuleErr.subtype_reason
-    -> sub:u_var
-    -> super:u_var
+    -> (u_var * subtype_side)
+    -> (u_var * subtype_side)
     -> unit =
-  fun ctx ~reason ~sub ~super ->
+  fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if not (Set.mem !(ctx.assumptions) (sub_id, super_id)) then
     begin
@@ -551,12 +556,13 @@ and unify_already_whnf
             unify
               ctx
               ~reason:`Unspecified
-              ~sub:(unroll_quant ctx `Sub q id k body) ~super
+              (unroll_quant ctx sub_dir q id k body, sub_dir)
+              (super, super_dir)
         | _, `Quant(_, q, id, k, body) ->
             unify ctx
               ~reason:`Unspecified
-              ~sub
-              ~super:(unroll_quant ctx `Super q id k body)
+              (sub, sub_dir)
+              (unroll_quant ctx super_dir q id k body, super_dir)
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
@@ -580,32 +586,49 @@ and unify_already_whnf
         (* Functions. *)
         | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
           `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
-            (* Note the flipped sub vs. super in the parameter case; this is standard
+            (* Note the flipped direction in the parameter case; this is standard
              * contravariance. *)
-            unify ctx ~sub:psuper ~super:psub ~reason:(`Cascaded(reason, `Fn `Param));
-            unify ctx ~sub:rsub ~super:rsuper ~reason:(`Cascaded(reason, `Fn `Result))
+            unify ctx
+              ~reason:(`Cascaded(reason, `Fn `Param))
+              (psuper, flip_dir super_dir)
+              (psub, flip_dir sub_dir);
+            unify ctx
+              ~reason:(`Cascaded(reason, `Fn `Result))
+              (rsub, sub_dir)
+              (rsuper, super_dir)
 
         | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
             wrong_num_args `Fn 2 x y
 
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
-            unify ctx ~sub:row_sub ~super:row_super ~reason:(`Cascaded(reason, `UnionRow))
+            unify ctx
+              ~reason:(`Cascaded(reason, `UnionRow))
+              (row_sub, sub_dir)
+              (row_super, super_dir)
 
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
 
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-            unify ctx ~sub:rtype_sub ~super:rtype_super ~reason:(`Cascaded(reason, `RecordPart `Type));
-            unify ctx ~sub:rvals_sub ~super:rvals_super ~reason:(`Cascaded(reason, `RecordPart `Value))
+            unify ctx
+              (rtype_sub, sub_dir)
+              (rtype_super, super_dir)
+              ~reason:(`Cascaded(reason, `RecordPart `Type));
+            unify ctx
+              (rvals_sub, sub_dir)
+              (rvals_super, super_dir)
+              ~reason:(`Cascaded(reason, `RecordPart `Value))
 
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
 
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
-            unify_extend ctx ~sub ~super ~reason
-
+            unify_extend ctx
+              ~reason
+              (sub, sub_dir)
+              (super, super_dir)
         | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
           `Const(_, `Named `Lambda, [pr, kpr; br, kbr], _) ->
             require_kind kpl kpr;
@@ -620,8 +643,8 @@ and unify_already_whnf
                 b_old
             in
             unify ctx
-              ~sub:(check pl bl)
-              ~super:(check pr br)
+              (check pl bl, sub_dir)
+              (check pr br, super_dir)
               ~reason:(`Cascaded(reason, `TypeLamBody))
         | `Const(_, `Named `Apply, [fl, flk; argl, arglk], retlk),
           `Const(_, `Named `Apply, [fr, frk; argr, argrk], retrk) ->
@@ -637,7 +660,7 @@ and unify_already_whnf
             MuleErr.bug "TODO: require_subytpe"
       end
     end
-and unify_extend ctx ~reason ~sub ~super =
+and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
   let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
@@ -678,22 +701,22 @@ and unify_extend ctx ~reason ~sub ~super =
     | `Right v -> super_only := (key, v) :: !super_only
     | `Both ((sub_t, sub_k), (super_t, super_k)) ->
         require_kind sub_k super_k;
-        require_subtype
+        unify
           ctx
           ~reason:(`Cascaded(reason, `RowLabel key))
-          ~sub:sub_t
-          ~super:super_t
+          (sub_t, sub_dir)
+          (super_t, super_dir)
   );
-  require_subtype
+  unify
     ctx
     ~reason:`Unspecified
-    ~sub:sub_tail
-    ~super:(unfold_row !super_only super_tail);
-  require_subtype
+    (sub_tail, sub_dir)
+    (unfold_row !super_only super_tail, super_dir);
+  unify
     ctx
     ~reason:`Unspecified
-    ~sub:(unfold_row !sub_only sub_tail)
-    ~super:super_tail
+    (unfold_row !sub_only sub_tail, sub_dir)
+    (super_tail, super_dir)
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
