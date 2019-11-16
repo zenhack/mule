@@ -1,17 +1,3 @@
-
-let desugar_typecheck expr =
-  let _ = Lint.check_expr expr in
-  let dexp = Desugar.desugar expr in
-  let _ = Report.display "Desugared" (Pretty.expr dexp) in
-  let ty_var =
-    Typecheck.typecheck dexp ~get_import_type:(fun _ ->
-      failwith "TODO: imports"
-    )
-  in
-  let ty = Extract.get_var_type ty_var in
-  let _ = Report.display "inferred type"  (Pretty.typ ty) in
-  (ty, dexp)
-
 let run_load_result: Load.result -> unit =
   fun Load.{typ; rt_expr; _} ->
     let rt_expr = Lazy.force rt_expr in
