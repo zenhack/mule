@@ -31,8 +31,4 @@ let run : string -> unit = fun input ->
       (* empty input *)
       ()
   | MParser.Success (Some expr) ->
-      try
-        run_load_result (Load.load_surface_ast ~typ:None ~expr)
-      with
-      | MuleErr.MuleExn e ->
-          Report.print_endline (Pretty.error e)
+      run_load_result (Load.load_surface_ast ~typ:None ~expr)

@@ -6,20 +6,14 @@ let load_and_typecheck typ file_name =
       Stdio.eprintf "Parse error : %s\n" msg;
       Caml.exit 1
   | Success expr ->
-      begin try
-          let _ = Lint.check expr in
-          let dexp = Desugared_ast_expr.WithType {
-              wt_expr = Desugar.desugar expr;
-              wt_type = typ;
-            }
-          in
-          let _ = Typecheck.typecheck dexp in
-          dexp
-        with
-        | MuleErr.MuleExn err ->
-            Stdio.eprintf "%s\n" (Pretty.error err);
-            Caml.exit 1
-      end
+      let _ = Lint.check expr in
+      let dexp = Desugared_ast_expr.WithType {
+          wt_expr = Desugar.desugar expr;
+          wt_type = typ;
+        }
+      in
+      let _ = Typecheck.typecheck dexp in
+      dexp
 
 let interp_cmd = function
   | `Repl ->
@@ -33,17 +27,9 @@ let interp_cmd = function
         | None -> src ^ ".js"
       in
       let Load.{js_expr; _} = Load.load_file ~base_path:src in
-      let e =
-        try Lazy.force js_expr
-        with
-        | MuleErr.MuleExn e ->
-            begin
-              Stdio.eprintf "%s\n" (Pretty.error e);
-              Caml.exit 1
-            end
-      in
       let text =
-        Js_ast.expr e
+        Lazy.force js_expr
+        |> Js_ast.expr
         |> Fmt.(fun e -> concat [
             s "const mule = (() => {";
             s Js_runtime_gen.src; s "\n";
@@ -68,7 +54,14 @@ let interp_cmd = function
 let main () =
   match Cli.parse_cmd () with
   | `Ok result ->
-      Config.set result.debug_flags;
-      interp_cmd result.cmd
+      begin
+        Config.set result.debug_flags;
+        try
+          interp_cmd result.cmd
+        with
+          | MuleErr.MuleExn err ->
+              Report.print_endline (Pretty.error err);
+              Caml.exit 1
+      end
   | `Version | `Help -> Caml.exit 0
   | `Error _ -> Caml.exit 1
