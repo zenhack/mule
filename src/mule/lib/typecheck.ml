@@ -496,12 +496,14 @@ and require_subtype
     -> sub:u_var
     -> super:u_var
     -> unit =
+  fun ctx ~reason ~sub ~super -> unify ctx ~reason ~sub ~super
+and unify =
   fun ctx ~reason ~sub ~super ->
   trace_req_subtype ~sub ~super;
-  require_subtype_already_whnf ctx ~reason ~sub:(whnf sub) ~super:(whnf super);
+  unify_already_whnf ctx ~reason ~sub:(whnf sub) ~super:(whnf super);
   if Config.trace_require_subtype () then
     Stdio.print_endline "Return."
-and require_subtype_already_whnf
+and unify_already_whnf
   : context
     -> reason:MuleErr.subtype_reason
     -> sub:u_var
@@ -546,12 +548,12 @@ and require_subtype_already_whnf
             UnionFind.merge (fun l _ -> l) sub super
 
         | `Quant(_, q, id, k, body), _ ->
-            require_subtype
+            unify
               ctx
               ~reason:`Unspecified
               ~sub:(unroll_quant ctx `Sub q id k body) ~super
         | _, `Quant(_, q, id, k, body) ->
-            require_subtype ctx
+            unify ctx
               ~reason:`Unspecified
               ~sub
               ~super:(unroll_quant ctx `Super q id k body)
@@ -580,29 +582,29 @@ and require_subtype_already_whnf
           `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
             (* Note the flipped sub vs. super in the parameter case; this is standard
              * contravariance. *)
-            require_subtype ctx ~sub:psuper ~super:psub ~reason:(`Cascaded(reason, `Fn `Param));
-            require_subtype ctx ~sub:rsub ~super:rsuper ~reason:(`Cascaded(reason, `Fn `Result))
+            unify ctx ~sub:psuper ~super:psub ~reason:(`Cascaded(reason, `Fn `Param));
+            unify ctx ~sub:rsub ~super:rsuper ~reason:(`Cascaded(reason, `Fn `Result))
 
         | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
             wrong_num_args `Fn 2 x y
 
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
-            require_subtype ctx ~sub:row_sub ~super:row_super ~reason:(`Cascaded(reason, `UnionRow))
+            unify ctx ~sub:row_sub ~super:row_super ~reason:(`Cascaded(reason, `UnionRow))
 
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
 
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-            require_subtype ctx ~sub:rtype_sub ~super:rtype_super ~reason:(`Cascaded(reason, `RecordPart `Type));
-            require_subtype ctx ~sub:rvals_sub ~super:rvals_super ~reason:(`Cascaded(reason, `RecordPart `Value))
+            unify ctx ~sub:rtype_sub ~super:rtype_super ~reason:(`Cascaded(reason, `RecordPart `Type));
+            unify ctx ~sub:rvals_sub ~super:rvals_super ~reason:(`Cascaded(reason, `RecordPart `Value))
 
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
 
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
-            require_subtype_extend ctx ~sub ~super ~reason
+            unify_extend ctx ~sub ~super ~reason
 
         | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
           `Const(_, `Named `Lambda, [pr, kpr; br, kbr], _) ->
@@ -617,7 +619,7 @@ and require_subtype_already_whnf
                 ~replacement:p
                 b_old
             in
-            require_subtype ctx
+            unify ctx
               ~sub:(check pl bl)
               ~super:(check pr br)
               ~reason:(`Cascaded(reason, `TypeLamBody))
@@ -635,7 +637,7 @@ and require_subtype_already_whnf
             MuleErr.bug "TODO: require_subytpe"
       end
     end
-and require_subtype_extend ctx ~reason ~sub ~super =
+and unify_extend ctx ~reason ~sub ~super =
   let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
