@@ -523,13 +523,13 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
       )
          *)
   | _ ->
-    let ty_got = synth ctx e in
-    require_subtype
-      ctx
-      ~reason
-      ~sub:ty_got
-      ~super:ty_want;
-    ty_got
+      let ty_got = synth ctx e in
+      require_subtype
+        ctx
+        ~reason
+        ~sub:ty_got
+        ~super:ty_want;
+      ty_got
 and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   fun ctx lf ty_want ->
   let ty_got = synth_leaf ctx lf in
