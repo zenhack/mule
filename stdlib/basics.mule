@@ -18,4 +18,9 @@
             | False _ -> True {}
           end
     }
+  , type ordering = LT {} | EQ {} | GT {}
+  , type order = {
+      , type t
+      , compare : t -> t -> ordering
+    }
 }
