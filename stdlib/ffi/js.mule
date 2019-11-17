@@ -1,0 +1,42 @@
+{
+  # The type of the javascript API. See src/libmule/runtime.js from the root
+  # of the repository for the implementation.
+  , type sig = {
+    , type cmd a
+    , value : {
+        , type t
+        , get-prop : text -> t -> cmd t
+        , set-prop : text -> t -> t -> cmd {}
+        , int : int -> t
+        , text : text -> t
+        , function : (t -> cmd t) -> t
+        , null : t
+        , undefined : t
+      }
+
+    , reflect : value.t -> cmd (
+        | Int int
+        | Text text
+
+        # TODO: make this a float, once we have those:
+        | Number value.t
+
+        # TODO: drop the arguments for these, once the language supports
+        # that.
+        | Undefined value.t | Null value.t
+
+        | Object value.t
+        | Unknown value.t
+      )
+
+    , call : value.t -> value.t -> cmd value.t
+    , try : cmd value.t -> cmd (Ok value.t | Err value.t)
+    , throw : all a. value.t -> cmd a
+    , finally : all a. cmd a -> cmd {} -> cmd a
+
+    , just : all a. a -> cmd a
+    , then : all a b. cmd a -> (a -> cmd b) -> cmd b
+  }
+  # The type of "raw" javascript programs:
+  , type main a = (js : sig) -> js.value -> js.cmd a
+}
