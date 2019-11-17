@@ -1,0 +1,21 @@
+{
+  , type bool = True {} | False {}
+  , bool = {
+      , type t = bool
+      , or : bool -> bool -> bool =
+          fn x y. match x with
+            | False _ -> y
+            | _ -> x
+          end
+      , and : bool -> bool -> bool =
+          fn x y. match x with
+            | True _ -> y
+            | _ -> x
+          end
+      , not : bool -> bool =
+          fn x. match x with
+            | True _ -> False {}
+            | False _ -> True {}
+          end
+    }
+}

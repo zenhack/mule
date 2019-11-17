@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 
-cd $(dirname $0)
 set -e
+cd $(dirname $0)
+export MULE_PATH="$PWD/stdlib"
 make
 mule=./_build/default/src/mule/mule.exe
 case "$1" in
