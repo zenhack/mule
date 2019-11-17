@@ -5,7 +5,8 @@ Desugared:
 
 inferred type:
 
-	(all a (all b (all c ((record (types (...c)) (values ((y b) ...a))) -> b))))
+	(all a
+	 (all b (all c ((record (types ((... c))) (values ((y b) (... a)))) -> b))))
 
 Runtime term:
 

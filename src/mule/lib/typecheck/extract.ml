@@ -129,7 +129,15 @@ and make_const_type id c args =
   | `Extend _, _ ->
       MuleErr.bug "kind mismatch"
 
-let strip_unused_quantifiers ty =
+(* Strip any quantifiers out of the type aren't needed. This takes two forms:
+ *
+ * - things like `all a. int`, where you have a quantified value that isn't
+ *   actually used.
+ * - Things with row types like:
+ *   - `Foo int | ...all r. r`, which is the same as just `Foo int`.
+ *   - `{...exist r. r}` which is the same as just `{}`.
+ *)
+let strip_needless_quantifiers ty =
   let rec go ty = match ty with
     (* These two cases may shadow a variable in the body, in which
      * case we have to remove it from the free variables. Either
@@ -176,13 +184,13 @@ let strip_unused_quantifiers ty =
 
     (* These we just apply recursivley; no special logic for them. *)
     | DT.Record{r_info; r_types; r_values; r_src} ->
-        let r_types, fv_types = go_row r_types in
-        let r_values, fv_values = go_row r_values in
+        let r_types, fv_types = go_row r_types (`Record `Type) in
+        let r_values, fv_values = go_row r_values (`Record `Value) in
         ( DT.Record{r_info; r_types; r_values; r_src}
         , Set.union fv_types fv_values
         )
     | DT.Union{u_row} ->
-        let u_row, fvs = go_row u_row in
+        let u_row, fvs = go_row u_row `Union in
         (DT.Union{u_row}, fvs)
     | DT.App{app_info; app_fn; app_arg} ->
         let app_fn, fv_fn = go app_fn in
@@ -190,7 +198,7 @@ let strip_unused_quantifiers ty =
         ( DT.App{app_info; app_fn; app_arg}
         , Set.union fv_fn fv_arg
         )
-  and go_row {row_info; row_fields; row_rest} =
+  and go_row {row_info; row_fields; row_rest} parent =
     let row_fields, fv_fields =
       List.fold_right
         row_fields
@@ -204,9 +212,22 @@ let strip_unused_quantifiers ty =
     in
     let row_rest, fvs = match row_rest with
       | None -> (None, fv_fields)
-      | Some t ->
-          let (rest, fv) = go t in
-          (Some rest, fv)
+      | Some rest ->
+          match rest with
+          | DT.Quant{q_var; q_quant; q_body = DT.Var{v_var; _}; _}
+            when Common_ast.Var.equal q_var v_var ->
+              begin match q_quant, parent with
+                | `All, `Union
+                | `All, `Record `Type
+                | `Exist, `Record `Value ->
+                    (None, fv_fields)
+                | _ ->
+                  let (rest, fv) = go rest in
+                  (Some rest, fv)
+              end
+          | _ ->
+            let (rest, fv) = go rest in
+            (Some rest, fv)
     in
     ({row_info; row_fields; row_rest}, fvs)
   in
@@ -214,7 +235,7 @@ let strip_unused_quantifiers ty =
 
 let get_var_type uv =
   fst (go IntSet.empty uv)
-  |> strip_unused_quantifiers
+  |> strip_needless_quantifiers
   |> Relabel.relabel_type ()
 
 let get_var_row uv =

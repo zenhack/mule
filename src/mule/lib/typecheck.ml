@@ -212,8 +212,8 @@ and make_type ctx ty = match ty with
       const_ty n_name
   | DT.Record{r_types; r_values; _} ->
       record
-        (make_row ctx `Record r_types)
-        (make_row ctx `Record r_values)
+        (make_row ctx (`Record `Type) r_types)
+        (make_row ctx (`Record `Value) r_values)
   | DT.Fn{fn_param; fn_ret; fn_pvar = None; _} ->
       with_kind ktype (make_type ctx fn_param) **> with_kind ktype (make_type ctx fn_ret)
   | DT.Fn{fn_param; fn_ret; fn_pvar = Some pvar; _} ->
@@ -297,8 +297,8 @@ and strip_param_exists ctx pty =
       pty
 and make_row ctx parent {row_fields; row_rest; _} =
   let tail = match row_rest, parent with
-    | None, `Record -> empty
-    | None, `Union -> all krow (fun x -> x)
+    | None, `Record `Type | None, `Union -> all krow (fun x -> x)
+    | None, `Record `Value -> empty
     | Some t, _ -> with_kind krow (make_type ctx t)
   in
   List.fold_right row_fields ~init:tail ~f:(fun (lbl, ty) rest ->

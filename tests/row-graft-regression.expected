@@ -10,8 +10,8 @@ inferred type:
 	  ((a -> b) ->
 	   (all c
 	    (all d
-	     ((record (types (...d)) (values ((z a) ...c))) ->
-	      (record (types (...d)) (values ((y b) (z a) ...c)))))))))
+	     ((record (types ((... d))) (values ((z a) (... c)))) ->
+	      (record (types ((... d))) (values ((y b) (z a) (... c))))))))))
 
 Runtime term:
 
