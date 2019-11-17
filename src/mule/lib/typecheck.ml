@@ -428,31 +428,35 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
   match b with
   | DE.BLeaf lf ->
       let param = fresh_local ctx `Flex ktype in
-      require_join ctx
-        ~reason:`Unspecified
-        (param **> result)
-        (synth_leaf ctx lf);
-      (param, result)
+      let leaf_result = fresh_local ctx `Flex ktype in
+      ignore (check_leaf ctx lf (param **> leaf_result));
+      ( param
+      , join ctx ~reason:`Unspecified result leaf_result
+      )
   | DE.BConst {cm_cases; cm_default} ->
       let param = fresh_local ctx `Flex ktype in
-      Option.iter cm_default ~f:(fun lf ->
-        require_join ctx
-          ~reason:`Unspecified
-          (param **> result)
-          (synth_leaf ctx lf)
-      );
-      begin match Map.to_alist cm_cases with
-        | [] -> (param, result)
-        | cs ->
-            List.iter cs ~f:(fun (p, body) ->
-              ignore (check_const ctx p param);
-              require_join ctx
-                ~reason:`Unspecified
-                result
-                (synth ctx body)
-            );
-            (param, result)
-      end
+      let default_result =
+        Option.map cm_default ~f:(fun lf ->
+          let leaf_result = fresh_local ctx `Flex ktype in
+          ignore (check_leaf ctx lf (param **> leaf_result));
+          join ctx ~reason:`Unspecified result leaf_result
+        )
+      in
+      let result = match default_result with
+        | Some r -> r
+        | None -> result
+      in
+      Map.fold cm_cases
+        ~init:(param, result)
+        ~f:(fun ~key ~data (param, result) ->
+          ignore (check_const ctx key param);
+          let result = join ctx
+            ~reason:`Unspecified
+            result
+            (synth ctx data)
+          in
+          (param, result)
+        )
   | DE.BLabel {lm_cases; lm_default} ->
       let map = Map.map lm_cases ~f:(
           synth_branch
@@ -461,17 +465,22 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
             ~result:(Some result)
         )
       in
-      let param_row =
+      let (param_row, result) =
         Map.fold map
           ~init:begin match lm_default with
-            | None when have_default -> empty
-            | None -> all krow (fun r -> r)
+            | None when have_default -> (empty, result)
+            | None -> (all krow (fun r -> r), result)
             | Some lf ->
                 let row = fresh_local ctx `Flex krow in
-                ignore (check_leaf ctx lf (union row **> result));
-                row
+                let leaf_result = fresh_local ctx `Flex ktype in
+                ignore (check_leaf ctx lf (union row **> leaf_result));
+                (row, join ctx ~reason:`Unspecified result leaf_result)
           end
-          ~f:(fun ~key ~data:(param, _) r -> extend key param r)
+          ~f:(fun ~key ~data:(param, data) (row, result) ->
+            ( extend key param row
+            , join ctx ~reason:`Unspecified data result
+            )
+          )
       in
       (union param_row, result)
 and synth_leaf ctx DE.{lf_var; lf_body} =
@@ -848,8 +857,8 @@ and apply_type app f arg =
 and require_type_eq ctx l r =
   require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
   require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
-and require_join ctx ~reason l r =
-  ignore (unify ctx ~reason (l, `Sub) (r, `Sub))
+and join ctx ~reason l r =
+  unify ctx ~reason (l, `Sub) (r, `Sub)
 
 
 let rec gen_kind = function
