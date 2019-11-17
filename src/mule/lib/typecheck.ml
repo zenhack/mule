@@ -420,31 +420,25 @@ and synth: context -> 'i DE.t -> u_var =
           in
           synth ctx letrec_body
         )
-and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b =
-  let result = match result with
-    | None -> fresh_local ctx `Flex ktype
-    | Some r -> r
-  in
+and synth_branch ctx ?have_default:(have_default=false) b =
   match b with
   | DE.BLeaf lf ->
       let param = fresh_local ctx `Flex ktype in
-      let leaf_result = fresh_local ctx `Flex ktype in
-      ignore (check_leaf ctx lf (param **> leaf_result));
-      ( param
-      , join ctx ~reason:`Unspecified result leaf_result
-      )
+      let result = fresh_local ctx `Flex ktype in
+      ignore (check_leaf ctx lf (param **> result));
+      (param, result)
   | DE.BConst {cm_cases; cm_default} ->
       let param = fresh_local ctx `Flex ktype in
-      let default_result =
+      let result =
         Option.map cm_default ~f:(fun lf ->
-          let leaf_result = fresh_local ctx `Flex ktype in
-          ignore (check_leaf ctx lf (param **> leaf_result));
-          join ctx ~reason:`Unspecified result leaf_result
+          let result = fresh_local ctx `Flex ktype in
+          ignore (check_leaf ctx lf (param **> result));
+          result
         )
       in
-      let result = match default_result with
+      let result = match result with
         | Some r -> r
-        | None -> result
+        | None -> fresh_local ctx `Flex ktype
       in
       Map.fold cm_cases
         ~init:(param, result)
@@ -462,19 +456,18 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
           synth_branch
             ctx
             ~have_default:(have_default || Option.is_some lm_default)
-            ~result:(Some result)
         )
       in
       let (param_row, result) =
+        let result = fresh_local ctx `Flex ktype in
         Map.fold map
           ~init:begin match lm_default with
             | None when have_default -> (empty, result)
             | None -> (all krow (fun r -> r), result)
             | Some lf ->
                 let row = fresh_local ctx `Flex krow in
-                let leaf_result = fresh_local ctx `Flex ktype in
-                ignore (check_leaf ctx lf (union row **> leaf_result));
-                (row, join ctx ~reason:`Unspecified result leaf_result)
+                ignore (check_leaf ctx lf (union row **> result));
+                (row, result)
           end
           ~f:(fun ~key ~data:(param, data) (row, result) ->
             ( extend key param row
