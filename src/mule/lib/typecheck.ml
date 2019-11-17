@@ -299,13 +299,7 @@ and make_row ctx parent {row_fields; row_rest; _} =
   let tail = match row_rest, parent with
     | None, `Record -> empty
     | None, `Union -> all krow (fun x -> x)
-    | Some (v, vsrc), _ -> with_kind
-          krow
-          (find_bound
-              ~env:ctx.type_env
-              ~var:v
-              ~src:vsrc
-          )
+    | Some t, _ -> with_kind krow (make_type ctx t)
   in
   List.fold_right row_fields ~init:tail ~f:(fun (lbl, ty) rest ->
     extend lbl (make_type ctx ty) rest

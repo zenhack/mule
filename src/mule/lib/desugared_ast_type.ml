@@ -63,8 +63,8 @@ and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
   row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field));
   row_rest =
     match row_rest with
-    | Some (v, _) when Var.equal v old -> MuleErr.bug "TODO"
-    | _ -> row_rest;
+    | Some t -> Some(subst old new_ t)
+    | None -> None
 }
 
 let rec sexp_of_t: 'i t -> Sexp.t = function
@@ -117,7 +117,7 @@ and sexp_of_row {row_fields; row_rest; _} =
     )
   in
   match row_rest with
-  | Some (v, _) -> Sexp.List (fields @ [Sexp.Atom ("..." ^ Var.to_string v)])
+  | Some t -> Sexp.List (fields @ [Sexp.List [Sexp.Atom "..."; sexp_of_t t]])
   | None -> Sexp.List fields
 
 let get_info = function
@@ -190,7 +190,7 @@ let rec map ty ~f = match ty with
 and map_row {row_info; row_fields; row_rest} ~f = {
   row_info = f row_info;
   row_fields = List.map row_fields ~f:(fun(l, t) -> (l, map t ~f));
-  row_rest;
+  row_rest = Option.map row_rest ~f:(map ~f);
 }
 
 let rec to_string = function
@@ -223,12 +223,12 @@ let rec to_string = function
         List.map types ~f:(fun (lbl, ty) -> format_type_member lbl ty);
         begin match types_rest with
           | None -> []
-          | Some (v, _) -> ["...type " ^ Var.to_string v]
+          | Some t -> ["...type " ^ to_string t]
         end;
         List.map vals ~f:(fun (lbl, ty) -> Label.to_string lbl ^ " : " ^ to_string ty);
         begin match vals_rest with
           | None -> []
-          | Some (v, _) -> ["..." ^ Var.to_string v]
+          | Some t -> ["..." ^ to_string t]
         end;
       ]
       |> String.concat ~sep:", "
@@ -245,7 +245,7 @@ let rec to_string = function
         )
         @ begin match row_rest with
           | None -> []
-          | Some (v, _) -> ["..." ^ Var.to_string v]
+          | Some t -> ["..." ^ to_string t]
         end)
   | Quant{q_quant; q_var; q_body; _} ->
       let q = match q_quant with `All -> "all" | `Exist -> "exist" in
@@ -352,7 +352,7 @@ let rec ftv = function
 and ftv_row {row_fields; row_rest; _} =
   let rest_ftv = match row_rest with
     | None -> VarSet.empty
-    | Some (v, _) -> VarSet.singleton v
+    | Some t -> ftv t
   in
   List.fold
     row_fields

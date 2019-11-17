@@ -68,5 +68,5 @@ type 'i t =
 and 'i row = {
   row_info: 'i;
   row_fields: (Label.t * 'i t) list;
-  row_rest: (Var.t * var_src) option;
+  row_rest: 'i t option;
 }

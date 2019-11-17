@@ -276,9 +276,12 @@ let rec desugar_type' ty = match ty.Loc.l_value with
           row_info = `Type;
           row_fields = [];
           row_rest = Some (
-              v.Loc.l_value,
-              `Sourced v
-            )
+            DT.Var {
+              v_info = `Unknown;
+              v_var = v.Loc.l_value;
+              v_src = `Sourced v;
+            }
+          );
         };
       }
   | ST.Annotated _ ->
@@ -347,7 +350,13 @@ and desugar_record_type types fields r r_src =
           r_values = {
             row_info = `Row;
             row_fields = fields;
-            row_rest = Some (v.Loc.l_value, `Sourced v);
+            row_rest = Some (
+              DT.Var {
+                v_var = v.Loc.l_value;
+                v_src = `Sourced v;
+                v_info = `Row;
+              }
+            )
           };
         }
     | (ST.Field (l, t) :: rest) ->
