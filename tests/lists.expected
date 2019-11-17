@@ -16,9 +16,8 @@ Desugared:
 	     (:
 	      (fn lst
 	       ((match
-	         ((Cons
-	           ($5 ((fn l ((((. add) int) (Integer 1)) (length ((. tl) l)))) $5)))
-	          (Nil ($6 ((fn $7 (Integer 0)) $6)))))
+	         ((Cons (l ((((. add) int) (Integer 1)) (length ((. tl) l)))))
+	          (Nil (_ (Integer 0)))))
 	        lst))
 	      (all a ((list a) -> int))))))
 	  (length
@@ -51,27 +50,24 @@ Runtime term:
 	     (1 ()
 	      (App
 	       ((Match
-	         (cases
-	          ((Cons
-	            (Lam
-	             (2 ()
-	              (App
-	               ((Lam
-	                 (3 ()
-	                  (App
+	         (BLabel
+	          (lm_cases
+	           ((Cons
+	             (BLeaf
+	              (Lam
+	               (2 ()
+	                (App
+	                 ((App
 	                   ((App
-	                     ((App
-	                       ((GetField add)
-	                        (Record
-	                         ((add (Prim <fun>)) (div (Prim <fun>))
-	                          (mul (Prim <fun>)) (rem (Prim <fun>))
-	                          (sub (Prim <fun>))))))
-	                      (Const (Integer 1))))
-	                    (App ((Var 3) (App ((GetField tl) (Var 0)))))))))
-	                (Var 0))))))
-	           (Nil
-	            (Lam (0 () (App ((Lam (0 () (Const (Integer 0)))) (Var 0))))))))
-	         (default ()))
+	                     ((GetField add)
+	                      (Record
+	                       ((add (Prim <fun>)) (div (Prim <fun>))
+	                        (mul (Prim <fun>)) (rem (Prim <fun>))
+	                        (sub (Prim <fun>))))))
+	                    (Const (Integer 1))))
+	                  (App ((Var 2) (App ((GetField tl) (Var 0)))))))))))
+	            (Nil (BLeaf (Lam (0 () (Const (Integer 0))))))))
+	          (lm_default ())))
 	        (Var 0)))))))
 	  (App
 	   ((Var 0)
