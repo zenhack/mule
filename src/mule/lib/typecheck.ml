@@ -477,13 +477,35 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
   )
 and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
-  let ty_got = synth ctx e in
-  require_subtype
-    ctx
-    ~reason
-    ~sub:ty_got
-    ~super:ty_want;
-  ty_got
+  match e with
+  | DE.Let{let_v; let_e; let_body} ->
+      let ty_e = synth ctx let_e in
+      check
+        { ctx with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty_e }
+        let_body
+        ty_want
+        ~reason:`Unspecified
+  | DE.App{app_fn; app_arg} ->
+      let p = synth ctx app_arg in
+      ignore (check ctx app_fn (p **> ty_want) ~reason:`Unspecified);
+      ty_want
+  | DE.WithType{wt_expr; wt_type} ->
+      let ty_want' = make_type ctx wt_type in
+      ignore (check ctx wt_expr ty_want' ~reason:`Unspecified);
+      require_subtype
+        ctx
+        ~reason:`Unspecified
+        ~sub:ty_want
+        ~super:ty_want';
+      ty_want
+  | _ ->
+    let ty_got = synth ctx e in
+    require_subtype
+      ctx
+      ~reason
+      ~sub:ty_got
+      ~super:ty_want;
+    ty_got
 and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   fun ctx lf ty_want ->
   let ty_got = synth_leaf ctx lf in
