@@ -68,9 +68,9 @@ let main () =
         try
           interp_cmd result.cmd
         with
-          | MuleErr.MuleExn err ->
-              Report.print_endline (Pretty.error err);
-              Caml.exit 1
+        | MuleErr.MuleExn err ->
+            Report.print_endline (Pretty.error err);
+            Caml.exit 1
       end
   | `Version | `Help -> Caml.exit 0
   | `Error _ -> Caml.exit 1

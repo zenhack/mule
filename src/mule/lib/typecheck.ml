@@ -433,9 +433,9 @@ and synth_branch ctx ?have_default:(have_default=false) b =
         ~f:(fun ~key ~data (param, result) ->
           ignore (check_const ctx key param);
           let result = join ctx
-            ~reason:`Unspecified
-            result
-            (synth ctx data)
+              ~reason:`Unspecified
+              result
+              (synth ctx data)
           in
           (param, result)
         )
@@ -739,19 +739,19 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
     Map.merge sub_fields super_fields ~f:(fun ~key data ->
       let reason = `Cascaded(reason, `RowLabel key) in
       match data with
-    | `Left v ->
-        single ~reason super_tail super_dir sub_dir key v
-    | `Right v ->
-        single ~reason sub_tail sub_dir super_dir key v
-    | `Both ((sub_t, sub_k), (super_t, super_k)) ->
-        require_kind sub_k super_k;
-        Some (
-          unify
-            ctx
-            ~reason
-            (sub_t, sub_dir)
-            (super_t, super_dir)
-        )
+      | `Left v ->
+          single ~reason super_tail super_dir sub_dir key v
+      | `Right v ->
+          single ~reason sub_tail sub_dir super_dir key v
+      | `Both ((sub_t, sub_k), (super_t, super_k)) ->
+          require_kind sub_k super_k;
+          Some (
+            unify
+              ctx
+              ~reason
+              (sub_t, sub_dir)
+              (super_t, super_dir)
+          )
     )
   in
   let tail =

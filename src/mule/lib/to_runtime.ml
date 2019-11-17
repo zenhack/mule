@@ -11,7 +11,7 @@ let translate
     -> binding VarMap.t
     -> 'i D.t
     -> (int * R.t) =
-fun ~get_import ->
+  fun ~get_import ->
   let rec go_expr =
     fun depth env -> function
       | D.Embed {e_value; _} ->
@@ -108,12 +108,12 @@ fun ~get_import ->
         (ncaps, Some body)
   and go_leaf: int -> binding VarMap.t -> 'i D.leaf -> (int * R.t) =
     fun depth env lf ->
-    let l_param =
-      match lf.lf_var with
-      | Some v -> v
-      | None -> Gensym.anon_var ()
-    in
-    go_expr depth env (D.Lam{l_param; l_body = lf.lf_body})
+      let l_param =
+        match lf.lf_var with
+        | Some v -> v
+        | None -> Gensym.anon_var ()
+      in
+      go_expr depth env (D.Lam{l_param; l_body = lf.lf_body})
   and go_letrec depth env bindings body =
     let env' =
       bindings
@@ -134,5 +134,5 @@ fun ~get_import ->
 
 let translate: get_import:(Paths_t.t -> R.t) -> 'i D.t -> R.t =
   fun ~get_import exp ->
-    let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
-    snd (translate ~get_import 0 env exp)
+  let env = Map.map Intrinsics.values ~f:(fun x -> `Term (snd x)) in
+  snd (translate ~get_import 0 env exp)

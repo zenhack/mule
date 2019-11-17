@@ -79,10 +79,10 @@ and go_row seen uv =
   | _ ->
       let (tail, ftv) = go seen uv in
       ( DT.{
-          row_info = ty_id;
-          row_fields = [];
-          row_rest = Some tail;
-        }
+            row_info = ty_id;
+            row_fields = [];
+            row_rest = Some tail;
+          }
       , ftv
       )
 and maybe_add_recur id fvs ty =
@@ -136,7 +136,7 @@ and make_const_type id c args =
  * - Things with row types like:
  *   - `Foo int | ...all r. r`, which is the same as just `Foo int`.
  *   - `{...exist r. r}` which is the same as just `{}`.
- *)
+*)
 let strip_needless_quantifiers ty =
   let rec go ty = match ty with
     (* These two cases may shadow a variable in the body, in which
@@ -222,12 +222,12 @@ let strip_needless_quantifiers ty =
                 | `Exist, `Record `Value ->
                     (None, fv_fields)
                 | _ ->
-                  let (rest, fv) = go rest in
-                  (Some rest, fv)
+                    let (rest, fv) = go rest in
+                    (Some rest, fv)
               end
           | _ ->
-            let (rest, fv) = go rest in
-            (Some rest, fv)
+              let (rest, fv) = go rest in
+              (Some rest, fv)
     in
     ({row_info; row_fields; row_rest}, fvs)
   in

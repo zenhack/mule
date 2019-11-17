@@ -1,7 +1,7 @@
 (* Misc. helpers for reporting error messages to the user.
  *
  * The names of some of these could use improvement.
- *)
+*)
 
 (* Wrappers around the standard versions of these functions which also
  * flush stdout. *)
@@ -14,6 +14,6 @@ val print_endline : string -> unit
  *
  * [display] only displays anything if --debug-steps was passed on the
  * command line, whereas [display_always] always displays.
- *)
+*)
 val display : string -> string -> unit
 val display_always : string -> string -> unit

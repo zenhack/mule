@@ -45,7 +45,7 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
         let {rt_expr; _} = get_or_load loader path in
         Lazy.force rt_expr
       )
-    )
+  )
   in
   let js_expr =
     lazy (
@@ -89,7 +89,7 @@ and load_file loader ~base_path ~types =
      *   from other errors.
      * - concurrent modifications to the source code we're loading isn't
      *   something we're interested in dealing with anyway.
-     *)
+    *)
     let type_path = base_path ^ ".msig" in
     if Caml.Sys.file_exists type_path then
       Some (parse_all Parser.type_file type_path)
