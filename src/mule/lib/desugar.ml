@@ -270,18 +270,12 @@ let rec desugar_type' ty = match ty.Loc.l_value with
           row_rest = None;
         };
       }
-  | ST.RowRest {rr_var = v; _} ->
+  | ST.RowRest rest ->
       DT.Union {
         u_row = {
           row_info = `Type;
           row_fields = [];
-          row_rest = Some (
-            DT.Var {
-              v_info = `Unknown;
-              v_var = v.Loc.l_value;
-              v_src = `Sourced v;
-            }
-          );
+          row_rest = Some (desugar_type' rest);
         };
       }
   | ST.Annotated _ ->
@@ -342,7 +336,7 @@ and desugar_record_type types fields r r_src =
           r_types = {row_info = `Row; row_fields = types; row_rest = None};
           r_values = {row_info = `Row; row_fields = fields; row_rest = None};
         }
-    | [ST.Rest v] ->
+    | [ST.Rest t] ->
         DT.Record {
           r_src;
           r_info = `Type;
@@ -350,13 +344,7 @@ and desugar_record_type types fields r r_src =
           r_values = {
             row_info = `Row;
             row_fields = fields;
-            row_rest = Some (
-              DT.Var {
-                v_var = v.Loc.l_value;
-                v_src = `Sourced v;
-                v_info = `Row;
-              }
-            )
+            row_rest = Some (desugar_type' t)
           };
         }
     | (ST.Field (l, t) :: rest) ->

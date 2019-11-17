@@ -43,9 +43,7 @@ module Type = struct
         u_l : lt;
         u_r : lt;
       }
-    | RowRest of {
-        rr_var : var;
-      }
+    | RowRest of lt
     | Annotated of {
         anno_var : var;
         anno_ty : lt;
@@ -63,7 +61,7 @@ module Type = struct
   and record_item =
     | Field of (label * lt)
     | Type of (label * var list * lt option)
-    | Rest of var
+    | Rest of lt
   [@@deriving sexp_of]
 end
 

@@ -203,8 +203,8 @@ and typ_factor = lazy (
   choice [
     located (import (fun i_path i_from -> Type.Import {i_path; i_from}));
     located begin
-      let%map v = attempt (kwd "...") >> var in
-      Type.RowRest {rr_var = v}
+      let%map rest = attempt (kwd "...") >> lazy_p typ in
+      Type.RowRest rest
     end;
     located begin
       let%bind v = var in
@@ -272,7 +272,7 @@ and record_item: (Type.record_item Loc.located, string) MParser.t Lazy.t = lazy 
   choice [
     lazy_p type_decl;
     lazy_p field_decl;
-    located (kwd "..." >> (var |>> fun v -> Type.Rest v));
+    located (kwd "..." >> (lazy_p typ |>> fun t -> Type.Rest t));
   ]
 )
 and type_decl: (Type.record_item Loc.located, string) MParser.t Lazy.t = lazy (located (
