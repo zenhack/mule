@@ -23,4 +23,7 @@
       , type t
       , compare : t -> t -> ordering
     }
+
+  , type maybe a = Some a | None {}
+  , maybe = import "maybe"
 }

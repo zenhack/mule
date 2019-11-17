@@ -1,0 +1,29 @@
+{
+  , type t a = Some a | None {}
+  , type cmd a = t a
+  , map : all a b. (a -> b) -> t a -> t b =
+      fn f x. match x with
+        | Some x -> Some (f x)
+        | None x -> None x
+      end
+  , just : all a. a -> t a = Some
+
+## FIXME: this doesn't type check for some reason; probably a bug in
+## the typechecker:
+#  , apply : all a b. t (a -> b) -> t a -> t b =
+#      fn f x.
+#        then f fn f.
+#        then x fn x.
+#        just (f x)
+
+  , flatten : all a. t (t a) -> t a =
+      fn maybe. match maybe with
+        | Some (Some x) -> Some x
+        | Some (None x) -> None x
+        | None _ -> None {}
+      end
+
+
+ , then : all a b. t a -> (a -> t b) -> t b =
+     fn x f. flatten (map f x)
+}
