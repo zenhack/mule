@@ -428,19 +428,28 @@ and synth_branch ctx ?have_default:(have_default=false) ?result:(result=None) b 
   match b with
   | DE.BLeaf lf ->
       let param = fresh_local ctx `Flex ktype in
-      ignore (check_leaf ctx lf (param **> result));
+      require_join ctx
+        ~reason:`Unspecified
+        (param **> result)
+        (synth_leaf ctx lf);
       (param, result)
   | DE.BConst {cm_cases; cm_default} ->
       let param = fresh_local ctx `Flex ktype in
       Option.iter cm_default ~f:(fun lf ->
-        ignore (check_leaf ctx lf (param **> result))
+        require_join ctx
+          ~reason:`Unspecified
+          (param **> result)
+          (synth_leaf ctx lf)
       );
       begin match Map.to_alist cm_cases with
         | [] -> (param, result)
         | cs ->
             List.iter cs ~f:(fun (p, body) ->
               ignore (check_const ctx p param);
-              ignore (check ctx body result ~reason:`Unspecified)
+              require_join ctx
+                ~reason:`Unspecified
+                result
+                (synth ctx body)
             );
             (param, result)
       end
@@ -790,6 +799,9 @@ and apply_type app f arg =
 and require_type_eq ctx l r =
   require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
   require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
+and require_join ctx ~reason l r =
+  unify ctx ~reason (l, `Sub) (r, `Sub)
+
 
 let rec gen_kind = function
   | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
