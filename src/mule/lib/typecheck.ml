@@ -510,31 +510,38 @@ and require_subtype
     -> super:u_var
     -> unit =
   fun ctx ~reason ~sub ~super ->
-  unify ctx ~reason (sub, `Sub) (super, `Super)
+  ignore (unify ctx ~reason (sub, `Sub) (super, `Super))
 and unify =
   fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
   trace_req_subtype ~sub ~super;
-  unify_already_whnf ctx ~reason (whnf sub, sub_dir) (whnf super, super_dir);
+  let result =
+    unify_already_whnf ctx ~reason (whnf sub, sub_dir) (whnf super, super_dir)
+  in
   if Config.trace_require_subtype () then
-    Stdio.print_endline "Return."
+    Stdio.print_endline "Return.";
+  result
 and unify_already_whnf
   : context
     -> reason:MuleErr.subtype_reason
     -> (u_var * subtype_side)
     -> (u_var * subtype_side)
-    -> unit =
+    -> u_var =
   fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
-  if not (Set.mem !(ctx.assumptions) (sub_id, super_id)) then
+  if Set.mem !(ctx.assumptions) (sub_id, super_id) then
+    sub
+  else
     begin
       require_kind (get_kind sub) (get_kind super);
       ctx.assumptions := Set.add !(ctx.assumptions) (sub_id, super_id);
       begin match UnionFind.get sub, UnionFind.get super with
-        | _ when UnionFind.equal sub super -> ()
+        | _ when UnionFind.equal sub super -> sub
         (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
          * sure this can actually come up, but if it does, this is the behavior that
          * makes sense. *)
-        | _ when sub_id = super_id -> UnionFind.merge (fun _ r -> r) sub super
+        | _ when sub_id = super_id ->
+            UnionFind.merge (fun _ r -> r) sub super;
+            sub
 
         | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope}, kl),
           `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope}, kr) ->
@@ -552,14 +559,17 @@ and unify_already_whnf
                     , kl
                     )
               )
-              sub super
+              sub super;
+            sub
         (* One side is flexible; set it equal to the other one. *)
         | `Free({ty_flag = `Flex; ty_scope; _}, _), _ ->
             hoist_scope ty_scope super;
-            UnionFind.merge (fun _ r -> r) sub super
+            UnionFind.merge (fun _ r -> r) sub super;
+            sub
         | _, `Free({ty_flag = `Flex; ty_scope; _}, _) ->
             hoist_scope ty_scope sub;
-            UnionFind.merge (fun l _ -> l) sub super
+            UnionFind.merge (fun l _ -> l) sub super;
+            sub
 
         | `Quant(_, q, id, k, body), _ ->
             unify
@@ -590,45 +600,57 @@ and unify_already_whnf
 
         (* All of the zero-argument consts unify with themselves; if the above case
          * didn't cover this one, then we're good: *)
-        | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> ()
+        | `Const(_, `Named _, [], _), `Const(_, `Named _, [], _) -> sub
 
         (* Functions. *)
         | `Const(_, `Named `Fn, [psub, _; rsub, _], _),
           `Const(_, `Named `Fn, [psuper, _; rsuper, _], _) ->
             (* Note the flipped direction in the parameter case; this is standard
              * contravariance. *)
-            unify ctx
-              ~reason:(`Cascaded(reason, `Fn `Param))
-              (psuper, flip_dir super_dir)
-              (psub, flip_dir sub_dir);
-            unify ctx
-              ~reason:(`Cascaded(reason, `Fn `Result))
-              (rsub, sub_dir)
-              (rsuper, super_dir)
+            let param =
+              unify ctx
+                ~reason:(`Cascaded(reason, `Fn `Param))
+                (psuper, flip_dir super_dir)
+                (psub, flip_dir sub_dir)
+            in
+            let result =
+              unify ctx
+                ~reason:(`Cascaded(reason, `Fn `Result))
+                (rsub, sub_dir)
+                (rsuper, super_dir)
+            in
+            (param **> result)
 
         | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
             wrong_num_args `Fn 2 x y
 
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
-            unify ctx
-              ~reason:(`Cascaded(reason, `UnionRow))
-              (row_sub, sub_dir)
-              (row_super, super_dir)
+            union (
+              unify ctx
+                ~reason:(`Cascaded(reason, `UnionRow))
+                (row_sub, sub_dir)
+                (row_super, super_dir)
+            )
 
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
 
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-            unify ctx
-              (rtype_sub, sub_dir)
-              (rtype_super, super_dir)
-              ~reason:(`Cascaded(reason, `RecordPart `Type));
-            unify ctx
-              (rvals_sub, sub_dir)
-              (rvals_super, super_dir)
-              ~reason:(`Cascaded(reason, `RecordPart `Value))
+            let rtype =
+              unify ctx
+                (rtype_sub, sub_dir)
+                (rtype_super, super_dir)
+                ~reason:(`Cascaded(reason, `RecordPart `Type))
+            in
+            let rvals =
+              unify ctx
+                (rvals_sub, sub_dir)
+                (rvals_super, super_dir)
+                ~reason:(`Cascaded(reason, `RecordPart `Value))
+            in
+            record rtype rvals
 
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
@@ -651,17 +673,26 @@ and unify_already_whnf
                 ~replacement:p
                 b_old
             in
-            unify ctx
-              (check pl bl, sub_dir)
-              (check pr br, super_dir)
-              ~reason:(`Cascaded(reason, `TypeLamBody))
+            let body =
+              unify ctx
+                (check pl bl, sub_dir)
+                (check pr br, super_dir)
+                ~reason:(`Cascaded(reason, `TypeLamBody))
+            in
+            lambda (get_kind p) (fun p' ->
+              subst
+                ~target:(get_id (UnionFind.get p))
+                ~replacement:p'
+                body
+            )
         | `Const(_, `Named `Apply, [fl, flk; argl, arglk], retlk),
           `Const(_, `Named `Apply, [fr, frk; argr, argrk], retrk) ->
             require_kind flk frk;
             require_kind arglk argrk;
             require_kind retlk retrk;
             require_type_eq ctx fl fr;
-            require_type_eq ctx argl argr
+            require_type_eq ctx argl argr;
+            apply fl argl
         | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
             MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
 
@@ -689,43 +720,61 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
     in
     go LabelMap.empty
   in
-  let unfold_row fields tail =
-    List.fold fields ~init:tail ~f:(fun t (lbl, (h, hk)) ->
-      UnionFind.make
-        (`Const
-            ( Gensym.gensym()
-            , `Extend lbl
-            , [h, hk; t, krow]
-            , krow
-            )
+  let (sub_fields, sub_tail) = fold_row sub in
+  let (super_fields, super_tail) = fold_row super in
+  let sub_tail = ref sub_tail in
+  let super_tail = ref super_tail in
+  let single
+      ~reason
+      tailref
+      taildir
+      lbldir
+      lbl
+      (ty, _kind)
+    =
+    let tail' =
+      unify
+        ctx
+        ~reason
+        (extend lbl ty (fresh_local ctx `Flex krow), lbldir)
+        (!tailref, taildir);
+    in
+    match UnionFind.get tail' with
+    | `Const(_, `Extend _, [h, _; t, _], _) ->
+        tailref := t;
+        Some h
+    | _ -> MuleErr.bug "impossible"
+  in
+  let merged =
+    Map.merge sub_fields super_fields ~f:(fun ~key data ->
+      let reason = `Cascaded(reason, `RowLabel key) in
+      match data with
+    | `Left v ->
+        single ~reason super_tail super_dir sub_dir key v
+    | `Right v ->
+        single ~reason sub_tail sub_dir super_dir key v
+    | `Both ((sub_t, sub_k), (super_t, super_k)) ->
+        require_kind sub_k super_k;
+        Some (
+          unify
+            ctx
+            ~reason
+            (sub_t, sub_dir)
+            (super_t, super_dir)
         )
     )
   in
-  let (sub_fields, sub_tail) = fold_row sub in
-  let (super_fields, super_tail) = fold_row super in
-  let sub_only = ref [] in
-  let super_only = ref [] in
-  Map.iter2 sub_fields super_fields ~f:(fun ~key ~data -> match data with
-    | `Left v -> sub_only := (key, v) :: !sub_only
-    | `Right v -> super_only := (key, v) :: !super_only
-    | `Both ((sub_t, sub_k), (super_t, super_k)) ->
-        require_kind sub_k super_k;
-        unify
-          ctx
-          ~reason:(`Cascaded(reason, `RowLabel key))
-          (sub_t, sub_dir)
-          (super_t, super_dir)
-  );
-  unify
-    ctx
-    ~reason:`Unspecified
-    (sub_tail, sub_dir)
-    (unfold_row !super_only super_tail, super_dir);
-  unify
-    ctx
-    ~reason:`Unspecified
-    (unfold_row !sub_only sub_tail, sub_dir)
-    (super_tail, super_dir)
+  let tail =
+    unify ctx
+      ~reason:(`Cascaded(reason, `RowTail))
+      (!sub_tail, sub_dir)
+      (!super_tail, super_dir)
+  in
+  Map.fold merged
+    ~init:tail
+    ~f:(fun ~key ~data tail ->
+      extend key data tail
+    )
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
@@ -800,7 +849,7 @@ and require_type_eq ctx l r =
   require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
   require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
 and require_join ctx ~reason l r =
-  unify ctx ~reason (l, `Sub) (r, `Sub)
+  ignore (unify ctx ~reason (l, `Sub) (r, `Sub))
 
 
 let rec gen_kind = function
