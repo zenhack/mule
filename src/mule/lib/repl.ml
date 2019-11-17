@@ -25,5 +25,11 @@ let run_line : Load.loader -> string -> unit =
 let rec loop : unit -> 'a = fun () ->
   let loader = Load.new_loader () in
   Report.print_string "#mule> ";
-  run_line loader (must_read_line ());
+  begin
+    try
+      run_line loader (must_read_line ())
+    with
+    | MuleErr.MuleExn e ->
+        Report.print_endline (Pretty.error e)
+  end;
   loop ()
