@@ -1,0 +1,6 @@
+{
+  , type sig = {
+      , type t a
+      , map : all a b. (a -> b) -> t a -> t b
+    }
+}

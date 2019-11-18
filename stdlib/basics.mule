@@ -26,4 +26,6 @@
 
   , type maybe a = Some a | None {}
   , maybe = import "maybe"
+
+  , type mappable = import "mappable".sig
 }
