@@ -7,6 +7,14 @@ type label = Label.t Loc.located
 
 let var_of_label = Loc.map ~f:var_of_label
 
+module Import = struct
+  type t = {
+    i_path: string;
+    i_from: string;
+  }
+  [@@deriving sexp_of]
+end
+
 module Type = struct
   type quantifier = [ `All | `Exist ]
   [@@deriving sexp_of]
@@ -52,10 +60,7 @@ module Type = struct
         p_var : var;
         p_lbls : label list;
       }
-    | Import of {
-        i_path : string;
-        i_from : string;
-      }
+    | Import of Import.t
   [@@deriving sexp_of]
 
   and record_item =
@@ -124,10 +129,7 @@ module Expr = struct
     | Const of {
         const_val : Const.t;
       }
-    | Import of {
-        i_path : string;
-        i_from : string;
-      }
+    | Import of Import.t
     | Embed of {
         e_path : string;
         e_from : string;
