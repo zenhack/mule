@@ -1,0 +1,69 @@
+{
+  , type t a
+    "An ordered sequence of elements."
+
+  , empty  : all a. t a
+    "The empty list."
+
+  , length : all a. t a -> int
+    "O(1): Get the length of the list."
+
+  , empty? : all a. t a -> import "basics".bool
+    "O(1): Check if the list is empty."
+
+  , singleton : all a. a -> t a
+    "Make a single element list."
+
+  , cons : all a. a -> t a -> t a
+    "O(1): Add an element to the front of the list."
+
+#  , snoc : all a. a -> t a -> t a
+#    "O(1): Add an element to the back of the list."
+#
+#  , append : all a. t a -> t a -> t a
+#    "O(log n): Append two lists."
+#
+#  , take  : all a. int -> t a -> t a
+#    "O(log n): Take the first n elements of the list."
+#
+#  , drop  : all a. int -> t a -> t a
+#    "O(log n): Drop the first n elements of the list."
+#
+#  , slice : all a. int -> int -> t a -> t a
+#    """O(log n): Extract a sub-range of the list.
+#
+#    Precisely, `slice i len` Extracts `len`elements starting at
+#    index `i` This is equivalent to `take len (drop i xs)`.
+#    """
+#
+#  , index  : all a. int -> t a -> maybe a
+#    """O(log n): `index i` gets the `i`th element of a list.
+#
+#    returns `None` if there is no such element.
+#    """
+#
+#  , index! : all a. int -> a -> t a
+#    "Like `index`, but throws an exception if the item is not found."
+#
+#  , first : all a. t a -> maybe a
+#    "O(1): get the first element of the list. Return `None` if it is empty."
+#
+#  , last  : all a. t a -> maybe a
+#    "O(1): get the last element of the list. Return `None` if it is empty."
+#
+#  , filter : all a. (a -> bool) -> t a -> t a
+#  , map    : all a b. (a -> b) -> t a -> t b
+#
+#  , fold       : (r : reducer) : t r.t -> r.t
+#  , fold-map   : all a. (r : reducer) -> (a -> r.t) -> r.t
+#  , fold-left  : all e r. (r -> e -> r) -> r -> t e -> r
+#  , fold-right : all e r. (e -> r -> r) -> r -> t e -> r
+#
+  , reverse : all a. t a -> t a
+#  , sort : (o : order) -> t o.t -> t o.t
+#
+#  , intersperse : all a. a -> t a -> t a
+#  , join : (r : reducer) -> r.t -> t r.t -> r.t
+#
+#  , compare : (o : order) -> t o.t -> t o.t -> cmp-result
+}

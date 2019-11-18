@@ -1,0 +1,54 @@
+# The current implementation is a standard cons list. As such, many of
+# the complexity bounds in the .msig are wrong. The plan is to replace
+# this with a better data structure down the line, so those comments
+# are aspirational.
+{
+  , type t a = Cons { hd : a, tl : t a } | Nil {}
+
+  , empty = Nil {}
+
+  , length =
+      let go =
+        fn accum lst. match lst with
+          | Nil _ -> accum
+          | Cons l -> go (int.add accum 1) l.tl
+        end
+      in
+      go 0
+
+  , empty? =
+      fn list. match list with
+        | Nil _ -> True {}
+        | Cons _ -> False {}
+      end
+
+#  , singleton = fn x. cons x empty
+
+  , cons =
+      fn x xs. Cons {
+        , hd = x
+        , tl = xs
+      }
+
+#  , snoc =
+#      fn xs x. append xs (singleton x)
+#
+#  , append =
+#      let go =
+#        fn l r. match l with
+#          | Nil _ -> r
+#          | Cons l -> go l.tl (cons l.hd r)
+#        end
+#      in
+#      fn l r. go (reverse l) r
+
+  , reverse =
+      let go =
+        fn accum list. match list with
+          | Nil _ -> accum
+          | Cons l -> go (cons accum l.hd) l.tl
+        end
+      in
+      go empty
+}
+
