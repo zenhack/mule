@@ -200,17 +200,23 @@ let rec typ_term = lazy (
 )
 and typ_factor = lazy (
   choice [
-    located (import |>> (fun i -> Type.Import i));
     located begin
       let%map rest = attempt (kwd "...") >> lazy_p typ in
       Type.RowRest rest
     end;
     located begin
-      let%bind v = var in
+      let%bind head = choice [
+        (var |>> fun v -> `Var v);
+        (located import |>> (fun i -> `Import i));
+      ]
+      in
       match%map many (kwd "." >> label) with
-      | [] -> Type.Var {v_var = v}
+      | [] -> begin match head with
+          | `Var v -> Type.Var {v_var = v}
+          | `Import i -> Type.Import i.Loc.l_value
+        end
       | p_lbls -> Type.Path {
-          p_var = `Var v;
+          p_var = head;
           p_lbls;
         }
     end;
