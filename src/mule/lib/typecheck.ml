@@ -269,8 +269,8 @@ and make_type ctx ty = match ty with
                       })
                 end
               |> with_kind ktype
-          | `Import _ ->
-              failwith "TODO"
+          | `Import {i_resolved_path; _} ->
+              ctx.get_import_type i_resolved_path
         end
       in
       let result_type = fresh_local ctx `Flex (gen_k ()) in
