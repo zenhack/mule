@@ -281,11 +281,21 @@ let rec desugar_type' ty = match ty.Loc.l_value with
   | ST.Annotated _ ->
       MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
+      let (p_var, src) = match p_var with
+        | `Var Loc.{l_value; l_loc} ->
+            ( `Var l_value
+            , Loc.{l_value = `Var l_value; l_loc}
+            )
+        | `Import Loc.{l_value; l_loc} ->
+            ( `Import (desugar_import l_value)
+            , Loc.{l_value = `Import l_value; l_loc}
+            )
+      in
       DT.Path {
         p_info = `Unknown;
-        p_var = p_var.Loc.l_value;
+        p_var;
         p_lbls = List.map p_lbls ~f:(fun Loc.{l_value = l; _} -> l);
-        p_src = `Sourced p_var;
+        p_src = `Sourced src;
       }
   | ST.App{app_fn = f; app_arg = x; _} ->
       DT.App {
@@ -358,17 +368,20 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
   |> hoist_assoc_types
+and desugar_import {i_path; i_from} =
+  let Loc.{l_value; l_loc} = i_path in
+  {
+    i_loc = l_loc;
+    i_orig_path = l_value;
+    i_resolved_path =
+      Paths.resolve_path
+        ~here:i_from
+        ~loc:l_loc
+        ~target:l_value;
+  }
 and desugar Loc.{l_value = e; l_loc} = match e with
-  | S.Import {i_path; i_from} ->
-      D.Import {
-        i_loc = l_loc;
-        i_orig_path = i_path;
-        i_resolved_path =
-          Paths.resolve_path
-            ~here:i_from
-            ~loc:l_loc
-            ~target:i_path;
-      }
+  | S.Import i ->
+      D.Import (desugar_import i)
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;

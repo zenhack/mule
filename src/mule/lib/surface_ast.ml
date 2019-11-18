@@ -9,7 +9,7 @@ let var_of_label = Loc.map ~f:var_of_label
 
 module Import = struct
   type t = {
-    i_path: string;
+    i_path: string Loc.located;
     i_from: string;
   }
   [@@deriving sexp_of]
@@ -57,7 +57,7 @@ module Type = struct
         anno_ty : lt;
       }
     | Path of {
-        p_var : var;
+        p_var : [ `Var of var | `Import of Import.t Loc.located ];
         p_lbls : label list;
       }
     | Import of Import.t

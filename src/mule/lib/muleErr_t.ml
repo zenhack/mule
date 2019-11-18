@@ -27,7 +27,7 @@ type subtype_reason =
   | `TypeAnnotation of  (k_var DE.t * k_var DT.t)
   | `ApplyFn of (k_var DE.t * k_var DE.t)
 
-  | `Path of DT.var_src
+  | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src
 
   (* No reason given. Eventually this will go away, but for now it exists so
    * we don't have to add reasons everywhere all at once. *)

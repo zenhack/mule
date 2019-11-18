@@ -13,13 +13,21 @@ let rec show_kind = function
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
-let show_path_type_error ~var ~path ~sub ~super =
+let show_path_type_error ~head ~path ~sub ~super =
   match path, super with
   | [], DT.Record _ ->
       String.concat [
-        Loc.pretty_t var.Loc.l_loc;
-        ": variable ";
-        Var.to_string var.Loc.l_value;
+        Loc.pretty_t head.Loc.l_loc;
+        begin match head.Loc.l_value with
+          | `Var v ->  String.concat [
+              ": variable ";
+              Var.to_string v
+            ]
+          | `Import Surface_ast.Import.{i_path; _} -> String.concat [
+              "import ";
+              String.escaped i_path.Loc.l_value;
+            ]
+        end;
         " is not a record; it cannot have associated types.";
       ]
   | _ ->
@@ -45,9 +53,9 @@ let show_type_error err = match err with
       in
       let path, rsn = unwrap_reason [] se_reason in
       begin match rsn with
-        | `Path (`Sourced v) -> String.concat [
+        | `Path (`Sourced src) -> String.concat [
             show_path_type_error
-              ~var:v
+              ~head:src
               ~path
               ~sub:se_sub
               ~super:se_super

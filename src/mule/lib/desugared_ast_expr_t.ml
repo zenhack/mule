@@ -1,4 +1,5 @@
 open Common_ast
+open Desugared_ast_common
 module Type_t = Desugared_ast_type_t
 
 type 'i t =
@@ -6,11 +7,7 @@ type 'i t =
       e_path: string;
       e_value: string;
     }
-  | Import of {
-      i_orig_path: string;
-      i_resolved_path: Paths_t.t;
-      i_loc : Loc.t;
-    }
+  | Import of import
   | Var of {
       v_var : Var.t;
       v_src :

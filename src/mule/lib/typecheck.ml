@@ -255,8 +255,23 @@ and make_type ctx ty = match ty with
         arg
   | DT.Path{p_var; p_lbls; p_src; _} ->
       let var_type =
-        find_bound ~env:ctx.vals_env ~var:p_var ~src:p_src
-        |> with_kind ktype
+        begin match p_var with
+          | `Var var ->
+              find_bound
+                ~env:ctx.vals_env
+                ~var
+                ~src:begin match p_src with
+                  | `Generated -> `Generated
+                  | `Sourced Common_ast.Loc.{l_loc; _} ->
+                      `Sourced (Common_ast.Loc.{
+                        l_value = var;
+                        l_loc;
+                      })
+                end
+              |> with_kind ktype
+          | `Import _ ->
+              failwith "TODO"
+        end
       in
       let result_type = fresh_local ctx `Flex (gen_k ()) in
       let path_type = make_path_type result_type p_lbls in

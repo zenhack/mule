@@ -179,8 +179,9 @@ let strip_needless_quantifiers ty =
 
     (* Leaves of the tree. *)
     | DT.Var{v_var; _} -> (ty, VarSet.singleton v_var)
-    | DT.Path{p_var; _} -> (ty, VarSet.singleton p_var)
-    | DT.Named _ | DT.Opaque _ -> (ty, VarSet.empty)
+    | DT.Path{p_var = `Var v; _} -> (ty, VarSet.singleton v)
+    | DT.Path{p_var = `Import _; _} | DT.Named _ | DT.Opaque _ ->
+        (ty, VarSet.empty)
 
     (* These we just apply recursivley; no special logic for them. *)
     | DT.Record{r_info; r_types; r_values; r_src} ->

@@ -1,4 +1,5 @@
 open Common_ast
+open Desugared_ast_common
 include Desugared_ast_type_t
 
 let rec subst old new_ ty = match ty with
@@ -27,10 +28,12 @@ let rec subst old new_ ty = match ty with
       else
         ty
   | Path{p_var; _} ->
-      if Var.equal p_var old then
-        MuleErr.bug "TODO"
-      else
-        ty
+      begin match p_var with
+        | `Var v when Var.equal v old ->
+            MuleErr.bug "TODO"
+        | _ ->
+            ty
+      end
   | Record {r_info; r_types; r_values; r_src} ->
       Record {
         r_info;
@@ -67,6 +70,11 @@ and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
     | None -> None
 }
 
+
+let sexp_of_path_start = function
+  | `Import i -> sexp_of_import i
+  | `Var v -> Var.sexp_of_t v
+
 let rec sexp_of_t: 'i t -> Sexp.t = function
   | Fn{fn_pvar = None; fn_param; fn_ret; _} ->
       Sexp.List [sexp_of_t fn_param; Sexp.Atom "->"; sexp_of_t fn_ret]
@@ -81,7 +89,10 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
   | Var{v_var; _} ->
       Var.sexp_of_t v_var
   | Path{p_var; p_lbls; _} -> Sexp.(
-      List ([Atom "."; Var.sexp_of_t p_var] @ List.map p_lbls ~f:Label.sexp_of_t)
+      List ([
+        Atom ".";
+        sexp_of_path_start p_var;
+      ] @ List.map p_lbls ~f:Label.sexp_of_t)
     )
   | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
       List [
@@ -213,7 +224,12 @@ let rec to_string = function
     ]
   | Var {v_var; _} -> Var.to_string v_var
   | Path {p_var; p_lbls; _} ->
-      String.concat ~sep:"." (Var.to_string p_var :: List.map p_lbls ~f:Label.to_string)
+      String.concat ~sep:"." (
+        begin match p_var with
+          | `Var v -> Var.to_string v
+          | `Import {i_orig_path; _} ->
+              "import " ^ String.escaped i_orig_path
+        end :: List.map p_lbls ~f:Label.to_string)
   | Record {
       r_types = {row_fields = types; row_rest = types_rest; _};
       r_values = {row_fields = vals; row_rest = vals_rest; _};
@@ -330,7 +346,8 @@ and apply_to_row {row_info; row_fields; row_rest} ~f = {
 (* Collect the free type variables in a type *)
 let rec ftv = function
   | Var {v_var; _} -> VarSet.singleton v_var
-  | Path{p_var; _} -> VarSet.singleton p_var
+  | Path{p_var = `Var v; _} -> VarSet.singleton v
+  | Path{p_var = `Import _; _} -> VarSet.empty
 
   | TypeLam {tl_param; tl_body; _} -> Set.remove (ftv tl_body) tl_param
   | Quant   {q_var;    q_body;  _} -> Set.remove (ftv  q_body) q_var

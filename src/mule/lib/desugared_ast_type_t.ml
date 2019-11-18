@@ -1,5 +1,6 @@
 
 open Common_ast
+open Desugared_ast_common
 
 type quantifier = [ `All | `Exist ]
 
@@ -7,10 +8,11 @@ let sexp_of_quantifier = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
 
-type var_src =
+type 'a src =
   [ `Generated
-  | `Sourced of Var.t Loc.located
+  | `Sourced of 'a Loc.located
   ]
+type var_src = Var.t src
 
 type 'i t =
   | Fn of {
@@ -31,8 +33,8 @@ type 'i t =
     }
   | Path of {
       p_info : 'i;
-      p_var : Var.t;
-      p_src : var_src;
+      p_var : [ `Var of Var.t | `Import of import ];
+      p_src : [ `Var of Var.t | `Import of Surface_ast.Import.t ] src;
       p_lbls : Label.t list;
     }
   | Record of {

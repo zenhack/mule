@@ -42,7 +42,7 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
     | TypeLam{tl_info; tl_param = v; tl_body = t} ->
         let v = get v in
         TypeLam{tl_info; tl_param = v; tl_body = go t}
-    | Opaque _ | Named _ -> typ
+    | Opaque _ | Named _ | Path{p_var = `Import _; _} -> typ
     | Fn {fn_info; fn_pvar = v; fn_param = l; fn_ret = r} ->
         let v' = Option.map v ~f:get in
         let l' = go l in
@@ -62,9 +62,9 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
         let v' = get v in
         let body' = go q_body in
         Quant {q_info; q_quant; q_var = v'; q_body = body'}
-    | Path{p_info; p_var; p_lbls; p_src} -> Path {
+    | Path{p_info; p_var = `Var v; p_lbls; p_src} -> Path {
         p_info;
-        p_var = get p_var;
+        p_var = `Var (get v);
         p_lbls;
         p_src;
       }
