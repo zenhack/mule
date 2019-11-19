@@ -24,8 +24,8 @@
       , compare : t -> t -> ordering
     }
 
-  , type maybe a = Some a | None {}
   , maybe = import "maybe"
+  , type maybe a = import "maybe".t a
 
   , type mappable = import "mappable".sig
 }
