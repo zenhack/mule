@@ -168,8 +168,8 @@ let constant : (Const.t, string) MParser.t = choice [
 
 let import: (Import.t, string) MParser.t
   = let%bind i_path = kwd "import" >> located text in
-    let%map i_from = get_user_state in
-    Import.{i_path; i_from}
+  let%map i_from = get_user_state in
+  Import.{i_path; i_from}
 
 let embed = (
   let%bind e_path = kwd "embed" >> text in
@@ -206,9 +206,9 @@ and typ_factor = lazy (
     end;
     located begin
       let%bind head = choice [
-        (var |>> fun v -> `Var v);
-        (located import |>> (fun i -> `Import i));
-      ]
+          (var |>> fun v -> `Var v);
+          (located import |>> (fun i -> `Import i));
+        ]
       in
       match%map many (kwd "." >> label) with
       | [] -> begin match head with

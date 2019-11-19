@@ -127,6 +127,6 @@ let all_files {edges; results; _} =
   Tsort.sort (module String)
     ~nodes:(Map.keys !results)
     ~edges:(!edges)
-    (* TODO: add a santiy check here that there are no cycles. *)
+  (* TODO: add a santiy check here that there are no cycles. *)
   |> List.concat
   |> List.map ~f:(fun k -> (k, Util.find_exn !results k))

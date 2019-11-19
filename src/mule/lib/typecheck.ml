@@ -264,9 +264,9 @@ and make_type ctx ty = match ty with
                   | `Generated -> `Generated
                   | `Sourced Common_ast.Loc.{l_loc; _} ->
                       `Sourced (Common_ast.Loc.{
-                        l_value = var;
-                        l_loc;
-                      })
+                          l_value = var;
+                          l_loc;
+                        })
                 end
               |> with_kind ktype
           | `Import {i_resolved_path; _} ->
