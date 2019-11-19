@@ -46,7 +46,7 @@
       let go =
         fn accum list. match list with
           | Nil _ -> accum
-          | Cons l -> go (cons accum l.hd) l.tl
+          | Cons l -> go (cons l.hd accum) l.tl
         end
       in
       go empty
