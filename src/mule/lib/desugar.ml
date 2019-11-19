@@ -8,6 +8,7 @@ module Ast = Common_ast
 module C = Common_ast.Const
 module DT = Desugared_ast.Type
 module DK = Desugared_ast.Kind
+module DC = Desugared_ast_common
 
 let incomplete_pattern () =
   MuleErr.throw `IncompletePattern
@@ -401,6 +402,29 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       app_arg = desugar x;
     }
   | S.Lam{lam_params; lam_body; _} -> desugar_lambda lam_params lam_body
+  | S.List {l_elts} ->
+      let empty = D.App {
+          app_fn = D.GetField{gf_lbl = Label.of_string "empty"};
+          app_arg = D.Import (DC.import_abs "list");
+        }
+      in
+      let cons = D.App {
+          app_fn = D.GetField{gf_lbl = Label.of_string "cons"};
+          app_arg = D.Import (DC.import_abs "list");
+        }
+      in
+      List.fold_right
+        l_elts
+        ~init:empty
+        ~f:(fun hd tl ->
+          D.App {
+            app_fn = D.App {
+                app_fn = cons;
+                app_arg = desugar hd;
+              };
+            app_arg = tl;
+          }
+        )
   | S.Record {r_fields = []; _} -> D.EmptyRecord
   | S.Record {r_fields = fields; _} -> desugar_record fields
   | S.Update{up_arg; up_fields; _} -> desugar_update up_arg up_fields

@@ -105,6 +105,7 @@ module Expr = struct
     | Record of {
         r_fields : field Loc.located list;
       }
+    | List of {l_elts : lt list}
     | GetField of {
         gf_arg : lt;
         gf_lbl : label;

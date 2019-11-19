@@ -12,7 +12,8 @@ module Dup_fields = struct
         go_fields fields
     | Update{up_arg = e; up_fields = fields; _} ->
         go_expr e; go_fields fields
-
+    | List{l_elts} ->
+        List.iter l_elts ~f:go_expr
     | Lam {lam_params = pats; lam_body = body; _} ->
         List.iter pats ~f:go_pat;
         go_expr body

@@ -73,6 +73,7 @@ let kwd name =
 
 let parens p = between (kwd "(") (kwd ")") p
 let braces p = between (kwd "{") (kwd "}") p
+let brackets p = between (kwd "[") (kwd "]") p
 
 let comma_list p =
   sep_start_by p (kwd ",")
@@ -375,6 +376,8 @@ and ex3 = lazy (
     lazy_p match_expr;
     lazy_p let_expr;
     located (var |>> fun v -> Expr.Var {v_var = v});
+    located (brackets (comma_list (lazy_p expr))
+             |>> fun l -> Expr.List {l_elts = l});
     parens (lazy_p expr);
     lazy_p record;
     located (ctor |>> fun c -> Expr.Ctor {c_lbl = c});
