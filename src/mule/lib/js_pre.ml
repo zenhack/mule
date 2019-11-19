@@ -19,14 +19,17 @@ type expr =
   | Index of (expr * expr)
   | Update of (expr * Label.t * expr)
   | Continue of expr
+[@@deriving sexp_of]
 and switch = {
   sw_arg: expr;
   sw_cases: (Const.t * branch) list;
   sw_default: expr option;
 }
+[@@deriving sexp_of]
 and branch =
   | BLeaf of expr
   | BBranch of switch
+[@@deriving sexp_of]
 
 let lam1 f =
   let v = Gensym.anon_var () in

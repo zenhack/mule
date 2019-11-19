@@ -59,11 +59,16 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
           var
         )
       in
+      Report.display "Js_pre" (Sexp.to_string_hum (Js_pre.sexp_of_expr e));
       let e =
         if Config.no_js_cps () then
           e
         else
-          Js_pre.cps (fun x -> x) e
+          begin
+            let cps = Js_pre.cps (fun x -> x) e in
+            Report.display "CPS" (Sexp.to_string_hum (Js_pre.sexp_of_expr cps));
+            cps
+          end
       in
       Js_pre.to_js e
     )
