@@ -5,4 +5,4 @@
 fn js global.
   js.then (js.get-prop "console" global) fn console.
   js.then (js.get-prop "log" console) fn log.
-  js.call1 log (js.text "Hello, World!")
+  js.call-1 log (js.text "Hello, World!")

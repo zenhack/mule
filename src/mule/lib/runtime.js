@@ -125,9 +125,9 @@ const $js = {
 		}
 	}),
 
-	'call': $fn2((f, args) => () => f(...args)),
-	'call1': $fn2((f, arg) => () => f(arg)),
-	'call0': $fn1((f) => () => f()),
+	'call-n': $fn2((f, args) => () => f(...args)),
+	'call-1': $fn2((f, arg) => () => f(arg)),
+	'call-0': $fn1((f) => () => f()),
 	'try': $fn1((cmd) => () => {
 		try {
 			return ['Ok', cmd()]

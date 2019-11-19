@@ -1,17 +1,34 @@
 {
-  # The type of the javascript API. See src/libmule/runtime.js from the root
-  # of the repository for the implementation.
-  , type sig = {
+  , type sig
+    "The type of the javascript API. See src/libmule/runtime.js from the root
+    of the repository for the implementation.
+    " = {
+
     , type cmd a
+      "A zero-argument javascript function, returning a value of type `a`."
+
     , type value
+      "A javascript value"
 
     , get-prop : text -> value -> cmd value
+      "`get-prop name object` gets the property `name` of `object`."
+
     , set-prop : text -> value -> value -> cmd {}
+      "`set-prop name val object` sets `object`'s `name` property to `val`."
+
     , int : int -> value
+      "Convert a mule `int` to a javascript bigint."
+
     , text : text -> value
+      "Convert a mule `text` to a javascript string."
+
     , function : (value -> cmd value) -> value
+
     , null : value
+      "Javascript's `null`"
+
     , undefined : value
+      "Javascript's `undefined."
 
     , reflect : value -> cmd (
         | Int int
@@ -28,16 +45,49 @@
         | Unknown value
       )
 
-    , call : value -> value -> cmd value
-    , call0 : value -> cmd value
-    , call1 : value -> value -> cmd value
+    , call-0 : value -> cmd value
+      "`call-0 f` calls the javascript function `f` with no arguments"
+
+    , call-1 : value -> value -> cmd value
+      "`call-1 f arg` calls the javascript function `f` with the one argument `arg`"
+
+    , call-n : value -> value -> cmd value
+      "`call-n f args` calls the javascript function `f` with the argument list `args`.
+
+      i.e., `call f args` invokes `f(...args)`. `args` therefore should be a javascript
+      iterable.
+      "
+
     , try : cmd value -> cmd (Ok value | Err value)
+      "Run the javascript command, catching any exceptions.
+
+      Returns `Ok value` if the command does not throw any exceptions, or
+      `Err exn` if it does.
+      "
+
     , throw : all a. value -> cmd a
+      "Throw a javascript exception."
+
     , finally : all a. cmd a -> cmd {} -> cmd a
+      "`finally cmd cleanup` is equivalent to the javascript:
+
+      ```javascript
+      try {
+        return cmd()
+      } finally {
+        return cleanup()
+      }
+      ```
+      "
 
     , just : all a. a -> cmd a
+      "`just val` returns `val`, with no side effects."
+
     , then : all a b. cmd a -> (a -> cmd b) -> cmd b
+      "`then cmd f` is equivalent to `f(cmd())`"
+
   }
-  # The type of "raw" javascript programs:
-  , type main = exist t. (js : sig) -> js.value -> js.cmd t
+  , type main
+    "The entry point of a 'raw' javascript program"
+    = exist t. (js : sig) -> js.value -> js.cmd t
 }
