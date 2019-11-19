@@ -2,10 +2,14 @@ include Load_t
 
 type loader = {
   results: result StringMap.t ref;
+  current: string option;
+  edges: string Tsort.edge list ref;
 }
 
 let new_loader () = {
   results = ref StringMap.empty;
+  current = None;
+  edges = ref [];
 }
 
 let maybe_chop_suffix str suffix =
@@ -105,4 +109,24 @@ and get_or_load loader path =
   match Map.find !(loader.results) path with
   | Some r -> r
   | None ->
-      load_file loader ~base_path:path ~types:[]
+      begin match loader.current with
+        | Some current ->
+            loader.edges := Tsort.{
+                from = current;
+                to_ = path;
+              } :: !(loader.edges)
+        | None -> ()
+      end;
+      load_file
+        { loader with current = Some path }
+        ~base_path:path
+        ~types:[]
+
+
+let all_files {edges; results; _} =
+  Tsort.sort (module String)
+    ~nodes:(Map.keys !results)
+    ~edges:(!edges)
+    (* TODO: add a santiy check here that there are no cycles. *)
+  |> List.concat
+  |> List.map ~f:(fun k -> (k, Util.find_exn !results k))

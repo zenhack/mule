@@ -37,5 +37,5 @@
     , then : all a b. cmd a -> (a -> cmd b) -> cmd b
   }
   # The type of "raw" javascript programs:
-  , type main a = (js : sig) -> js.value -> js.cmd a
+  , type main = exist t. (js : sig) -> js.value -> js.cmd t
 }

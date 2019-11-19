@@ -16,3 +16,6 @@ val load_file
   -> base_path:string
   -> types:(Desugared_ast_kind.maybe_kind Desugared_ast_type_t.t list)
   -> result
+
+(* Return a list of all the files loaded by the loader, in dependency order. *)
+val all_files : loader -> (string * result) list

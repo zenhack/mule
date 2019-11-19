@@ -123,7 +123,7 @@ const $js = {
 			default:
 				return ['Unknown', v]
 		}
-	})
+	}),
 
 	'call': $fn2((f, args) => () => f(...args)),
 	'try': $fn1((cmd) => () => {
