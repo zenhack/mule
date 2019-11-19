@@ -24,7 +24,11 @@ let build src dest =
     Load.load_file
       loader
       ~base_path:src
-      ~types:[js_main_type]
+      ~types:(if Config.no_js_type_requirement () then
+          []
+        else
+          [js_main_type]
+      )
   in
   let files =
     Load.all_files loader

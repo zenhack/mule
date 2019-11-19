@@ -28,13 +28,14 @@ let debug_flag name ~doc =
 
 let with_debug_flags : cmd Term.t -> t Term.t =
   fun term ->
-  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps c -> {
+  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps no_js_type_requirement c -> {
         debug_flags = {
           print_eval_steps = eval_steps;
           always_print_stack_trace = stack_trace;
           trace_require_subtype = trace_require_subtype;
           debug_steps = steps;
           no_js_cps = no_js_cps;
+          no_js_type_requirement;
         };
         cmd = c;
       })
@@ -64,6 +65,11 @@ let with_debug_flags : cmd Term.t -> t Term.t =
             "When emitting javascript, don't cps-transform the output."
             ^ " This can result in broken code, but it can sometimes be"
             ^ " easier to read."
+          )
+        $ debug_flag "no-js-type-requirement"
+          ~doc:(
+            "Don't require a specific type for javascript build output. "
+            ^ "This can be useful when debugging code generation."
           )
         $ term
   )

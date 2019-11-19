@@ -5,6 +5,7 @@ module Debug_flags = struct
     trace_require_subtype : bool;
     debug_steps : bool;
     no_js_cps : bool;
+    no_js_type_requirement : bool;
   }
 end
 
