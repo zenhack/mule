@@ -71,6 +71,11 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
   let var = Gensym.anon_var () in
   {typ; typ_var; rt_expr; js_expr; var}
 and load_file loader ~base_path ~types =
+  load_path
+    loader
+    ~base_path:(maybe_chop_suffix base_path ".mule")
+    ~types
+and load_path loader ~base_path ~types =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
     let src = Stdio.In_channel.read_all path in
@@ -81,7 +86,6 @@ and load_file loader ~base_path ~types =
     | Success value ->
         value
   in
-  let base_path = maybe_chop_suffix base_path ".mule" in
   let expr = parse_all Parser.expr_file (base_path ^ ".mule") in
   let typ =
     (* It would be slightly more correct to just call parse_all
@@ -117,7 +121,7 @@ and get_or_load loader path =
               } :: !(loader.edges)
         | None -> ()
       end;
-      load_file
+      load_path
         { loader with current = Some path }
         ~base_path:path
         ~types:[]
