@@ -33,6 +33,9 @@ let add_lazy_var env v =
   let name = Gensym.anon_var () in
   (name, Map.set env ~key:v ~data:(`LazyVar name))
 
+let js_let (v, e, body) =
+  Js.Call1(Js.Lam1(v, body), e)
+
 let translate_expr ~get_import expr =
   let rec go env = function
     | D.Expr.Embed {e_value; _} ->
@@ -104,7 +107,7 @@ let translate_expr ~get_import expr =
         let decls =
           List.map letrec_vals ~f:(fun (v, body) ->
             fun b ->
-              Js.Let
+              js_let
                 ( get_var env' v
                 , Js.Lazy (go env' body)
                 , b
@@ -119,7 +122,7 @@ let translate_expr ~get_import expr =
         let redecls =
           List.map letrec_vals ~f:(fun (v, _) ->
             fun b ->
-              Js.Let
+              js_let
                 ( get_var env'' v
                 , translate_var env' v
                 , b
@@ -164,7 +167,7 @@ let translate_expr ~get_import expr =
       | None -> go env lf_body
       | Some v ->
           let (name, env') = add_var env v in
-          Js.Let
+          js_let
             ( name
             , arg
             , go env' lf_body

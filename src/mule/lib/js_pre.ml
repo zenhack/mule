@@ -19,7 +19,6 @@ type expr =
   | Index of (expr * expr)
   | Update of (expr * Label.t * expr)
   | Continue of expr
-  | Let of (Var.t * expr * expr)
 and switch = {
   sw_arg: expr;
   sw_cases: (Const.t * branch) list;
@@ -38,8 +37,6 @@ let return k v =
 
 let rec cps k e = match e with
   | Var _ | Null | Const _ -> k e
-  | Let(v, e, body) ->
-      cps k (Call1(Lam1(v, body), e))
   | Lam1(p, body) ->
       let kv = Gensym.anon_var () in
       let k' v = Continue (Call1(Var kv, v)) in
@@ -93,7 +90,6 @@ let const_to_js = function
   | Const.Char c -> Js.String (String.make 1 c)
 
 let rec to_js = function
-  | Let _ -> MuleErr.bug "let should have been eliminated before converting to js"
   | Var v -> Js.Var (Var.to_string v)
   | Null -> Js.Null
   | Const c -> const_to_js c
