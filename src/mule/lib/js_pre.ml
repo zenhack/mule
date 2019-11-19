@@ -54,7 +54,7 @@ let rec cps k e = match e with
       )
   | Lazy e ->
       let k' = Gensym.anon_var () in
-      Lazy(Lam1(k', e |> cps (fun e -> Call1(Var k', e))))
+      k (Lazy(Lam1(k', e |> cps (fun e -> Call1(Var k', e)))))
   | Object props ->
       []
       |> List.fold
