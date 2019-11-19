@@ -29,6 +29,8 @@
       )
 
     , call : value -> value -> cmd value
+    , call0 : value -> cmd value
+    , call1 : value -> value -> cmd value
     , try : cmd value -> cmd (Ok value | Err value)
     , throw : all a. value -> cmd a
     , finally : all a. cmd a -> cmd {} -> cmd a
