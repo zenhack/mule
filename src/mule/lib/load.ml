@@ -24,10 +24,10 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
   Lint.check_expr expr;
   Option.iter typ ~f:Lint.check_type;
   let dexp = Desugar.desugar expr in
-  Report.display "Desugared" (Pretty.expr dexp);
+  Report.display "Desugared" (fun () -> Pretty.expr dexp);
   let dtyp = Option.map typ ~f:(fun t ->
       let ret = Desugar.desugar_type t in
-      Report.display "Desugared type signature" (Pretty.typ ret);
+      Report.display "Desugared type signature" (fun () -> Pretty.typ ret);
       ret
     )
   in
@@ -41,7 +41,7 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
       )
   in
   let typ = Extract.get_var_type typ_var in
-  Report.display "inferred type"  (Pretty.typ typ);
+  Report.display "inferred type"  (fun () -> Pretty.typ typ);
   let rt_expr = lazy (
     To_runtime.translate
       dexp
@@ -59,14 +59,14 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
           var
         )
       in
-      Report.display "Js_pre" (Sexp.to_string_hum (Js_pre.sexp_of_expr e));
+      Report.display "Js_pre" (fun () -> Sexp.to_string_hum (Js_pre.sexp_of_expr e));
       let e =
         if Config.no_js_cps () then
           e
         else
           begin
             let cps = Js_pre.cps (fun x -> x) e in
-            Report.display "CPS" (Sexp.to_string_hum (Js_pre.sexp_of_expr cps));
+            Report.display "CPS" (fun () -> Sexp.to_string_hum (Js_pre.sexp_of_expr cps));
             cps
           end
       in

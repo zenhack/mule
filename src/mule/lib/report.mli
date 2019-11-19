@@ -15,5 +15,5 @@ val print_endline : string -> unit
  * [display] only displays anything if --debug-steps was passed on the
  * command line, whereas [display_always] always displays.
 *)
-val display : string -> string -> unit
+val display : string -> (unit -> string) -> unit
 val display_always : string -> string -> unit

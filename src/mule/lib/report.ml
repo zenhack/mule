@@ -19,4 +19,4 @@ let display_always label text =
 
 let display label text =
   if Config.debug_steps () then
-    display_always label text
+    display_always label (text ())
