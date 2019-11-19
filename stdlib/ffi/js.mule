@@ -1,4 +1,7 @@
 {
+  , type main
+    "The entry point of a 'raw' javascript program"
+    = exist t. (js : sig) -> js.value -> js.cmd t
   , type sig
     "The type of the javascript API. See src/libmule/runtime.js from the root
     of the repository for the implementation.
@@ -87,7 +90,4 @@
       "`then cmd f` is equivalent to `f(cmd())`"
 
   }
-  , type main
-    "The entry point of a 'raw' javascript program"
-    = exist t. (js : sig) -> js.value -> js.cmd t
 }
