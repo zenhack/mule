@@ -90,42 +90,40 @@ const $fn = (count, f) => {
 };
 
 const $js = {
-	'value': {
-		'get-prop': $fn2((prop, obj) => () => obj[prop]),
-		'set-prop': $fn3((prop, val, obj) => () => {
-			obj[prop] = val
-			return {}
-		}),
-		'int': $fn1((x) => x),
-		'text': $fn1((x) => x),
+	'get-prop': $fn2((prop, obj) => () => obj[prop]),
+	'set-prop': $fn3((prop, val, obj) => () => {
+		obj[prop] = val
+		return {}
+	}),
+	'int': $fn1((x) => x),
+	'text': $fn1((x) => x),
 
-		'function': $fn1((f) => () => {
-			return $call1(f, arguments)
-		}),
-		'null': null,
-		'undefined': undefined,
+	'function': $fn1((f) => () => {
+		return $call1(f, arguments)
+	}),
+	'null': null,
+	'undefined': undefined,
 
-		'reflect': $fn1((v) => () => {
-    		var type = typeof(v)
-				switch(type) {
-				case 'bigint':
-					return ['Int', v]
-				case 'number':
-					return ['Number', v]
-				case 'string':
-					return ['Text', v]
-				case 'undefined':
-						return ['Undefined', v]
-				case 'object':
-						if(v === null) {
-							return ['Null', v]
-						}
-						return ['Object', v]
-				default:
-					return ['Unknown', v]
-			}
-		})
-	},
+	'reflect': $fn1((v) => () => {
+			var type = typeof(v)
+			switch(type) {
+			case 'bigint':
+				return ['Int', v]
+			case 'number':
+				return ['Number', v]
+			case 'string':
+				return ['Text', v]
+			case 'undefined':
+					return ['Undefined', v]
+			case 'object':
+					if(v === null) {
+						return ['Null', v]
+					}
+					return ['Object', v]
+			default:
+				return ['Unknown', v]
+		}
+	})
 
 	'call': $fn2((f, args) => () => f(...args)),
 	'try': $fn1((cmd) => () => {

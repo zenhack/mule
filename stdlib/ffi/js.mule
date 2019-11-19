@@ -3,35 +3,34 @@
   # of the repository for the implementation.
   , type sig = {
     , type cmd a
-    , value : {
-        , type t
-        , get-prop : text -> t -> cmd t
-        , set-prop : text -> t -> t -> cmd {}
-        , int : int -> t
-        , text : text -> t
-        , function : (t -> cmd t) -> t
-        , null : t
-        , undefined : t
-      }
+    , type value
 
-    , reflect : value.t -> cmd (
+    , get-prop : text -> value -> cmd value
+    , set-prop : text -> value -> value -> cmd {}
+    , int : int -> value
+    , text : text -> value
+    , function : (value -> cmd value) -> value
+    , null : value
+    , undefined : value
+
+    , reflect : value -> cmd (
         | Int int
         | Text text
 
         # TODO: make this a float, once we have those:
-        | Number value.t
+        | Number value
 
         # TODO: drop the arguments for these, once the language supports
         # that.
-        | Undefined value.t | Null value.t
+        | Undefined value | Null value
 
-        | Object value.t
-        | Unknown value.t
+        | Object value
+        | Unknown value
       )
 
-    , call : value.t -> value.t -> cmd value.t
-    , try : cmd value.t -> cmd (Ok value.t | Err value.t)
-    , throw : all a. value.t -> cmd a
+    , call : value -> value -> cmd value
+    , try : cmd value -> cmd (Ok value | Err value)
+    , throw : all a. value -> cmd a
     , finally : all a. cmd a -> cmd {} -> cmd a
 
     , just : all a. a -> cmd a
