@@ -371,7 +371,7 @@ and desugar_type t =
 and desugar_import {i_path; i_from} =
   let Loc.{l_value; l_loc} = i_path in
   {
-    i_loc = l_loc;
+    i_loc = Some l_loc;
     i_orig_path = l_value;
     i_resolved_path =
       Paths.resolve_path
