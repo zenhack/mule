@@ -401,7 +401,7 @@ and synth: context -> 'i DE.t -> u_var =
           in
           let ctx' =
             List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v) ->
-              { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data: v }
+              { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data:v }
             )
           in
           let checked_vals =
