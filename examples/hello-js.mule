@@ -1,0 +1,12 @@
+# Hello World using the javascript ffi; see `stdlib/ffi/js`.
+#
+# Obviously, this is very low-level; you wouldn't really write
+# hello world this way; it's just to demo the ffi.
+fn js global.
+  js.then (js.get-prop "console" global) fn console.
+  js.then (js.get-prop "log" console) fn log.
+
+  # This actually doesn't *quite* do the right thing, because
+  # js.call expects an iterator of arguments. The js ffi doesn't
+  # currently give us a way to make one of those though.
+  js.call log (js.text "Hello, World!")
