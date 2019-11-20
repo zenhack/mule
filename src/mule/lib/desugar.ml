@@ -465,6 +465,12 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       _;
     } ->
       desugar_let bindings body
+  | S.Quote _ | S.Unquote _ | S.UnquoteSplice _ ->
+      MuleErr.throw (`NotImplemented (String.concat [
+          "Quote and unquote operators are not yet implemented. ";
+          "Progress on the macro system is tracked at:\n\n\t";
+          "https://gitlab.com/isd/mule/issues/7";
+        ]))
 and desugar_update e fields =
   let rec go e = function
     | [] -> desugar e

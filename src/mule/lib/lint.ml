@@ -30,6 +30,8 @@ module Dup_fields = struct
     | WithType{wt_term = e; wt_type = ty; _} ->
         go_expr e;
         go_type ty
+    | Quote e | Unquote e | UnquoteSplice e ->
+        go_expr e
   and go_let =
     List.iter ~f:(fun Loc.{l_value; _} -> match l_value with
       | `BindVal(pat, e) ->

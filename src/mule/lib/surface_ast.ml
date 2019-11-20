@@ -135,6 +135,9 @@ module Expr = struct
         e_path : string;
         e_from : string;
       }
+    | Unquote of lt
+    | UnquoteSplice of lt
+    | Quote of lt
   [@@deriving sexp_of]
   and binding =
     [ `BindType of var * var list * Type.lt

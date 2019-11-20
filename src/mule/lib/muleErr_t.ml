@@ -83,6 +83,8 @@ type t =
   | `IllegalAnnotatedType of Surface_ast.Type.lt
   | `PathError of path_error
   | `Bug of string
+
+  | `NotImplemented of string
   ]
 
 exception MuleExn of t

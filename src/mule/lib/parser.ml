@@ -358,15 +358,31 @@ and ex1 = lazy (
   ]
 )
 and ex2 = lazy (
+  let%bind quotes = many (lazy_p quote) in
   let%bind head = lazy_p ex3 in
-  many (kwd "." >> label)
-  |>> List.fold_left ~init:head ~f:(fun e l -> Loc.{
-      l_value = Expr.GetField {
-          gf_arg = e;
-          gf_lbl = l;
-        };
-      l_loc = spanning e.l_loc l.l_loc;
-    })
+  let%map e =
+    many (kwd "." >> label)
+    |>> List.fold_left
+        ~init:head
+        ~f:(fun e l -> Loc.{
+        l_value = Expr.GetField {
+            gf_arg = e;
+            gf_lbl = l;
+          };
+        l_loc = spanning e.l_loc l.l_loc;
+      })
+  in
+  List.fold_right quotes ~init:e ~f:(fun q body ->
+    let f e = match q.Loc.l_value with
+      | `Quote -> Expr.Quote e
+      | `Unquote -> Expr.Unquote e
+      | `UnquoteSplice -> Expr.UnquoteSplice e
+    in
+    Loc.{
+      l_loc = spanning q.l_loc body.l_loc;
+      l_value = f body;
+    }
+  )
 )
 and ex3 = lazy (
   choice [
@@ -384,6 +400,11 @@ and ex3 = lazy (
     located (constant |>> fun n -> Expr.Const {const_val = n});
   ]
 )
+and quote = lazy (located (choice [
+    (kwd "`" >>$ `Quote);
+    (kwd "~@" >>$ `UnquoteSplice);
+    (kwd "~" >>$ `Unquote);
+]))
 and lambda = lazy ((located (
     let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
     let%map body = kwd "." >> lazy_p expr in

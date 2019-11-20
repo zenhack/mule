@@ -168,6 +168,9 @@ let error = function
       show_path_error pe
   | `LazyLoop ->
       "Infinite loop"
+
+  | `NotImplemented msg ->
+      "Unimplemented feature: " ^ msg
   | `Bug msg ->
       "BUG: " ^ msg
 
