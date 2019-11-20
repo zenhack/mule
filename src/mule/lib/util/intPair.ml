@@ -1,4 +1,1 @@
-include Pair.Make(struct
-    module Left = Int
-    module Right = Int
-  end)
+include Pair.Make(Int)(Int)

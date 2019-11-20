@@ -1,31 +1,26 @@
-module type S = sig
-  module Left : Elt.S
-  module Right : Elt.S
-end
-
-module Make(P:S) = struct
+module Make(Left:Elt.S)(Right:Elt.S) = struct
   module T = struct
-    type t = (P.Left.t * P.Right.t)
+    type t = (Left.t * Right.t)
 
     let sexp_of_t (l, r) =
       Sexp.List [
-        P.Left.sexp_of_t l;
-        P.Right.sexp_of_t r;
+        Left.sexp_of_t l;
+        Right.sexp_of_t r;
       ]
 
     let t_of_sexp = function
       | Sexp.List [l; r] ->
-          ( P.Left.t_of_sexp l
-          , P.Right.t_of_sexp r
+          ( Left.t_of_sexp l
+          , Right.t_of_sexp r
           )
       | sexp ->
           raise (Sexp.Of_sexp_error (Failure "t_of_sexp: pair needed", sexp))
 
 
     let compare (x1, y1) (x2, y2) =
-      let r = P.Left.compare x1 x2 in
+      let r = Left.compare x1 x2 in
       if r = 0 then
-        P.Right.compare y1 y2
+        Right.compare y1 y2
       else
         r
   end
