@@ -65,7 +65,7 @@ Negative integers start with a minus sign:
 -42 : int
 ```
 
-Positive integers may optional have a leading plus sign:
+Positive integers may optionally have a leading plus sign:
 
 ```
 #mule> +42
