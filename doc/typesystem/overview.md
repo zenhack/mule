@@ -83,7 +83,7 @@ Mule has functionality equivalent to ML modules, but unifies the module
 system and the core language. Mule's type system is close to system
 F-omega in power, and the semantics of "modules" are inspired by the
 [F-ing modules][5] work in the literature, though they differ in detail.
-[later work][6] by the same authors discussed combining the module and
+[Later work][6] by the same authors discussed combining the module and
 core languages, but our approach to this is somewhat different.
 
 Very briefly:
@@ -151,7 +151,7 @@ is conceptually a pair like:
     )
 
 The row for type witnesses is universally quantified in the row's tail,
-so `{}` maybe be used where a value of type `{ type t = int }` is
+so `{}` may be used where a value of type `{ type t = int }` is
 required, since `{}` conceptually has the type `(all r. {...r}, {})`.
 This allows associated types to be inferred in some cases.
 
