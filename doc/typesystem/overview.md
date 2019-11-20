@@ -155,6 +155,16 @@ so `{}` may be used where a value of type `{ type t = int }` is
 required, since `{}` conceptually has the type `(all r. {...r}, {})`.
 This allows associated types to be inferred in some cases.
 
+Additionally, rather than having an "empty" row, we treat the tails of
+records' values as being `exist r. r`. This gives us something closer to
+"width subtyping", so this works:
+
+
+    {x = 1, y = "hello"} : {x : int}
+
+because `{x : int}` is really `{x : int, ...exist r. r}`, and we can
+instantiate `r = < y : text >`.
+
 [1]: http://gallium.inria.fr/~remy/work/mlf/
 [2]: http://gallium.inria.fr/~remy/mlf/scherer@master2010:mlfomega.pdf
 [3]: https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
