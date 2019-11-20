@@ -123,8 +123,8 @@ Very briefly:
 Mule has row-polymorphic records and sums. They are based on [this
 paper][3]. The biggest deviations from the original are:
 
-1. We do not treat duplicate labels as significant. {l : a, l : b} is the
-   same type as {l : a}.
+1. We do not treat duplicate labels as significant. `{l : a, l : b}` is
+   the same type as `{l : a}`.
 2. We do not allow field deletion (which is obviously required for (1)
    to be sound).
 
