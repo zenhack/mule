@@ -36,9 +36,12 @@ syntax match muleCtor "\v<[A-Z][a-zA-Z0-9_]*"
 syntax match muleUnQuote "\v\~(\@?)[a-z_][.a-zA-Z0-9_?!-]*"
 
 syntax match muleNumber "\v<[0-9]([_0-9]*)(\.[0-9]+)?([eE][0-9]+)?"
-syntax region muleString start=/\v"/ skip=/v\\./ end=/\v"/
-syntax region muleCharacter start=/\v'/ skip=/v\\./ end=/\v'/
+
+syntax region muleString start=/\v"/ skip=/v\\./ end=/\v"/ contains=muleEscape
+syntax region muleCharacter start=/\v'/ skip=/v\\./ end=/\v'/ contains=muleEscape
 syntax region muleDocString start=/\v"""/ end=/\v"""/
+
+syntax match muleEscape "\v\\[\\\"'trn]" contained
 
 
 highlight default link muleTodo Todo
