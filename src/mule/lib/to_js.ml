@@ -104,14 +104,11 @@ let translate_expr ~get_import expr =
             snd (add_lazy_var env v)
           )
         in
-        let decls =
+        let binds =
           List.map letrec_vals ~f:(fun (v, body) ->
-            fun b ->
-              js_let
-                ( get_var env' v
-                , Js.Lazy (go env' body)
-                , b
-                )
+            ( get_var env' v
+            , Js.Lazy (go env' body)
+            )
           )
         in
         let env'' =
@@ -119,20 +116,19 @@ let translate_expr ~get_import expr =
             snd (add_var env v)
           )
         in
-        let redecls =
-          List.map letrec_vals ~f:(fun (v, _) ->
-            fun b ->
+        let body' =
+          List.fold
+            letrec_vals
+            ~init:(go env'' letrec_body)
+            ~f:(fun body (v, _) ->
               js_let
                 ( get_var env'' v
                 , translate_var env' v
-                , b
+                , body
                 )
-          )
+            )
         in
-        List.fold_right
-          (decls @ redecls)
-          ~init:(go env'' letrec_body)
-          ~f:(fun f body -> f body)
+        Js.LetRec(binds, body')
   and go_branch env b arg =
     match b with
     | D.Expr.BLeaf lf -> Js.BLeaf (go_leaf env lf arg)

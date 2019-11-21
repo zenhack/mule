@@ -19,6 +19,7 @@ type expr =
   | Index of (expr * expr)
   | Update of (expr * Label.t * expr)
   | Continue of expr
+  | LetRec of ((Var.t * expr) list * expr)
 [@@deriving sexp_of]
 and switch = {
   sw_arg: expr;
@@ -52,6 +53,11 @@ let rec cps k e = match e with
       sw_arg |> cps (fun e ->
         Switch (cps_switch k {sw_arg = e; sw_cases; sw_default})
       )
+  | LetRec(binds, body) ->
+      let binds' =
+        List.map binds ~f:(fun (v, e) -> (v, cps (fun x -> x) e))
+      in
+      LetRec(binds', cps k body)
   | Lazy e ->
       let k' = Gensym.anon_var () in
       k (Lazy(Lam1(k', e |> cps (fun e -> Call1(Var k', e)))))
@@ -106,6 +112,12 @@ let rec to_js = function
             ([], `S [switch_to_js sw])
         , []
         )
+  | LetRec(binds, body) ->
+      let binds =
+        List.map binds ~f:(fun (v, e) -> Js.VarDecl(Var.to_string v, to_js e))
+      in
+      let body = Js.Return (to_js body) in
+      Js.Call(Js.Lam([], `S (binds @ [body])), [])
   | Lazy e ->
       Js.Call(Js.Var "$lazy", [to_js e])
   | Call1(f, x) ->
