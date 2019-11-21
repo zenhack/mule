@@ -65,7 +65,7 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
           e
         else
           begin
-            let cps = Js_pre.cps (fun x -> x) e in
+            let cps = Js_pre.cps e in
             Report.display "CPS" (fun () -> Sexp.to_string_hum (Js_pre.sexp_of_expr cps));
             cps
           end

@@ -93,6 +93,12 @@ and cps_branch k = function
   | BLeaf e -> BLeaf (cps k e)
   | BBranch sw -> BBranch (cps_switch k sw)
 
+let cps e =
+  Call1
+    ( Var (Var.of_string "$call0")
+    , lam1 (fun k -> e |> cps (fun e -> Call1(k, e)))
+    )
+
 let const_to_js = function
   | Const.Integer n -> Js.BigInt n
   | Const.Text s -> Js.String s

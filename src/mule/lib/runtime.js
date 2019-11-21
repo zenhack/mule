@@ -58,9 +58,9 @@ const text = {
   'from-int': $fn1(String),
 }
 
-const $call1 = function(f, v) {
+const $call0 = (f) => {
 	var result = null;
-	var next = f(v, (r) => {
+	var next = f((r) => {
 		result = r;
 		return null;
 	})
@@ -68,6 +68,10 @@ const $call1 = function(f, v) {
 		next = next()
 	}
 	return result;
+}
+
+const $call1 = (f, v) => {
+	return $call0((r) => f(v, r))
 };
 
 const $call = function(f) {
