@@ -92,8 +92,12 @@ let values = dict [
         ]
     );
     "char",
-    ( recordType [ "t", char_t ] []
-    , recordVal []
+    ( recordType
+        [ "t", char_t ]
+        [ "to-text", fn_t char_t text_t ]
+    , recordVal [
+        "to-text", R.prim (fun c -> R.text (String.make 1 (R.assert_char c)));
+      ]
     );
   ]
 

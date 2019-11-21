@@ -40,7 +40,9 @@ const int = {
   rem: $fn2((x, y) => x % y),
 }
 
-const char = {}
+const char = {
+	'to-text': (c, k) => k(c)
+}
 
 const text = {
   length: $fn1((x) => x.length),

@@ -107,6 +107,10 @@ let assert_text e = match assert_const e with
   | Const.Text s -> s
   | _ -> MuleErr.bug "run-time type error."
 
+let assert_char c = match assert_const c with
+  | Const.Char c -> c
+  | _ -> MuleErr.bug "run-time type error."
+
 let mk_record fields =
   fields
   |> List.map ~f:(fun (k, v) -> (Label.of_string k, v))
