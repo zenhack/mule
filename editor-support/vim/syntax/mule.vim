@@ -12,6 +12,7 @@ syntax keyword muleType
 	\ type
 	\ rec
 	\ all
+	\ exist
 
 syntax keyword muleImport
 	\ import
