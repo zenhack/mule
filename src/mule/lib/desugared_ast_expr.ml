@@ -209,7 +209,7 @@ and map_branch b ~f = match b with
     }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 
-let rec subst: 'a t VarMap.t -> 'a t -> 'a t = fun env expr ->
+let rec subst: (Var.t, 'a t, 'cmp) Map.t -> 'a t -> 'a t = fun env expr ->
   match expr with
   (* TODO: do stuff with type variables *)
   | Var {v_var = v; _} ->

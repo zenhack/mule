@@ -1,13 +1,13 @@
 include Load_t
 
 type loader = {
-  results: result StringMap.t ref;
+  results: (string, result, String.comparator_witness) Map.t ref;
   current: string option;
   edges: string Tsort.edge list ref;
 }
 
 let new_loader () = {
-  results = ref StringMap.empty;
+  results = ref (Map.empty (module String));
   current = None;
   edges = ref [];
 }

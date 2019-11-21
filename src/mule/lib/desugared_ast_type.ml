@@ -345,9 +345,9 @@ and apply_to_row {row_info; row_fields; row_rest} ~f = {
 
 (* Collect the free type variables in a type *)
 let rec ftv = function
-  | Var {v_var; _} -> VarSet.singleton v_var
-  | Path{p_var = `Var v; _} -> VarSet.singleton v
-  | Path{p_var = `Import _; _} -> VarSet.empty
+  | Var {v_var; _} -> Set.singleton (module Var) v_var
+  | Path{p_var = `Var v; _} -> Set.singleton (module Var) v
+  | Path{p_var = `Import _; _} -> Set.empty (module Var)
 
   | TypeLam {tl_param; tl_body; _} -> Set.remove (ftv tl_body) tl_param
   | Quant   {q_var;    q_body;  _} -> Set.remove (ftv  q_body) q_var
@@ -364,11 +364,11 @@ let rec ftv = function
 
   | App {app_fn; app_arg; _} -> Set.union (ftv app_fn) (ftv app_arg)
 
-  | Opaque _ | Named _ -> VarSet.empty
+  | Opaque _ | Named _ -> Set.empty (module Var)
 (*  Like ftv, but for rows: *)
 and ftv_row {row_fields; row_rest; _} =
   let rest_ftv = match row_rest with
-    | None -> VarSet.empty
+    | None -> Set.empty (module Var)
     | Some t -> ftv t
   in
   List.fold

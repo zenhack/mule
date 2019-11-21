@@ -94,7 +94,7 @@ module Dup_fields = struct
     let map =
       List.fold
         lst
-        ~init:LabelMap.empty
+        ~init:(Map.empty (module Label))
         ~f:(fun map {l_value; l_loc} ->
           Map.update map l_value ~f:(function
             | None -> [l_loc]

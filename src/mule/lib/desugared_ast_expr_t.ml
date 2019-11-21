@@ -60,7 +60,7 @@ and 'i branch =
       lm_default : 'i leaf option;
     }
   | BConst of {
-      cm_cases : 'i t ConstMap.t;
+      cm_cases : (Const.t, 'i t, Const.comparator_witness) Map.t;
       cm_default: 'i leaf option;
     }
   | BLeaf of 'i leaf

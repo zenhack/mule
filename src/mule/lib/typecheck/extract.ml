@@ -4,15 +4,17 @@ module DT = Desugared_ast_type
 module DK = Desugared_ast_kind
 module ST = Surface_ast.Type
 
+module Var = Common_ast.Var
+
 let var_of_int n =
-  Common_ast.Var.of_string ("$$" ^ Int.to_string n)
+  Var.of_string ("$$" ^ Int.to_string n)
 let mk_var id =
   ( DT.Var {
         v_info = id;
         v_var = var_of_int id;
         v_src = `Generated;
       }
-  , IntSet.singleton id
+  , Set.singleton (module Int) id
   )
 
 let rec go seen uv =
@@ -178,10 +180,10 @@ let strip_needless_quantifiers ty =
           (q_body, fvs)
 
     (* Leaves of the tree. *)
-    | DT.Var{v_var; _} -> (ty, VarSet.singleton v_var)
-    | DT.Path{p_var = `Var v; _} -> (ty, VarSet.singleton v)
+    | DT.Var{v_var; _} -> (ty, Set.singleton (module Var) v_var)
+    | DT.Path{p_var = `Var v; _} -> (ty, Set.singleton (module Var) v)
     | DT.Path{p_var = `Import _; _} | DT.Named _ | DT.Opaque _ ->
-        (ty, VarSet.empty)
+        (ty, Set.empty (module Var))
 
     (* These we just apply recursivley; no special logic for them. *)
     | DT.Record{r_info; r_types; r_values; r_src} ->
@@ -203,7 +205,7 @@ let strip_needless_quantifiers ty =
     let row_fields, fv_fields =
       List.fold_right
         row_fields
-        ~init:([], VarSet.empty)
+        ~init:([], Set.empty (module Var))
         ~f:(fun (l, t) (fs, fvs) ->
           let t, fv_t = go t in
           ( ((l, t) :: fs)
@@ -216,7 +218,7 @@ let strip_needless_quantifiers ty =
       | Some rest ->
           match rest with
           | DT.Quant{q_var; q_quant; q_body = DT.Var{v_var; _}; _}
-            when Common_ast.Var.equal q_var v_var ->
+            when Var.equal q_var v_var ->
               begin match q_quant, parent with
                 | `All, `Union
                 | `All, `Record `Type
@@ -235,12 +237,12 @@ let strip_needless_quantifiers ty =
   fst (go ty)
 
 let get_var_type uv =
-  fst (go IntSet.empty uv)
+  fst (go (Set.empty (module Int)) uv)
   |> strip_needless_quantifiers
   |> Relabel.relabel_type ()
 
 let get_var_row uv =
-  fst (go_row (IntSet.empty) uv)
+  fst (go_row (Set.empty (module Int)) uv)
 
 let rec kind: u_kind -> DK.maybe_kind = function
   | `Free _ -> `Unknown

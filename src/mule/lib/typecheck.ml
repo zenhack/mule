@@ -6,9 +6,13 @@ module C = Common_ast.Const
 module Label = Common_ast.Label
 module Var = Common_ast.Var
 
+module IntPair = Pair.Make(Int)(Int)
+
+type 'v var_map = (Var.t, 'v, Var.comparator_witness) Map.t
+
 type context = {
-  type_env : u_var VarMap.t;
-  vals_env : u_var VarMap.t;
+  type_env : u_var var_map;
+  vals_env : u_var var_map;
   locals : u_var list ref;
 
   (* [assumptions] is a list of subtyping constraints we've already seen.
@@ -20,7 +24,7 @@ type context = {
    * -- but that's as expected; recursive types amount to circular
    * reasoning.
   *)
-  assumptions : IntPairSet.t ref;
+  assumptions : (IntPair.t, IntPair.comparator_witness) Set.t ref;
   scope : Scope.t;
 
   get_import_type : Paths_t.t -> u_var;
@@ -45,7 +49,7 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
  * variables underneath it have a scope at least as great as [scope]. *)
 let hoist_scope: Scope.t -> u_var -> unit =
   fun scope uv ->
-  let seen = ref IntSet.empty in
+  let seen = ref (Set.empty (module Int)) in
   let rec go uv =
     let u = UnionFind.get uv in
     let id = get_id u in
@@ -69,7 +73,7 @@ let hoist_scope: Scope.t -> u_var -> unit =
 let rec subst ~target ~replacement uv =
   (* Nodes we've already seen, to detect cycles and avoid traversing
    * shared sub-graphs. *)
-  let seen = ref IntMap.empty in
+  let seen = ref (Map.empty (module Int)) in
   let rec go uv =
     begin match UnionFind.get uv with
       | u when get_id u = target -> replacement
@@ -165,11 +169,11 @@ let find_bound ~env ~var ~src = match Map.find env var with
 
 (* Build an initial context, which contains types for the stuff in intrinsics. *)
 let rec make_initial_context ~get_import_type =
-  let assumptions = ref IntPairSet.empty in
+  let assumptions = ref (Set.empty (module IntPair)) in
   let scope = Scope.empty in
   let dummy = {
-    type_env = VarMap.empty;
-    vals_env = VarMap.empty;
+    type_env = Map.empty (module Var);
+    vals_env = Map.empty (module Var);
     locals = ref [];
     assumptions;
     scope;
@@ -769,7 +773,7 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
       | _ ->
           (m, row)
     in
-    go LabelMap.empty
+    go (Map.empty (module Label))
   in
   let (sub_fields, sub_tail) = fold_row sub in
   let (super_fields, super_tail) = fold_row super in
@@ -834,11 +838,11 @@ and trace_req_subtype ~sub ~super =
             Sexp.Atom "require_subtype";
             Sexp.List [
               Sexp.Atom "sub";
-              sexp_of_uvar IntSet.empty sub;
+              sexp_of_uvar (Set.empty (module Int)) sub;
             ];
             Sexp.List [
               Sexp.Atom "super";
-              sexp_of_uvar IntSet.empty super;
+              sexp_of_uvar (Set.empty (module Int)) super;
             ];
           ])
       |> Sexp.to_string_hum

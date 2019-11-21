@@ -14,7 +14,7 @@ type runner = {
 }
 
 let ignore_io io =
-  R.prim_io (fun () -> Lwt.map (fun _ -> R.Expr.Record LabelMap.empty) (io ()))
+  R.prim_io (fun () -> Lwt.map (fun _ -> R.Expr.Record (Map.empty (module Label))) (io ()))
 
 let io_just = R.prim (fun x ->
     R.prim_io (fun () -> Lwt.return x)

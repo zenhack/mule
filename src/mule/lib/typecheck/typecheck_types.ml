@@ -131,7 +131,7 @@ let rec sexp_of_u_kind: u_kind -> Sexp.t = function
   | `Type -> Sexp.Atom "type"
   | `Arrow(p, r) -> Sexp.List [sexp_of_kvar p; Sexp.Atom "=>"; sexp_of_kvar r]
 and sexp_of_kvar: k_var -> Sexp.t = fun v -> sexp_of_u_kind (UnionFind.get v)
-and sexp_of_uvar: IntSet.t -> u_var -> Sexp.t =
+and sexp_of_uvar: (int, Int.comparator_witness) Set.t -> u_var -> Sexp.t =
   fun seen v -> sexp_of_u_type seen (UnionFind.get v)
 and sexp_of_u_typeconst: u_typeconst -> Sexp.t = function
   | `Named n -> Sexp.List [Sexp.Atom "named"; sexp_of_typeconst_name n]
@@ -142,7 +142,7 @@ and sexp_of_flag: bound_ty -> Sexp.t = function
 and sexp_of_quantifier: quantifier -> Sexp.t = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
-and sexp_of_u_type: IntSet.t -> u_type -> Sexp.t = fun seen -> function
+and sexp_of_u_type: (int, Int.comparator_witness) Set.t -> u_type -> Sexp.t = fun seen -> function
   | `Free({ty_id; ty_flag; ty_scope}, k) -> Sexp.List [
       sexp_of_flag ty_flag;
       Int.sexp_of_t ty_id;

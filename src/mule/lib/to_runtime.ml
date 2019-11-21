@@ -8,7 +8,7 @@ type binding = [ `Index of int | `Term of R.t ]
 let translate
   : get_import:(Paths_t.t -> R.t)
     -> int
-    -> binding VarMap.t
+    -> (Var.t, binding, 'cmp) Map.t
     -> 'i D.t
     -> (int * R.t) =
   fun ~get_import ->
@@ -42,7 +42,7 @@ let translate
           (max fcap xcap, R.App(f', x'))
       | D.WithType {wt_expr = e; _} ->
           go_expr depth env e
-      | D.EmptyRecord -> (0, R.Record LabelMap.empty)
+      | D.EmptyRecord -> (0, R.Record (Map.empty(module Label)))
       | D.GetField {gf_lbl} -> (0, R.GetField gf_lbl)
       | D.UpdateVal {uv_lbl = label } ->
           ( 0
@@ -106,7 +106,7 @@ let translate
     | Some lf ->
         let (ncaps, body) = go_leaf depth env lf in
         (ncaps, Some body)
-  and go_leaf: int -> binding VarMap.t -> 'i D.leaf -> (int * R.t) =
+  and go_leaf: int -> (Var.t, binding, 'cmp) Map.t -> 'i D.leaf -> (int * R.t) =
     fun depth env lf ->
       let l_param =
         match lf.lf_var with

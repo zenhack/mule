@@ -19,7 +19,7 @@ let unreachable_cases cases =
 let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   fun nodes ->
   let vars =
-    List.fold nodes ~init:VarSet.empty ~f:(fun set (v, _) -> Set.add set v)
+    List.fold nodes ~init:(Set.empty (module Var)) ~f:(fun set (v, _) -> Set.add set v)
   in
   let edges =
     List.map nodes ~f:(fun (from, t) ->
@@ -526,7 +526,7 @@ and desugar_lambda ps body =
         let v = Gensym.anon_var () in
         D.Match (D.BLabel {
             lm_default = None;
-            lm_cases = LabelMap.singleton
+            lm_cases = Map.singleton (module Label)
                 c_lbl.Loc.l_value
                 D.(BLeaf {
                     lf_var = Some v;
@@ -605,9 +605,9 @@ and desugar_record fields =
 and desugar_match cases =
   begin match cases with
     | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->
-        desugar_lbl_match LabelMap.empty cases
+        desugar_lbl_match (Map.empty (module Label)) cases
     | (Loc.{l_value = SP.Const _; _}, _) :: _ ->
-        desugar_const_match ConstMap.empty cases
+        desugar_const_match (Map.empty (module Const)) cases
     | [Loc.{l_value = SP.Wild; _}, body] ->
         D.BLeaf {
           lf_var = None;
@@ -620,7 +620,7 @@ and desugar_match cases =
           lf_body = desugar body;
         }
     | [] -> D.BLabel {
-        lm_cases = LabelMap.empty;
+        lm_cases = Map.empty (module Label);
         lm_default = None;
       }
     | (Loc.{l_value = SP.Wild; _}, _) :: cs | (Loc.{l_value = SP.Var _; _}, _) :: cs ->
@@ -754,7 +754,7 @@ and desugar_let bs body =
               app_fn =
                 D.Match (D.BLabel {
                     lm_default = None;
-                    lm_cases = LabelMap.singleton lbl.Loc.l_value D.(BLeaf {
+                    lm_cases = Map.singleton (module Label) lbl.Loc.l_value D.(BLeaf {
                         lf_var = Some match_var;
                         lf_body = Var {
                             v_var = match_var;
