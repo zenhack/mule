@@ -519,31 +519,25 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
       ty_want
   | DE.Lam{l_param; l_body} ->
       with_locals ctx (fun ctx ->
-        let want = unroll_all_quants ctx `Super ty_want in
-        begin match UnionFind.get want with
-        | `Free({ty_flag = `Flex; _}, k) ->
-            require_kind k ktype;
-            let got = synth ctx e in
-            UnionFind.merge (fun _ r -> r) want got;
-            got
-        | `Const(_, `Named `Fn, [p, _; r, _], _) ->
-            let body =
-              check
-                { ctx with vals_env = Map.set ctx.vals_env ~key:l_param ~data:p }
-                l_body
-                r
-                ~reason:`Unspecified
-            in
-            (p **> body)
-        | _ ->
-            MuleErr.throw
-              (`TypeError
-                (`MismatchedCtors {
-                    se_sub = Extract.get_var_type (synth ctx e);
-                    se_super = Extract.get_var_type ty_want;
-                    se_reason = reason;
-                  }))
-        end
+          check_maybe_flex ctx e ty_want ~f:(fun want -> match UnionFind.get want with
+          | `Const(_, `Named `Fn, [p, _; r, _], _) ->
+              let body =
+                check
+                  { ctx with vals_env = Map.set ctx.vals_env ~key:l_param ~data:p }
+                  l_body
+                  r
+                  ~reason:`Unspecified
+              in
+              (p **> body)
+          | _ ->
+              MuleErr.throw
+                (`TypeError
+                  (`MismatchedCtors {
+                      se_sub = Extract.get_var_type (synth ctx e);
+                      se_super = Extract.get_var_type ty_want;
+                      se_reason = reason;
+                    }))
+        )
       )
   | _ ->
       let ty_got = synth ctx e in
@@ -553,6 +547,16 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
         ~sub:ty_got
         ~super:ty_want;
       ty_got
+and check_maybe_flex ctx e ty_want ~f =
+  let want = unroll_all_quants ctx `Super ty_want in
+  match UnionFind.get want with
+  | `Free({ty_flag = `Flex; _}, k) ->
+      require_kind k ktype;
+      let got = synth ctx e in
+      UnionFind.merge (fun _ r -> r) want got;
+      got
+  | _ ->
+      f want
 and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   fun ctx lf ty_want ->
   let ty_got = synth_leaf ctx lf in
