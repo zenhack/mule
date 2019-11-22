@@ -517,10 +517,15 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
         ~sub:ty_want
         ~super:ty_want';
       ty_want
-      (*
   | DE.Lam{l_param; l_body} ->
       with_locals ctx (fun ctx ->
-        begin match UnionFind.get (unroll_all_quants ctx `Super ty_want) with
+        let want = unroll_all_quants ctx `Super ty_want in
+        begin match UnionFind.get want with
+        | `Free({ty_flag = `Flex; _}, k) ->
+            require_kind k ktype;
+            let got = synth ctx e in
+            UnionFind.merge (fun _ r -> r) want got;
+            got
         | `Const(_, `Named `Fn, [p, _; r, _], _) ->
             let body =
               check
@@ -540,7 +545,6 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
                   }))
         end
       )
-         *)
   | _ ->
       let ty_got = synth ctx e in
       require_subtype
@@ -854,13 +858,11 @@ and unroll_quant ctx side q id k body =
     ~target:id
     ~replacement:(fresh_local ctx (get_flag q side) k)
     body
-    (*
 and unroll_all_quants ctx side uv = match UnionFind.get uv with
   | `Quant(_, q, id, k, body) ->
       unroll_quant ctx side q id k body
       |> unroll_all_quants ctx side
   | _ -> uv
-       *)
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
   require_subtype ctx ~reason:`Unspecified ~sub:ty_got ~super:ty_want
