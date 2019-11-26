@@ -30,6 +30,15 @@ type context = {
   get_import_type : Paths_t.t -> u_var;
 }
 
+let throw_mismatch ~reason ~sub ~super =
+  MuleErr.throw
+    (`TypeError
+      (`MismatchedCtors {
+          se_sub = Extract.get_var_type sub;
+          se_super = Extract.get_var_type super;
+          se_reason = reason;
+        }))
+
 let flip_dir = function
   | `Sub -> `Super
   | `Super -> `Sub
@@ -530,13 +539,22 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
               in
               (p **> body)
           | _ ->
-              MuleErr.throw
-                (`TypeError
-                  (`MismatchedCtors {
-                      se_sub = Extract.get_var_type (synth ctx e);
-                      se_super = Extract.get_var_type ty_want;
-                      se_reason = reason;
-                    }))
+              throw_mismatch
+                ~sub:(synth ctx e)
+                ~super:ty_want
+                ~reason
+        )
+      )
+  | DE.Match b ->
+      with_locals ctx (fun ctx ->
+        check_maybe_flex ctx e ty_want ~f:(fun want -> match UnionFind.get want with
+          | `Const(_, `Named `Fn, [p, _; r, _], _) ->
+              check_branch ctx b (p, r)
+          | _ ->
+              throw_mismatch
+                ~sub:(synth ctx e)
+                ~super:ty_want
+                ~reason
         )
       )
   | _ ->
@@ -557,6 +575,57 @@ and check_maybe_flex ctx e ty_want ~f =
       got
   | _ ->
       f want
+and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -> u_var =
+  fun ctx b ?default (p_want, r_want) ->
+    let ty_want = p_want **> r_want in
+    match b with
+    | DE.BLeaf lf ->
+        check_leaf ctx lf ty_want
+    | DE.BConst {cm_cases; cm_default} ->
+        begin match default, cm_default with
+          | None, None -> MuleErr.throw `IncompletePattern
+          | Some _, None -> ()
+          | _, Some lf -> ignore (check_leaf ctx lf ty_want)
+        end;
+        Map.iteri cm_cases ~f:(fun ~key ~data ->
+          check_const ctx key p_want;
+          ignore (check ctx data r_want ~reason:`Unspecified);
+        );
+        ty_want
+    | DE.BLabel {lm_cases; lm_default} ->
+        let default = match lm_default with
+          | None -> default
+          | Some _ -> Some ty_want
+        in
+        Option.iter lm_default ~f:(fun lf -> ignore (check_leaf ctx lf ty_want));
+        let p_lbls = union (make_match_row ctx
+              ~have_default:(Option.is_some default)
+              lm_cases
+              lm_default
+          )
+        in
+        require_subtype ctx ~sub:p_want ~super:p_lbls ~reason:`Unspecified;
+        Map.iteri lm_cases ~f:(fun ~key ~data ->
+          let u_hd = fresh_local ctx `Flex ktype in
+          let u_tl = fresh_local ctx `Flex krow in
+          require_subtype
+            ctx
+            ~sub:p_want
+            ~super:(union (extend key u_hd u_tl))
+            ~reason:`Unspecified;
+          ignore (check_branch ctx data ?default (u_hd, r_want))
+        );
+        ty_want
+and make_match_row ctx ~have_default lm_cases lm_default =
+  Map.fold lm_cases
+    ~init:begin match lm_default with
+      | None when have_default -> empty
+      | None -> all krow (fun r -> r)
+      | Some _ -> fresh_local ctx `Flex krow
+    end
+    ~f:(fun ~key ~data:_ tl ->
+      extend key (fresh_local ctx `Flex ktype) tl
+    )
 and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   fun ctx lf ty_want ->
   let ty_got = synth_leaf ctx lf in
