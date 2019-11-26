@@ -377,7 +377,7 @@ and synth: context -> 'i DE.t -> u_var =
         let _ = check ctx wt_expr want_ty ~reason:(`TypeAnnotation(wt_expr, wt_type)) in
         want_ty
     | DE.Let{let_v; let_e; let_body} ->
-        let ty = synth ctx let_e in
+        let ty = unpack_exist ctx (synth ctx let_e) in
         synth
           { ctx
             with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty
@@ -422,6 +422,7 @@ and synth: context -> 'i DE.t -> u_var =
               with_locals ctx' (fun ctx ->
                 check ctx e (Util.find_exn ctx.vals_env v) ~reason:`Unspecified
               )
+              |> unpack_exist ctx
             )
           in
           let checked_vals =
@@ -926,6 +927,15 @@ and trace_req_subtype ~sub ~super =
       |> Stdio.print_endline;
       Stdio.print_endline ""
     end
+and unpack_exist ctx ty = match UnionFind.get ty with
+  | `Quant(_, `Exist, id, k, body) ->
+      subst
+        ~target:id
+        ~replacement:(fresh_local ctx `Rigid k)
+        body
+      |> unpack_exist ctx
+  | _ ->
+      ty
 and unroll_quant ctx side q id k body =
   subst
     ~target:id
