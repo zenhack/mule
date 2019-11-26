@@ -5,27 +5,17 @@ Desugared:
 	  (letrec (types ())
 	   (values
 	    ((even
-	      ((:
-	        ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
-	         (union
-	          ((True (record (types ()) (values ())))
-	           (False (record (types ()) (values ())))))))
-	       (fn x
-	        ((match
-	          ((S ($2 ((match () (k (odd k))) $2)))
-	           (Z ($3 ((match () (_ ((fn x (True x)) {}))) $3)))))
-	         x))))
+	      (: (fn x ((match ((S (k (odd k))) (Z (_ ((fn x (True x)) {}))))) x))
+	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	        (union
+	         ((True (record (types ()) (values ())))
+	          (False (record (types ()) (values ()))))))))
 	     (odd
-	      ((:
-	        ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
-	         (union
-	          ((True (record (types ()) (values ())))
-	           (False (record (types ()) (values ())))))))
-	       (fn x
-	        ((match
-	          ((S ($0 ((match () (k (even k))) $0)))
-	           (Z ($1 ((match () (_ ((fn x (False x)) {}))) $1)))))
-	         x))))))
+	      (: (fn x ((match ((S (k (even k))) (Z (_ ((fn x (False x)) {}))))) x))
+	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
+	        (union
+	         ((True (record (types ()) (values ())))
+	          (False (record (types ()) (values ()))))))))))
 	   (((.= even) (((.= odd) {}) odd)) even)))
 	 ((fn x (S x))
 	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
@@ -33,8 +23,8 @@ Desugared:
 inferred type:
 
 	(union
-	 ((False (record (types ()) (values ())))
-	  (True (record (types ()) (values ())))))
+	 ((True (record (types ()) (values ())))
+	  (False (record (types ()) (values ())))))
 
 Runtime term:
 
@@ -47,52 +37,30 @@ Runtime term:
 	         (2 ()
 	          (App
 	           ((Match
-	             (cases
-	              ((S
-	                (Lam
-	                 (3 ()
-	                  (App
-	                   ((Match (cases ())
-	                     (default ((Lam (4 () (App ((Var 4) (Var 0))))))))
-	                    (Var 0))))))
-	               (Z
-	                (Lam
-	                 (0 ()
-	                  (App
-	                   ((Match (cases ())
-	                     (default
-	                      ((Lam
-	                        (0 ()
-	                         (App
-	                          ((Lam (0 () (Ctor (True (Var 0))))) (Record ()))))))))
-	                    (Var 0))))))))
-	             (default ()))
+	             (BLabel
+	              (lm_cases
+	               ((S (BLeaf (Lam (3 () (App ((Var 3) (Var 0)))))))
+	                (Z
+	                 (BLeaf
+	                  (Lam
+	                   (0 ()
+	                    (App ((Lam (0 () (Ctor (True (Var 0))))) (Record ())))))))))
+	              (lm_default ())))
 	            (Var 0))))))
 	       (1
 	        (Lam
 	         (1 ()
 	          (App
 	           ((Match
-	             (cases
-	              ((S
-	                (Lam
-	                 (2 ()
-	                  (App
-	                   ((Match (cases ())
-	                     (default ((Lam (3 () (App ((Var 3) (Var 0))))))))
-	                    (Var 0))))))
-	               (Z
-	                (Lam
-	                 (0 ()
-	                  (App
-	                   ((Match (cases ())
-	                     (default
-	                      ((Lam
-	                        (0 ()
-	                         (App
-	                          ((Lam (0 () (Ctor (False (Var 0))))) (Record ()))))))))
-	                    (Var 0))))))))
-	             (default ()))
+	             (BLabel
+	              (lm_cases
+	               ((S (BLeaf (Lam (2 () (App ((Var 2) (Var 0)))))))
+	                (Z
+	                 (BLeaf
+	                  (Lam
+	                   (0 ()
+	                    (App ((Lam (0 () (Ctor (False (Var 0))))) (Record ())))))))))
+	              (lm_default ())))
 	            (Var 0)))))))
 	      (App
 	       ((App
