@@ -38,7 +38,6 @@ and 'a bound = {
 }
 and tyvar = {
   ty_id: int;
-  ty_origin: int;
   ty_flag: bound_ty;
   ty_scope: Scope.t;
 }

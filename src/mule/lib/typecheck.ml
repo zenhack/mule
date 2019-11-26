@@ -126,7 +126,7 @@ let with_locals ctx f =
   let (_grafted, raised, to_generalize) =
     List.partition3_map !new_locals ~f:(fun v ->
       match UnionFind.get v with
-      | `Free({ty_id; ty_scope; ty_flag; ty_origin = _}, k) when Scope.equal ty_scope scope ->
+      | `Free({ty_id; ty_scope; ty_flag}, k) when Scope.equal ty_scope scope ->
           let q = match ty_flag with
             | `Flex -> `All
             | `Rigid -> `Exist
@@ -149,7 +149,7 @@ let with_locals ctx f =
 let fresh_local ctx ty_flag k =
   let ty_id = Gensym.gensym () in
   let ty_scope = ctx.scope in
-  let v = UnionFind.make (`Free({ty_id; ty_origin = ty_id; ty_flag; ty_scope}, k)) in
+  let v = UnionFind.make (`Free({ty_id; ty_flag; ty_scope}, k)) in
   ctx.locals := v :: !(ctx.locals);
   v
 
@@ -606,8 +606,8 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
-        | `Free({ty_flag = `Flex; ty_id = l_id; ty_origin = l_origin; ty_scope = l_scope}, kl),
-          `Free({ty_flag = `Flex; ty_id = _   ; ty_origin = _       ; ty_scope = r_scope}, kr) ->
+        | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope}, kl),
+          `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope}, kr) ->
             (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
             require_kind kl kr;
@@ -617,7 +617,6 @@ and unify_already_whnf
                     ( {
                       ty_flag = `Flex;
                       ty_id = l_id;
-                      ty_origin = l_origin;
                       ty_scope = Scope.lca l_scope r_scope;
                     }
                     , kl
@@ -647,26 +646,8 @@ and unify_already_whnf
               (sub, sub_dir)
               (unroll_quant ctx super_dir q id k body, super_dir)
 
-        | `Free({ty_flag = `Rigid; ty_origin = l_orig; ty_scope = l_scope; ty_id = l_id; _}, k),
-          `Free({ty_flag = `Rigid; ty_origin = r_orig; ty_scope = r_scope; _}, _)
-          when l_orig = r_orig ->
-            UnionFind.merge
-              (fun _ _ ->
-                  `Free
-                    ( {
-                      ty_flag = `Rigid;
-                      ty_id = l_id;
-                      ty_origin = l_orig;
-                      ty_scope = Scope.lca l_scope r_scope;
-                    }
-                    , k
-                    )
-              )
-              sub super;
-            sub
-
-        (* Distinct rigid variables should fail (If they were the same already,
-         * they would have been covered above): *)
+        (* Rigid variable should fail (If they were the same already, they would have been
+         * covered above): *)
         | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
             MuleErr.throw (`TypeError `CantInstantiate)
 
