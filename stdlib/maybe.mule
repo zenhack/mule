@@ -1,6 +1,13 @@
 {
   , type t a = Some a | None {}
   , type cmd a = t a
+
+  , with-default : all a. a -> t a -> a =
+      fn def maybe. match maybe with
+        | None _ -> def
+        | Some x -> x
+      end
+
   , map : all a b. (a -> b) -> t a -> t b =
       fn f x. match x with
         | Some x -> Some (f x)
