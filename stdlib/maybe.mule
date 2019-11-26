@@ -18,8 +18,7 @@
 
   , flatten : all a. t (t a) -> t a =
       fn maybe. match maybe with
-        | Some (Some x) -> Some x
-        | Some (None x) -> None x
+        | Some x -> x
         | None _ -> None {}
       end
 
