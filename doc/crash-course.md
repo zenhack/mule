@@ -191,3 +191,36 @@ Is equivalent to:
 ```
 fn x. fn y. x
 ```
+
+## Let expressions
+
+If you've been following along in the repl thus far, you may now want to
+switch to editing a `.mule` source file and running `mule eval`, as our
+expressions are about to get bigger, and we'll want more than one line
+to work with.
+
+Let expressions can be used to bind the value of an expression to a
+variable, which can be used in the body of the let. The most basic
+version of the syntax is:
+
+```
+let <variable> = <expresssion> in <expression>
+```
+
+Let's try out an example. Put this in a file (let's call it
+`scratch.mule`):
+
+```
+# scratch.mule
+let increment = int.add 1 in
+increment 4
+````
+
+...and run it with `mule eval ./scratch.mule`.
+
+You should see this output:
+
+```
+it : int =
+  5
+```
