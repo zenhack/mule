@@ -93,8 +93,24 @@ operations using the usual function syntax (explored later):
 Mule's built in `text` type (often called a "string" in other
 languages) is enclosed in double quotes:
 
+```
 #mule> "Hello, World!"
 "Hello, World!" : text
+```
+
+Inside of text literals, any character is allowed, but double quotes
+backslashes must be escaped by preceding them with a backslash. So:
+
+* `\"` generates a double quote.
+* `\\` generates a single backslash
+
+Additionally, the following escape sequences exist (though you can also
+just use the literal character for each of these:
+
+* `\'` for single quote.
+* `\n` for newline.
+* `\t` for tab.
+* `\r` for carriage return.
 
 Right now the `text` type maps to a flat array of memory (JavaScript
 strings on the JavaScript backend, or OCaml strings in the interpreter),
@@ -103,11 +119,17 @@ efficient concatenation etc, So you will be able to glue large text
 values together without having to do anything special to avoid an O(n)
 cost for each append.
 
-## Built in types
+## Characters
 
-Mule has several built-in primitive types:
+Mule also has a built in `char` type, which represents a single
+character. The syntax is the same as for `text`, except we use single
+quotes instead of double, and only one character is allowed:
 
-* integers
-* characters
-* text (called "strings" in many other languages).
+```
+#mule> 'c'
+'c' : char
+```
 
+The same escape sequences are available as with text, though in this
+case the single-quote escape is mandatory while the double quote is
+optional, so you can write `'"'` for a double quote character literal.
