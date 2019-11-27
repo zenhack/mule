@@ -133,3 +133,40 @@ quotes instead of double, and only one character is allowed:
 The same escape sequences are available as with text, though in this
 case the single-quote escape is mandatory while the double quote is
 optional, so you can write `'"'` for a double quote character literal.
+
+## Functions
+
+In mule, a lambda looks like:
+
+```
+#mule> fn x y. x
+<lambda> : all a. (a) -> all b. (b) -> a
+```
+
+That is:
+
+* The keyword `fn`
+* A list of parameters (in this case `x y`)
+* A dot `.`
+* The body of the expression, which is a function.
+
+Functions are applied to their arguments by listing them separated by
+whitespace:
+
+```
+#mule> (fn x y. x) 1 2
+1 : int
+```
+
+Like in many ML family languages, the multi-argument syntax is just
+syntactic sugar for currying, so the expression:
+
+```
+fn x y. x
+```
+
+Is equivalent to:
+
+```
+fn x. fn y. x
+```
