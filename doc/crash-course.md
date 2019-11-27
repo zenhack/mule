@@ -96,12 +96,12 @@ languages) is enclosed in double quotes:
 #mule> "Hello, World!"
 "Hello, World!" : text
 
-Right now the `text` type maps to a flat array of memory (javascript
-strings on the js backend, or ocaml strings in the interpreter), but
-longer term we want to move to a smarter data structure, with efficient
-concatenation etc, So you will be able to glue large text values
-together without having to do anything special to avoid an O(n) cost for
-each append.
+Right now the `text` type maps to a flat array of memory (JavaScript
+strings on the JavaScript backend, or OCaml strings in the interpreter),
+but longer term we want to move to a smarter data structure, with
+efficient concatenation etc, So you will be able to glue large text
+values together without having to do anything special to avoid an O(n)
+cost for each append.
 
 ## Built in types
 
