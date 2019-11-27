@@ -20,8 +20,11 @@ report their type:
 
 ```
 #mule> int.add 4 2
-6 : int
+it : int =
+  6
 ```
+
+The above reports that the result has type `int`, and the value is `6`.
 
 Alternatively, you can evaluate a whole file via `mule eval <filename>`.
 The file extension for mule source code is `.mule`.
@@ -41,7 +44,8 @@ usage:
 
 ```
 #mule> 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 : int
+it : int =
+  100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ```
 
 Mule's integer literals can be written in decimal, hexidecimal, binary
@@ -49,27 +53,33 @@ or octal:
 
 ```
 #mule> 16
-16 : int
+it : int =
+  16
 #mule> 0x10
-16 : int
+it : int =
+  16
 #mule> 0b10000
-16 : int
+it : int =
+  16
 #mule> 0o20
-16 : int
+it : int =
+  16
 ```
 
 Negative integers start with a minus sign:
 
 ```
 #mule> -42
--42 : int
+it : int =
+  -42
 ```
 
 Positive integers may optionally have a leading plus sign:
 
 ```
 #mule> +42
-42 : int
+it : int =
+  42
 ```
 
 Mule allows underscores in the middle of integer literals to improve
@@ -77,7 +87,8 @@ readability:
 
 ```
 #mule> 1_000_000_000
-1000000000 : int
+it : int =
+  1000000000
 ```
 
 We don't yet have infix operators, so you have to call the integer
@@ -85,7 +96,8 @@ operations using the usual function syntax (explored later):
 
 ```
 #mule> int.mul 2 2
-4 : int
+it : int =
+  4
 ```
 
 ## Text
@@ -95,7 +107,8 @@ languages) is enclosed in double quotes:
 
 ```
 #mule> "Hello, World!"
-"Hello, World!" : text
+it : text =
+  "Hello, World!"
 ```
 
 Inside of text literals, any character is allowed, but double quotes
@@ -127,7 +140,8 @@ quotes instead of double, and only one character is allowed:
 
 ```
 #mule> 'c'
-'c' : char
+it : char =
+  'c'
 ```
 
 The same escape sequences are available as with text, though in this
@@ -140,7 +154,8 @@ In mule, a lambda looks like:
 
 ```
 #mule> fn x y. x
-<lambda> : all a. (a) -> all b. (b) -> a
+it : all a. (a) -> all b. (b) -> a =
+  <lambda>
 ```
 
 That is:
@@ -150,12 +165,18 @@ That is:
 * A dot `.`
 * The body of the expression, which is a function.
 
+You'll notice that the repl won't display the details of a function;
+instead, it will just say `<lambda>`. It will still give you the type
+however. There are a few other sorts of value that will do something
+similar.
+
 Functions are applied to their arguments by listing them separated by
 whitespace:
 
 ```
 #mule> (fn x y. x) 1 2
-1 : int
+it : int =
+  1
 ```
 
 Like in many ML family languages, the multi-argument syntax is just
