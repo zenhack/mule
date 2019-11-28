@@ -214,6 +214,7 @@ let pretty_opt_fst sep = function
         docs
         ~init:(ifflat (indent doc) (indent (sep ^/^ indent doc)))
         ~f:(fun docs doc -> docs ^^ break 0 ^^ indent (sep ^/^ indent doc))
+      ^^ break 0
     )
 
 
