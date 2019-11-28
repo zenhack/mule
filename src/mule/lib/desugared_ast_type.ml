@@ -207,13 +207,14 @@ and map_row {row_info; row_fields; row_rest} ~f = {
 let indent doc = PPrint.(nest 2 (group doc))
 
 let pretty_opt_fst sep = function
-  | [] -> PPrint.empty
-  | (doc :: docs) -> PPrint.(indent (
-      List.fold_left
+  | [] -> PPrint.(break 0)
+  | (doc :: docs) -> PPrint.(
+      break 0
+      ^^ List.fold_left
         docs
         ~init:(ifflat (indent doc) (indent (sep ^/^ indent doc)))
         ~f:(fun docs doc -> docs ^^ break 0 ^^ indent (sep ^/^ indent doc))
-    ))
+    )
 
 
 let pretty_string s =
@@ -298,7 +299,7 @@ let rec pretty_t = function
   | Opaque _ -> PPrint.string "<opaque>"
   | TypeLam _ -> PPrint.string "<type lambda>"
   | App{app_fn; app_arg; _} ->
-      PPrint.(parens (pretty_t app_fn) ^/^ pretty_t app_arg)
+      PPrint.(parens (group (pretty_t app_fn)) ^/^ indent (pretty_t app_arg))
 and pretty_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
