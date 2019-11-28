@@ -207,9 +207,9 @@ and map_row {row_info; row_fields; row_rest} ~f = {
 let indent doc = PPrint.(nest 2 (group doc))
 
 let pretty_opt_fst sep = function
-  | [] -> PPrint.(break 0)
+  | [] -> PPrint.empty
   | (doc :: docs) -> PPrint.(
-      break 0
+      ifflat empty (break 0)
       ^^ List.fold_left
         docs
         ~init:(ifflat (indent doc) (indent (sep ^/^ indent doc)))
