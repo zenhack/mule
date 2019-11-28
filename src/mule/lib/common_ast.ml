@@ -60,6 +60,12 @@ module Const = struct
 
   include T
   include Comparator.Make(T)
+
+  let to_string = function
+    | Text x -> "\"" ^ String.escaped x ^ "\""
+    | Integer x -> Z.to_string x
+    | Char '\'' -> "\\'"
+    | Char c -> "'" ^ String.escaped (Char.to_string c) ^ "'"
 end
 
 module Loc = struct

@@ -39,6 +39,26 @@ module Expr = struct
     | InProgress
     | Ready of t
 
+  let rec pretty_t prec = function
+    | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ ->
+        PP.string "<non-value>"
+    | Lam _ -> PP.string "<lambda>"
+    | Lazy _ -> PP.string "<lazy>"
+    | Prim _ -> PP.string "<primitive-function>"
+    | PrimIO _ -> PP.string "<primitive-io>"
+    | Const c -> PP.string (Const.to_string c)
+    | Ctor(lbl, arg) ->
+        PP.(Prec.(parens_if_tighter_than prec AppFn (
+          Label.pretty lbl ^/^ pretty_t AppArg arg
+        )))
+    | Record fields ->
+        Map.to_alist fields
+        |> List.map ~f:(fun (k, v) ->
+          PP.(Label.pretty k ^/^ PP.string "=" ^/^ pretty_t Prec.TopLevel v)
+        )
+        |> PP.(opt_fst comma)
+        |> PP.braces
+
   (* Convert a runtime value to a human readable string.
    *
    * This is intended for displaying *fully evaluated* values to the user. As such,
@@ -49,35 +69,8 @@ module Expr = struct
    * - More generally, a displayed non-value (including the body of a lambda) would
    *   include code that has been transformed.
   *)
-  let rec to_string = function
-    | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ ->
-        "<non-value>"
-    | Lam _ -> "<lambda>"
-    | Record fields ->
-        Map.to_alist fields
-        |> List.map ~f:(fun (k, v) -> Label.to_string k ^ " = " ^ to_string v)
-        |> String.concat ~sep:", "
-        |> (fun s -> "{" ^ s ^ "}")
-    | Ctor(lbl, arg) ->
-        Label.to_string lbl ^ " (" ^ to_string arg ^ ")"
-    | Lazy _ -> "<lazy>"
-    | Const c ->
-        begin match c with
-          | Const.Text txt -> String.concat [
-              "\"";
-              String.escaped txt;
-              "\"";
-            ]
-          | Const.Integer n ->
-              Z.to_string n
-          | Const.Char c -> String.concat [
-              "'";
-              Char.escaped c;
-              "'";
-            ]
-        end
-    | Prim _ -> "<primitive-function>"
-    | PrimIO _ -> "<primitive-io>"
+  let to_string e =
+    PP.(build_string (pretty_t Prec.TopLevel e))
 end
 
 (* Misc helpers for putting together ASTs: *)

@@ -340,9 +340,7 @@ and pretty_type_member lbl ty =
     ))
 
 let to_string ty =
-  let buf = Buffer.create 1 in
-  PP.(ToBuffer.pretty 1.0 80 buf (indent (pretty_t Prec.TopLevel ty)));
-  Buffer.contents buf
+  PP.(build_string (pretty_t Prec.TopLevel ty))
 
 let rec apply_to_kids t ~f = match t with
   | Var _ | Path _ | Named _ | Opaque _ -> t

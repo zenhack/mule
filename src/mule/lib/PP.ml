@@ -43,3 +43,8 @@ let binder prec bname args body =
       ^/^ indent (group body)
     )
   )
+
+let build_string doc =
+  let buf = Buffer.create 1 in
+  ToBuffer.pretty 1.0 80 buf (indent doc);
+  Buffer.contents buf
