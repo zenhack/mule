@@ -363,14 +363,14 @@ and ex2 = lazy (
   let%map e =
     many (kwd "." >> label)
     |>> List.fold_left
-        ~init:head
-        ~f:(fun e l -> Loc.{
-        l_value = Expr.GetField {
-            gf_arg = e;
-            gf_lbl = l;
-          };
-        l_loc = spanning e.l_loc l.l_loc;
-      })
+      ~init:head
+      ~f:(fun e l -> Loc.{
+          l_value = Expr.GetField {
+              gf_arg = e;
+              gf_lbl = l;
+            };
+          l_loc = spanning e.l_loc l.l_loc;
+        })
   in
   List.fold_right quotes ~init:e ~f:(fun q body ->
     let f e = match q.Loc.l_value with
@@ -404,7 +404,7 @@ and quote = lazy (located (choice [
     (kwd "`" >>$ `Quote);
     (kwd "~@" >>$ `UnquoteSplice);
     (kwd "~" >>$ `Unquote);
-]))
+  ]))
 and lambda = lazy ((located (
     let%bind params = kwd "fn" >> many1 (lazy_p pattern) in
     let%map body = kwd "." >> lazy_p expr in

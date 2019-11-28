@@ -230,9 +230,9 @@ let pretty_path_root = function
 
 let pretty_binder bname args body =
   PPrint.(group (
-    group (separate (break 1) (string bname :: args) ^^ dot)
-    ^/^ indent (group body)
-  ))
+      group (separate (break 1) (string bname :: args) ^^ dot)
+      ^/^ indent (group body)
+    ))
 
 let rec pretty_t = function
   | Fn {fn_pvar; fn_param; fn_ret; _} ->
@@ -240,8 +240,8 @@ let rec pretty_t = function
         let param = pretty_t fn_param in
         let param =
           match fn_pvar with
-            | None -> param
-            | Some v -> Var.pretty v ^/^ colon ^/^ group param
+          | None -> param
+          | Some v -> Var.pretty v ^/^ colon ^/^ group param
         in
         let param = group (parens param) in
         group (param ^/^ string "->" ^/^ group (pretty_t fn_ret))
@@ -252,9 +252,9 @@ let rec pretty_t = function
       Var.pretty v_var;
   | Path {p_var; p_lbls; _} ->
       PPrint.(
-          (pretty_path_root p_var
-                :: List.map p_lbls ~f:(fun l -> string (Label.to_string l))
-               )
+        (pretty_path_root p_var
+         :: List.map p_lbls ~f:(fun l -> string (Label.to_string l))
+        )
         |> separate dot
       )
   | Record {
@@ -279,16 +279,16 @@ let rec pretty_t = function
       |> pretty_opt_fst PPrint.comma
       |> PPrint.braces
   | Union{u_row = {row_fields; row_rest; _}} ->
-        List.map row_fields ~f:(fun (lbl, ty) ->
-          PPrint.(
-            Label.pretty lbl ^/^ parens (pretty_t ty)
-          )
+      List.map row_fields ~f:(fun (lbl, ty) ->
+        PPrint.(
+          Label.pretty lbl ^/^ parens (pretty_t ty)
         )
-        @ begin match row_rest with
-          | None -> []
-          | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
-        end
-    |> pretty_opt_fst PPrint.(break 1 ^^ bar)
+      )
+      @ begin match row_rest with
+        | None -> []
+        | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
+      end
+      |> pretty_opt_fst PPrint.(break 1 ^^ bar)
   | Quant{q_quant; q_var; q_body; _} ->
       pretty_quant q_quant q_var q_body
   | Named {n_name; _} ->
@@ -299,21 +299,21 @@ let rec pretty_t = function
   | App{app_fn; app_arg; _} ->
       PPrint.(parens (group (pretty_t app_fn)) ^/^ indent (pretty_t app_arg))
 and pretty_quant quant var body =
-    let rec go vars = function
-      | Quant{q_quant; q_var; q_body; _} when Poly.equal quant q_quant ->
-          go (q_var :: vars) q_body
-      | body ->
-          (List.rev vars, body)
-    in
-    let q = match quant with
-      | `All -> "all"
-      | `Exist -> "exist"
-    in
-    let vars, body = go [var] body in
-    pretty_binder
-      q
-      (List.map vars ~f:Var.pretty)
-      (pretty_t body)
+  let rec go vars = function
+    | Quant{q_quant; q_var; q_body; _} when Poly.equal quant q_quant ->
+        go (q_var :: vars) q_body
+    | body ->
+        (List.rev vars, body)
+  in
+  let q = match quant with
+    | `All -> "all"
+    | `Exist -> "exist"
+  in
+  let vars, body = go [var] body in
+  pretty_binder
+    q
+    (List.map vars ~f:Var.pretty)
+    (pretty_t body)
 and pretty_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
@@ -327,17 +327,17 @@ and pretty_type_member lbl ty =
   PPrint.(group (
       group (
         string "type"
-          ^/^
+        ^/^
         separate
           (break 1)
           (Label.pretty lbl :: List.map params ~f:Var.pretty)
-        )
-        ^^
-        begin match body with
-          | Opaque _ -> empty
-          | _ -> break 1 ^^ string "=" ^/^ group (pretty_t body)
-        end
-  ))
+      )
+      ^^
+      begin match body with
+        | Opaque _ -> empty
+        | _ -> break 1 ^^ string "=" ^/^ group (pretty_t body)
+      end
+    ))
 
 let to_string ty =
   let buf = Buffer.create 1 in
