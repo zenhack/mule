@@ -288,11 +288,7 @@ let rec pretty_t = function
         end
     |> pretty_opt_fst PPrint.(break 1 ^^ bar)
   | Quant{q_quant; q_var; q_body; _} ->
-      let q = match q_quant with
-        | `All -> "all"
-        | `Exist -> "exist"
-      in
-      pretty_binder q [Var.pretty q_var] (pretty_t q_body)
+      pretty_quant q_quant q_var q_body
   | Named {n_name; _} ->
       Typecheck_types_t.string_of_typeconst_name n_name
       |> PPrint.string
@@ -300,6 +296,22 @@ let rec pretty_t = function
   | TypeLam _ -> PPrint.string "<type lambda>"
   | App{app_fn; app_arg; _} ->
       PPrint.(parens (group (pretty_t app_fn)) ^/^ indent (pretty_t app_arg))
+and pretty_quant quant var body =
+    let rec go vars = function
+      | Quant{q_quant; q_var; q_body; _} when Poly.equal quant q_quant ->
+          go (q_var :: vars) q_body
+      | body ->
+          (List.rev vars, body)
+    in
+    let q = match quant with
+      | `All -> "all"
+      | `Exist -> "exist"
+    in
+    let vars, body = go [var] body in
+    pretty_binder
+      q
+      (List.map vars ~f:Var.pretty)
+      (pretty_t body)
 and pretty_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
