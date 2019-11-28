@@ -240,9 +240,10 @@ let rec pretty_t = function
         let param =
           match fn_pvar with
             | None -> param
-            | Some v -> parens (Var.pretty v ^/^ colon ^/^ group param)
+            | Some v -> Var.pretty v ^/^ colon ^/^ group param
         in
-        group param ^/^ string "->" ^/^ group (pretty_t fn_ret)
+        let param = group (parens param) in
+        group (param ^/^ string "->" ^/^ group (pretty_t fn_ret))
       )
   | Recur{mu_var; mu_body; _} ->
       pretty_binder "rec" [Var.pretty mu_var] (pretty_t mu_body)
