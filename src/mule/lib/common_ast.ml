@@ -7,6 +7,8 @@ module Name = struct
 
     val of_string : string -> t
     val to_string : t -> string
+
+    val pretty : t -> PPrint.document
   end
 
   module Impl : S = struct
@@ -23,6 +25,7 @@ module Name = struct
     let of_string s = s
     let to_string s = s
 
+    let pretty s = PPrint.string s
 
     let equal = String.equal
   end

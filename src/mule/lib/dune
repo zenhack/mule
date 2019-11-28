@@ -23,6 +23,7 @@
     mparser
     yojson
     zarith
+    pprint
     cmdliner)
   (inline_tests)
   (preprocess
