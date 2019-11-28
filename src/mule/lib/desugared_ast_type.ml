@@ -341,7 +341,7 @@ and pretty_type_member lbl ty =
 
 let to_string ty =
   let buf = Buffer.create 1 in
-  PPrint.ToBuffer.pretty 1.0 80 buf (pretty_t ty);
+  PPrint.ToBuffer.pretty 1.0 80 buf (indent (pretty_t ty));
   Buffer.contents buf
 
 let rec apply_to_kids t ~f = match t with
