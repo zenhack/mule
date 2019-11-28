@@ -204,46 +204,47 @@ and map_row {row_info; row_fields; row_rest} ~f = {
   row_rest = Option.map row_rest ~f:(map ~f);
 }
 
+let indent doc = PPrint.(nest 2 (group doc))
+
 let pretty_opt_fst sep = function
   | [] -> PPrint.empty
-  | docs -> PPrint.(group (nest 2 (ifflat empty sep ^^ separate sep docs)))
+  | (doc :: docs) -> PPrint.(indent (
+      List.fold_left
+        docs
+        ~init:(ifflat (indent doc) (indent (sep ^/^ indent doc)))
+        ~f:(fun docs doc -> docs ^^ break 0 ^^ indent (sep ^/^ indent doc))
+    ))
 
 
-let pretty_import {i_orig_path; _} = PPrint.(concat [
-      string "import";
-      break 1;
-      char '"';
-      string (String.escaped i_orig_path);
-      char '"';
-    ])
+let pretty_string s =
+  PPrint.(group (char '"' ^^ string (String.escaped s) ^^ char '"'))
+
+let pretty_import {i_orig_path; _} =
+  PPrint.(group (string "import" ^/^ pretty_string i_orig_path))
 
 let pretty_path_root = function
   | `Var v -> Var.pretty v
   | `Import i -> pretty_import i
 
+let pretty_binder bname args body =
+  PPrint.(group (
+    group (separate (break 1) (string bname :: args) ^^ dot)
+    ^/^ indent (group body)
+  ))
+
 let rec pretty_t = function
   | Fn {fn_pvar; fn_param; fn_ret; _} ->
       PPrint.(
-          begin match fn_pvar with
-            | None ->
-                pretty_t fn_param
-            | Some v ->
-                parens (Var.pretty v ^/^ colon ^/^ pretty_t fn_param)
-          end
-          ^/^
-          string "->"
-          ^/^
-          pretty_t fn_ret
-        )
+        let param = pretty_t fn_param in
+        let param =
+          match fn_pvar with
+            | None -> param
+            | Some v -> parens (Var.pretty v ^/^ colon ^/^ group param)
+        in
+        group param ^/^ string "->" ^/^ group (pretty_t fn_ret)
+      )
   | Recur{mu_var; mu_body; _} ->
-      PPrint.(concat [
-          string "rec";
-          break 1;
-          Var.pretty mu_var;
-          dot;
-          break 1;
-          group (pretty_t mu_body)
-        ])
+      pretty_binder "rec" [Var.pretty mu_var] (pretty_t mu_body)
   | Var{v_var; _} ->
       Var.pretty v_var;
   | Path {p_var; p_lbls; _} ->
@@ -265,38 +266,39 @@ let rec pretty_t = function
           | Some t -> [PPrint.(string "...type" ^/^ pretty_t t)]
         end;
         List.map vals ~f:(fun (lbl, ty) ->
-          PPrint.(group (Label.pretty lbl ^/^ colon ^/^ group (pretty_t ty)))
+          PPrint.(group (group (Label.pretty lbl ^/^ colon) ^/^ indent (pretty_t ty)))
         );
         begin match vals_rest with
           | None -> []
           | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
         end;
       ]
-      |> pretty_opt_fst PPrint.(comma ^^ break 1)
+      |> pretty_opt_fst PPrint.comma
       |> PPrint.braces
   | Union{u_row = {row_fields; row_rest; _}} ->
         List.map row_fields ~f:(fun (lbl, ty) ->
           PPrint.(
-            Label.pretty lbl ^^ parens (pretty_t ty)
+            Label.pretty lbl ^/^ parens (pretty_t ty)
           )
         )
         @ begin match row_rest with
           | None -> []
           | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
         end
-    |> pretty_opt_fst PPrint.bar
+    |> pretty_opt_fst PPrint.(break 1 ^^ bar)
   | Quant{q_quant; q_var; q_body; _} ->
-      let q = match q_quant with `All -> "all" | `Exist -> "exist" in
-      PPrint.(
-        string q ^/^ Var.pretty q_var ^^ dot ^/^ pretty_t q_body
-      )
+      let q = match q_quant with
+        | `All -> "all"
+        | `Exist -> "exist"
+      in
+      pretty_binder q [Var.pretty q_var] (pretty_t q_body)
   | Named {n_name; _} ->
       Typecheck_types_t.string_of_typeconst_name n_name
       |> PPrint.string
   | Opaque _ -> PPrint.string "<opaque>"
   | TypeLam _ -> PPrint.string "<type lambda>"
   | App{app_fn; app_arg; _} ->
-      PPrint.(parens (pretty_t app_fn) ^^ break 1 ^^ pretty_t app_arg)
+      PPrint.(parens (pretty_t app_fn) ^/^ pretty_t app_arg)
 and pretty_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
@@ -308,21 +310,23 @@ and pretty_type_member lbl ty =
   in
   let (params, body) = go [] ty in
   PPrint.(group (
-      string "type"
-        ^/^
-      separate
-        (break 1)
-        (Label.pretty lbl :: List.map params ~f:Var.pretty)
+      group (
+        string "type"
+          ^/^
+        separate
+          (break 1)
+          (Label.pretty lbl :: List.map params ~f:Var.pretty)
+        )
         ^^
-      begin match body with
-        | Opaque _ -> empty
-        | _ -> break 1 ^^ string "=" ^/^ group (pretty_t body)
-      end
+        begin match body with
+          | Opaque _ -> empty
+          | _ -> break 1 ^^ string "=" ^/^ group (pretty_t body)
+        end
   ))
 
 let to_string ty =
   let buf = Buffer.create 1 in
-  PPrint.ToBuffer.pretty 0.8 80 buf (pretty_t ty);
+  PPrint.ToBuffer.pretty 1.0 80 buf (pretty_t ty);
   Buffer.contents buf
 
 let rec apply_to_kids t ~f = match t with
