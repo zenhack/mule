@@ -204,86 +204,113 @@ and map_row {row_info; row_fields; row_rest} ~f = {
   row_rest = Option.map row_rest ~f:(map ~f);
 }
 
-let rec to_string = function
-  | Fn {fn_pvar = Some p; fn_param; fn_ret; _} ->
-      String.concat [
-        "(";
-        Var.to_string p;
-        " : ";
-        to_string fn_param;
-        ") -> ";
-        to_string fn_ret;
-      ]
-  | Fn {fn_pvar = None; fn_param; fn_ret; _} ->
-      String.concat ["("; to_string fn_param; ") -> "; to_string fn_ret]
-  | Recur{mu_var; mu_body; _} -> String.concat [
-      "rec ";
-      Var.to_string mu_var;
-      ". ";
-      to_string mu_body;
-    ]
-  | Var {v_var; _} -> Var.to_string v_var
+let pretty_opt_fst sep = function
+  | [] -> PPrint.empty
+  | docs -> PPrint.(group (nest 2 (ifflat empty sep ^^ separate sep docs)))
+
+
+let pretty_import {i_orig_path; _} = PPrint.(concat [
+      string "import";
+      break 1;
+      char '"';
+      string (String.escaped i_orig_path);
+      char '"';
+    ])
+
+let pretty_path_root = function
+  | `Var v -> Var.pretty v
+  | `Import i -> pretty_import i
+
+let rec pretty_t = function
+  | Fn {fn_pvar; fn_param; fn_ret; _} ->
+      PPrint.(concat [
+          begin match fn_pvar with
+            | None -> pretty_t fn_param
+            | Some v -> parens (concat [
+                Var.pretty v;
+                break 1;
+                colon;
+                break 1;
+                pretty_t fn_param;
+              ])
+          end;
+          break 1;
+          string "->";
+          break 1;
+          pretty_t fn_ret;
+        ])
+  | Recur{mu_var; mu_body; _} ->
+      PPrint.(concat [
+          string "rec";
+          break 1;
+          Var.pretty mu_var;
+          dot;
+          break 1;
+          group (pretty_t mu_body)
+        ])
+  | Var{v_var; _} ->
+      Var.pretty v_var;
   | Path {p_var; p_lbls; _} ->
-      String.concat ~sep:"." (
-        begin match p_var with
-          | `Var v -> Var.to_string v
-          | `Import {i_orig_path; _} ->
-              "import " ^ String.escaped i_orig_path
-        end :: List.map p_lbls ~f:Label.to_string)
+      PPrint.(
+          (pretty_path_root p_var
+                :: List.map p_lbls ~f:(fun l -> string (Label.to_string l))
+               )
+        |> separate dot
+      )
   | Record {
       r_types = {row_fields = types; row_rest = types_rest; _};
       r_values = {row_fields = vals; row_rest = vals_rest; _};
       _;
     } ->
       List.concat [
-        List.map types ~f:(fun (lbl, ty) -> format_type_member lbl ty);
+        List.map types ~f:(fun (lbl, ty) -> pretty_type_member lbl ty);
         begin match types_rest with
           | None -> []
-          | Some t -> ["...type " ^ to_string t]
+          | Some t -> [PPrint.(string "...type" ^^ break 1 ^^ pretty_t t)]
         end;
-        List.map vals ~f:(fun (lbl, ty) -> Label.to_string lbl ^ " : " ^ to_string ty);
+        List.map vals ~f:(fun (lbl, ty) -> PPrint.(group (concat [
+            Label.pretty lbl;
+            break 1;
+            colon;
+            break 1;
+            group (pretty_t ty);
+          ])));
         begin match vals_rest with
           | None -> []
-          | Some t -> ["..." ^ to_string t]
+          | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
         end;
       ]
-      |> String.concat ~sep:", "
-      |> (fun s -> "{" ^ s ^ "}")
+      |> pretty_opt_fst PPrint.(comma ^^ break 1)
+      |> PPrint.braces
   | Union{u_row = {row_fields; row_rest; _}} ->
-      String.concat ~sep:" | " (
         List.map row_fields ~f:(fun (lbl, ty) ->
-          String.concat [
-            Label.to_string lbl;
-            " (";
-            to_string ty;
-            ")";
-          ]
+          PPrint.(
+            Label.pretty lbl ^^ parens (pretty_t ty)
+          )
         )
         @ begin match row_rest with
           | None -> []
-          | Some t -> ["..." ^ to_string t]
-        end)
+          | Some t -> [PPrint.(string "..." ^^ pretty_t t)]
+        end
+    |> pretty_opt_fst PPrint.bar
   | Quant{q_quant; q_var; q_body; _} ->
       let q = match q_quant with `All -> "all" | `Exist -> "exist" in
-      String.concat [
-        q;
-        " ";
-        Var.to_string q_var;
-        ". ";
-        to_string q_body;
-      ]
+      PPrint.(concat [
+        string q;
+        break 1;
+        Var.pretty q_var;
+        dot;
+        break 1;
+        pretty_t q_body;
+      ])
   | Named {n_name; _} ->
       Typecheck_types_t.string_of_typeconst_name n_name
-  | Opaque _ -> "<opaque>"
-  | TypeLam _ -> "<type lambda>"
+      |> PPrint.string
+  | Opaque _ -> PPrint.string "<opaque>"
+  | TypeLam _ -> PPrint.string "<type lambda>"
   | App{app_fn; app_arg; _} ->
-      String.concat [
-        "(";
-        to_string app_fn;
-        ") ";
-        to_string app_arg;
-      ]
-and format_type_member lbl ty =
+      PPrint.(parens (pretty_t app_fn) ^^ break 1 ^^ pretty_t app_arg)
+and pretty_type_member lbl ty =
   let rec go params = function
     | Recur{mu_var; mu_body; _}
       when String.equal (Var.to_string mu_var) (Label.to_string lbl) ->
@@ -293,14 +320,22 @@ and format_type_member lbl ty =
     | t -> (List.rev params, t)
   in
   let (params, body) = go [] ty in
-  String.concat [
-    "type ";
-    Label.to_string lbl;
-    String.concat (List.map params ~f:(fun p -> " " ^ Var.to_string p))
-  ] ^ begin match body with
-    | Opaque _ -> ""
-    | _ -> " = " ^ to_string body
-  end
+  PPrint.(group (concat [
+      string "type";
+      break 1;
+      separate
+        (break 1)
+        (Label.pretty lbl :: List.map params ~f:Var.pretty);
+      begin match body with
+        | Opaque _ -> empty
+        | _ -> break 1 ^^ string "=" ^^ break 1 ^^ (group (pretty_t body))
+      end;
+  ]))
+
+let to_string ty =
+  let buf = Buffer.create 1 in
+  PPrint.ToBuffer.pretty 0.8 80 buf (pretty_t ty);
+  Buffer.contents buf
 
 let rec apply_to_kids t ~f = match t with
   | Var _ | Path _ | Named _ | Opaque _ -> t
