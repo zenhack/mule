@@ -5,4 +5,4 @@ Desugared:
 	 (letrec (types ())
 	  (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
 	  (((.= x) (((.= y) {}) y)) x)))
-Type error: Mismatched type constructors: (a) -> a is not a subtype of {}
+Type error: Mismatched type constructors: a -> a is not a subtype of {}
