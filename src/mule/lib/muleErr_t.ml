@@ -51,7 +51,12 @@ type type_error =
   [ `MismatchedCtors of subtype_error
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
-  | `CantInstantiate of Typecheck_types_t.var_info
+  | `CantInstantiate of
+      ( Typecheck_types_t.var_info *
+        [ `Type of int DT.t
+        | `Row of int DT.row
+        ]
+      )
   ]
 
 type path_error =  {

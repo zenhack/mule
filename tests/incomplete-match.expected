@@ -2,4 +2,4 @@
 Desugared:
 
 	((match ((Err (x x)))) ((fn x (Ok x)) {}))
-Type error: could not instatiate rigid type variable
+Type error: Could not instantiate rigid type variable. Rigid variables must be treated as opaque.

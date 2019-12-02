@@ -47,10 +47,23 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate TT.{vi_name = None} ->
-      "could not instatiate rigid type variable"
-  | `CantInstantiate TT.{vi_name = Some v} ->
-      "could not instatiate rigid type variable " ^ v
+  | `CantInstantiate (TT.{vi_name}, other_ty) ->
+      let var = match vi_name with
+        | None -> ""
+        | Some v -> " " ^ v
+      in
+      String.concat [
+        "Could not instantiate rigid type variable";
+        var;
+        begin match other_ty with
+          | `Type t ->
+              " with type " ^ Desugared_ast_type.to_string t
+          | `Row _ ->
+              (* TODO: print something helpful here. *)
+              ""
+        end;
+        ". Rigid variables must be treated as opaque.";
+      ]
   | `MismatchedCtors {se_sub; se_super; se_reason} ->
       let rec unwrap_reason path = function
         | `Cascaded(rsn, next) ->

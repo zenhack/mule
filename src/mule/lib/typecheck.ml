@@ -30,6 +30,19 @@ type context = {
   get_import_type : Paths_t.t -> u_var;
 }
 
+let cant_instantiate info other_ty =
+  MuleErr.throw
+    (`TypeError
+        (`CantInstantiate
+            ( info
+            , begin match UnionFind.get (get_kind other_ty) with
+                | `Row -> `Row (Extract.get_var_row other_ty)
+                | _ -> `Type (Extract.get_var_type other_ty)
+              end
+            )
+        )
+    )
+
 let throw_mismatch ~reason ~sub ~super =
   MuleErr.throw
     (`TypeError
@@ -752,9 +765,10 @@ and unify_already_whnf
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
-        | `Free{ty_flag = `Rigid; ty_info; _}, _
+        | `Free{ty_flag = `Rigid; ty_info; _}, _ ->
+            cant_instantiate ty_info super
         | _, `Free{ty_flag = `Rigid; ty_info; _} ->
-            MuleErr.throw (`TypeError (`CantInstantiate ty_info))
+            cant_instantiate ty_info sub
 
         (* Mismatched named constructors are never reconcilable: *)
         | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->
