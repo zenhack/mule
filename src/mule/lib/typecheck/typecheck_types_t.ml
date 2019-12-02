@@ -27,7 +27,7 @@ type u_typeconst =
 (* Contents of unification variables: *)
 and u_type =
   [ `Free of (tyvar * k_var)
-  | `Bound of (int * k_var)
+  | `Bound of (int * var_info * k_var)
   | `Quant of (int * [`All|`Exist] * int * k_var * u_var)
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
   ]
@@ -36,6 +36,10 @@ and tyvar = {
   ty_id: int;
   ty_flag: bound_ty;
   ty_scope: Scope.t;
+  ty_info: var_info;
+}
+and var_info = {
+  vi_name: string option;
 }
 and u_var = u_type UnionFind.var
 

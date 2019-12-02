@@ -110,7 +110,7 @@ and copy = function
       let v' = Gensym.gensym () in
       `Quant(qid, q, v', k, subst body
                ~target:v
-               ~replacement:(UnionFind.make (`Bound(v', k))))
+               ~replacement:(UnionFind.make (`Bound(v', {vi_name = None}, k))))
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
@@ -135,12 +135,12 @@ let with_locals ctx f =
   let (_grafted, raised, to_generalize) =
     List.partition3_map !new_locals ~f:(fun v ->
       match UnionFind.get v with
-      | `Free({ty_id; ty_scope; ty_flag}, k) when Scope.equal ty_scope scope ->
+      | `Free({ty_id; ty_scope; ty_flag; ty_info}, k) when Scope.equal ty_scope scope ->
           let q = match ty_flag with
             | `Flex -> `All
             | `Rigid -> `Exist
           in
-          let replacement = UnionFind.make (`Bound(ty_id, k)) in
+          let replacement = UnionFind.make (`Bound(ty_id, ty_info, k)) in
           `Trd (fun acc ->
             UnionFind.make
               (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
@@ -158,7 +158,7 @@ let with_locals ctx f =
 let fresh_local ctx ty_flag k =
   let ty_id = Gensym.gensym () in
   let ty_scope = ctx.scope in
-  let v = UnionFind.make (`Free({ty_id; ty_flag; ty_scope}, k)) in
+  let v = UnionFind.make (`Free({ty_id; ty_flag; ty_scope; ty_info = {vi_name = None}}, k)) in
   ctx.locals := v :: !(ctx.locals);
   v
 
@@ -676,8 +676,8 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
-        | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope}, kl),
-          `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope}, kr) ->
+        | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope; _}, kl),
+          `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope; _}, kr) ->
             (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
             require_kind kl kr;
@@ -686,6 +686,7 @@ and unify_already_whnf
                   `Free
                     ( {
                       ty_flag = `Flex;
+                      ty_info = {vi_name = None};
                       ty_id = l_id;
                       ty_scope = Scope.lca l_scope r_scope;
                     }
