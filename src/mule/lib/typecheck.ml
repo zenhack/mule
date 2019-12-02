@@ -244,7 +244,7 @@ and make_type ctx ty = match ty with
         ~var:v_var
         ~src:v_src
   | DT.Quant {q_quant; q_var; q_body; _} ->
-      quant q_quant (gen_k ()) (fun v ->
+      quant ~vname:(Var.to_string q_var) q_quant (gen_k ()) (fun v ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:q_var ~data:v }
           q_body
@@ -283,7 +283,7 @@ and make_type ctx ty = match ty with
       require_kind (get_kind t) ktype;
       t
   | DT.TypeLam{tl_param; tl_body; _} ->
-      lambda (gen_k ()) (fun p ->
+      lambda ~vname:(Var.to_string tl_param) (gen_k ()) (fun p ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:tl_param ~data:p }
           tl_body
@@ -706,7 +706,7 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
-        | `Free{ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope; ty_kind = kl; _},
+        | `Free{ty_flag = `Flex; ty_id = l_id; ty_info = l_info; ty_scope = l_scope; ty_kind = kl; _},
           `Free{ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope; ty_kind = kr; _} ->
             (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
@@ -714,7 +714,7 @@ and unify_already_whnf
             UnionFind.merge
               (fun _ _ -> `Free {
                   ty_flag = `Flex;
-                  ty_info = {vi_name = None};
+                  ty_info = l_info;
                   ty_id = l_id;
                   ty_scope = Scope.lca l_scope r_scope;
                   ty_kind = kl;
