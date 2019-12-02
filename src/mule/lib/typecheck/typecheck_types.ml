@@ -103,16 +103,17 @@ let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
-  let v = UnionFind.make (`Bound {
+  let bv = {
       bv_id = ty_id;
       bv_info = {vi_name = None};
       bv_kind =  k;
-    })
+    }
   in
+  let v = UnionFind.make (`Bound bv) in
   UnionFind.make (`Quant {
       q_id;
       q_quant = q;
-      q_var_id = ty_id;
+      q_var = bv;
       q_kind = k;
       q_body = mkbody v;
     })
@@ -193,7 +194,7 @@ and sexp_of_u_type: (int, Int.comparator_witness) Set.t -> u_type -> Sexp.t = fu
             sexp_of_kvar k;
           ]
         end
-  | `Quant {q_id = qid; q_quant = q; q_var_id = vid; q_kind = k; q_body = body} ->
+  | `Quant {q_id = qid; q_quant = q; q_var = {bv_id = vid; _}; q_kind = k; q_body = body} ->
       if Set.mem seen qid then
         Sexp.List [Sexp.Atom "q"; Int.sexp_of_t qid]
       else begin

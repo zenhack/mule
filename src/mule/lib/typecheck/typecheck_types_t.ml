@@ -28,7 +28,7 @@ type u_typeconst =
 and u_quant = {
   q_id : int;
   q_quant : [ `All | `Exist ];
-  q_var_id: int;
+  q_var : u_bound_var;
   q_kind: k_var;
   q_body: u_var;
 }
