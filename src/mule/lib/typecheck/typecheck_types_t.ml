@@ -36,6 +36,7 @@ and u_bound_var = {
   bv_id: int;
   bv_info: var_info;
   bv_kind: k_var;
+  bv_binder: [ `Lambda | `Recur | `Quant of [ `All | `Exist ] ];
 }
 and u_type =
   [ `Free of tyvar

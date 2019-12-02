@@ -120,12 +120,7 @@ and copy = function
   | `Free _ | `Bound _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
   | `Quant q ->
-      let bv = {
-        bv_id = Gensym.gensym ();
-        bv_info = {vi_name = None};
-        bv_kind = q.q_kind;
-      }
-      in
+      let bv = { q.q_var with bv_id = Gensym.gensym () } in
       `Quant {
         q with
         q_id = Gensym.gensym ();
@@ -168,6 +163,7 @@ let with_locals ctx f =
               bv_id = ty_id;
               bv_info = ty_info;
               bv_kind = k;
+              bv_binder = `Quant q;
             }
           in
           `Trd (fun acc ->

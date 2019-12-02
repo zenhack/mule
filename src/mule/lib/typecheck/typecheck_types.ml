@@ -94,6 +94,7 @@ let recur : (u_var -> u_var) -> u_var = fun mkbody ->
       bv_id = ty_id;
       bv_info = {vi_name = None};
       bv_kind = ktype;
+      bv_binder = `Recur;
     })
   in
   let body = mkbody v in
@@ -107,6 +108,7 @@ let quant : ?vname:string -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var
       bv_id = ty_id;
       bv_info = {vi_name = vname};
       bv_kind =  k;
+      bv_binder = `Quant q;
     }
   in
   let v = UnionFind.make (`Bound bv) in
@@ -134,6 +136,7 @@ let lambda : ?vname:string -> k_var -> (u_var -> u_var) -> u_var =
       bv_id = Gensym.gensym();
       bv_info = {vi_name = vname};
       bv_kind = kparam;
+      bv_binder = `Lambda;
     })
   in
   let body = mkbody param in
