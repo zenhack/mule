@@ -60,7 +60,7 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
 let hoist_scope: Scope.t -> u_var -> unit =
   fun scope uv ->
   let seen = ref (Set.empty (module Int)) in
-  let rec go uv =
+  let rec go : u_var -> unit = fun uv ->
     let u = UnionFind.get uv in
     let id = get_id u in
     if not (Set.mem !seen id) then
@@ -115,7 +115,11 @@ and copy = function
         q_body =
           subst q.q_body
            ~target:q.q_var_id
-           ~replacement:(UnionFind.make (`Bound(v', {vi_name = None}, q.q_kind)));
+           ~replacement:(UnionFind.make (`Bound {
+               bv_id = v';
+               bv_info = {vi_name = None};
+               bv_kind = q.q_kind;
+             }))
       }
 
 let wrong_num_args ctor want gotl gotr =
@@ -146,7 +150,12 @@ let with_locals ctx f =
             | `Flex -> `All
             | `Rigid -> `Exist
           in
-          let replacement = UnionFind.make (`Bound(ty_id, ty_info, k)) in
+          let replacement = UnionFind.make (`Bound {
+              bv_id = ty_id;
+              bv_info = ty_info;
+              bv_kind = k;
+            })
+          in
           `Trd (fun acc ->
             UnionFind.make
               (`Quant {

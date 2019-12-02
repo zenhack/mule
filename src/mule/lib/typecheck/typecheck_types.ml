@@ -12,7 +12,7 @@ let gen_k: unit -> k_var =
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
   | `Free (_, k) -> k
-  | `Bound (_, _, k) -> k
+  | `Bound {bv_kind; _} -> bv_kind
   | `Quant {q_body; _} -> get_kind q_body
 
 let flip_sign = function
@@ -32,7 +32,7 @@ let get_id = function
   | `Const(ty_id, _, _, _) -> ty_id
   | `Quant {q_id; _} -> q_id
   | `Free({ty_id; _}, _) -> ty_id
-  | `Bound(ty_id, _, _) -> ty_id
+  | `Bound {bv_id; _} -> bv_id
 
 let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
   | `Type -> `Type
@@ -90,7 +90,12 @@ let apply: u_var -> u_var -> u_var = fun f x ->
   end
 let recur : (u_var -> u_var) -> u_var = fun mkbody ->
   let ty_id = Gensym.gensym () in
-  let v = UnionFind.make (`Bound(ty_id, {vi_name = None}, ktype)) in
+  let v = UnionFind.make (`Bound {
+      bv_id = ty_id;
+      bv_info = {vi_name = None};
+      bv_kind = ktype;
+    })
+  in
   let body = mkbody v in
   UnionFind.merge (fun _ r -> r) v body;
   body
@@ -98,7 +103,12 @@ let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun q k mkbody ->
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
-  let v = UnionFind.make (`Bound(ty_id, {vi_name = None}, k)) in
+  let v = UnionFind.make (`Bound {
+      bv_id = ty_id;
+      bv_info = {vi_name = None};
+      bv_kind =  k;
+    })
+  in
   UnionFind.make (`Quant {
       q_id;
       q_quant = q;
@@ -119,7 +129,12 @@ let empty: u_var =
 let lambda : k_var -> (u_var -> u_var) -> u_var =
   fun kparam mkbody ->
   let id = Gensym.gensym () in
-  let param = UnionFind.make (`Bound(Gensym.gensym(), {vi_name = None}, kparam)) in
+  let param = UnionFind.make (`Bound {
+      bv_id = Gensym.gensym();
+      bv_info = {vi_name = None};
+      bv_kind = kparam;
+    })
+  in
   let body = mkbody param in
   let kbody = get_kind body in
   UnionFind.make
@@ -155,7 +170,7 @@ and sexp_of_u_type: (int, Int.comparator_witness) Set.t -> u_type -> Sexp.t = fu
       Scope.sexp_of_t ty_scope;
       sexp_of_kvar k;
     ]
-  | `Bound(id, _, k) ->
+  | `Bound{bv_id = id; bv_kind = k; _} ->
       Sexp.List [
         Sexp.Atom "bound";
         Int.sexp_of_t id;

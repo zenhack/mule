@@ -32,9 +32,14 @@ and u_quant = {
   q_kind: k_var;
   q_body: u_var;
 }
+and u_bound_var = {
+  bv_id: int;
+  bv_info: var_info;
+  bv_kind: k_var;
+}
 and u_type =
   [ `Free of (tyvar * k_var)
-  | `Bound of (int * var_info * k_var)
+  | `Bound of u_bound_var
   | `Quant of u_quant
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
   ]
