@@ -50,7 +50,8 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
   fun  t ~f -> match t with
     | `Free _ -> t
     | `Bound _ -> t
-    | `Quant(q_id, q, v, k, body) -> `Quant(q_id, q, v, k, f body)
+    | `Quant q ->
+        `Quant { q with q_body = f q.q_body }
     | `Const(c_id, c, args, k) ->
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
@@ -71,8 +72,8 @@ let hoist_scope: Scope.t -> u_var -> unit =
               (`Free({tv with ty_scope = Scope.lca scope tv.ty_scope}, k))
               uv
         | `Bound _ -> ()
-        | `Quant(_, _, _, _, body) ->
-            go body
+        | `Quant {q_body; _} ->
+            go q_body
         | `Const(_, _, args, _) ->
             List.iter args ~f:(fun (t, _) -> go t)
       end
@@ -88,7 +89,7 @@ let rec subst ~target ~replacement uv =
       | u when get_id u = target -> replacement
       | u when Map.mem !seen (get_id u) -> Util.find_exn !seen (get_id u)
       | `Free _ | `Bound _ -> uv
-      | `Quant(_, _, v, _, _) when v = target ->
+      | `Quant q when q.q_var_id = target ->
           (* Shadowing the target; stop here. *)
           uv
       | u ->
@@ -105,12 +106,17 @@ let rec subst ~target ~replacement uv =
 and copy = function
   | `Free _ | `Bound _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
-  | `Quant(_, q, v, k, body) ->
-      let qid = Gensym.gensym () in
+  | `Quant q ->
       let v' = Gensym.gensym () in
-      `Quant(qid, q, v', k, subst body
-               ~target:v
-               ~replacement:(UnionFind.make (`Bound(v', {vi_name = None}, k))))
+      `Quant {
+        q with
+        q_id = Gensym.gensym ();
+        q_var_id = v';
+        q_body =
+          subst q.q_body
+           ~target:q.q_var_id
+           ~replacement:(UnionFind.make (`Bound(v', {vi_name = None}, q.q_kind)));
+      }
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
@@ -143,9 +149,16 @@ let with_locals ctx f =
           let replacement = UnionFind.make (`Bound(ty_id, ty_info, k)) in
           `Trd (fun acc ->
             UnionFind.make
-              (`Quant(Gensym.gensym (), q, ty_id, k, subst acc
-                        ~target:ty_id
-                        ~replacement))
+              (`Quant {
+                  q_id = Gensym.gensym ();
+                  q_quant = q;
+                  q_var_id = ty_id;
+                  q_kind = k;
+                  q_body =
+                    subst acc
+                      ~target:ty_id
+                      ~replacement;
+                })
           )
       | `Free _ -> `Snd v
       | _ -> `Fst ()
@@ -314,12 +327,12 @@ and make_path_type result_type lbls =
   end
 and strip_param_exists ctx pty =
   match UnionFind.get pty with
-  | `Quant(_, `Exist, id, k, body) ->
+  | `Quant {q_quant = `Exist; q_var_id; q_kind; q_body; _} ->
       strip_param_exists ctx (
         subst
-          body
-          ~target:id
-          ~replacement:(fresh_local ctx `Flex k)
+          q_body
+          ~target:q_var_id
+          ~replacement:(fresh_local ctx `Flex q_kind)
       )
   | _ ->
       pty
@@ -704,18 +717,25 @@ and unify_already_whnf
             hoist_scope ty_scope sub;
             UnionFind.merge (fun l _ -> l) sub super;
             sub
-
-        | `Quant(_, q, id, k, body), _ ->
+        | `Quant q, _ ->
             unify
               ctx
               ~reason:`Unspecified
-              (unroll_quant ctx sub_dir q id k body, sub_dir)
-              (super, super_dir)
-        | _, `Quant(_, q, id, k, body) ->
+              ( unroll_quant ctx sub_dir q
+              , sub_dir
+              )
+              ( super
+              , super_dir
+              )
+        | _, `Quant q ->
             unify ctx
               ~reason:`Unspecified
-              (sub, sub_dir)
-              (unroll_quant ctx super_dir q id k body, super_dir)
+              ( sub
+              , sub_dir
+              )
+              ( unroll_quant ctx super_dir q
+              , super_dir
+              )
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
@@ -929,7 +949,7 @@ and trace_req_subtype ~sub ~super =
       Stdio.print_endline ""
     end
 and unpack_exist ctx ty = match UnionFind.get ty with
-  | `Quant(_, `Exist, id, k, body) ->
+  | `Quant {q_quant  = `Exist; q_var_id = id; q_kind = k; q_body = body; _} ->
       subst
         ~target:id
         ~replacement:(fresh_local ctx `Rigid k)
@@ -937,14 +957,14 @@ and unpack_exist ctx ty = match UnionFind.get ty with
       |> unpack_exist ctx
   | _ ->
       ty
-and unroll_quant ctx side q id k body =
+and unroll_quant ctx side q =
   subst
-    ~target:id
-    ~replacement:(fresh_local ctx (get_flag q side) k)
-    body
+    ~target:q.q_var_id
+    ~replacement:(fresh_local ctx (get_flag q.q_quant side) q.q_kind)
+    q.q_body
 and unroll_all_quants ctx side uv = match UnionFind.get uv with
-  | `Quant(_, q, id, k, body) ->
-      unroll_quant ctx side q id k body
+  | `Quant q ->
+      unroll_quant ctx side q
       |> unroll_all_quants ctx side
   | _ -> uv
 and check_const ctx c ty_want =
@@ -974,9 +994,9 @@ and kind_occurs_check: int -> u_kind -> unit =
 and whnf: u_var -> u_var =
   fun t ->
   match UnionFind.get t with
-  | `Quant(qid, q, v, k, body) ->
+  | `Quant q ->
       UnionFind.set
-        (`Quant(qid, q, v, k, whnf body))
+        (`Quant { q with q_body = whnf q.q_body })
         t;
       t
   | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->

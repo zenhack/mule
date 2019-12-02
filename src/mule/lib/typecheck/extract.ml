@@ -25,7 +25,7 @@ let rec go seen uv =
   else
     begin match t with
       | `Free _ | `Bound _ -> mk_var ty_id
-      | `Quant(q_id, q, v_id, _, body) ->
+      | `Quant{q_id; q_quant = q; q_var_id = v_id; q_body = body; _} ->
           let (body', fvs) = go (Set.add seen q_id) body in
           maybe_add_recur
             q_id

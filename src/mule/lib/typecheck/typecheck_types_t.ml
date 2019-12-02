@@ -25,10 +25,17 @@ type u_typeconst =
   | `Extend of Label.t
   ]
 (* Contents of unification variables: *)
+and u_quant = {
+  q_id : int;
+  q_quant : [ `All | `Exist ];
+  q_var_id: int;
+  q_kind: k_var;
+  q_body: u_var;
+}
 and u_type =
   [ `Free of (tyvar * k_var)
   | `Bound of (int * var_info * k_var)
-  | `Quant of (int * [`All|`Exist] * int * k_var * u_var)
+  | `Quant of u_quant
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
   ]
 and bound_ty = [ `Rigid | `Flex ]

@@ -13,7 +13,7 @@ let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
   | `Free (_, k) -> k
   | `Bound (_, _, k) -> k
-  | `Quant(_, _, _, _, t) -> get_kind t
+  | `Quant {q_body; _} -> get_kind q_body
 
 let flip_sign = function
   | `Pos -> `Neg
@@ -30,7 +30,7 @@ let get_flag: quantifier -> subtype_side -> bound_ty =
 
 let get_id = function
   | `Const(ty_id, _, _, _) -> ty_id
-  | `Quant(ty_id, _, _, _, _) -> ty_id
+  | `Quant {q_id; _} -> q_id
   | `Free({ty_id; _}, _) -> ty_id
   | `Bound(ty_id, _, _) -> ty_id
 
@@ -99,7 +99,13 @@ let quant : [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
   let v = UnionFind.make (`Bound(ty_id, {vi_name = None}, k)) in
-  UnionFind.make (`Quant(q_id, q, ty_id, k, mkbody v))
+  UnionFind.make (`Quant {
+      q_id;
+      q_quant = q;
+      q_var_id = ty_id;
+      q_kind = k;
+      q_body = mkbody v;
+    })
 
 let all : k_var -> (u_var -> u_var) -> u_var =
   fun k mkbody -> quant `All k mkbody
@@ -172,7 +178,7 @@ and sexp_of_u_type: (int, Int.comparator_witness) Set.t -> u_type -> Sexp.t = fu
             sexp_of_kvar k;
           ]
         end
-  | `Quant(qid, q, vid, k, body) ->
+  | `Quant {q_id = qid; q_quant = q; q_var_id = vid; q_kind = k; q_body = body} ->
       if Set.mem seen qid then
         Sexp.List [Sexp.Atom "q"; Int.sexp_of_t qid]
       else begin
