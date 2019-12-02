@@ -38,7 +38,7 @@ and u_bound_var = {
   bv_kind: k_var;
 }
 and u_type =
-  [ `Free of (tyvar * k_var)
+  [ `Free of tyvar
   | `Bound of u_bound_var
   | `Quant of u_quant
   | `Const of (int * u_typeconst * (u_var * k_var) list * k_var)
@@ -49,6 +49,7 @@ and tyvar = {
   ty_flag: bound_ty;
   ty_scope: Scope.t;
   ty_info: var_info;
+  ty_kind: k_var;
 }
 and var_info = {
   vi_name: string option;

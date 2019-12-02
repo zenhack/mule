@@ -67,9 +67,9 @@ let hoist_scope: Scope.t -> u_var -> unit =
       begin
         seen := Set.add !seen id;
         match u with
-        | `Free(tv, k) ->
+        | `Free tv ->
             UnionFind.set
-              (`Free({tv with ty_scope = Scope.lca scope tv.ty_scope}, k))
+              (`Free{tv with ty_scope = Scope.lca scope tv.ty_scope})
               uv
         | `Bound _ -> ()
         | `Quant {q_body; _} ->
@@ -146,7 +146,7 @@ let with_locals ctx f =
   let (_grafted, raised, to_generalize) =
     List.partition3_map !new_locals ~f:(fun v ->
       match UnionFind.get v with
-      | `Free({ty_id; ty_scope; ty_flag; ty_info}, k) when Scope.equal ty_scope scope ->
+      | `Free{ty_id; ty_scope; ty_flag; ty_info; ty_kind = k} when Scope.equal ty_scope scope ->
           let q = match ty_flag with
             | `Flex -> `All
             | `Rigid -> `Exist
@@ -181,7 +181,14 @@ let with_locals ctx f =
 let fresh_local ctx ty_flag k =
   let ty_id = Gensym.gensym () in
   let ty_scope = ctx.scope in
-  let v = UnionFind.make (`Free({ty_id; ty_flag; ty_scope; ty_info = {vi_name = None}}, k)) in
+  let v = UnionFind.make (`Free {
+      ty_id;
+      ty_flag;
+      ty_scope;
+      ty_info = {vi_name = None};
+      ty_kind = k;
+    })
+  in
   ctx.locals := v :: !(ctx.locals);
   v
 
@@ -592,8 +599,8 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
 and check_maybe_flex ctx e ty_want ~f =
   let want = unroll_all_quants ctx `Super ty_want in
   match UnionFind.get want with
-  | `Free({ty_flag = `Flex; _}, k) ->
-      require_kind k ktype;
+  | `Free{ty_flag = `Flex; ty_kind; _} ->
+      require_kind ty_kind ktype;
       let got = synth ctx e in
       UnionFind.merge (fun _ r -> r) want got;
       got
@@ -699,31 +706,27 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
-        | `Free({ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope; _}, kl),
-          `Free({ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope; _}, kr) ->
+        | `Free{ty_flag = `Flex; ty_id = l_id; ty_scope = l_scope; ty_kind = kl; _},
+          `Free{ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope; ty_kind = kr; _} ->
             (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
             require_kind kl kr;
             UnionFind.merge
-              (fun _ _ ->
-                  `Free
-                    ( {
-                      ty_flag = `Flex;
-                      ty_info = {vi_name = None};
-                      ty_id = l_id;
-                      ty_scope = Scope.lca l_scope r_scope;
-                    }
-                    , kl
-                    )
-              )
+              (fun _ _ -> `Free {
+                  ty_flag = `Flex;
+                  ty_info = {vi_name = None};
+                  ty_id = l_id;
+                  ty_scope = Scope.lca l_scope r_scope;
+                  ty_kind = kl;
+                })
               sub super;
             sub
         (* One side is flexible; set it equal to the other one. *)
-        | `Free({ty_flag = `Flex; ty_scope; _}, _), _ ->
+        | `Free{ty_flag = `Flex; ty_scope; _}, _ ->
             hoist_scope ty_scope super;
             UnionFind.merge (fun _ r -> r) sub super;
             sub
-        | _, `Free({ty_flag = `Flex; ty_scope; _}, _) ->
+        | _, `Free{ty_flag = `Flex; ty_scope; _} ->
             hoist_scope ty_scope sub;
             UnionFind.merge (fun l _ -> l) sub super;
             sub
@@ -749,7 +752,7 @@ and unify_already_whnf
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
-        | `Free({ty_flag = `Rigid; _}, _), _ | _, `Free({ty_flag = `Rigid; _}, _) ->
+        | `Free{ty_flag = `Rigid; _}, _ | _, `Free{ty_flag = `Rigid; _} ->
             MuleErr.throw (`TypeError `CantInstantiate)
 
         (* Mismatched named constructors are never reconcilable: *)

@@ -11,7 +11,7 @@ let gen_k: unit -> k_var =
 
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
-  | `Free (_, k) -> k
+  | `Free {ty_kind; _} -> ty_kind
   | `Bound {bv_kind; _} -> bv_kind
   | `Quant {q_body; _} -> get_kind q_body
 
@@ -31,7 +31,7 @@ let get_flag: quantifier -> subtype_side -> bound_ty =
 let get_id = function
   | `Const(ty_id, _, _, _) -> ty_id
   | `Quant {q_id; _} -> q_id
-  | `Free({ty_id; _}, _) -> ty_id
+  | `Free{ty_id; _} -> ty_id
   | `Bound {bv_id; _} -> bv_id
 
 let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
@@ -165,11 +165,11 @@ and sexp_of_quantifier: quantifier -> Sexp.t = function
   | `All -> Sexp.Atom "all"
   | `Exist -> Sexp.Atom "exist"
 and sexp_of_u_type: (int, Int.comparator_witness) Set.t -> u_type -> Sexp.t = fun seen -> function
-  | `Free({ty_id; ty_flag; ty_scope; _}, k) -> Sexp.List [
+  | `Free {ty_id; ty_flag; ty_scope; ty_kind; _} -> Sexp.List [
       sexp_of_flag ty_flag;
       Int.sexp_of_t ty_id;
       Scope.sexp_of_t ty_scope;
-      sexp_of_kvar k;
+      sexp_of_kvar ty_kind;
     ]
   | `Bound{bv_id = id; bv_kind = k; _} ->
       Sexp.List [
