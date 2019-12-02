@@ -2,6 +2,10 @@ open Common_ast
 open Desugared_ast
 open MuleErr_t
 
+module TT = Typecheck_types_t
+
+
+
 let typ t = Sexp.to_string_hum (Type.sexp_of_t t)
 let expr e = Sexp.to_string_hum (Expr.sexp_of_t e)
 let runtime_expr e = Sexp.to_string_hum (Runtime_ast.Expr.sexp_of_t e)
@@ -43,8 +47,10 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate ->
+  | `CantInstantiate TT.{vi_name = None} ->
       "could not instatiate rigid type variable"
+  | `CantInstantiate TT.{vi_name = Some v} ->
+      "could not instatiate rigid type variable " ^ v
   | `MismatchedCtors {se_sub; se_super; se_reason} ->
       let rec unwrap_reason path = function
         | `Cascaded(rsn, next) ->

@@ -752,8 +752,9 @@ and unify_already_whnf
 
         (* Rigid variable should fail (If they were the same already, they would have been
          * covered above): *)
-        | `Free{ty_flag = `Rigid; _}, _ | _, `Free{ty_flag = `Rigid; _} ->
-            MuleErr.throw (`TypeError `CantInstantiate)
+        | `Free{ty_flag = `Rigid; ty_info; _}, _
+        | _, `Free{ty_flag = `Rigid; ty_info; _} ->
+            MuleErr.throw (`TypeError (`CantInstantiate ty_info))
 
         (* Mismatched named constructors are never reconcilable: *)
         | `Const(_, `Named n, _, _), `Const(_, `Named m, _, _) when not (Poly.equal n m) ->

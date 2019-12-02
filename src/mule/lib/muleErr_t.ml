@@ -51,7 +51,7 @@ type type_error =
   [ `MismatchedCtors of subtype_error
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
-  | `CantInstantiate
+  | `CantInstantiate of Typecheck_types_t.var_info
   ]
 
 type path_error =  {
