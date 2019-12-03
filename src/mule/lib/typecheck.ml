@@ -186,17 +186,14 @@ let with_locals ctx f =
   List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
 
 (* Create a new local with the given flag and kind. *)
-let fresh_local ?vname ctx ty_flag k =
+let fresh_local ?(vinfo={vi_name = None; vi_binder = None}) ctx ty_flag k =
   let ty_id = Gensym.gensym () in
   let ty_scope = ctx.scope in
   let v = UnionFind.make (`Free {
       ty_id;
       ty_flag;
       ty_scope;
-      ty_info = {
-        vi_name = vname;
-        vi_binder = None;
-      };
+      ty_info = vinfo;
       ty_kind = k;
     })
   in
@@ -355,12 +352,12 @@ and make_path_type result_type lbls =
   end
 and strip_param_exists ctx pty =
   match UnionFind.get pty with
-  | `Quant {q_quant = `Exist; q_var = {bv_id; bv_info = {vi_name; _}; _}; q_kind; q_body; _} ->
+  | `Quant {q_quant = `Exist; q_var = {bv_id; bv_info; _}; q_kind; q_body; _} ->
       strip_param_exists ctx (
         subst
           q_body
           ~target:bv_id
-          ~replacement:(fresh_local ctx `Flex q_kind ?vname:vi_name)
+          ~replacement:(fresh_local ctx `Flex q_kind ~vinfo:bv_info)
       )
   | _ ->
       pty
@@ -991,7 +988,7 @@ and unroll_quant ctx side q =
         ctx
         (get_flag q.q_quant side)
         q.q_kind
-        ?vname:q.q_var.bv_info.vi_name;
+        ~vinfo:q.q_var.bv_info
     )
     q.q_body
 and unroll_all_quants ctx side uv = match UnionFind.get uv with

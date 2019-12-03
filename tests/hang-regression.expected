@@ -2,4 +2,5 @@
 Desugared:
 
 	(: (Integer 4) (all a a))
-Type error: Could not instantiate rigid type variable a with type int. Rigid variables must be treated as opaque.
+Type error: Mismatched types: a and int.
+a is an `all`-bound type variable. The code must work for *all* types a, not just int.
