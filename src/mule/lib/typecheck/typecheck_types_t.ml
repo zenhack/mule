@@ -36,7 +36,6 @@ and u_bound_var = {
   bv_id: int;
   bv_info: var_info;
   bv_kind: k_var;
-  bv_binder: [ `Lambda | `Recur | `Quant of [ `All | `Exist ] ];
 }
 and u_type =
   [ `Free of tyvar
@@ -54,6 +53,7 @@ and tyvar = {
 }
 and var_info = {
   vi_name: string option;
+  vi_binder: [ `Lambda | `Quant of [ `All | `Exist ] ] option;
 }
 and u_var = u_type UnionFind.var
 

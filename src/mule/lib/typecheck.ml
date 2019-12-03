@@ -161,9 +161,8 @@ let with_locals ctx f =
           in
           let bv = {
               bv_id = ty_id;
-              bv_info = ty_info;
+              bv_info = { ty_info with vi_binder = Some (`Quant q) };
               bv_kind = k;
-              bv_binder = `Quant q;
             }
           in
           `Trd (fun acc ->
@@ -194,7 +193,10 @@ let fresh_local ?vname ctx ty_flag k =
       ty_id;
       ty_flag;
       ty_scope;
-      ty_info = {vi_name = vname};
+      ty_info = {
+        vi_name = vname;
+        vi_binder = None;
+      };
       ty_kind = k;
     })
   in
@@ -353,7 +355,7 @@ and make_path_type result_type lbls =
   end
 and strip_param_exists ctx pty =
   match UnionFind.get pty with
-  | `Quant {q_quant = `Exist; q_var = {bv_id; bv_info = {vi_name}; _}; q_kind; q_body; _} ->
+  | `Quant {q_quant = `Exist; q_var = {bv_id; bv_info = {vi_name; _}; _}; q_kind; q_body; _} ->
       strip_param_exists ctx (
         subst
           q_body

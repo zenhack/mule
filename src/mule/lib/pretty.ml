@@ -47,7 +47,7 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate (TT.{vi_name}, other_ty) ->
+  | `CantInstantiate (TT.{vi_name; _}, other_ty) ->
       let var = match vi_name with
         | None -> ""
         | Some v -> " " ^ v
