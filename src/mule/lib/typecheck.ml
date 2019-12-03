@@ -741,7 +741,7 @@ and unify_already_whnf
         | `Quant q, _ ->
             unify
               ctx
-              ~reason:`Unspecified
+              ~reason:(`Cascaded(reason, `Unroll(q, `Left)))
               ( unroll_quant ctx sub_dir q
               , sub_dir
               )
@@ -750,7 +750,7 @@ and unify_already_whnf
               )
         | _, `Quant q ->
             unify ctx
-              ~reason:`Unspecified
+              ~reason:(`Cascaded(reason, `Unroll(q, `Right)))
               ( sub
               , sub_dir
               )

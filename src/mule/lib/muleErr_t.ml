@@ -14,6 +14,7 @@ type type_path =
   | `RecordPart of [ `Type | `Value ]
   | `UnionRow
   | `TypeLamBody
+  | `Unroll of Typecheck_types_t.u_quant * [ `Left | `Right ]
   ]
 
 (* A reason for a subtyping constraint. *)
