@@ -54,7 +54,7 @@ let show_cant_instantiate name binder ty =
             name; ", not just "; ty; ".";
           ]
         | `Exist -> String.concat [
-            name; "is an `exist`-bound type variable. The code must work regardless of ";
+            name; " is an `exist`-bound type variable. The code must work regardless of ";
             "what type it actually is, so we can't assume it's "; ty; ".";
           ]
         end
