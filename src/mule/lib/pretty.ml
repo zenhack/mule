@@ -42,28 +42,48 @@ let show_path_type_error ~head ~path ~sub ~super =
         Desugared_ast_type.to_string super;
       ]
 
+let show_cant_instantiate name binder ty =
+  match name, binder, ty with
+  | Some name, Some (`Quant q), `Type ty ->
+      let ty = Desugared_ast_type.to_string ty in
+        String.concat [
+        "Mismatched types: "; name; " and "; ty; ".\n";
+        begin match q with
+        | `All -> String.concat [
+            name; " is an `all`-bound type variable. The code must work for *all* types ";
+            name; ", not just "; ty; ".";
+          ]
+        | `Exist -> String.concat [
+            name; "is an `exist`-bound type variable. The code must work regardless of ";
+            "what type it actually is, so we can't assume it's "; ty; ".";
+          ]
+        end
+    ]
+  | _ ->
+    let var = match name with
+      | None -> ""
+      | Some v -> " " ^ v
+    in
+    String.concat [
+      "Could not instantiate rigid type variable";
+      var;
+      begin match ty with
+        | `Type t ->
+            " with type " ^ Desugared_ast_type.to_string t
+        | `Row _ ->
+            (* TODO: print something helpful here. *)
+            ""
+      end;
+      ". Rigid variables must be treated as opaque.";
+    ]
+
 let show_type_error err = match err with
   | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate (TT.{vi_name; _}, other_ty) ->
-      let var = match vi_name with
-        | None -> ""
-        | Some v -> " " ^ v
-      in
-      String.concat [
-        "Could not instantiate rigid type variable";
-        var;
-        begin match other_ty with
-          | `Type t ->
-              " with type " ^ Desugared_ast_type.to_string t
-          | `Row _ ->
-              (* TODO: print something helpful here. *)
-              ""
-        end;
-        ". Rigid variables must be treated as opaque.";
-      ]
+  | `CantInstantiate (TT.{vi_name; vi_binder}, other_ty) ->
+      show_cant_instantiate vi_name vi_binder other_ty
   | `MismatchedCtors {se_sub; se_super; se_reason} ->
       let rec unwrap_reason path = function
         | `Cascaded(rsn, next) ->
