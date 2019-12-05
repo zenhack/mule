@@ -157,6 +157,14 @@ let show_type_error err = match err with
               "but its type is:";
               "\n\n";
               Desugared_ast_type.to_string sub_root;
+              "\n\n";
+              "The type:";
+              "\n\n";
+              Desugared_ast_type.to_string se_sub;
+              "\n\n";
+              "is not a subtype of:";
+              "\n\n";
+              Desugared_ast_type.to_string se_super;
            ]
         | (`Unspecified, _) ->
             String.concat [
