@@ -39,7 +39,7 @@ let rec sexp_of_t = function
       Sexp.Atom "match";
       sexp_of_branch b;
     ]
-  | WithType {wt_expr = e; wt_type = ty} ->
+  | WithType {wt_expr = e; wt_type = ty; _} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
       Sexp.List [
@@ -137,8 +137,9 @@ let apply_to_kids e ~f = match e with
         ut_type;
         ut_record = f ut_record;
       }
-  | WithType{wt_expr; wt_type} ->
+  | WithType{wt_src; wt_expr; wt_type} ->
       WithType {
+        wt_src;
         wt_expr = f wt_expr;
         wt_type;
       }
@@ -151,8 +152,9 @@ let apply_to_kids e ~f = match e with
   | Const _ -> e
 
 let rec subst_ty old new_ = function
-  | WithType {wt_expr = e; wt_type = ty} ->
+  | WithType {wt_src; wt_expr = e; wt_type = ty} ->
       WithType {
+        wt_src;
         wt_expr = subst_ty old new_ e;
         wt_type = Type.subst old new_ ty;
       }
@@ -160,8 +162,9 @@ let rec subst_ty old new_ = function
 
 let rec map e ~f =
   match e with
-  | WithType {wt_expr = e; wt_type = ty} ->
+  | WithType {wt_src; wt_expr = e; wt_type = ty} ->
       WithType {
+        wt_src;
         wt_type = Type.map ty ~f;
         wt_expr = map e ~f;
       }
@@ -246,8 +249,9 @@ let rec subst: (Var.t, 'a t, 'cmp) Map.t -> 'a t -> 'a t = fun env expr ->
         ut_type;
         ut_record = subst env ut_record;
       }
-  | WithType {wt_expr; wt_type} ->
+  | WithType {wt_src; wt_expr; wt_type} ->
       WithType {
+        wt_src;
         wt_expr = subst env wt_expr;
         wt_type;
       }

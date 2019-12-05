@@ -23,7 +23,7 @@ let build src dest =
       ~types:(if Config.no_js_type_requirement () then
           []
         else
-          [js_main_type]
+          [(`Main, js_main_type)]
       )
   in
   let files =

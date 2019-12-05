@@ -16,7 +16,7 @@ let interp_cmd = function
               Load.load_file
                 (Load.new_loader ())
                 ~base_path:file
-                ~types:[runner.Runners.want_type]
+                ~types:[(`Main, runner.Runners.want_type)]
             in
             Lazy.force rt_expr
             |> runner.Runners.run

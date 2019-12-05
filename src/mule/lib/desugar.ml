@@ -456,6 +456,7 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       }
   | S.WithType{wt_term = e; wt_type = ty; _} ->
       D.WithType {
+        wt_src = `WithType(e, ty);
         wt_expr = desugar e;
         wt_type = desugar_type ty;
       }
@@ -504,7 +505,7 @@ and desugar_lambda ps body =
           l_param = Gensym.anon_var ();
           l_body = go pats;
         }
-    | (SP.Var {v_var; v_type = Some ty; _} :: pats) ->
+    | (SP.Var {v_var; v_type = Some ty} :: pats) ->
         let v = v_var.Loc.l_value in
         D.Lam {
           l_param = v;
@@ -512,6 +513,7 @@ and desugar_lambda ps body =
               let_v = v;
               let_e =
                 D.WithType {
+                  wt_src = `Pattern(v_var, ty);
                   wt_expr = D.Var {
                       v_var = v;
                       v_src = `Sourced v_var;
@@ -550,6 +552,7 @@ and desugar_record fields =
           ( types
           , ( Ast.var_of_label l.Loc.l_value
             , D.WithType {
+                wt_src = `RecordVal(l, ty, e);
                 wt_expr = desugar e;
                 wt_type = desugar_type ty;
               };
@@ -682,12 +685,13 @@ and desugar_lbl_match dict = function
           };
         lm_cases = finalize_dict dict;
       }
-  | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty; _}; _}, body] ->
+  | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty}; _}, body] ->
       let v' = Gensym.anon_var () in
       let let_ = D.Let {
           let_v = v.Loc.l_value;
           let_e =
             D.WithType {
+              wt_src = `Pattern(v, ty);
               wt_expr = D.Var {
                   v_var = v';
                   v_src = `Generated;
@@ -735,10 +739,11 @@ and desugar_let bs body =
         incomplete_pattern ()
     | (SP.Wild, e) ->
         go ((Gensym.anon_var (), e) :: vals) types bs
-    | (SP.Var{v_var = v; v_type = Some ty; _}, e) ->
+    | (SP.Var{v_var = v; v_type = Some ty}, e) ->
         go
           (( v.Loc.l_value
            , D.WithType{
+               wt_src = `Pattern(v, ty);
                wt_expr = e;
                wt_type = desugar_type ty
              }

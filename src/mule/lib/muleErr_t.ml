@@ -36,7 +36,7 @@ end
 (* A reason for a subtyping constraint. *)
 type subtype_reason =
   [ `RecordUpdate of TT.k_var DE.t
-  | `TypeAnnotation of  (TT.k_var DE.t * TT.k_var DT.t)
+  | `TypeAnnotation of  (DE.withtype_src * TT.k_var DT.t)
   | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t)
 
   | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src

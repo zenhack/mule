@@ -20,7 +20,7 @@ let run_line : Load.loader -> string -> unit =
       ()
   | MParser.Success (Some expr) ->
       Run.run_load_result
-        (Load.load_surface_ast loader ~typ:None ~expr ~extra_types:[])
+        (Load.load_surface_ast loader ~expr ~extra_types:[])
 
 let rec loop : unit -> 'a = fun () ->
   let loader = Load.new_loader () in

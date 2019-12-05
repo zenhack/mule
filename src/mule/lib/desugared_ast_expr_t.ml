@@ -2,6 +2,14 @@ open Common_ast
 open Desugared_ast_common
 module Type_t = Desugared_ast_type_t
 
+type withtype_src =
+  [ `Pattern of (Var.t Loc.located * Surface_ast.Type.lt)
+  | `WithType of (Surface_ast.Expr.lt * Surface_ast.Type.lt)
+  | `RecordVal of (Label.t Loc.located * Surface_ast.Type.lt * Surface_ast.Expr.lt)
+  | `Msig
+  | `Main
+  ]
+
 type 'i t =
   | Embed of {
       e_path: string;
@@ -38,6 +46,7 @@ type 'i t =
     }
   | Match of 'i branch
   | WithType of {
+      wt_src : withtype_src;
       wt_expr : 'i t;
       wt_type : 'i Type_t.t;
     }

@@ -1,3 +1,5 @@
+include Typecheck_t
+
 open Typecheck_types
 
 module DE = Desugared_ast_expr
@@ -411,9 +413,9 @@ and synth: context -> 'i DE.t -> u_var =
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
         union (extend c_lbl arg_t (all krow (fun r -> r)))
-    | DE.WithType {wt_expr; wt_type} ->
+    | DE.WithType {wt_src; wt_expr; wt_type} ->
         let want_ty = make_type ctx wt_type |> with_kind ktype in
-        let _ = check ctx wt_expr want_ty ~reason:(`TypeAnnotation(wt_expr, wt_type)) in
+        let _ = check ctx wt_expr want_ty ~reason:(`TypeAnnotation(wt_src, wt_type)) in
         want_ty
     | DE.Let{let_v; let_e; let_body} ->
         let ty = unpack_exist ctx (synth ctx let_e) in
@@ -557,12 +559,12 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
       let p = synth ctx app_arg in
       ignore (check ctx app_fn (p **> ty_want) ~reason:`Unspecified);
       ty_want
-  | DE.WithType{wt_expr; wt_type} ->
+  | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want' = make_type ctx wt_type in
       ignore (check ctx wt_expr ty_want' ~reason:`Unspecified);
       require_subtype
         ctx
-        ~reason:`Unspecified
+        ~reason:(`TypeAnnotation(wt_src, wt_type))
         ~sub:ty_want
         ~super:ty_want';
       ty_want
@@ -1087,8 +1089,9 @@ let rec gen_kind = function
 
 let typecheck ~get_import_type ~want exp =
   let ctx = make_initial_context ~get_import_type in
-  let exp = List.fold_left want ~init:exp ~f:(fun wt_expr wt_type ->
+  let exp = List.fold_left want ~init:exp ~f:(fun wt_expr (wt_src, wt_type) ->
       DE.WithType {
+        wt_src;
         wt_type;
         wt_expr;
       }

@@ -22,13 +22,13 @@ let maybe_chop_suffix str suffix =
 
 let rec load_surface_ast loader ~typ ~expr ~extra_types =
   Lint.check_expr expr;
-  Option.iter typ ~f:Lint.check_type;
+  Option.iter typ ~f:(fun (_, t) -> Lint.check_type t);
   let dexp = Desugar.desugar expr in
   Report.display "Desugared" (fun () -> Pretty.expr dexp);
-  let dtyp = Option.map typ ~f:(fun t ->
+  let dtyp = Option.map typ ~f:(fun (src, t) ->
       let ret = Desugar.desugar_type t in
       Report.display "Desugared type signature" (fun () -> Pretty.typ ret);
-      ret
+      (src, ret)
     )
   in
   let typ_var =
@@ -105,7 +105,7 @@ and load_path loader ~base_path ~types =
     *)
     let type_path = base_path ^ ".msig" in
     if Caml.Sys.file_exists type_path then
-      Some (parse_all Parser.type_file type_path)
+      Some (`Msig, parse_all Parser.type_file type_path)
     else
       None
   in
@@ -131,6 +131,9 @@ and get_or_load loader path =
         ~base_path:path
         ~types:[]
 
+
+let load_surface_ast loader ~expr ~extra_types =
+  load_surface_ast loader ~typ:None ~expr ~extra_types
 
 let all_files {edges; results; _} =
   Tsort.sort (module String)
