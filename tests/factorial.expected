@@ -7,7 +7,7 @@ Desugared:
 	    (fn n
 	     ((match
 	       ((((Integer 0) (Integer 1)))
-	        (n ((((. mul) int) n) (factorial ((((. sub) int) n) (Integer 1)))))))
+	        (n (((. int mul) n) (factorial (((. int sub) n) (Integer 1)))))))
 	      n)))))
 	 (factorial (Integer 5)))
 

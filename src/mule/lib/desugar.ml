@@ -403,15 +403,17 @@ and desugar Loc.{l_value = e; l_loc} = match e with
     }
   | S.Lam{lam_params; lam_body; _} -> desugar_lambda lam_params lam_body
   | S.List {l_elts} ->
-      let empty = D.App {
-          app_fn = D.GetField{gf_lbl = Label.of_string "empty"};
-          app_arg = D.Import (DC.import_abs "list");
+      let empty =
+        D.GetField {
+          gf_lbl = Label.of_string "empty";
+          gf_record = D.Import (DC.import_abs "list");
         }
       in
-      let cons = D.App {
-          app_fn = D.GetField{gf_lbl = Label.of_string "cons"};
-          app_arg = D.Import (DC.import_abs "list");
-        }
+      let cons =
+          D.GetField{
+            gf_lbl = Label.of_string "cons";
+            gf_record = D.Import (DC.import_abs "list");
+          };
       in
       List.fold_right
         l_elts
@@ -429,11 +431,9 @@ and desugar Loc.{l_value = e; l_loc} = match e with
   | S.Record {r_fields = fields; _} -> desugar_record fields
   | S.Update{up_arg; up_fields; _} -> desugar_update up_arg up_fields
   | S.GetField {gf_arg = e; gf_lbl = l; _} ->
-      D.App {
-        app_fn = D.GetField {
-            gf_lbl = l.Loc.l_value;
-          };
-        app_arg = desugar e;
+      D.GetField {
+          gf_lbl = l.Loc.l_value;
+          gf_record = desugar e;
       }
   | S.Ctor {c_lbl = label; _} ->
       (* The choice of variable name here doesn't matter, since

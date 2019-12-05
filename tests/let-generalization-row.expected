@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(letrec (types ()) (values ((f (fn x ((. y) x)))))
+	(letrec (types ()) (values ((f (fn x (. x y)))))
 	 (letrec (types ())
 	  (values
 	   ((a (f (letrec (types ()) (values ((y {}))) (((.= y) {}) y))))

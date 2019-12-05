@@ -43,7 +43,9 @@ let translate
       | D.WithType {wt_expr = e; _} ->
           go_expr depth env e
       | D.EmptyRecord -> (0, R.Record (Map.empty(module Label)))
-      | D.GetField {gf_lbl} -> (0, R.GetField gf_lbl)
+      | D.GetField {gf_lbl; gf_record} ->
+          let (n, record) = go_expr depth env gf_record in
+          (n, R.App(R.GetField gf_lbl, record))
       | D.UpdateVal {uv_lbl = label } ->
           ( 0
           , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))

@@ -392,10 +392,18 @@ and synth: context -> 'i DE.t -> u_var =
           in
           p **> r
         )
-    | DE.GetField{gf_lbl} ->
-        all krow (fun rv -> all ktype (fun a -> all krow (fun rt ->
-            record rt (extend gf_lbl a rv) **> a
-          )))
+    | DE.GetField{gf_lbl; gf_record} ->
+        with_locals ctx (fun ctx ->
+          let head = fresh_local ctx `Flex ktype in
+          let tail = fresh_local ctx `Flex krow in
+          let rt = fresh_local ctx `Flex krow in
+          ignore
+            (check ctx
+              gf_record
+              (record rt (extend gf_lbl head tail))
+              ~reason:(NonEmpty.singleton (`GetField(gf_lbl, gf_record))));
+          head
+        )
     | DE.UpdateVal {uv_lbl} ->
         all krow (fun rv -> (all krow (fun rt -> all ktype (fun t ->
             record rt rv **> t **> record rt (extend uv_lbl t rv)

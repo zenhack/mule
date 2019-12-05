@@ -1,12 +1,12 @@
 
 Desugared:
 
-	(fn x ((. y) x))
+	(fn x (. x y))
 
 inferred type:
 
 	(all a
-	 (all b (all c ((record (types ((... c))) (values ((y b) (... a)))) -> b))))
+	 (all b (all c ((record (types ((... c))) (values ((y a) (... b)))) -> a))))
 
 Runtime term:
 

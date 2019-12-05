@@ -2,7 +2,7 @@
 Desugared:
 
 	(letrec (types ())
-	 (values ((y ((((. add) int) x) (Integer 2))) (x (Integer 1)))) y)
+	 (values ((y (((. int add) x) (Integer 2))) (x (Integer 1)))) y)
 
 inferred type:
 

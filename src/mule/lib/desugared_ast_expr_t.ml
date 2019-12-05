@@ -31,6 +31,7 @@ type 'i t =
   | EmptyRecord
   | GetField of {
       gf_lbl : Label.t;
+      gf_record : 'i t;
     }
   | UpdateType of {
       ut_lbl    : Label.t;

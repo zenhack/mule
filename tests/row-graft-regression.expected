@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(fn f (fn arg (((.= y) arg) (f ((. z) arg)))))
+	(fn f (fn arg (((.= y) arg) (f (. arg z)))))
 
 inferred type:
 

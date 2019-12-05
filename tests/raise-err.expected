@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(: (fn y ((. x) y))
+	(: (fn y (. y x))
 	 ((e : (exist $6 (record (types ((t $6))) (values ((x $6)))))) -> (. e t)))
 
 inferred type:

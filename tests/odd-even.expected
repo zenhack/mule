@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(((. odd)
+	((.
 	  (letrec (types ())
 	   (values
 	    ((even
@@ -16,7 +16,8 @@ Desugared:
 	        (union
 	         ((True (record (types ()) (values ())))
 	          (False (record (types ()) (values ()))))))))))
-	   (((.= even) (((.= odd) {}) odd)) even)))
+	   (((.= even) (((.= odd) {}) odd)) even))
+	  odd)
 	 ((fn x (S x))
 	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
 

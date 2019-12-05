@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((. x) (letrec (types ()) (values ((x {}))) (((.= x) {}) x)))
+	(. (letrec (types ()) (values ((x {}))) (((.= x) {}) x)) x)
 
 inferred type:
 

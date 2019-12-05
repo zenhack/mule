@@ -17,8 +17,9 @@ let rec sexp_of_t = function
   | App{app_fn; app_arg} ->
       Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
   | EmptyRecord -> Sexp.Atom "{}"
-  | GetField{gf_lbl; _} -> Sexp.List [
+  | GetField{gf_lbl; gf_record} -> Sexp.List [
       Sexp.Atom ".";
+      sexp_of_t gf_record;
       Label.sexp_of_t gf_lbl;
     ]
   | UpdateVal {uv_lbl} -> Sexp.List [
@@ -143,9 +144,13 @@ let apply_to_kids e ~f = match e with
         wt_expr = f wt_expr;
         wt_type;
       }
+  | GetField {gf_lbl; gf_record} ->
+      GetField {
+        gf_lbl;
+        gf_record = f gf_record;
+      }
   | Var _
   | EmptyRecord
-  | GetField _
   | UpdateVal _
   | Embed _
   | Import _
@@ -193,9 +198,13 @@ let rec map e ~f =
         ut_type = Type.map ut_type ~f;
         ut_record = map ut_record ~f;
       }
+  | GetField {gf_lbl; gf_record} ->
+      GetField {
+        gf_lbl;
+        gf_record = map gf_record ~f;
+      }
   | Var x -> Var x
   | EmptyRecord -> EmptyRecord
-  | GetField x -> GetField x
   | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
@@ -255,7 +264,12 @@ let rec subst: (Var.t, 'a t, 'cmp) Map.t -> 'a t -> 'a t = fun env expr ->
         wt_expr = subst env wt_expr;
         wt_type;
       }
-  | Const _ | EmptyRecord | GetField _ | UpdateVal _ | Embed _ | Import _ ->
+  | GetField {gf_lbl; gf_record} ->
+      GetField {
+        gf_lbl;
+        gf_record = subst env gf_record;
+      }
+  | Const _ | EmptyRecord | UpdateVal _ | Embed _ | Import _ ->
       expr
 and subst_branch env b = match b with
   | BLeaf lf -> BLeaf (subst_leaf env lf)

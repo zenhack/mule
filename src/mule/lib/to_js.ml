@@ -52,13 +52,10 @@ let translate_expr ~get_import expr =
         Js.Call1(go env app_fn, go env app_arg)
     | D.Expr.EmptyRecord ->
         Js.Object []
-    | D.Expr.GetField{gf_lbl} ->
-        Js.Lam1
-          ( Var.of_string "o"
-          , Js.Index
-              ( Js.Var (Var.of_string "o")
-              , Js.Const (Const.Text (Label.to_string gf_lbl))
-              )
+    | D.Expr.GetField{gf_lbl; gf_record} ->
+        Js.Index
+          ( go env gf_record
+          , Js.Const (Const.Text (Label.to_string gf_lbl))
           )
     | D.Expr.Ctor{c_lbl; c_arg} ->
         Js.Tagged (c_lbl, go env c_arg)
