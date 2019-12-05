@@ -85,6 +85,7 @@ let show_type_error err = match err with
   | `CantInstantiate (TT.{vi_name; vi_binder}, other_ty) ->
       show_cant_instantiate vi_name vi_binder other_ty
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
+      let sub_root, _super_root = se_path.MuleErr.TypePath.roots in
       begin match se_reason with
         | `Path (`Sourced src) -> String.concat [
             show_path_type_error
@@ -93,12 +94,16 @@ let show_type_error err = match err with
               ~sub:se_sub
               ~super:se_super
           ]
-        | `TypeAnnotation(_, ty) ->
+        | `TypeAnnotation(`WithType(Loc.{l_loc; _}, _), ty) ->
             String.concat [
-              "This expression does not match its type annotation; ";
-              "its type is ";
-              "... ";
-              "but the annotation says it should be ";
+              "The expression at ";
+              Loc.pretty_t l_loc;
+              " does not match its type annotation; its type is:";
+              "\n\n";
+              Desugared_ast_type.to_string (Extract.get_var_type sub_root);
+              "\n\n";
+              "but the annotation says it should be:";
+              "\n\n";
               Desugared_ast_type.to_string ty;
             ]
         | _ ->

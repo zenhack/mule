@@ -3,4 +3,10 @@ Desugared:
 
 	(: (Integer 4)
 	 ((e : (exist $6 (record (types ((t $6))) (values ())))) -> ((. e t) int)))
-Type error: Mismatched type constructors: int is not a subtype of {type t = a} -> a int
+Type error: The expression at line 4, columns 1-2 does not match its type annotation; its type is:
+
+int
+
+but the annotation says it should be:
+
+(e : exist $6. {type t = $6}) -> e.t int

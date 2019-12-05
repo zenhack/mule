@@ -1,3 +1,4 @@
-# This test currently fails during kind inference. It shouldn't
-# type check, but it *is* well-kinded.
+# This is a regression test for a bug where the below failed to type check
+# with a kind mismatch error. It *shouldn't* type check, but it *is*
+# well-kinded.
 4 : (e : { type t a }) -> e.t int
