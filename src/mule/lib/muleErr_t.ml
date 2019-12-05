@@ -37,7 +37,7 @@ end
 type subtype_reason =
   [ `RecordUpdate of TT.k_var DE.t
   | `TypeAnnotation of  (DE.withtype_src * TT.k_var DT.t)
-  | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t)
+  | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t * TT.u_var)
 
   | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src
 

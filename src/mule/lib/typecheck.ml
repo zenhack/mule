@@ -429,7 +429,7 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let p = synth ctx app_arg in
           let r = fresh_local ctx `Flex ktype in
-          let _ = check ctx app_fn (p **> r) ~reason:(`ApplyFn(app_fn, app_arg)) in
+          let _ = check ctx app_fn (p **> r) ~reason:(`ApplyFn(app_fn, app_arg, p)) in
           r
         )
     | DE.Match b ->

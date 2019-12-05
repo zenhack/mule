@@ -132,6 +132,7 @@ let show_type_error err = match err with
       show_cant_instantiate ci
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
       let sub_root, _super_root = se_path.MuleErr.TypePath.roots in
+      let sub_root = Extract.get_var_type sub_root in
       begin match se_reason with
         | `Path (`Sourced src) -> String.concat [
             show_path_type_error
@@ -145,7 +146,25 @@ let show_type_error err = match err with
               "\n\n";
               "but its actual type is:";
               "\n\n";
-              Desugared_ast_type.to_string (Extract.get_var_type sub_root);
+              Desugared_ast_type.to_string sub_root;
+            ]
+        | `ApplyFn(_, _, argtype) -> String.concat [
+              "The expression at "; "<TODO>"; " is being applied to a ";
+              "value of type:";
+              "\n\n";
+              Extract.get_var_type argtype |> Desugared_ast_type.to_string;
+              "\n\n";
+              "but its type is:";
+              "\n\n";
+              Desugared_ast_type.to_string sub_root;
+           ]
+        | `Unspecified ->
+            String.concat [
+              "<TODO>: Get rid of unspecified reasons.\n";
+              "Mismatched type constructors: ";
+              Desugared_ast_type.to_string se_sub;
+              " is not a subtype of ";
+              Desugared_ast_type.to_string se_super;
             ]
         | _ ->
             String.concat [
