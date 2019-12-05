@@ -555,7 +555,7 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
         { ctx with vals_env = Map.set ctx.vals_env ~key:let_v ~data:ty_e }
         let_body
         ty_want
-        ~reason:`Unspecified
+        ~reason
   | DE.App{app_fn; app_arg} ->
       let p = synth ctx app_arg in
       ignore (check ctx app_fn (p **> ty_want) ~reason:`Unspecified);
