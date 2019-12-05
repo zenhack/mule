@@ -2,4 +2,5 @@
 Desugared:
 
 	(fn x ((match ((((Text Hey!) x) ((Integer 1) x)) (_ x))) x))
-Type error: Mismatched type constructors: int is not a subtype of text
+Type error: <TODO>: Get rid of unspecified reasons.
+Mismatched type constructors: int is not a subtype of text
