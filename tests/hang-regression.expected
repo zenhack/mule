@@ -2,5 +2,5 @@
 Desugared:
 
 	(: (Integer 4) (all a a))
-Type error: Mismatched types: a and int.
-a is an `all`-bound type variable. The code must work for *all* types a, not just int.
+Type error: Mismatched types: int and all a. a.
+Could not instantiate type variable a to int. a is an `all`-bound type variable. The code must work for *all* types a, not just int.

@@ -42,12 +42,16 @@ let show_path_type_error ~head ~path ~sub ~super =
         Desugared_ast_type.to_string super;
       ]
 
-let show_cant_instantiate name binder ty =
-  match name, binder, ty with
+let show_cant_instantiate {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path} =
+  match vi_name, vi_binder, ci_other with
   | Some name, Some (`Quant q), `Type ty ->
+      let sub, super = ci_path.MuleErr.TypePath.roots in
+      let sub = sub |> Extract.get_var_type |> Desugared_ast_type.to_string  in
+      let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
         String.concat [
-        "Mismatched types: "; name; " and "; ty; ".\n";
+        "Mismatched types: "; sub ; " and "; super ; ".\n";
+        "Could not instantiate type variable "; name; " to "; ty; ". ";
         begin match q with
         | `All -> String.concat [
             name; " is an `all`-bound type variable. The code must work for *all* types ";
@@ -60,14 +64,14 @@ let show_cant_instantiate name binder ty =
         end
     ]
   | _ ->
-    let var = match name with
+    let var = match vi_name with
       | None -> ""
       | Some v -> " " ^ v
     in
     String.concat [
       "Could not instantiate rigid type variable";
       var;
-      begin match ty with
+      begin match ci_other with
         | `Type t ->
             " with type " ^ Desugared_ast_type.to_string t
         | `Row _ ->
@@ -82,8 +86,8 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate {ci_info = TT.{vi_name; vi_binder}; ci_other}->
-      show_cant_instantiate vi_name vi_binder ci_other
+  | `CantInstantiate ci ->
+      show_cant_instantiate ci
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
       let sub_root, _super_root = se_path.MuleErr.TypePath.roots in
       begin match se_reason with
