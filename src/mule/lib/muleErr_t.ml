@@ -67,6 +67,7 @@ type cant_instantiate = {
     | `Row of int DT.row
     ];
   ci_path : TypePath.t;
+  ci_reason : subtype_reason;
 }
 type type_error =
   [ `MismatchedCtors of subtype_error

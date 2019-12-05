@@ -42,7 +42,10 @@ let show_path_type_error ~head ~path ~sub ~super =
         Desugared_ast_type.to_string super;
       ]
 
-let show_cant_instantiate {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path} =
+let show_cant_instantiate
+    {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path; ci_reason}
+  =
+  let _ = ci_reason in (* TODO: use this. *)
   match vi_name, vi_binder, ci_other with
   | Some name, Some (`Quant q), `Type ty ->
       let sub, super = ci_path.MuleErr.TypePath.roots in
