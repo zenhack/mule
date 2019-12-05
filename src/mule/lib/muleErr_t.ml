@@ -5,34 +5,6 @@ module DE = Desugared_ast_expr_t
 
 module TT = Typecheck_types_t
 
-
-module TypePath = struct
-  (* A segment in a path through a type. *)
-  type seg =
-    [ `RowLabel of Label.t
-    | `RowTail
-    | `Fn of [ `Param | `Result ]
-    | `RecordPart of [ `Type | `Value ]
-    | `UnionRow
-    | `TypeLamBody
-    | `Unroll of Typecheck_types_t.u_quant * [ `Left | `Right ]
-    ]
-
-  type t = {
-    roots: (TT.u_var * TT.u_var);
-    segs: seg list;
-  }
-
-  let base: TT.u_var -> TT.u_var -> t =
-    fun l r -> {
-        roots = (l, r);
-        segs = [];
-      }
-
-  let append: t -> seg -> t =
-    fun t seg -> { t with segs = seg :: t.segs }
-end
-
 (* A reason for a subtyping constraint. *)
 type subtype_reason =
   [ `RecordUpdate of TT.k_var DE.t

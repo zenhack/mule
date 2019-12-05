@@ -584,7 +584,7 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
               (p **> body)
           | _ ->
               let sub, super = synth ctx e, ty_want in
-              let path = MuleErr.TypePath.base sub super in
+              let path = TypePath.base sub super in
               throw_mismatch
                 ~sub
                 ~super
@@ -599,7 +599,7 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
               check_branch ctx b (p, r)
           | _ ->
               let sub, super = synth ctx e, ty_want in
-              let path = MuleErr.TypePath.base sub super in
+              let path = TypePath.base sub super in
               throw_mismatch
                 ~sub
                 ~super
@@ -693,7 +693,7 @@ and require_subtype
     -> unit =
   fun ctx ~reason ~sub ~super ->
   ignore (unify ctx
-      ~path:(MuleErr.TypePath.base sub super)
+      ~path:(TypePath.base sub super)
       ~reason
       (sub, `Sub)
       (super, `Super)
@@ -709,7 +709,7 @@ and unify =
   result
 and unify_already_whnf
   : context
-    -> path:MuleErr.TypePath.t
+    -> path:TypePath.t
     -> reason:MuleErr.subtype_reason
     -> (u_var * subtype_side)
     -> (u_var * subtype_side)
@@ -759,7 +759,7 @@ and unify_already_whnf
             unify
               ctx
               ~reason
-              ~path:(MuleErr.TypePath.append path (`Unroll(q, `Left)))
+              ~path:(TypePath.append path (`Unroll(q, `Left)))
               ( unroll_quant ctx sub_dir q
               , sub_dir
               )
@@ -769,7 +769,7 @@ and unify_already_whnf
         | _, `Quant q ->
             unify ctx
               ~reason
-              ~path:(MuleErr.TypePath.append path (`Unroll(q, `Right)))
+              ~path:(TypePath.append path (`Unroll(q, `Right)))
               ( sub
               , sub_dir
               )
@@ -807,14 +807,14 @@ and unify_already_whnf
             let param =
               unify ctx
                 ~reason
-                ~path:(MuleErr.TypePath.append path (`Fn `Param))
+                ~path:(TypePath.append path (`Fn `Param))
                 (psuper, flip_dir super_dir)
                 (psub, flip_dir sub_dir)
             in
             let result =
               unify ctx
                 ~reason
-                ~path:(MuleErr.TypePath.append path (`Fn `Result))
+                ~path:(TypePath.append path (`Fn `Result))
                 (rsub, sub_dir)
                 (rsuper, super_dir)
             in
@@ -828,7 +828,7 @@ and unify_already_whnf
             union (
               unify ctx
                 ~reason
-                ~path:(MuleErr.TypePath.append path `UnionRow)
+                ~path:(TypePath.append path `UnionRow)
                 (row_sub, sub_dir)
                 (row_super, super_dir)
             )
@@ -843,14 +843,14 @@ and unify_already_whnf
                 (rtype_sub, sub_dir)
                 (rtype_super, super_dir)
                 ~reason
-                ~path:(MuleErr.TypePath.append path (`RecordPart `Type))
+                ~path:(TypePath.append path (`RecordPart `Type))
             in
             let rvals =
               unify ctx
                 (rvals_sub, sub_dir)
                 (rvals_super, super_dir)
                 ~reason
-                ~path:(MuleErr.TypePath.append path (`RecordPart `Value))
+                ~path:(TypePath.append path (`RecordPart `Value))
             in
             record rtype rvals
 
@@ -881,7 +881,7 @@ and unify_already_whnf
                 (check pl bl, sub_dir)
                 (check pr br, super_dir)
                 ~reason
-                ~path:(MuleErr.TypePath.append path `TypeLamBody)
+                ~path:(TypePath.append path `TypeLamBody)
             in
             lambda (get_kind p) (fun p' ->
               subst
@@ -952,7 +952,7 @@ and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
   in
   let merged =
     Map.merge sub_fields super_fields ~f:(fun ~key data ->
-      let path = MuleErr.TypePath.append path (`RowLabel key) in
+      let path = TypePath.append path (`RowLabel key) in
       match data with
       | `Left v ->
           single ~path super_tail super_dir sub_dir key v
@@ -973,7 +973,7 @@ and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
   let tail =
     unify ctx
       ~reason
-      ~path:(MuleErr.TypePath.append path `RowTail)
+      ~path:(TypePath.append path `RowTail)
       (!sub_tail, sub_dir)
       (!super_tail, super_dir)
   in
@@ -1077,7 +1077,7 @@ and require_type_eq ctx l r =
   require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
 and join ctx ~reason l r =
   unify ctx
-    ~path:(MuleErr.TypePath.base l r)
+    ~path:(TypePath.base l r)
     ~reason
     (l, `Sub)
     (r, `Sub)

@@ -75,7 +75,7 @@ let show_cant_instantiate
   =
   match vi_name, vi_binder, ci_other with
   | Some name, Some (`Quant q), `Type ty ->
-      let sub, super = ci_path.MuleErr.TypePath.roots in
+      let sub, super = ci_path.TypePath.roots in
       let sub = sub |> Extract.get_var_type |> Desugared_ast_type.to_string  in
       let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
@@ -131,7 +131,7 @@ let show_type_error err = match err with
   | `CantInstantiate ci ->
       show_cant_instantiate ci
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
-      let sub_root, _super_root = se_path.MuleErr.TypePath.roots in
+      let sub_root, _super_root = se_path.TypePath.roots in
       let sub_root = Extract.get_var_type sub_root in
       begin match se_reason with
         | `Path (`Sourced src) -> String.concat [
