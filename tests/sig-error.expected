@@ -1,0 +1,16 @@
+
+Desugared:
+
+	(Text hello)
+
+Desugared type signature:
+
+	int
+Type error: The file does not match it's signature (.msig).
+The signature file says the type should be:
+
+int
+
+but its actual type is:
+
+text

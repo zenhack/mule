@@ -42,10 +42,41 @@ let show_path_type_error ~head ~path ~sub ~super =
         Desugared_ast_type.to_string super;
       ]
 
+let show_type_annotation_err (src, ty) =
+  let what = match src with
+    | `WithType(Loc.{l_loc; _}, _) ->
+        `Fragment ("expression", l_loc)
+    | `Pattern(Loc.{l_loc; l_value}, _) ->
+        `Fragment ("variable `" ^ Var.to_string l_value ^ "`", l_loc)
+    | `RecordVal(Loc.{l_loc; l_value}, _, _) ->
+        `Fragment ("record field `" ^ Label.to_string l_value ^ "`", l_loc)
+    | `Msig -> `Msig
+    | `Main -> `Main
+  in
+  begin match what with
+  | `Fragment(what, where) -> String.concat [
+      "The "; what; " at "; Loc.pretty_t where;
+      " does not match its type annotation.\n";
+      "The annotation says its type should be:";
+    ]
+  | `Msig -> String.concat [
+      "The file does not match it's signature (.msig).\n";
+      "The signature file says the type should be:";
+    ]
+  | `Main -> String.concat [
+      "The file does not have the required type. The entrypoint to a ";
+      "program for this target must have type:";
+    ]
+  end
+  ^ "\n\n" ^ Desugared_ast_type.to_string ty
+
+let show_reason_summary = function
+  | `TypeAnnotation ta -> show_type_annotation_err ta
+  | _ -> ""
+
 let show_cant_instantiate
     {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path; ci_reason}
   =
-  let _ = ci_reason in (* TODO: use this. *)
   match vi_name, vi_binder, ci_other with
   | Some name, Some (`Quant q), `Type ty ->
       let sub, super = ci_path.MuleErr.TypePath.roots in
@@ -53,18 +84,30 @@ let show_cant_instantiate
       let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
         String.concat [
-        "Mismatched types: "; sub ; " and "; super ; ".\n";
-        "Could not instantiate type variable "; name; " to "; ty; ". ";
-        begin match q with
-        | `All -> String.concat [
-            name; " is an `all`-bound type variable. The code must work for *all* types ";
-            name; ", not just "; ty; ".";
-          ]
-        | `Exist -> String.concat [
-            name; " is an `exist`-bound type variable. The code must work regardless of ";
-            "what type it actually is, so we can't assume it's "; ty; ".";
-          ]
-        end
+          begin match ci_reason with
+            | `TypeAnnotation _ -> String.concat [
+                show_reason_summary ci_reason;
+                "\n\n";
+                "but its actual type is:";
+                "\n\n";
+                sub;
+                "\n\n";
+              ]
+            | _ -> String.concat [
+                "Mismatched types: `"; sub ; "` and `"; super ; "`.\n";
+              ]
+          end;
+          "We can't set the type variable `"; name; "` to "; ty; ", because ";
+          begin match q with
+          | `All -> String.concat [
+              "`"; name; "` is an `all`-bound type variable. The code must work for *all* types ";
+              "`"; name; "`, not just "; ty; ".";
+            ]
+          | `Exist -> String.concat [
+              "`"; name; "` is an `exist`-bound type variable. The code must work regardless of ";
+              "what type it actually is, so we can't assume it's "; ty; ".";
+            ]
+          end;
     ]
   | _ ->
     let var = match vi_name with
@@ -101,17 +144,12 @@ let show_type_error err = match err with
               ~sub:se_sub
               ~super:se_super
           ]
-        | `TypeAnnotation(`WithType(Loc.{l_loc; _}, _), ty) ->
-            String.concat [
-              "The expression at ";
-              Loc.pretty_t l_loc;
-              " does not match its type annotation; its type is:";
+        | `TypeAnnotation _ -> String.concat [
+              show_reason_summary se_reason;
+              "\n\n";
+              "but its actual type is:";
               "\n\n";
               Desugared_ast_type.to_string (Extract.get_var_type sub_root);
-              "\n\n";
-              "but the annotation says it should be:";
-              "\n\n";
-              Desugared_ast_type.to_string ty;
             ]
         | _ ->
             String.concat [

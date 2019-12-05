@@ -5,5 +5,5 @@ Desugared:
 	 (values
 	  ((rank2 (: (fn rank1 (rank1 (Integer 0))) ((all a (a -> a)) -> int)))))
 	 (rank2 (fn $6 (Integer 4))))
-Type error: Mismatched types: all a. a -> a -> int and all a. a -> int -> b.
-Could not instantiate type variable a to int. a is an `all`-bound type variable. The code must work for *all* types a, not just int.
+Type error: Mismatched types: `all a. a -> a -> int` and `all a. a -> int -> b`.
+We can't set the type variable `a` to int, because `a` is an `all`-bound type variable. The code must work for *all* types `a`, not just int.
