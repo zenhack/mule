@@ -81,7 +81,7 @@ let show_cant_instantiate
       let ty = Desugared_ast_type.to_string ty in
         String.concat [
           begin match ci_reason with
-            | `TypeAnnotation ta -> String.concat [
+            | (`TypeAnnotation ta, _) -> String.concat [
                 show_type_annotation_err ta;
                 "\n\n";
                 "but its actual type is:";
@@ -134,21 +134,21 @@ let show_type_error err = match err with
       let sub_root, _super_root = se_path.TypePath.roots in
       let sub_root = Extract.get_var_type sub_root in
       begin match se_reason with
-        | `Path (`Sourced src) -> String.concat [
+        | (`Path (`Sourced src), _) -> String.concat [
             show_path_type_error
               ~head:src
               ~path:se_path
               ~sub:se_sub
               ~super:se_super
           ]
-        | `TypeAnnotation ta -> String.concat [
+        | (`TypeAnnotation ta, _) -> String.concat [
               show_type_annotation_err ta;
               "\n\n";
               "but its actual type is:";
               "\n\n";
               Desugared_ast_type.to_string sub_root;
             ]
-        | `ApplyFn(_, _, argtype) -> String.concat [
+        | (`ApplyFn(_, _, argtype), _) -> String.concat [
               "The expression at "; "<TODO>"; " is being applied to a ";
               "value of type:";
               "\n\n";
@@ -158,7 +158,7 @@ let show_type_error err = match err with
               "\n\n";
               Desugared_ast_type.to_string sub_root;
            ]
-        | `Unspecified ->
+        | (`Unspecified, _) ->
             String.concat [
               "<TODO>: Get rid of unspecified reasons.\n";
               "Mismatched type constructors: ";

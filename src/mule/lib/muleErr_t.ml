@@ -22,7 +22,7 @@ type subtype_error = {
   se_sub : int DT.t;
   se_super : int DT.t;
   se_path : TypePath.t;
-  se_reason : subtype_reason;
+  se_reason : subtype_reason NonEmpty.t;
 }
 
 type ctor = Typecheck_types_t.u_typeconst
@@ -39,7 +39,7 @@ type cant_instantiate = {
     | `Row of int DT.row
     ];
   ci_path : TypePath.t;
-  ci_reason : subtype_reason;
+  ci_reason : subtype_reason NonEmpty.t;
 }
 type type_error =
   [ `MismatchedCtors of subtype_error

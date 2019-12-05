@@ -332,7 +332,7 @@ and make_type ctx ty = match ty with
       let path_type = make_path_type result_type p_lbls in
       require_subtype
         ctx
-        ~reason:(`Path p_src)
+        ~reason:(NonEmpty.singleton (`Path p_src))
         ~sub:var_type
         ~super:path_type;
       result_type
@@ -405,7 +405,10 @@ and synth: context -> 'i DE.t -> u_var =
           let rv = fresh_local ctx `Flex krow in
           let rt = fresh_local ctx `Flex krow in
           let _ =
-            check ctx ut_record (record rt rv) ~reason:(`RecordUpdate e)
+            check ctx
+              ut_record
+              (record rt rv)
+              ~reason:(NonEmpty.singleton (`RecordUpdate e))
           in
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
@@ -416,7 +419,11 @@ and synth: context -> 'i DE.t -> u_var =
         union (extend c_lbl arg_t (all krow (fun r -> r)))
     | DE.WithType {wt_src; wt_expr; wt_type} ->
         let want_ty = make_type ctx wt_type |> with_kind ktype in
-        let _ = check ctx wt_expr want_ty ~reason:(`TypeAnnotation(wt_src, wt_type)) in
+        let _ = check ctx
+            wt_expr
+            want_ty
+            ~reason:(NonEmpty.singleton (`TypeAnnotation(wt_src, wt_type)))
+        in
         want_ty
     | DE.Let{let_v; let_e; let_body} ->
         let ty = unpack_exist ctx (synth ctx let_e) in
@@ -429,7 +436,11 @@ and synth: context -> 'i DE.t -> u_var =
         with_locals ctx (fun ctx ->
           let p = synth ctx app_arg in
           let r = fresh_local ctx `Flex ktype in
-          let _ = check ctx app_fn (p **> r) ~reason:(`ApplyFn(app_fn, app_arg, p)) in
+          let _ = check ctx
+              app_fn
+              (p **> r)
+              ~reason:(NonEmpty.singleton (`ApplyFn(app_fn, app_arg, p)))
+          in
           r
         )
     | DE.Match b ->
@@ -462,7 +473,10 @@ and synth: context -> 'i DE.t -> u_var =
           let checked_vals =
             List.map letrec_vals ~f:(fun (v, e) ->
               with_locals ctx' (fun ctx ->
-                check ctx e (Util.find_exn ctx.vals_env v) ~reason:`Unspecified
+                check ctx
+                  e
+                  (Util.find_exn ctx.vals_env v)
+                  ~reason:(NonEmpty.singleton `Unspecified)
               )
               |> unpack_exist ctx
             )
@@ -504,7 +518,7 @@ and synth_branch ctx ?have_default:(have_default=false) b =
         ~f:(fun ~key ~data (param, result) ->
           ignore (check_const ctx key param);
           let result = join ctx
-              ~reason:`Unspecified
+              ~reason:(NonEmpty.singleton `Unspecified)
               result
               (synth ctx data)
           in
@@ -530,7 +544,7 @@ and synth_branch ctx ?have_default:(have_default=false) b =
           end
           ~f:(fun ~key ~data:(param, data) (row, result) ->
             ( extend key param row
-            , join ctx ~reason:`Unspecified data result
+            , join ctx ~reason:(NonEmpty.singleton `Unspecified) data result
             )
           )
       in
@@ -546,7 +560,7 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
           { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:pat }
           lf_body
   )
-and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var =
+and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
   match e with
   | DE.Let{let_v; let_e; let_body} ->
@@ -558,12 +572,20 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
         ~reason
   | DE.App{app_fn; app_arg} ->
       let p = synth ctx app_arg in
-      ignore (check ctx app_fn (p **> ty_want) ~reason:`Unspecified);
+      ignore
+        (check ctx
+            app_fn
+            (p **> ty_want)
+            ~reason:(NonEmpty.singleton `Unspecified));
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want_inner = make_type ctx wt_type in
       let ty_want_outer = ty_want in
-      ignore (check ctx wt_expr ty_want_inner ~reason:(`TypeAnnotation(wt_src, wt_type)));
+      ignore
+        (check ctx
+            wt_expr
+            ty_want_inner
+            ~reason:(NonEmpty.singleton (`TypeAnnotation(wt_src, wt_type))));
       require_subtype
         ctx
         ~reason
@@ -579,7 +601,7 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
                   { ctx with vals_env = Map.set ctx.vals_env ~key:l_param ~data:p }
                   l_body
                   r
-                  ~reason:`Unspecified
+                  ~reason:(NonEmpty.singleton `Unspecified)
               in
               (p **> body)
           | _ ->
@@ -639,7 +661,7 @@ and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -
       end;
       Map.iteri cm_cases ~f:(fun ~key ~data ->
         check_const ctx key p_want;
-        ignore (check ctx data r_want ~reason:`Unspecified);
+        ignore (check ctx data r_want ~reason:(NonEmpty.singleton `Unspecified));
       );
       ty_want
   | DE.BLabel {lm_cases; lm_default} ->
@@ -654,7 +676,10 @@ and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -
             lm_default
         )
       in
-      require_subtype ctx ~sub:p_want ~super:p_lbls ~reason:`Unspecified;
+      require_subtype ctx
+        ~sub:p_want
+        ~super:p_lbls
+        ~reason:(NonEmpty.singleton `Unspecified);
       Map.iteri lm_cases ~f:(fun ~key ~data ->
         let u_hd = fresh_local ctx `Flex ktype in
         let u_tl = fresh_local ctx `Flex krow in
@@ -662,7 +687,7 @@ and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -
           ctx
           ~sub:p_want
           ~super:(union (extend key u_hd u_tl))
-          ~reason:`Unspecified;
+          ~reason:(NonEmpty.singleton `Unspecified);
         ignore (check_branch ctx data ?default (u_hd, r_want))
       );
       ty_want
@@ -681,13 +706,13 @@ and check_leaf: context -> 'i DE.leaf -> u_var -> u_var =
   let ty_got = synth_leaf ctx lf in
   require_subtype
     ctx
-    ~reason:`Unspecified
+    ~reason:(NonEmpty.singleton `Unspecified)
     ~sub:ty_got
     ~super:ty_want;
   ty_got
 and require_subtype
   : context
-    -> reason:MuleErr.subtype_reason
+    -> reason:(MuleErr.subtype_reason NonEmpty.t)
     -> sub:u_var
     -> super:u_var
     -> unit =
@@ -710,7 +735,7 @@ and unify =
 and unify_already_whnf
   : context
     -> path:TypePath.t
-    -> reason:MuleErr.subtype_reason
+    -> reason:(MuleErr.subtype_reason NonEmpty.t)
     -> (u_var * subtype_side)
     -> (u_var * subtype_side)
     -> u_var =
@@ -1028,7 +1053,10 @@ and unroll_all_quants ctx side uv = match UnionFind.get uv with
   | _ -> uv
 and check_const ctx c ty_want =
   let ty_got = synth_const c in
-  require_subtype ctx ~reason:`Unspecified ~sub:ty_got ~super:ty_want
+  require_subtype ctx
+    ~sub:ty_got
+    ~super:ty_want
+    ~reason:(NonEmpty.singleton `Unspecified)
 and with_kind k u = require_kind k (get_kind u); u
 and require_kind l r = UnionFind.merge unify_kind l r
 and unify_kind l r =
@@ -1073,8 +1101,8 @@ and apply_type app f arg =
       ignore (whnf result)
   | _ -> ()
 and require_type_eq ctx l r =
-  require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
-  require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
+  require_subtype ctx ~reason:(NonEmpty.singleton `Unspecified) ~sub:l ~super:r;
+  require_subtype ctx ~reason:(NonEmpty.singleton `Unspecified) ~sub:r ~super:l
 and join ctx ~reason l r =
   unify ctx
     ~path:(TypePath.base l r)
