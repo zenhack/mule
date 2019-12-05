@@ -18,7 +18,7 @@ let rec show_kind = function
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
 let show_path_type_error ~head ~path ~sub ~super =
-  match path, super with
+  match path.TypePath.segs, super with
   | [], DT.Record _ ->
       String.concat [
         Loc.pretty_t head.Loc.l_loc;
@@ -84,18 +84,12 @@ let show_type_error err = match err with
       "inferring kinds: occurs check failed"
   | `CantInstantiate (TT.{vi_name; vi_binder}, other_ty) ->
       show_cant_instantiate vi_name vi_binder other_ty
-  | `MismatchedCtors {se_sub; se_super; se_reason} ->
-      let rec unwrap_reason path = function
-        | `Cascaded(rsn, next) ->
-            unwrap_reason (next :: path) rsn
-        | rsn -> (path, rsn)
-      in
-      let path, rsn = unwrap_reason [] se_reason in
-      begin match rsn with
+  | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
+      begin match se_reason with
         | `Path (`Sourced src) -> String.concat [
             show_path_type_error
               ~head:src
-              ~path
+              ~path:se_path
               ~sub:se_sub
               ~super:se_super
           ]

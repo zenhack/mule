@@ -43,12 +43,13 @@ let cant_instantiate info other_ty =
         )
     )
 
-let throw_mismatch ~reason ~sub ~super =
+let throw_mismatch ~path ~reason ~sub ~super =
   MuleErr.throw
     (`TypeError
         (`MismatchedCtors {
               se_sub = Extract.get_var_type sub;
               se_super = Extract.get_var_type super;
+              se_path = path;
               se_reason = reason;
             }))
 
@@ -578,9 +579,12 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
               in
               (p **> body)
           | _ ->
+              let sub, super = synth ctx e, ty_want in
+              let path = MuleErr.TypePath.base sub super in
               throw_mismatch
-                ~sub:(synth ctx e)
-                ~super:ty_want
+                ~sub
+                ~super
+                ~path
                 ~reason
         )
       )
@@ -590,9 +594,12 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
           | `Const(_, `Named `Fn, [p, _; r, _], _) ->
               check_branch ctx b (p, r)
           | _ ->
+              let sub, super = synth ctx e, ty_want in
+              let path = MuleErr.TypePath.base sub super in
               throw_mismatch
-                ~sub:(synth ctx e)
-                ~super:ty_want
+                ~sub
+                ~super
+                ~path
                 ~reason
         )
       )
@@ -681,7 +688,12 @@ and require_subtype
     -> super:u_var
     -> unit =
   fun ctx ~reason ~sub ~super ->
-  ignore (unify ctx ~reason (sub, `Sub) (super, `Super))
+  ignore (unify ctx
+      ~path:(MuleErr.TypePath.base sub super)
+      ~reason
+      (sub, `Sub)
+      (super, `Super)
+  )
 and unify =
   fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
   trace_req_subtype ~sub ~super;
@@ -693,11 +705,12 @@ and unify =
   result
 and unify_already_whnf
   : context
+    -> path:MuleErr.TypePath.t
     -> reason:MuleErr.subtype_reason
     -> (u_var * subtype_side)
     -> (u_var * subtype_side)
     -> u_var =
-  fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
+  fun ctx ~path ~reason (sub, sub_dir) (super, super_dir) ->
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if Set.mem !(ctx.assumptions) (sub_id, super_id) then
     sub
@@ -741,7 +754,8 @@ and unify_already_whnf
         | `Quant q, _ ->
             unify
               ctx
-              ~reason:(`Cascaded(reason, `Unroll(q, `Left)))
+              ~reason
+              ~path:(MuleErr.TypePath.append path (`Unroll(q, `Left)))
               ( unroll_quant ctx sub_dir q
               , sub_dir
               )
@@ -750,7 +764,8 @@ and unify_already_whnf
               )
         | _, `Quant q ->
             unify ctx
-              ~reason:(`Cascaded(reason, `Unroll(q, `Right)))
+              ~reason
+              ~path:(MuleErr.TypePath.append path (`Unroll(q, `Right)))
               ( sub
               , sub_dir
               )
@@ -772,6 +787,7 @@ and unify_already_whnf
                   (`MismatchedCtors {
                         se_sub = Extract.get_var_type sub;
                         se_super = Extract.get_var_type super;
+                        se_path = path;
                         se_reason = reason;
                       }))
 
@@ -786,13 +802,15 @@ and unify_already_whnf
              * contravariance. *)
             let param =
               unify ctx
-                ~reason:(`Cascaded(reason, `Fn `Param))
+                ~reason
+                ~path:(MuleErr.TypePath.append path (`Fn `Param))
                 (psuper, flip_dir super_dir)
                 (psub, flip_dir sub_dir)
             in
             let result =
               unify ctx
-                ~reason:(`Cascaded(reason, `Fn `Result))
+                ~reason
+                ~path:(MuleErr.TypePath.append path (`Fn `Result))
                 (rsub, sub_dir)
                 (rsuper, super_dir)
             in
@@ -805,7 +823,8 @@ and unify_already_whnf
           `Const(_, `Named `Union, [row_super, _], _) ->
             union (
               unify ctx
-                ~reason:(`Cascaded(reason, `UnionRow))
+                ~reason
+                ~path:(MuleErr.TypePath.append path `UnionRow)
                 (row_sub, sub_dir)
                 (row_super, super_dir)
             )
@@ -819,13 +838,15 @@ and unify_already_whnf
               unify ctx
                 (rtype_sub, sub_dir)
                 (rtype_super, super_dir)
-                ~reason:(`Cascaded(reason, `RecordPart `Type))
+                ~reason
+                ~path:(MuleErr.TypePath.append path (`RecordPart `Type))
             in
             let rvals =
               unify ctx
                 (rvals_sub, sub_dir)
                 (rvals_super, super_dir)
-                ~reason:(`Cascaded(reason, `RecordPart `Value))
+                ~reason
+                ~path:(MuleErr.TypePath.append path (`RecordPart `Value))
             in
             record rtype rvals
 
@@ -835,6 +856,7 @@ and unify_already_whnf
         | `Const(_, `Extend _, _, _), `Const(_, `Extend _, _, _) ->
             unify_extend ctx
               ~reason
+              ~path
               (sub, sub_dir)
               (super, super_dir)
         | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
@@ -854,7 +876,8 @@ and unify_already_whnf
               unify ctx
                 (check pl bl, sub_dir)
                 (check pr br, super_dir)
-                ~reason:(`Cascaded(reason, `TypeLamBody))
+                ~reason
+                ~path:(MuleErr.TypePath.append path `TypeLamBody)
             in
             lambda (get_kind p) (fun p' ->
               subst
@@ -877,7 +900,7 @@ and unify_already_whnf
             MuleErr.bug "TODO: require_subytpe"
       end
     end
-and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
+and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
   let fold_row =
     let rec go m row =
       require_kind (get_kind row) krow;
@@ -902,7 +925,7 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
   let sub_tail = ref sub_tail in
   let super_tail = ref super_tail in
   let single
-      ~reason
+      ~path
       tailref
       taildir
       lbldir
@@ -913,6 +936,7 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
       unify
         ctx
         ~reason
+        ~path
         (extend lbl ty (fresh_local ctx `Flex krow), lbldir)
         (!tailref, taildir);
     in
@@ -924,18 +948,19 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
   in
   let merged =
     Map.merge sub_fields super_fields ~f:(fun ~key data ->
-      let reason = `Cascaded(reason, `RowLabel key) in
+      let path = MuleErr.TypePath.append path (`RowLabel key) in
       match data with
       | `Left v ->
-          single ~reason super_tail super_dir sub_dir key v
+          single ~path super_tail super_dir sub_dir key v
       | `Right v ->
-          single ~reason sub_tail sub_dir super_dir key v
+          single ~path sub_tail sub_dir super_dir key v
       | `Both ((sub_t, sub_k), (super_t, super_k)) ->
           require_kind sub_k super_k;
           Some (
             unify
               ctx
               ~reason
+              ~path
               (sub_t, sub_dir)
               (super_t, super_dir)
           )
@@ -943,7 +968,8 @@ and unify_extend ctx ~reason (sub, sub_dir) (super, super_dir) =
   in
   let tail =
     unify ctx
-      ~reason:(`Cascaded(reason, `RowTail))
+      ~reason
+      ~path:(MuleErr.TypePath.append path `RowTail)
       (!sub_tail, sub_dir)
       (!super_tail, super_dir)
   in
@@ -1046,7 +1072,11 @@ and require_type_eq ctx l r =
   require_subtype ctx ~reason:`Unspecified ~sub:l ~super:r;
   require_subtype ctx ~reason:`Unspecified ~sub:r ~super:l
 and join ctx ~reason l r =
-  unify ctx ~reason (l, `Sub) (r, `Sub)
+  unify ctx
+    ~path:(MuleErr.TypePath.base l r)
+    ~reason
+    (l, `Sub)
+    (r, `Sub)
 
 
 let rec gen_kind = function

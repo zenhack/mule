@@ -3,30 +3,41 @@ open Common_ast
 module DT = Desugared_ast_type_t
 module DE = Desugared_ast_expr_t
 
-type k_var = Typecheck_types_t.k_var
+module TT = Typecheck_types_t
 
-(* A segment in a path through a type. See the disucssion for the `Cascade
- * variant of [subtype_reason] *)
-type type_path =
-  [ `RowLabel of Label.t
-  | `RowTail
-  | `Fn of [ `Param | `Result ]
-  | `RecordPart of [ `Type | `Value ]
-  | `UnionRow
-  | `TypeLamBody
-  | `Unroll of Typecheck_types_t.u_quant * [ `Left | `Right ]
-  ]
+
+module TypePath = struct
+  (* A segment in a path through a type. *)
+  type seg =
+    [ `RowLabel of Label.t
+    | `RowTail
+    | `Fn of [ `Param | `Result ]
+    | `RecordPart of [ `Type | `Value ]
+    | `UnionRow
+    | `TypeLamBody
+    | `Unroll of Typecheck_types_t.u_quant * [ `Left | `Right ]
+    ]
+
+  type t = {
+    roots: (TT.u_var * TT.u_var);
+    segs: seg list;
+  }
+
+  let base: TT.u_var -> TT.u_var -> t =
+    fun l r -> {
+        roots = (l, r);
+        segs = [];
+      }
+
+  let append: t -> seg -> t =
+    fun t seg -> { t with segs = seg :: t.segs }
+end
 
 (* A reason for a subtyping constraint. *)
 type subtype_reason =
-  [ (* This subtyping constraint is a result of another subtyping constraint.
-     * It checks if some smaller part of a type matches. The path describes
-     * how we got here from the parent constraint. *)
-    `Cascaded of (subtype_reason * type_path)
-
-  | `RecordUpdate of k_var DE.t
-  | `TypeAnnotation of  (k_var DE.t * k_var DT.t)
-  | `ApplyFn of (k_var DE.t * k_var DE.t)
+  [ `RecordUpdate of TT.k_var DE.t
+  | `TypeAnnotation of  (TT.k_var DE.t * TT.k_var DT.t)
+  | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t)
 
   | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src
 
@@ -38,6 +49,7 @@ type subtype_reason =
 type subtype_error = {
   se_sub : int DT.t;
   se_super : int DT.t;
+  se_path : TypePath.t;
   se_reason : subtype_reason;
 }
 
