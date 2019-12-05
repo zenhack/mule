@@ -562,12 +562,12 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want' = make_type ctx wt_type in
-      ignore (check ctx wt_expr ty_want' ~reason:`Unspecified);
+      ignore (check ctx wt_expr ty_want' ~reason:(`TypeAnnotation(wt_src, wt_type)));
       require_subtype
         ctx
-        ~reason:(`TypeAnnotation(wt_src, wt_type))
-        ~sub:ty_want
-        ~super:ty_want';
+        ~reason
+        ~sub:ty_want'
+        ~super:ty_want;
       ty_want
   | DE.Lam{l_param; l_body} ->
       with_locals ctx (fun ctx ->
