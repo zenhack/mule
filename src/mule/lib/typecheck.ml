@@ -576,7 +576,7 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
         (check ctx
             app_fn
             (p **> ty_want)
-            ~reason:(NonEmpty.singleton `Unspecified));
+            ~reason:(NonEmpty.cons (`ApplyFn(app_fn, app_arg, p)) reason));
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want_inner = make_type ctx wt_type in

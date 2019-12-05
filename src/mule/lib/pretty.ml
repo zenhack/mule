@@ -80,7 +80,7 @@ let show_cant_instantiate
       let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
         String.concat [
-          begin match ci_reason with
+          begin match NonEmpty.rev ci_reason with
             | (`TypeAnnotation ta, _) -> String.concat [
                 show_type_annotation_err ta;
                 "\n\n";
@@ -133,7 +133,7 @@ let show_type_error err = match err with
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
       let sub_root, _super_root = se_path.TypePath.roots in
       let sub_root = Extract.get_var_type sub_root in
-      begin match se_reason with
+      begin match NonEmpty.rev se_reason with
         | (`Path (`Sourced src), _) -> String.concat [
             show_path_type_error
               ~head:src
