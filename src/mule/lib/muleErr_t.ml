@@ -60,16 +60,18 @@ type kind =
   | `Unknown
   | `Arrow of kind * kind
   ]
+type cant_instantiate = {
+  ci_info : TT.var_info;
+  ci_other:
+    [ `Type of int DT.t
+    | `Row of int DT.row
+    ];
+}
 type type_error =
   [ `MismatchedCtors of subtype_error
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
-  | `CantInstantiate of
-      ( Typecheck_types_t.var_info *
-        [ `Type of int DT.t
-        | `Row of int DT.row
-        ]
-      )
+  | `CantInstantiate of cant_instantiate
   ]
 
 type path_error =  {

@@ -35,15 +35,14 @@ type context = {
 let cant_instantiate info other_ty =
   MuleErr.throw
     (`TypeError
-        (`CantInstantiate
-            ( info
-            , begin match UnionFind.get (get_kind other_ty) with
+        (`CantInstantiate {
+              ci_info = info;
+              ci_other =
+                begin match UnionFind.get (get_kind other_ty) with
                 | `Row -> `Row (Extract.get_var_row other_ty)
                 | _ -> `Type (Extract.get_var_type other_ty)
-              end
-            )
-        )
-    )
+                end;
+            }))
 
 let throw_mismatch ~path ~reason ~sub ~super =
   MuleErr.throw

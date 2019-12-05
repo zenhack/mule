@@ -82,8 +82,8 @@ let show_type_error err = match err with
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `CantInstantiate (TT.{vi_name; vi_binder}, other_ty) ->
-      show_cant_instantiate vi_name vi_binder other_ty
+  | `CantInstantiate {ci_info = TT.{vi_name; vi_binder}; ci_other}->
+      show_cant_instantiate vi_name vi_binder ci_other
   | `MismatchedCtors {se_sub; se_super; se_path; se_reason} ->
       let sub_root, _super_root = se_path.MuleErr.TypePath.roots in
       begin match se_reason with
