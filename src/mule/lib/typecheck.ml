@@ -561,14 +561,15 @@ and check: context -> reason:MuleErr.subtype_reason -> 'i DE.t -> u_var -> u_var
       ignore (check ctx app_fn (p **> ty_want) ~reason:`Unspecified);
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
-      let ty_want' = make_type ctx wt_type in
-      ignore (check ctx wt_expr ty_want' ~reason:(`TypeAnnotation(wt_src, wt_type)));
+      let ty_want_inner = make_type ctx wt_type in
+      let ty_want_outer = ty_want in
+      ignore (check ctx wt_expr ty_want_inner ~reason:(`TypeAnnotation(wt_src, wt_type)));
       require_subtype
         ctx
         ~reason
-        ~sub:ty_want'
-        ~super:ty_want;
-      ty_want
+        ~sub:ty_want_inner
+        ~super:ty_want_outer;
+      ty_want_outer
   | DE.Lam{l_param; l_body} ->
       with_locals ctx (fun ctx ->
         check_maybe_flex ctx e ty_want ~f:(fun want -> match UnionFind.get want with
