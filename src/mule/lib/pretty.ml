@@ -70,10 +70,6 @@ let show_type_annotation_err (src, ty) =
   end
   ^ "\n\n" ^ Desugared_ast_type.to_string ty
 
-let show_reason_summary = function
-  | `TypeAnnotation ta -> show_type_annotation_err ta
-  | _ -> ""
-
 let show_cant_instantiate
     {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path; ci_reason}
   =
@@ -85,8 +81,8 @@ let show_cant_instantiate
       let ty = Desugared_ast_type.to_string ty in
         String.concat [
           begin match ci_reason with
-            | `TypeAnnotation _ -> String.concat [
-                show_reason_summary ci_reason;
+            | `TypeAnnotation ta -> String.concat [
+                show_type_annotation_err ta;
                 "\n\n";
                 "but its actual type is:";
                 "\n\n";
@@ -144,8 +140,8 @@ let show_type_error err = match err with
               ~sub:se_sub
               ~super:se_super
           ]
-        | `TypeAnnotation _ -> String.concat [
-              show_reason_summary se_reason;
+        | `TypeAnnotation ta -> String.concat [
+              show_type_annotation_err ta;
               "\n\n";
               "but its actual type is:";
               "\n\n";
