@@ -69,17 +69,11 @@ let translate_expr ~get_import expr =
         Js.Const const_val
     | D.Expr.WithType {wt_expr; _} ->
         go env wt_expr
-    | D.Expr.UpdateVal {uv_lbl} ->
-        Js.Lam1
-          ( Var.of_string "r"
-          , Js.Lam1
-              ( Var.of_string "v"
-              , Js.Update
-                  ( Js.Var (Var.of_string "r")
-                  , uv_lbl
-                  , Js.Var (Var.of_string "v")
-                  )
-              )
+    | D.Expr.UpdateVal {uv_lbl; uv_val; uv_record} ->
+        Js.Update
+          ( go env uv_record
+          , uv_lbl
+          , go env uv_val
           )
     | D.Expr.Match b ->
         let v = Var.of_string "p" in

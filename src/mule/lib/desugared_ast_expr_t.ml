@@ -40,6 +40,8 @@ type 'i t =
     }
   | UpdateVal of {
       uv_lbl : Label.t;
+      uv_val : 'i t;
+      uv_record : 'i t;
     }
   | Ctor of {
       c_lbl : Label.t;

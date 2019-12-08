@@ -4,13 +4,13 @@ Desugared:
 	(letrec (types ()) (values ((f (fn x (. x y)))))
 	 (letrec (types ())
 	  (values
-	   ((a (f (letrec (types ()) (values ((y {}))) (((.= y) {}) y))))
+	   ((a (f (letrec (types ()) (values ((y {}))) (.= y y {}))))
 	    (b
 	     (f
 	      (letrec (types ())
-	       (values ((y (letrec (types ()) (values ((z {}))) (((.= z) {}) z)))))
-	       (((.= y) {}) y))))))
-	  (((.= a) (((.= b) {}) b)) a)))
+	       (values ((y (letrec (types ()) (values ((z {}))) (.= z z {})))))
+	       (.= y y {}))))))
+	  (.= a a (.= b b {}))))
 
 inferred type:
 
@@ -29,13 +29,7 @@ Runtime term:
 	       ((Var 2)
 	        (LetRec
 	         (((0 (Record ())))
-	          (App
-	           ((App
-	             ((Lam
-	               (0 ()
-	                (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	              (Record ())))
-	            (Var 0))))))))
+	          (Update (old (Record ())) (label y) (field (Var 0))))))))
 	     (3
 	      (App
 	       ((Var 2)
@@ -43,33 +37,10 @@ Runtime term:
 	         (((0
 	            (LetRec
 	             (((0 (Record ())))
-	              (App
-	               ((App
-	                 ((Lam
-	                   (0 ()
-	                    (Lam
-	                     (1 () (Update (old (Var 1)) (label z) (field (Var 0)))))))
-	                  (Record ())))
-	                (Var 0)))))))
-	          (App
-	           ((App
-	             ((Lam
-	               (0 ()
-	                (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	              (Record ())))
-	            (Var 0)))))))))
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label a) (field (Var 0)))))))
-	        (App
-	         ((App
-	           ((Lam
-	             (0 ()
-	              (Lam (1 () (Update (old (Var 1)) (label b) (field (Var 0)))))))
-	            (Record ())))
-	          (Var 1)))))
-	      (Var 0)))))))
+	              (Update (old (Record ())) (label z) (field (Var 0)))))))
+	          (Update (old (Record ())) (label y) (field (Var 0)))))))))
+	    (Update (old (Update (old (Record ())) (label b) (field (Var 1))))
+	     (label a) (field (Var 0)))))))
 
 Evaluated:
 

@@ -3,7 +3,7 @@ Desugared:
 
 	(letrec (types ()) (values ((f (fn x x))))
 	 (letrec (types ()) (values ((a (f (fn y y))) (b (f ((fn x (Ok x)) {})))))
-	  (((.= a) (((.= b) {}) b)) a)))
+	  (.= a a (.= b b {}))))
 
 inferred type:
 
@@ -18,18 +18,8 @@ Runtime term:
 	  (LetRec
 	   (((3 (App ((Var 2) (Lam (0 () (Var 0))))))
 	     (3 (App ((Var 2) (App ((Lam (0 () (Ctor (Ok (Var 0))))) (Record ())))))))
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label a) (field (Var 0)))))))
-	        (App
-	         ((App
-	           ((Lam
-	             (0 ()
-	              (Lam (1 () (Update (old (Var 1)) (label b) (field (Var 0)))))))
-	            (Record ())))
-	          (Var 1)))))
-	      (Var 0)))))))
+	    (Update (old (Update (old (Record ())) (label b) (field (Var 1))))
+	     (label a) (field (Var 0)))))))
 
 Evaluated:
 

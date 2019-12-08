@@ -3,7 +3,7 @@ Desugared:
 
 	(letrec (types ((t (rec t int)))) (values ())
 	 (letrec (types ()) (values ((x (: (Integer 4) t))))
-	  (((.= x) (.type= t {} t)) x)))
+	  (.= x x (.type= t {} t))))
 
 inferred type:
 
@@ -13,12 +13,7 @@ Runtime term:
 
 	(LetRec
 	 (((0 (Const (Integer 4))))
-	  (App
-	   ((App
-	     ((Lam
-	       (0 () (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
-	      (Record ())))
-	    (Var 0)))))
+	  (Update (old (Record ())) (label x) (field (Var 0)))))
 
 Evaluated:
 

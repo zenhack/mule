@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(((.= y) (letrec (types ()) (values ((x {}))) (((.= x) {}) x)))
-	 (letrec (types ()) (values ((z {}))) (((.= z) {}) z)))
+	(.= y (letrec (types ()) (values ((z {}))) (.= z z {}))
+	 (letrec (types ()) (values ((x {}))) (.= x x {})))
 
 inferred type:
 
@@ -13,27 +13,14 @@ inferred type:
 
 Runtime term:
 
-	(App
-	 ((App
-	   ((Lam
-	     (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	    (LetRec
-	     (((0 (Record ())))
-	      (App
-	       ((App
-	         ((Lam
-	           (0 ()
-	            (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
-	          (Record ())))
-	        (Var 0)))))))
+	(Update
+	 (old
 	  (LetRec
-	   (((0 (Record ())))
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label z) (field (Var 0)))))))
-	        (Record ())))
-	      (Var 0)))))))
+	   (((0 (Record ()))) (Update (old (Record ())) (label x) (field (Var 0))))))
+	 (label y)
+	 (field
+	  (LetRec
+	   (((0 (Record ()))) (Update (old (Record ())) (label z) (field (Var 0)))))))
 
 Evaluated:
 

@@ -5,7 +5,7 @@ Desugared:
 	 (let (choice (: choice (all a (a -> (a -> a)))))
 	  (letrec (types ())
 	   (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
-	   (((.= x) (((.= y) {}) y)) x))))
+	   (.= x x (.= y y {})))))
 
 inferred type:
 
@@ -24,20 +24,8 @@ Runtime term:
 	       (((3 (App ((App ((Var 2) (Record ()))) (Record ()))))
 	         (3
 	          (App ((App ((Var 2) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0)))))))
-	        (App
-	         ((App
-	           ((Lam
-	             (0 ()
-	              (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
-	            (App
-	             ((App
-	               ((Lam
-	                 (0 ()
-	                  (Lam
-	                   (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	                (Record ())))
-	              (Var 1)))))
-	          (Var 0)))))))
+	        (Update (old (Update (old (Record ())) (label y) (field (Var 1))))
+	         (label x) (field (Var 0)))))))
 	    (Var 0)))))
 
 Evaluated:
@@ -51,18 +39,6 @@ Evaluated:
 	       (((3 (App ((App ((Var 2) (Record ()))) (Record ()))))
 	         (3
 	          (App ((App ((Var 2) (Lam (0 () (Var 0))))) (Lam (0 () (Var 0)))))))
-	        (App
-	         ((App
-	           ((Lam
-	             (0 ()
-	              (Lam (1 () (Update (old (Var 1)) (label x) (field (Var 0)))))))
-	            (App
-	             ((App
-	               ((Lam
-	                 (0 ()
-	                  (Lam
-	                   (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	                (Record ())))
-	              (Var 1)))))
-	          (Var 0)))))))
+	        (Update (old (Update (old (Record ())) (label y) (field (Var 1))))
+	         (label x) (field (Var 0)))))))
 	    (Var 0)))))

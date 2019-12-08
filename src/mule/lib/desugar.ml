@@ -476,14 +476,10 @@ and desugar_update e fields =
   let rec go e = function
     | [] -> desugar e
     | `Value (l, _, v) :: fs ->
-        D.App {
-          app_fn = D.App {
-              app_fn = D.UpdateVal {
-                  uv_lbl = l.Loc.l_value;
-                };
-              app_arg = go e fs
-            };
-          app_arg = desugar v;
+        D.UpdateVal {
+          uv_lbl = l.Loc.l_value;
+          uv_val = desugar v;
+          uv_record = go e fs;
         }
     | `Type (lbl, params, ty) :: fs ->
         let (_, ty) = desugar_type_binding (SC.var_of_label lbl, params, ty) in
@@ -572,20 +568,16 @@ and desugar_record fields =
       | `Value (l, _, _) ->
           let lbl = l.Loc.l_value in
           let var = Ast.var_of_label lbl in
-          D.App {
-            app_fn = D.App {
-                app_fn = D.UpdateVal {
-                    uv_lbl = lbl;
-                  };
-                app_arg = old;
-              };
-            app_arg = D.Var {
+          D.UpdateVal {
+            uv_lbl = lbl;
+            uv_val = D.Var {
                 v_var = Ast.var_of_label lbl;
                 v_src = `Sourced Loc.{
                     l_value = var;
                     l_loc = l.Loc.l_loc;
                   };
               };
+            uv_record = old;
           }
       | `Type (l, _, _) ->
           let Loc.{l_value; l_loc} = l in

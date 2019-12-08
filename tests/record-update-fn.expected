@@ -1,34 +1,20 @@
 
 Desugared:
 
-	(fn x (((.= y) x) {}))
+	(fn x (.= y {} x))
 
 inferred type:
 
 	(all a
 	 (all b
-	  ((record (types ((... b))) (values ((... a)))) ->
-	   (record (types ((... b)))
-	    (values ((y (record (types ()) (values ()))) (... a)))))))
+	  ((record (types ((... a))) (values ((... b)))) ->
+	   (record (types ((... a)))
+	    (values ((y (record (types ()) (values ()))) (... b)))))))
 
 Runtime term:
 
-	(Lam
-	 (0 ()
-	  (App
-	   ((App
-	     ((Lam
-	       (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	      (Var 0)))
-	    (Record ())))))
+	(Lam (0 () (Update (old (Var 0)) (label y) (field (Record ())))))
 
 Evaluated:
 
-	(Lam
-	 (0 ()
-	  (App
-	   ((App
-	     ((Lam
-	       (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	      (Var 0)))
-	    (Record ())))))
+	(Lam (0 () (Update (old (Var 0)) (label y) (field (Record ())))))

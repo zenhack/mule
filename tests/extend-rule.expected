@@ -4,11 +4,11 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((b
-	    (: (fn x (((.= y) x) (Integer 2)))
+	    (: (fn x (.= y (Integer 2) x))
 	     ((record (types ()) (values ())) ->
 	      (record (types ()) (values ((y int)))))))
 	   (a
-	    (: (fn x (((.= y) x) (Integer 2)))
+	    (: (fn x (.= y (Integer 2) x))
 	     ((record (types ()) (values ((y int)))) ->
 	      (record (types ()) (values ((y int)))))))))
 	 {})
@@ -21,25 +21,9 @@ Runtime term:
 
 	(LetRec
 	 (((0
-	    (Lam
-	     (0 ()
-	      (App
-	       ((App
-	         ((Lam
-	           (0 ()
-	            (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	          (Var 0)))
-	        (Const (Integer 2)))))))
+	    (Lam (0 () (Update (old (Var 0)) (label y) (field (Const (Integer 2)))))))
 	   (0
-	    (Lam
-	     (0 ()
-	      (App
-	       ((App
-	         ((Lam
-	           (0 ()
-	            (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	          (Var 0)))
-	        (Const (Integer 2))))))))
+	    (Lam (0 () (Update (old (Var 0)) (label y) (field (Const (Integer 2))))))))
 	  (Record ())))
 
 Evaluated:

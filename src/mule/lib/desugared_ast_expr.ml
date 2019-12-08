@@ -22,9 +22,11 @@ let rec sexp_of_t = function
       sexp_of_t gf_record;
       Label.sexp_of_t gf_lbl;
     ]
-  | UpdateVal {uv_lbl} -> Sexp.List [
+  | UpdateVal {uv_lbl; uv_val; uv_record} -> Sexp.List [
       Sexp.Atom ".=";
       Label.sexp_of_t uv_lbl;
+      sexp_of_t uv_val;
+      sexp_of_t uv_record;
     ]
   | UpdateType {ut_lbl; ut_type; ut_record} -> Sexp.List [
       Sexp.Atom ".type=";
@@ -149,9 +151,14 @@ let apply_to_kids e ~f = match e with
         gf_lbl;
         gf_record = f gf_record;
       }
+  | UpdateVal {uv_lbl; uv_record; uv_val} ->
+      UpdateVal {
+        uv_lbl;
+        uv_record = f uv_record;
+        uv_val = f uv_val;
+      }
   | Var _
   | EmptyRecord
-  | UpdateVal _
   | Embed _
   | Import _
   | Const _ -> e
@@ -203,9 +210,14 @@ let rec map e ~f =
         gf_lbl;
         gf_record = map gf_record ~f;
       }
+  | UpdateVal{uv_lbl; uv_val; uv_record} ->
+      UpdateVal {
+        uv_lbl;
+        uv_val = map uv_val ~f;
+        uv_record = map uv_record ~f;
+      }
   | Var x -> Var x
   | EmptyRecord -> EmptyRecord
-  | UpdateVal x -> UpdateVal x
   | Const x -> Const x
   | Embed x -> Embed x
   | Import x -> Import x
@@ -269,7 +281,13 @@ let rec subst: (Var.t, 'a t, 'cmp) Map.t -> 'a t -> 'a t = fun env expr ->
         gf_lbl;
         gf_record = subst env gf_record;
       }
-  | Const _ | EmptyRecord | UpdateVal _ | Embed _ | Import _ ->
+  | UpdateVal {uv_lbl; uv_val; uv_record} ->
+      UpdateVal {
+        uv_lbl;
+        uv_val = subst env uv_val;
+        uv_record = subst env uv_record;
+      }
+  | Const _ | EmptyRecord | Embed _ | Import _ ->
       expr
 and subst_branch env b = match b with
   | BLeaf lf -> BLeaf (subst_leaf env lf)

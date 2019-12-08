@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(fn f (fn arg (((.= y) arg) (f (. arg z)))))
+	(fn f (fn arg (.= y (f (. arg z)) arg)))
 
 inferred type:
 
@@ -19,12 +19,8 @@ Runtime term:
 	 (0 ()
 	  (Lam
 	   (1 ()
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	        (Var 0)))
-	      (App ((Var 1) (App ((GetField z) (Var 0)))))))))))
+	    (Update (old (Var 0)) (label y)
+	     (field (App ((Var 1) (App ((GetField z) (Var 0)))))))))))
 
 Evaluated:
 
@@ -32,9 +28,5 @@ Evaluated:
 	 (0 ()
 	  (Lam
 	   (1 ()
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label y) (field (Var 0)))))))
-	        (Var 0)))
-	      (App ((Var 1) (App ((GetField z) (Var 0)))))))))))
+	    (Update (old (Var 0)) (label y)
+	     (field (App ((Var 1) (App ((GetField z) (Var 0)))))))))))

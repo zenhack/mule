@@ -404,10 +404,16 @@ and synth: context -> 'i DE.t -> u_var =
               ~reason:(NonEmpty.singleton (`GetField(gf_lbl, gf_record))));
           head
         )
-    | DE.UpdateVal {uv_lbl} ->
-        all krow (fun rv -> (all krow (fun rt -> all ktype (fun t ->
-            record rt rv **> t **> record rt (extend uv_lbl t rv)
-          ))))
+    | DE.UpdateVal {uv_lbl; uv_val; uv_record} ->
+        let rt = fresh_local ctx `Flex krow in
+        let rv = fresh_local ctx `Flex krow in
+        ignore
+          (check ctx
+            uv_record
+            (record rt rv)
+            ~reason:(NonEmpty.singleton (`RecordUpdate e)));
+        let val_t = synth ctx uv_val in
+        record rt (extend uv_lbl val_t rv)
     | DE.UpdateType {ut_lbl; ut_type; ut_record} ->
         with_locals ctx (fun ctx ->
           let rv = fresh_local ctx `Flex krow in

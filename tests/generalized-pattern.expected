@@ -6,7 +6,7 @@ Desugared:
 	  ((x (: $6 (all a (a -> a))))
 	   ($6 ((match ((Ok ($7 $7)))) ((fn x (Ok x)) (fn x x))))))
 	 (letrec (types ()) (values ((k (x {})) (v (x (fn y y)))))
-	  (((.= k) (((.= v) {}) v)) k)))
+	  (.= k k (.= v v {}))))
 
 inferred type:
 
@@ -26,18 +26,8 @@ Runtime term:
 	  (LetRec
 	   (((3 (App ((Var 2) (Record ()))))
 	     (3 (App ((Var 2) (Lam (0 () (Var 0)))))))
-	    (App
-	     ((App
-	       ((Lam
-	         (0 () (Lam (1 () (Update (old (Var 1)) (label k) (field (Var 0)))))))
-	        (App
-	         ((App
-	           ((Lam
-	             (0 ()
-	              (Lam (1 () (Update (old (Var 1)) (label v) (field (Var 0)))))))
-	            (Record ())))
-	          (Var 1)))))
-	      (Var 0)))))))
+	    (Update (old (Update (old (Record ())) (label v) (field (Var 1))))
+	     (label k) (field (Var 0)))))))
 
 Evaluated:
 

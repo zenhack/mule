@@ -46,9 +46,11 @@ let translate
       | D.GetField {gf_lbl; gf_record} ->
           let (n, record) = go_expr depth env gf_record in
           (n, R.App(R.GetField gf_lbl, record))
-      | D.UpdateVal {uv_lbl = label } ->
-          ( 0
-          , R.Lam(0, [], R.Lam(1, [], R.Update { old = R.Var 1; label; field = R.Var 0 }))
+      | D.UpdateVal {uv_lbl = label; uv_val; uv_record} ->
+          let (n, old) = go_expr depth env uv_record in
+          let (m, field)  = go_expr depth env uv_val in
+          ( max n m
+          , R.Update {old; label; field}
           )
       | D.UpdateType {ut_record; _} ->
           go_expr depth env ut_record
