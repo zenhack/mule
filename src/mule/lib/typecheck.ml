@@ -576,6 +576,7 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
   )
 and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
+  require_kind (get_kind ty_want) ktype;
   match e with
   | DE.Let{let_v; let_e; let_body} ->
       let ty_e = synth ctx let_e in
@@ -593,7 +594,7 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
             ~reason:(NonEmpty.cons (`ApplyFn(app_fn, app_arg, p)) reason));
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
-      let ty_want_inner = make_type ctx wt_type in
+      let ty_want_inner = make_type ctx wt_type |> with_kind ktype in
       let ty_want_outer = ty_want in
       ignore
         (check ctx
