@@ -21,10 +21,25 @@ Mule is designed for being able to run untrusted code. Accordingly:
   you can believe the type, even if you don't trust its author and
   haven't audited the code.
 * Mule is referentially transparent (sometimes called "purely
-  functional"). This means that most code can't do IO, or even behave
-  non-deterministically. The latter provides a useful defense against
-  [Spectre][spectre]-style vulnerabilities, as it means most code has no way
-  to actually observe timing effects.
+  functional"). This has a few advantages:
+  * It means that most code can't do IO, or even behave
+    non-deterministically. The former drastically reduces attack
+    surface, and the latter provides a useful defense against
+    [Spectre][spectre]-style side-channel vulnerabilities, as it means
+    most code has no way to actually observe timing effects.
+
+    Note that referential transparency is actaully a stronger guarantee
+    than is strictly necessary for this property, but also:
+  * It will allow us to make use of timeouts, allocation limits, and
+    thread cancellation to mitigate denial of service attacks.
+
+    It would be too error prone to do this in a language with
+    uncontrolled mutability, because of the possibility of corrupting
+    state, so it could only safely happen in such a language at a very
+    coarse granularity (possibly whole language VM instances or address
+    spaces). By controlling and minimizing state, we make this a practical
+    and viable strategy for use at a much finer granularity. See also
+    <https://github.com/tc39/proposal-oom-fails-fast#background>
 * (Planned) Mule's standard libraries are [ocap][ocap] friendly, so
   even when code needs to do some amount of IO to do its job, it is
   still easy and natural to only provide access to what is needed,
@@ -38,6 +53,11 @@ Mule is very much a "one way to do it" language. We strive for
 features to be orthogonal and therefore have only one product type
 (records), one kind of union/sum/variant, one type of function, one
 way to derive boilerplate, to do syntactic abstraction, etc.
+
+(Planned) Mule wants to be a "batteries included" language. It's very
+early days, so we aren't there yet -- building out libraries will take
+time. But the goal is to have a large, high quality standard library
+for developers to draw on.
 
 # ML family
 
