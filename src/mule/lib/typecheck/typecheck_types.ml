@@ -88,11 +88,11 @@ let apply: u_var -> u_var -> u_var = fun f x ->
               )
           )
   end
-let recur : (u_var -> u_var) -> u_var = fun mkbody ->
+let recur : vname:string -> (u_var -> u_var) -> u_var = fun ~vname mkbody ->
   let ty_id = Gensym.gensym () in
   let v = UnionFind.make (`Bound {
       bv_id = ty_id;
-      bv_info = {vi_name = None; vi_binder = None};
+      bv_info = {vi_name = Some vname; vi_binder = Some `Rec};
       bv_kind = ktype;
     })
   in

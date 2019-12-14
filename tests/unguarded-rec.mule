@@ -1,0 +1,3 @@
+# This should fail, as the type is meaningless. It does, but we should
+# report better errors.
+4 : rec a. a

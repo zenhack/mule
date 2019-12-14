@@ -286,7 +286,7 @@ and make_type ctx ty = match ty with
   | DT.Union{u_row} ->
       union (make_row ctx `Union u_row)
   | DT.Recur{mu_var; mu_body; _} ->
-      let t = recur (fun v ->
+      let t = recur ~vname:(Var.to_string mu_var) (fun v ->
           make_type
             { ctx with type_env = Map.set ctx.type_env ~key:mu_var ~data:v }
             mu_body
@@ -937,11 +937,21 @@ and unify_already_whnf
             require_type_eq ctx fl fr;
             require_type_eq ctx argl argr;
             apply fl argl
-        | `Const(_, `Named c, _, _), _ | _, `Const(_, `Named c, _, _) ->
-            MuleErr.bug ("Unknown type constructor: " ^ string_of_typeconst_name c)
+        | `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _}, _
+        | _, `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _} ->
+            (* This can happen if the user supplies the type `rec a. a`. Normally,
+             * the rec-bound variable gets replaced with the body but if the variable
+             * is ungarded like that it sticks around. *)
+            MuleErr.bug ("TODO(better errors): unguarded recursive type: rec " ^ var ^ ". " ^ var)
 
         | _ ->
-            MuleErr.bug "TODO: require_subytpe"
+            let data =
+              Sexp.List [
+                Sexp.List [Sexp.Atom "sub"; sexp_of_uvar (Set.empty (module Int)) sub];
+                Sexp.List [Sexp.Atom "super"; sexp_of_uvar (Set.empty (module Int)) super];
+              ]
+            in
+            MuleErr.bug ("unify: did not handle case:\n" ^ (Sexp.to_string_hum data))
       end
     end
 and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =

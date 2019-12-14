@@ -53,7 +53,7 @@ and tyvar = {
 }
 and var_info = {
   vi_name: string option;
-  vi_binder: [ `Lambda | `Quant of [ `All | `Exist ] ] option;
+  vi_binder: [ `Rec | `Lambda | `Quant of [ `All | `Exist ] ] option;
 }
 and u_var = u_type UnionFind.var
 

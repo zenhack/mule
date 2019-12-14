@@ -1,0 +1,2 @@
+# FAILING: This curently hangs the type checker.
+4 : rec a. all b. a
