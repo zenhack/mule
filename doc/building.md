@@ -22,9 +22,9 @@ For more detailed setup information, see the [official docs][3]
 Next, install the OCaml dependencies for Mule:
 
 ```
-opam install dune base cmdliner lwt lwt.unix lwt_ppx mparser pprint \
-    ppx_compare ppx_inline_test ppx_let ppx_sexp_conv stdio yojson \
-    zarith
+opam install dune base cmdliner linenoise lwt lwt.unix lwt_ppx mparser \
+    pprint ppx_compare ppx_inline_test ppx_let ppx_sexp_conv stdio
+    yojson zarith
 ```
 
 # Building Mule

@@ -1,14 +1,20 @@
 
+let history_filename = ".mule_history"
+
+let setup_linenoise () =
+  LNoise.history_load ~filename:history_filename |> ignore;
+  LNoise.history_set ~max_length:100 |> ignore
+
 let must_read_line () =
-  try
-    Caml.read_line ()
-  with
-  | End_of_file ->
+  match LNoise.linenoise "#mule> " with
+  | None ->
       (* Make sure the terminal prompt shows up on a new line: *)
       Stdio.print_endline "";
       Caml.exit 0
-  | e ->
-      raise e
+  | Some v ->
+      LNoise.history_add v |> ignore;
+      LNoise.history_save ~filename:history_filename |> ignore;
+      v
 
 let run_line : Load.loader -> string -> unit =
   fun loader line ->
@@ -24,7 +30,7 @@ let run_line : Load.loader -> string -> unit =
 
 let rec loop : unit -> 'a = fun () ->
   let loader = Load.new_loader () in
-  Report.print_string "#mule> ";
+  setup_linenoise ();
   begin
     try
       run_line loader (must_read_line ())

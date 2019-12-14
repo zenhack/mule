@@ -3,3 +3,4 @@ _build
 *.opam
 *.install
 *.mule.js
+.mule_history

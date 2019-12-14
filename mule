@@ -4,9 +4,4 @@ set -e
 cd $(dirname $0)
 export MULE_PATH="$PWD/stdlib"
 make
-mule=./_build/default/src/mule/mule.exe
-case "$1" in
-	'') rlwrap $mule $@;;
-	repl|-*) rlwrap $mule $@;;
-	*) $mule $@;;
-esac
+./_build/default/src/mule/mule.exe $@
