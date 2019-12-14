@@ -9,7 +9,7 @@ all:
 	dune build $(main_exe)
 install: all
 	dune build @install
-	dune install libmule
+	dune install mule
 check: runtest $(checks)
 %.check: all %.mule %.expected
 	@echo CHECK $*

@@ -1,3 +1,5 @@
 (executable
   (name mule)
+  (package mule)
+  (public_name mule)
   (libraries libmule))

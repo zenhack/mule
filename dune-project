@@ -9,6 +9,9 @@
 (homepage "https://gitlab.com/isd/mule")
 
 (package
+  (name mule))
+
+(package
   (name libmule))
 
 (package
