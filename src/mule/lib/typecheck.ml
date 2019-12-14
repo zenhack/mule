@@ -110,7 +110,7 @@ let rec subst ~target ~replacement uv =
           (* Shadowing the target; stop here. *)
           uv
       | u ->
-          (* An an entry to `seen` before traversing, in case we hit
+          (* Add an entry to `seen` before traversing, in case we hit
            * ourselves further down. *)
           let result = copy u in
           let result_v = UnionFind.make result in
