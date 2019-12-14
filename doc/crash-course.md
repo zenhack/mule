@@ -112,7 +112,7 @@ it : text =
 ```
 
 Inside of text literals, any character is allowed, but double quotes
-backslashes must be escaped by preceding them with a backslash. So:
+and backslashes must be escaped by preceding them with a backslash. So:
 
 * `\"` generates a double quote.
 * `\\` generates a single backslash
@@ -192,6 +192,18 @@ Is equivalent to:
 fn x. fn y. x
 ```
 
+And the expression:
+
+```
+f x y
+```
+
+Is equivalent to:
+
+```
+(f x) y
+```
+
 ## Let expressions
 
 If you've been following along in the repl thus far, you may now want to
@@ -232,4 +244,45 @@ Legal variable names must:
   and `?`.
 * Right now identifiers are ascii-only. Eventually we will likely allow
   any unicode letter, to support developers who speak languages other
-than English.
+  than English.
+
+There is no special syntax for defining functions; just use a `let` and
+a lambda:
+
+```
+let double = fn n. int.add n n in
+double 7
+```
+
+You can define more than one variable in the same let expression,
+separating the definitions with commas:
+
+```
+let sender = "alice", receiver = "bob" in ...
+```
+
+When splitting let bindings across multiple lines, the convention in
+mule is to put commas *in front* of the definitions, at the beginning of
+the line, rather than after them at the end.  To make editing lists of
+bindings easier, a leading comma is allowed before the first binding:
+
+
+```
+let
+  , sender = "alice"
+  , receiver = "bob"
+in
+...
+```
+
+The comma-first style may seem bizzare if you've never encountered it
+before, but from experience in other languages where this is common,
+I've found it improves readability -- it's much easier to spot a missing
+comma. Think of it as a bulleted list if that helps you.
+
+In general, wherever commas are used as separators in Mule, a leading
+comma is permitted.
+
+## Records
+
+...
