@@ -1,0 +1,22 @@
+---
+before_script:
+  # Report version numbers of some tools. This can make debugging failed builds
+  # easier.
+  - ocaml --version
+  - opam --version
+  # Install ocaml dependencies.
+  - opam install dune base cmdliner linenoise lwt lwt.unix lwt_ppx mparser
+  - opam install pprint ppx_compare ppx_inline_test ppx_let ppx_sexp_conv stdio
+  - opam install yojson zarith
+  # Install ocp-indent, which we use to check formatting:
+  - opam install ocp-indent
+test:alltests:
+  image: ocaml/opam2
+  script:
+    # Build:
+    - make
+    # Run the tests:
+    - make check
+    # Format with ocp-indent, and fail if it changed anything:
+    - make format
+    - git diff --exit-code
