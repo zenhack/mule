@@ -5,7 +5,7 @@ before_script:
   - ocaml --version
   - opam --version
   # System dependencies needed by some of our ocaml deps:
-  - sudo apt-get install -y m4
+  - sudo apt-get install -y m4 libgmp-dev
   # Install ocaml dependencies.
   - opam install dune base cmdliner linenoise lwt lwt_ppx mparser
   - opam install pprint ppx_compare ppx_inline_test ppx_let ppx_sexp_conv stdio
