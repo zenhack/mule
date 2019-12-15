@@ -54,19 +54,19 @@ let show_type_annotation_err (src, ty) =
     | `Main -> `Main
   in
   begin match what with
-  | `Fragment(what, where) -> String.concat [
-      "The "; what; " at "; Loc.pretty_t where;
-      " does not match its type annotation.\n";
-      "The annotation says its type should be:";
-    ]
-  | `Msig -> String.concat [
-      "The file does not match it's signature (.msig).\n";
-      "The signature file says the type should be:";
-    ]
-  | `Main -> String.concat [
-      "The file does not have the required type. The entrypoint to a ";
-      "program for this target must have type:";
-    ]
+    | `Fragment(what, where) -> String.concat [
+        "The "; what; " at "; Loc.pretty_t where;
+        " does not match its type annotation.\n";
+        "The annotation says its type should be:";
+      ]
+    | `Msig -> String.concat [
+        "The file does not match it's signature (.msig).\n";
+        "The signature file says the type should be:";
+      ]
+    | `Main -> String.concat [
+        "The file does not have the required type. The entrypoint to a ";
+        "program for this target must have type:";
+      ]
   end
   ^ "\n\n" ^ Desugared_ast_type.to_string ty
 
@@ -79,22 +79,22 @@ let show_cant_instantiate
       let sub = sub |> Extract.get_var_type |> Desugared_ast_type.to_string  in
       let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
-        String.concat [
-          begin match NonEmpty.rev ci_reason with
-            | (`TypeAnnotation ta, _) -> String.concat [
-                show_type_annotation_err ta;
-                "\n\n";
-                "but its actual type is:";
-                "\n\n";
-                sub;
-                "\n\n";
-              ]
-            | _ -> String.concat [
-                "Mismatched types: `"; sub ; "` and `"; super ; "`.\n";
-              ]
-          end;
-          "We can't set the type variable `"; name; "` to "; ty; ", because ";
-          begin match q with
+      String.concat [
+        begin match NonEmpty.rev ci_reason with
+          | (`TypeAnnotation ta, _) -> String.concat [
+              show_type_annotation_err ta;
+              "\n\n";
+              "but its actual type is:";
+              "\n\n";
+              sub;
+              "\n\n";
+            ]
+          | _ -> String.concat [
+              "Mismatched types: `"; sub ; "` and `"; super ; "`.\n";
+            ]
+        end;
+        "We can't set the type variable `"; name; "` to "; ty; ", because ";
+        begin match q with
           | `All -> String.concat [
               "`"; name; "` is an `all`-bound type variable. The code must work for *all* types ";
               "`"; name; "`, not just "; ty; ".";
@@ -103,25 +103,25 @@ let show_cant_instantiate
               "`"; name; "` is an `exist`-bound type variable. The code must work regardless of ";
               "what type it actually is, so we can't assume it's "; ty; ".";
             ]
-          end;
-    ]
+        end;
+      ]
   | _ ->
-    let var = match vi_name with
-      | None -> ""
-      | Some v -> " " ^ v
-    in
-    String.concat [
-      "Could not instantiate rigid type variable";
-      var;
-      begin match ci_other with
-        | `Type t ->
-            " with type " ^ Desugared_ast_type.to_string t
-        | `Row _ ->
-            (* TODO: print something helpful here. *)
-            ""
-      end;
-      ". Rigid variables must be treated as opaque.";
-    ]
+      let var = match vi_name with
+        | None -> ""
+        | Some v -> " " ^ v
+      in
+      String.concat [
+        "Could not instantiate rigid type variable";
+        var;
+        begin match ci_other with
+          | `Type t ->
+              " with type " ^ Desugared_ast_type.to_string t
+          | `Row _ ->
+              (* TODO: print something helpful here. *)
+              ""
+        end;
+        ". Rigid variables must be treated as opaque.";
+      ]
 
 let show_type_error err = match err with
   | `MismatchedKinds (l, r) ->
@@ -142,30 +142,30 @@ let show_type_error err = match err with
               ~super:se_super
           ]
         | (`TypeAnnotation ta, _) -> String.concat [
-              show_type_annotation_err ta;
-              "\n\n";
-              "but its actual type is:";
-              "\n\n";
-              Desugared_ast_type.to_string sub_root;
-            ]
+            show_type_annotation_err ta;
+            "\n\n";
+            "but its actual type is:";
+            "\n\n";
+            Desugared_ast_type.to_string sub_root;
+          ]
         | (`ApplyFn(_, _, argtype), _) -> String.concat [
-              "The expression at "; "<TODO>"; " is being applied to a ";
-              "value of type:";
-              "\n\n";
-              Extract.get_var_type argtype |> Desugared_ast_type.to_string;
-              "\n\n";
-              "but its type is:";
-              "\n\n";
-              Desugared_ast_type.to_string sub_root;
-              "\n\n";
-              "The type:";
-              "\n\n";
-              Desugared_ast_type.to_string se_sub;
-              "\n\n";
-              "is not a subtype of:";
-              "\n\n";
-              Desugared_ast_type.to_string se_super;
-           ]
+            "The expression at "; "<TODO>"; " is being applied to a ";
+            "value of type:";
+            "\n\n";
+            Extract.get_var_type argtype |> Desugared_ast_type.to_string;
+            "\n\n";
+            "but its type is:";
+            "\n\n";
+            Desugared_ast_type.to_string sub_root;
+            "\n\n";
+            "The type:";
+            "\n\n";
+            Desugared_ast_type.to_string se_sub;
+            "\n\n";
+            "is not a subtype of:";
+            "\n\n";
+            Desugared_ast_type.to_string se_super;
+          ]
         | (`Unspecified, _) ->
             String.concat [
               "<TODO>: Get rid of unspecified reasons.\n";

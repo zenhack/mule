@@ -22,14 +22,14 @@ let in_root_dir f =
 let tst name =
   in_root_dir (fun () ->
     ignore (Caml.Sys.command (
-      String.concat [
-        "./_build/default/src/mule/mule.exe eval --debug-steps tests/";
-        name; ".mule > tests/"; name; ".actual";
-      ]
-    ));
+        String.concat [
+          "./_build/default/src/mule/mule.exe eval --debug-steps tests/";
+          name; ".mule > tests/"; name; ".actual";
+        ]
+      ));
     let status = Caml.Sys.command (
-      String.concat ["diff -u tests/"; name; ".expected tests/"; name; ".actual"]
-    )
+        String.concat ["diff -u tests/"; name; ".expected tests/"; name; ".actual"]
+      )
     in
     status = 0
   )

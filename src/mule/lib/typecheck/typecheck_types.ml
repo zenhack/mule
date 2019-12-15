@@ -104,13 +104,13 @@ let quant : ?vname:string -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
   let bv = {
-      bv_id = ty_id;
-      bv_info = {
-        vi_name = vname;
-        vi_binder = Some (`Quant q);
-      };
-      bv_kind =  k;
-    }
+    bv_id = ty_id;
+    bv_info = {
+      vi_name = vname;
+      vi_binder = Some (`Quant q);
+    };
+    bv_kind =  k;
+  }
   in
   let v = UnionFind.make (`Bound bv) in
   UnionFind.make (`Quant {

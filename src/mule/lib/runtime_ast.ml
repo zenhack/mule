@@ -49,8 +49,8 @@ module Expr = struct
     | Const c -> PP.string (Const.to_string c)
     | Ctor(lbl, arg) ->
         PP.(Prec.(parens_if_tighter_than prec AppFn (
-          Label.pretty lbl ^/^ pretty_t AppArg arg
-        )))
+            Label.pretty lbl ^/^ pretty_t AppArg arg
+          )))
     | Record fields ->
         Map.to_alist fields
         |> List.map ~f:(fun (k, v) ->

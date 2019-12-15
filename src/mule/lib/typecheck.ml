@@ -39,8 +39,8 @@ let cant_instantiate info other_ty ~path ~reason =
               ci_info = info;
               ci_other =
                 begin match UnionFind.get (get_kind other_ty) with
-                | `Row -> `Row (Extract.get_var_row other_ty)
-                | _ -> `Type (Extract.get_var_type other_ty)
+                  | `Row -> `Row (Extract.get_var_row other_ty)
+                  | _ -> `Type (Extract.get_var_type other_ty)
                 end;
               ci_path = path;
               ci_reason = reason;
@@ -131,8 +131,8 @@ and copy = function
         q_var = bv;
         q_body =
           subst q.q_body
-           ~target:q.q_var.bv_id
-           ~replacement:(UnionFind.make (`Bound bv))
+            ~target:q.q_var.bv_id
+            ~replacement:(UnionFind.make (`Bound bv))
       }
 
 let wrong_num_args ctor want gotl gotr =
@@ -164,23 +164,23 @@ let with_locals ctx f =
             | `Rigid -> `Exist
           in
           let bv = {
-              bv_id = ty_id;
-              bv_info = { ty_info with vi_binder = Some (`Quant q) };
-              bv_kind = k;
-            }
+            bv_id = ty_id;
+            bv_info = { ty_info with vi_binder = Some (`Quant q) };
+            bv_kind = k;
+          }
           in
           `Trd (fun acc ->
             UnionFind.make
               (`Quant {
-                  q_id = Gensym.gensym ();
-                  q_quant = q;
-                  q_var = bv;
-                  q_kind = k;
-                  q_body =
-                    subst acc
-                      ~target:ty_id
-                      ~replacement:(UnionFind.make (`Bound bv));
-                })
+                    q_id = Gensym.gensym ();
+                    q_quant = q;
+                    q_var = bv;
+                    q_kind = k;
+                    q_body =
+                      subst acc
+                        ~target:ty_id
+                        ~replacement:(UnionFind.make (`Bound bv));
+                  })
           )
       | `Free _ -> `Snd v
       | _ -> `Fst ()
@@ -399,9 +399,9 @@ and synth: context -> 'i DE.t -> u_var =
           let rt = fresh_local ctx `Flex krow in
           ignore
             (check ctx
-              gf_record
-              (record rt (extend gf_lbl head tail))
-              ~reason:(NonEmpty.singleton (`GetField(gf_lbl, gf_record))));
+                gf_record
+                (record rt (extend gf_lbl head tail))
+                ~reason:(NonEmpty.singleton (`GetField(gf_lbl, gf_record))));
           head
         )
     | DE.UpdateVal {uv_lbl; uv_val; uv_record} ->
@@ -409,9 +409,9 @@ and synth: context -> 'i DE.t -> u_var =
         let rv = fresh_local ctx `Flex krow in
         ignore
           (check ctx
-            uv_record
-            (record rt rv)
-            ~reason:(NonEmpty.singleton (`RecordUpdate e)));
+              uv_record
+              (record rt rv)
+              ~reason:(NonEmpty.singleton (`RecordUpdate e)));
         let val_t = synth ctx uv_val in
         record rt (extend uv_lbl val_t rv)
     | DE.UpdateType {ut_lbl; ut_type; ut_record} ->
@@ -778,12 +778,12 @@ and unify_already_whnf
             require_kind kl kr;
             UnionFind.merge
               (fun _ _ -> `Free {
-                  ty_flag = `Flex;
-                  ty_info = l_info;
-                  ty_id = l_id;
-                  ty_scope = Scope.lca l_scope r_scope;
-                  ty_kind = kl;
-                })
+                    ty_flag = `Flex;
+                    ty_info = l_info;
+                    ty_id = l_id;
+                    ty_scope = Scope.lca l_scope r_scope;
+                    ty_kind = kl;
+                  })
               sub super;
             sub
         (* One side is flexible; set it equal to the other one. *)

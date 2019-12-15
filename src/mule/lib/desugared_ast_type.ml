@@ -214,23 +214,23 @@ let pretty_path_root = function
 let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
   | Fn {fn_pvar; fn_param; fn_ret; _} ->
       PP.(Prec.parens_if_tighter_than prec ArrowRight (
-        let param =
-          match fn_pvar with
-          | None ->
-              pretty_t ArrowLeft fn_param
-          | Some v ->
-              parens (
-                Var.pretty v
-                ^/^ colon
-                ^/^ group (pretty_t Colon fn_param)
-              )
-        in
-        group (
-          group param
-          ^/^ string "->"
-          ^/^ group (pretty_t ArrowRight fn_ret)
-        )
-      ))
+          let param =
+            match fn_pvar with
+            | None ->
+                pretty_t ArrowLeft fn_param
+            | Some v ->
+                parens (
+                  Var.pretty v
+                  ^/^ colon
+                  ^/^ group (pretty_t Colon fn_param)
+                )
+          in
+          group (
+            group param
+            ^/^ string "->"
+            ^/^ group (pretty_t ArrowRight fn_ret)
+          )
+        ))
   | Recur{mu_var; mu_body; _} ->
       PP.(Prec.(binder prec "rec" [Var.pretty mu_var] (pretty_t TopLevel mu_body)))
   | Var{v_var; _} ->
@@ -266,12 +266,12 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
   | Union{u_row = {row_fields; row_rest; _}} ->
       let fields =
         PP.(Prec.(
-          List.map row_fields ~f:(fun (lbl, ty) ->
-            PP.(
-              Label.pretty lbl ^/^ (pretty_t AppArg ty)
+            List.map row_fields ~f:(fun (lbl, ty) ->
+              PP.(
+                Label.pretty lbl ^/^ (pretty_t AppArg ty)
+              )
             )
-          )
-        ))
+          ))
       in
       begin match fields with
         | [field] -> field
@@ -293,10 +293,10 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
   | TypeLam _ -> PP.string "<type lambda>"
   | App{app_fn; app_arg; _} ->
       PP.(Prec.(
-        parens_if_tighter_than prec AppFn (group (pretty_t AppFn app_fn))
-        ^/^
-        parens_if_tighter_than prec AppArg (indent (pretty_t AppArg app_arg))
-      ))
+          parens_if_tighter_than prec AppFn (group (pretty_t AppFn app_fn))
+          ^/^
+          parens_if_tighter_than prec AppArg (indent (pretty_t AppArg app_arg))
+        ))
 and pretty_quant prec quant var body =
   let rec go vars = function
     | Quant{q_quant; q_var; q_body; _} when Poly.equal quant q_quant ->

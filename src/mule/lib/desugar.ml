@@ -410,10 +410,10 @@ and desugar Loc.{l_value = e; l_loc} = match e with
         }
       in
       let cons =
-          D.GetField{
-            gf_lbl = Label.of_string "cons";
-            gf_record = D.Import (DC.import_abs "list");
-          };
+        D.GetField{
+          gf_lbl = Label.of_string "cons";
+          gf_record = D.Import (DC.import_abs "list");
+        };
       in
       List.fold_right
         l_elts
@@ -432,8 +432,8 @@ and desugar Loc.{l_value = e; l_loc} = match e with
   | S.Update{up_arg; up_fields; _} -> desugar_update up_arg up_fields
   | S.GetField {gf_arg = e; gf_lbl = l; _} ->
       D.GetField {
-          gf_lbl = l.Loc.l_value;
-          gf_record = desugar e;
+        gf_lbl = l.Loc.l_value;
+        gf_record = desugar e;
       }
   | S.Ctor {c_lbl = label; _} ->
       (* The choice of variable name here doesn't matter, since
