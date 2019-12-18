@@ -1155,6 +1155,62 @@ let typecheck ~get_import_type ~want exp =
   let exp = DE.map exp ~f:gen_kind in
   synth ctx exp
 
+module Graphviz = struct
+  let once_for_id seen id ~f =
+    if not (Set.mem !seen id) then
+      begin
+        seen := Set.add !seen id;
+        f ()
+      end
+
+  let emit_bound_var seen {bv_id; _} =
+    once_for_id seen bv_id ~f:(fun () ->
+      Debug.show_node `TyVar bv_id
+    )
+
+  let emit_siblings_edges args =
+    let args =
+      List.map args ~f:(fun (uv, _) -> get_id (UnionFind.get uv))
+    in
+    match args with
+    | [] -> ()
+    | (x :: xs) ->
+        List.fold_left xs ~init:x ~f:(fun l r ->
+          Debug.show_edge `Sibling l r; r
+        )
+        |> ignore
+
+  let rec emit_u_var seen uv =
+    let u = UnionFind.get uv in
+    let u_id = get_id u in
+    once_for_id seen u_id ~f:begin fun () ->
+      match u with
+        | `Const(_, c, args, _) ->
+            Debug.show_node (`Const c) u_id;
+            List.iter args ~f:(fun (ty, _) ->
+              emit_u_var seen ty;
+              Debug.show_edge `Structural u_id (get_id (UnionFind.get ty));
+            );
+            emit_siblings_edges args
+        | `Bound bv -> emit_bound_var seen bv
+        | `Quant {q_quant; q_var = {bv_id; _} as bv; q_body; _} ->
+            Debug.show_node (`Quant q_quant) u_id;
+            emit_bound_var seen bv;
+            emit_u_var seen q_body;
+            Debug.show_edge `Structural u_id bv_id;
+            Debug.show_edge (`Binding `Explicit) bv_id u_id;
+            let body_id = get_id (UnionFind.get q_body) in
+            Debug.show_edge `Structural u_id body_id;
+            Debug.show_edge `Sibling bv_id body_id
+        | `Free {ty_id; _} ->
+            Debug.show_node `TyVar ty_id;
+            failwith "TODO: display scope & flag"
+    end
+
+    (* Silence an unused variable warning for now: *)
+    let _ = emit_u_var
+end
+
 module Tests = struct
   module Helpers = struct
     (*

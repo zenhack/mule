@@ -37,7 +37,8 @@ let fmt_node: node_type -> int -> string =
             | `Named name -> Typecheck_types.string_of_typeconst_name name
             | `Extend lbl -> Label.to_string lbl ^ " ::"
           end
-      | `G -> "G"
+      | `Quant `All -> "all"
+      | `Quant `Exist -> "exist"
     end
     ; " : "
     ; Int.to_string n

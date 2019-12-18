@@ -10,5 +10,5 @@ type edge_type =
 type node_type =
   [ `TyVar
   | `Const of u_typeconst
-  | `G
+  | `Quant of [ `All | `Exist ]
   ]
