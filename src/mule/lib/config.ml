@@ -16,3 +16,8 @@ let trace_require_subtype () = (!config).trace_require_subtype
 let debug_steps () = (!config).debug_steps
 let no_js_cps () = (!config).no_js_cps
 let no_js_type_requirement () = (!config).no_js_type_requirement
+
+let browser () =
+  match Sys.getenv "BROWSER" with
+  | None -> "firefox"
+  | Some b -> b
