@@ -843,6 +843,17 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
+        | `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _}, _
+        | _, `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _} ->
+            (* This can happen if the user supplies the type `rec a. a`. Normally,
+             * the rec-bound variable gets replaced with the body but if the variable
+             * is ungarded like that it sticks around. *)
+            MuleErr.bug ("TODO(better errors): unguarded recursive type: rec " ^ var ^ ". " ^ var)
+
+        | _, `Bound _ | `Bound _, _ ->
+            (* This should never happen. *)
+            MuleErr.bug "Tried to unify distinct bound variables!"
+
         | `Free{ty_flag = `Flex; ty_id = l_id; ty_info = l_info; ty_scope = l_scope; ty_kind = kl; _},
           `Free{ty_flag = `Flex; ty_id = _   ; ty_scope = r_scope; ty_kind = kr; _} ->
             (* Both sides are flexible variables; merge them, using the lca of their
@@ -1009,12 +1020,6 @@ and unify_already_whnf
             require_type_eq ctx fl fr;
             require_type_eq ctx argl argr;
             apply fl argl
-        | `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _}, _
-        | _, `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _} ->
-            (* This can happen if the user supplies the type `rec a. a`. Normally,
-             * the rec-bound variable gets replaced with the body but if the variable
-             * is ungarded like that it sticks around. *)
-            MuleErr.bug ("TODO(better errors): unguarded recursive type: rec " ^ var ^ ". " ^ var)
 
         | _ ->
             let data =
