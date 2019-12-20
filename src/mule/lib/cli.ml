@@ -28,7 +28,14 @@ let debug_flag name ~doc =
 
 let with_debug_flags : cmd Term.t -> t Term.t =
   fun term ->
-  Term.(const (fun eval_steps stack_trace trace_require_subtype steps no_js_cps no_js_type_requirement c -> {
+  Term.(const (fun
+      eval_steps
+      stack_trace
+      trace_require_subtype
+      steps no_js_cps
+      no_js_type_requirement
+      render_constraint_graph
+      c -> {
         debug_flags = {
           print_eval_steps = eval_steps;
           always_print_stack_trace = stack_trace;
@@ -36,6 +43,7 @@ let with_debug_flags : cmd Term.t -> t Term.t =
           debug_steps = steps;
           no_js_cps = no_js_cps;
           no_js_type_requirement;
+          render_constraint_graph;
         };
         cmd = c;
       })
@@ -70,6 +78,11 @@ let with_debug_flags : cmd Term.t -> t Term.t =
           ~doc:(
             "Don't require a specific type for javascript build output. "
             ^ "This can be useful when debugging code generation."
+          )
+        $ debug_flag "render-constraint-graph"
+          ~doc:(
+            "During type checking, render the constraint graph with graphviz. "
+            ^ "uses the value of the BROWSER env var, or firefox if not defined."
           )
         $ term
   )

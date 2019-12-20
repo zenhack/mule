@@ -5,6 +5,7 @@ let config = ref Cli.Debug_flags.{
     debug_steps = false;
     no_js_cps = false;
     no_js_type_requirement = false;
+    render_constraint_graph = false;
   }
 
 let set new_cfg =
@@ -16,6 +17,7 @@ let trace_require_subtype () = (!config).trace_require_subtype
 let debug_steps () = (!config).debug_steps
 let no_js_cps () = (!config).no_js_cps
 let no_js_type_requirement () = (!config).no_js_type_requirement
+let render_constraint_graph () = (!config).render_constraint_graph
 
 let browser () =
   match Sys.getenv "BROWSER" with

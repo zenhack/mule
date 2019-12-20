@@ -6,6 +6,7 @@ module Debug_flags = struct
     debug_steps : bool;
     no_js_cps : bool;
     no_js_type_requirement : bool;
+    render_constraint_graph : bool;
   }
 end
 

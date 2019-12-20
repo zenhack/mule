@@ -10,6 +10,69 @@ module Var = Common_ast.Var
 
 module IntPair = Pair.Make(Int)(Int)
 
+module Graphviz = struct
+  let once_for_id seen id ~f =
+    if not (Set.mem !seen id) then
+      begin
+        seen := Set.add !seen id;
+        f ()
+      end
+
+  let emit_constraint_edge ldir lv rdir rv =
+    let lid, rid = get_id (UnionFind.get lv), get_id (UnionFind.get rv) in
+    match (ldir, lid, rdir, rid) with
+    | `Sub, sub, `Super, super
+    | `Super, super, `Sub, sub ->
+        Debug.show_edge `Instance super sub
+    | _ ->
+        (* TODO: distinguish meet vs. join *)
+        Debug.show_edge `Unify lid rid
+
+  let emit_bound_var seen {bv_id; _} =
+    once_for_id seen bv_id ~f:(fun () ->
+      Debug.show_node `Bound bv_id
+    )
+
+  let emit_siblings_edges args =
+    let args =
+      List.map args ~f:(fun (uv, _) -> get_id (UnionFind.get uv))
+    in
+    match args with
+    | [] -> ()
+    | (x :: xs) ->
+        List.fold_left xs ~init:x ~f:(fun l r ->
+          Debug.show_edge `Sibling l r; r
+        )
+        |> ignore
+
+  let rec emit_u_var seen uv =
+    let u = UnionFind.get uv in
+    let u_id = get_id u in
+    once_for_id seen u_id ~f:begin fun () ->
+      match u with
+      | `Const(_, c, args, _) ->
+          Debug.show_node (`Const c) u_id;
+          List.iter args ~f:(fun (ty, _) ->
+            emit_u_var seen ty;
+            Debug.show_edge `Structural u_id (get_id (UnionFind.get ty));
+          );
+          emit_siblings_edges args
+      | `Bound bv -> emit_bound_var seen bv
+      | `Quant {q_quant; q_var = {bv_id; _} as bv; q_body; _} ->
+          Debug.show_node (`Quant q_quant) u_id;
+          emit_bound_var seen bv;
+          emit_u_var seen q_body;
+          Debug.show_edge `Structural u_id bv_id;
+          Debug.show_edge (`Binding `Explicit) u_id bv_id;
+          let body_id = get_id (UnionFind.get q_body) in
+          Debug.show_edge `Structural u_id body_id;
+          Debug.show_edge `Sibling bv_id body_id
+      | `Free {ty_id; ty_flag; _} ->
+          (* TODO: display scope. *)
+          Debug.show_node (`Free ty_flag) ty_id
+    end
+end
+
 type 'v var_map = (Var.t, 'v, Var.comparator_witness) Map.t
 
 type context = {
@@ -755,6 +818,15 @@ and unify_already_whnf
     -> (u_var * subtype_side)
     -> u_var =
   fun ctx ~path ~reason (sub, sub_dir) (super, super_dir) ->
+  if Config.render_constraint_graph () then
+    begin
+      Debug.start_graph ();
+      let seen = ref (Set.empty (module Int)) in
+      Graphviz.emit_u_var seen sub;
+      Graphviz.emit_u_var seen super;
+      Graphviz.emit_constraint_edge sub_dir sub super_dir super;
+      Debug.end_graph ()
+    end;
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if Set.mem !(ctx.assumptions) (sub_id, super_id) then
     sub
@@ -1154,62 +1226,6 @@ let typecheck ~get_import_type ~want exp =
   in
   let exp = DE.map exp ~f:gen_kind in
   synth ctx exp
-
-module Graphviz = struct
-  let once_for_id seen id ~f =
-    if not (Set.mem !seen id) then
-      begin
-        seen := Set.add !seen id;
-        f ()
-      end
-
-  let emit_bound_var seen {bv_id; _} =
-    once_for_id seen bv_id ~f:(fun () ->
-      Debug.show_node `TyVar bv_id
-    )
-
-  let emit_siblings_edges args =
-    let args =
-      List.map args ~f:(fun (uv, _) -> get_id (UnionFind.get uv))
-    in
-    match args with
-    | [] -> ()
-    | (x :: xs) ->
-        List.fold_left xs ~init:x ~f:(fun l r ->
-          Debug.show_edge `Sibling l r; r
-        )
-        |> ignore
-
-  let rec emit_u_var seen uv =
-    let u = UnionFind.get uv in
-    let u_id = get_id u in
-    once_for_id seen u_id ~f:begin fun () ->
-      match u with
-      | `Const(_, c, args, _) ->
-          Debug.show_node (`Const c) u_id;
-          List.iter args ~f:(fun (ty, _) ->
-            emit_u_var seen ty;
-            Debug.show_edge `Structural u_id (get_id (UnionFind.get ty));
-          );
-          emit_siblings_edges args
-      | `Bound bv -> emit_bound_var seen bv
-      | `Quant {q_quant; q_var = {bv_id; _} as bv; q_body; _} ->
-          Debug.show_node (`Quant q_quant) u_id;
-          emit_bound_var seen bv;
-          emit_u_var seen q_body;
-          Debug.show_edge `Structural u_id bv_id;
-          Debug.show_edge (`Binding `Explicit) bv_id u_id;
-          let body_id = get_id (UnionFind.get q_body) in
-          Debug.show_edge `Structural u_id body_id;
-          Debug.show_edge `Sibling bv_id body_id
-      | `Free {ty_id; _} ->
-          Debug.show_node `TyVar ty_id;
-          failwith "TODO: display scope & flag"
-    end
-
-  (* Silence an unused variable warning for now: *)
-  let _ = emit_u_var
-end
 
 module Tests = struct
   module Helpers = struct

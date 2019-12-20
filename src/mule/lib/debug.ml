@@ -31,7 +31,9 @@ let fmt_node: node_type -> int -> string =
     ; Int.to_string n
     ; " [label=\""
     ; begin match ty with
-      | `TyVar -> "V"
+      | `Free `Flex -> "F"
+      | `Free `Rigid -> "R"
+      | `Bound -> "B"
       | `Const c ->
           begin match c with
             | `Named name -> Typecheck_types.string_of_typeconst_name name

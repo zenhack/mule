@@ -8,7 +8,8 @@ type edge_type =
   | `Binding of [ `Flex | `Rigid | `Explicit ]
   ]
 type node_type =
-  [ `TyVar
+  [ `Free of [ `Flex | `Rigid ]
+  | `Bound
   | `Const of u_typeconst
   | `Quant of [ `All | `Exist ]
   ]
