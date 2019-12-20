@@ -1,0 +1,47 @@
+# This tests for a regression, where previously 'length' would be assigned
+# the type below, but with an `exist` quantifier instead of `all` (but gave
+# the correct type if the annotation was omitted!)
+#
+# This bug was also caught by the test in lists.mule, but this version is
+# simpler.
+#
+# The source of the bug had to do with the order in which recursively bound
+# variables were generalized wrt. other operations. Specifically, When we
+# see a set of recursively defined variables, we do inference like this:
+#
+# - Create a flexible type variable for each definition, at the outer scope
+#   of the bindings.
+# - Call 'check' on each binding, generalizing each result.
+#
+# The problem occurs when some variable created in the subexpression is
+# unified with the flexible variable. This causes its scope to be raised
+# outside of the binding unneccessarily, thus deferring its generalization.
+#
+# This particular case was fixed by changing the way type-annotations are
+# checked. This desugars to:
+#
+#  let length = ( fn ... : all b. ...) in length
+#
+# Previously, the logic was: check the inner type annotation, then check
+# that said type is a subtype of our desired type. This breaks when the
+# desired type is a flexible var, since while checking the inner type we
+# may unify the flexible variable with some sub part of the type. This
+# means that type assigned to the full annotated expression may be more
+# restrictive than the annotation specifies, because the flexible variable
+# will have been instantiated (either with something more restrictive, or
+# something that causes checking to fail). In this case the flexible var
+# was being unified something containing a temporary rigid variable, which
+# was then generalized existentially.
+#
+# The fix is to do the subtype check *first*. This makes sure the variable
+# is immediately unified with the type specified by the annotation, and so
+# no modification can occur.
+#
+# Note that this test still fails, because of issue #26.
+let length : all b. (rec l. Cons { hd : b, tl : l } | Nil {}) -> int =
+  fn lst. match lst with
+    | Nil _ -> 0
+    | Cons l -> length l.tl
+  end
+in
+length

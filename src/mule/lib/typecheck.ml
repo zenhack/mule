@@ -686,16 +686,24 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
   | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want_inner = make_type ctx wt_type |> with_kind ktype in
       let ty_want_outer = ty_want in
-      ignore
-        (check ctx
-            wt_expr
-            ty_want_inner
-            ~reason:(NonEmpty.singleton (`TypeAnnotation(wt_src, wt_type))));
+      (* Verify that the annotation is a subtype of our desired type, then
+       * check that the annotation is correct.
+       *
+       * Note that the order here is /critical/; if ty_want_outer is a
+       * flexible variable, checking the annotation first may cause it
+       * to be unified with something during the check, which may either
+       * cause typechecking to erroneously fail, or yield a more specific
+       * type than necessary. *)
       require_subtype
         ctx
         ~reason
         ~sub:ty_want_inner
         ~super:ty_want_outer;
+      ignore
+        (check ctx
+            wt_expr
+            ty_want_inner
+            ~reason:(NonEmpty.singleton (`TypeAnnotation(wt_src, wt_type))));
       ty_want_outer
   | DE.Lam{l_param; l_body} ->
       with_locals ctx (fun ctx ->
