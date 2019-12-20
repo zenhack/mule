@@ -36,8 +36,9 @@ let fmt_node: node_type -> int -> string =
       | `Bound -> "B"
       | `Const c ->
           begin match c with
+            | `Named `Record -> "{...type _, ..._}"
             | `Named name -> Typecheck_types.string_of_typeconst_name name
-            | `Extend lbl -> Label.to_string lbl ^ " ::"
+            | `Extend lbl -> "< " ^ Label.to_string lbl ^ " _ | _ >"
           end
       | `Quant `All -> "all"
       | `Quant `Exist -> "exist"
