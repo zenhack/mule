@@ -10,6 +10,28 @@ module Var = Common_ast.Var
 
 module IntPair = Pair.Make(Int)(Int)
 
+type 'v var_map = (Var.t, 'v, Var.comparator_witness) Map.t
+
+type context = {
+  type_env : u_var var_map;
+  vals_env : u_var var_map;
+  locals : u_var list ref;
+
+  (* [assumptions] is a list of subtyping constraints we've already seen.
+   * This is used when checking subtyping constraints that may involve
+   * recursive types -- if we are asked to check a subtyping constraint
+   * that's already in our assumptions, we just return.
+   *
+   * Note that from a logician's standpoint this sounds incredibly fishy
+   * -- but that's as expected; recursive types amount to circular
+   * reasoning.
+  *)
+  assumptions : (IntPair.t, IntPair.comparator_witness) Set.t ref;
+  scope : Scope.t;
+
+  get_import_type : Paths_t.t -> u_var;
+}
+
 module Graphviz = struct
   let once_for_id seen id ~f =
     if not (Set.mem !seen id) then
@@ -71,29 +93,16 @@ module Graphviz = struct
           (* TODO: display scope. *)
           Debug.show_node (`Free ty_flag) ty_id
     end
+
+  (* This traverses the contexts and emtis everything reachable from it.
+   * we are not currently using it, because this ends up printing out the
+   * types of all the builtins too, which is too much clutter.
+  let emit_ctx seen ctx =
+    Map.iter ctx.type_env ~f:(emit_u_var seen);
+    Map.iter ctx.vals_env ~f:(emit_u_var seen);
+    List.iter !(ctx.locals) ~f:(fun v -> emit_u_var seen v)
+     *)
 end
-
-type 'v var_map = (Var.t, 'v, Var.comparator_witness) Map.t
-
-type context = {
-  type_env : u_var var_map;
-  vals_env : u_var var_map;
-  locals : u_var list ref;
-
-  (* [assumptions] is a list of subtyping constraints we've already seen.
-   * This is used when checking subtyping constraints that may involve
-   * recursive types -- if we are asked to check a subtyping constraint
-   * that's already in our assumptions, we just return.
-   *
-   * Note that from a logician's standpoint this sounds incredibly fishy
-   * -- but that's as expected; recursive types amount to circular
-   * reasoning.
-  *)
-  assumptions : (IntPair.t, IntPair.comparator_witness) Set.t ref;
-  scope : Scope.t;
-
-  get_import_type : Paths_t.t -> u_var;
-}
 
 let cant_instantiate info other_ty ~path ~reason =
   MuleErr.throw
@@ -438,7 +447,8 @@ and make_row ctx parent {row_fields; row_rest; _} =
     extend lbl (make_type ctx ty) rest
   )
 and synth: context -> 'i DE.t -> u_var =
-  fun ctx e -> match e with
+  fun ctx e ->
+  let result = begin match e with
     | DE.Const {const_val} -> synth_const const_val
     | DE.Embed _ -> text
     | DE.Import {i_resolved_path; _} ->
@@ -570,6 +580,16 @@ and synth: context -> 'i DE.t -> u_var =
           in
           synth ctx letrec_body
         )
+  end
+  in
+  if Config.render_constraint_graph () then
+    begin
+      Debug.start_graph ();
+      Graphviz.emit_u_var (ref (Set.empty (module Int))) result;
+      Debug.set_root (get_id (UnionFind.get result));
+      Debug.end_graph()
+    end;
+  result
 and synth_branch ctx ?have_default:(have_default=false) b =
   match b with
   | DE.BLeaf lf ->
@@ -639,6 +659,13 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
   )
 and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
+  if Config.render_constraint_graph () then
+    begin
+      Debug.start_graph ();
+      Graphviz.emit_u_var (ref (Set.empty (module Int))) ty_want;
+      Debug.set_root (get_id (UnionFind.get ty_want));
+      Debug.end_graph ()
+    end;
   require_kind (get_kind ty_want) ktype;
   match e with
   | DE.Let{let_v; let_e; let_body} ->
@@ -825,6 +852,8 @@ and unify_already_whnf
       Graphviz.emit_u_var seen sub;
       Graphviz.emit_u_var seen super;
       Graphviz.emit_constraint_edge sub_dir sub super_dir super;
+      Debug.set_root (get_id (UnionFind.get super));
+      (* Graphviz.emit_ctx seen ctx; *)
       Debug.end_graph ()
     end;
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
