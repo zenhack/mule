@@ -1,0 +1,47 @@
+
+Desugared:
+
+	(letrec (types ())
+	 (values
+	  ((length
+	    (:
+	     (fn lst
+	      ((match ((Cons (l (length (. l tl)))) (Nil (_ (Integer 0))))) lst))
+	     (all b
+	      ((rec l
+	        (union
+	         ((Cons (record (types ()) (values ((tl l) (hd b)))))
+	          (Nil (record (types ()) (values ()))))))
+	       -> int))))))
+	 length)
+
+inferred type:
+
+	(all a
+	 ((rec b
+	   (union
+	    ((Cons (record (types ()) (values ((tl b) (hd a)))))
+	     (Nil (record (types ()) (values ()))))))
+	  -> int))
+
+Runtime term:
+
+	(LetRec
+	 (((1
+	    (Lam
+	     (1 ()
+	      (App
+	       ((Match
+	         (BLabel
+	          (lm_cases
+	           ((Cons
+	             (BLeaf
+	              (Lam (2 () (App ((Var 2) (App ((GetField tl) (Var 0)))))))))
+	            (Nil (BLeaf (Lam (0 () (Const (Integer 0))))))))
+	          (lm_default ())))
+	        (Var 0)))))))
+	  (Var 0)))
+
+Evaluated:
+
+	"<cyclc data structure; can't print>"

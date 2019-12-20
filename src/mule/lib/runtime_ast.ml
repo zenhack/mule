@@ -39,6 +39,11 @@ module Expr = struct
     | InProgress
     | Ready of t
 
+  let sexp_of_t t =
+    (* Workaround for issue #26. *)
+    try sexp_of_t t
+    with Stack_overflow -> Sexp.Atom "<cyclc data structure; can't print>"
+
   let rec pretty_t prec = function
     | Var _ | LetRec _ | App _ | GetField _ | Update _ | Match _ ->
         PP.string "<non-value>"

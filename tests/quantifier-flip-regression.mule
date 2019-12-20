@@ -36,8 +36,6 @@
 # The fix is to do the subtype check *first*. This makes sure the variable
 # is immediately unified with the type specified by the annotation, and so
 # no modification can occur.
-#
-# Note that this test still fails, because of issue #26.
 let length : all b. (rec l. Cons { hd : b, tl : l } | Nil {}) -> int =
   fn lst. match lst with
     | Nil _ -> 0
