@@ -45,7 +45,12 @@ let fmt_node: node_type -> int -> string =
     end
     ; " : "
     ; Int.to_string n
-    ; "\"];\n"
+    ; "\""
+    ; if Poly.equal (Some n) !root_node then
+        " shape=box "
+      else
+        ""
+    ; "];\n"
     ]
 
 let fmt_edge_ty = function
