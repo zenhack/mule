@@ -320,6 +320,49 @@ let rec make_initial_context ~get_import_type =
     get_import_type;
   }
 
+and with_rec_binds ctx DE.{rec_types; rec_vals} f =
+  (* TODO: mutual recursion among types. *)
+  let ctx = List.fold rec_types ~init:ctx ~f:(fun ctx (v, ty) ->
+      { ctx with type_env =
+                   Map.set
+                     ctx.type_env
+                     ~key:v
+                     ~data:(with_locals ctx (fun ctx -> make_type ctx ty))
+      }
+    )
+  in
+  let new_vars =
+    List.map rec_vals ~f:(fun (v, _) ->
+      (v, fresh_local ctx `Flex ktype)
+    )
+  in
+  let ctx' =
+    List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v) ->
+      { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data:v }
+    )
+  in
+  let checked_vals =
+    List.map rec_vals ~f:(fun (v, e) ->
+      with_locals ctx' (fun ctx ->
+        check ctx
+          e
+          (Util.find_exn ctx.vals_env v)
+          ~reason:(NonEmpty.singleton `Unspecified)
+      )
+      |> unpack_exist ctx
+    )
+  in
+  let checked_vals =
+    List.map2_exn rec_vals checked_vals ~f:(fun (v, _) ty ->
+      (v, ty)
+    )
+  in
+  let ctx =
+    List.fold checked_vals ~init:ctx ~f:(fun ctx (v, ty) ->
+      { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:ty }
+    )
+  in
+  f ctx
 (* Turn a type in the AST into a type in the type checker: *)
 and make_type ctx ty = match ty with
   | DT.Var {v_var; v_src; _} ->
@@ -535,50 +578,11 @@ and synth: context -> 'i DE.t -> u_var =
           let (p, r) = synth_branch ctx b in
           p **> r
         )
-    | DE.LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
-        (* TODO: mutual recursion among types. *)
+    | DE.LetRec{letrec_binds; letrec_body} ->
         with_locals ctx (fun ctx ->
-          let ctx = List.fold rec_types ~init:ctx ~f:(fun ctx (v, ty) ->
-              { ctx with type_env =
-                           Map.set
-                             ctx.type_env
-                             ~key:v
-                             ~data:(with_locals ctx (fun ctx -> make_type ctx ty))
-              }
-            )
-          in
-          let new_vars =
-            List.map rec_vals ~f:(fun (v, _) ->
-              (v, fresh_local ctx `Flex ktype)
-            )
-          in
-          let ctx' =
-            List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v) ->
-              { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data:v }
-            )
-          in
-          let checked_vals =
-            List.map rec_vals ~f:(fun (v, e) ->
-              with_locals ctx' (fun ctx ->
-                check ctx
-                  e
-                  (Util.find_exn ctx.vals_env v)
-                  ~reason:(NonEmpty.singleton `Unspecified)
-              )
-              |> unpack_exist ctx
-            )
-          in
-          let checked_vals =
-            List.map2_exn rec_vals checked_vals ~f:(fun (v, _) ty ->
-              (v, ty)
-            )
-          in
-          let ctx =
-            List.fold checked_vals ~init:ctx ~f:(fun ctx (v, ty) ->
-              { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:ty }
-            )
-          in
-          synth ctx letrec_body
+          with_rec_binds ctx letrec_binds (fun ctx ->
+            synth ctx letrec_body
+          )
         )
   end
   in
