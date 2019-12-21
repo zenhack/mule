@@ -50,13 +50,13 @@ let rec sexp_of_t = function
         Sexp.List [Var.sexp_of_t v; sexp_of_t e];
         sexp_of_t body;
       ]
-  | LetRec{letrec_types; letrec_vals; letrec_body} ->
+  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
       Sexp.List [
         Sexp.Atom "letrec";
         Sexp.List [
           Sexp.Atom "types";
           Sexp.List
-            ( List.map letrec_types ~f:(fun (v, ty) ->
+            ( List.map rec_types ~f:(fun (v, ty) ->
                   Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
                 )
             )
@@ -64,7 +64,7 @@ let rec sexp_of_t = function
         Sexp.List [
           Sexp.Atom "values";
           Sexp.List
-            ( List.map letrec_vals ~f:(fun (var, value) ->
+            ( List.map rec_vals ~f:(fun (var, value) ->
                   Sexp.List [Var.sexp_of_t var; sexp_of_t value]
                 )
             )
@@ -128,10 +128,12 @@ let apply_to_kids e ~f = match e with
       let_e = f let_e;
       let_body = f let_body
     }
-  | LetRec{letrec_types; letrec_vals; letrec_body} ->
+  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
       LetRec {
-        letrec_types;
-        letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, f e));
+        letrec_binds = {
+          rec_types;
+          rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
+        };
         letrec_body = f letrec_body;
       }
   | UpdateType{ut_lbl; ut_type; ut_record} ->
@@ -193,10 +195,12 @@ let rec map e ~f =
       let_e = map let_e ~f;
       let_body = map let_body ~f;
     }
-  | LetRec{letrec_types; letrec_vals; letrec_body} ->
+  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
       LetRec {
-        letrec_types = List.map letrec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
-        letrec_vals = List.map letrec_vals ~f:(fun (v, e) -> (v, map e ~f));
+        letrec_binds = {
+          rec_types = List.map rec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
+          rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
+        };
         letrec_body = map letrec_body ~f;
       }
   | UpdateType{ut_lbl; ut_type; ut_record} ->

@@ -40,18 +40,22 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
     sorted_vars
     ~f:(List.map ~f:(fun v -> (v, Util.find_exn map v)))
 
-let sort_let ~letrec_types ~letrec_vals ~letrec_body =
-  let types = sort_let_types letrec_types in
+let sort_let ~rec_types ~rec_vals ~letrec_body =
+  let types = sort_let_types rec_types in
   List.fold_right
     types
     ~init:(D.LetRec{
-        letrec_types = [];
-        letrec_vals;
+        letrec_binds = {
+          rec_types = [];
+          rec_vals;
+        };
         letrec_body;
       })
-    ~f:(fun letrec_types letrec_body -> D.LetRec {
-        letrec_types;
-        letrec_vals = [];
+    ~f:(fun rec_types letrec_body -> D.LetRec {
+        letrec_binds = {
+          rec_types;
+          rec_vals = [];
+        };
         letrec_body;
       })
 
@@ -594,8 +598,8 @@ and desugar_record fields =
     )
   in
   sort_let
-    ~letrec_vals:values
-    ~letrec_types:types
+    ~rec_vals:values
+    ~rec_types:types
     ~letrec_body:body
 and desugar_match cases =
   begin match cases with
@@ -715,8 +719,8 @@ and desugar_let bs body =
   let rec go vals types = function
     | [] ->
         sort_let
-          ~letrec_types:types
-          ~letrec_vals:vals
+          ~rec_types:types
+          ~rec_vals:vals
           ~letrec_body:(desugar body)
     | `BindType t :: bs ->
         let (v, ty) = desugar_type_binding t in
@@ -807,8 +811,10 @@ and desugar_type_binding: (SC.var * SC.var list * ST.lt) -> (Ast.Var.t * DK.mayb
 
 let rec simplify = function
   | D.LetRec{
-      letrec_types = [];
-      letrec_vals = [];
+      letrec_binds = {
+        rec_types = [];
+        rec_vals = [];
+      };
       letrec_body;
     } ->
       simplify letrec_body

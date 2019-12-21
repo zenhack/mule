@@ -535,10 +535,10 @@ and synth: context -> 'i DE.t -> u_var =
           let (p, r) = synth_branch ctx b in
           p **> r
         )
-    | DE.LetRec{letrec_types; letrec_vals; letrec_body} ->
+    | DE.LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
         (* TODO: mutual recursion among types. *)
         with_locals ctx (fun ctx ->
-          let ctx = List.fold letrec_types ~init:ctx ~f:(fun ctx (v, ty) ->
+          let ctx = List.fold rec_types ~init:ctx ~f:(fun ctx (v, ty) ->
               { ctx with type_env =
                            Map.set
                              ctx.type_env
@@ -548,7 +548,7 @@ and synth: context -> 'i DE.t -> u_var =
             )
           in
           let new_vars =
-            List.map letrec_vals ~f:(fun (v, _) ->
+            List.map rec_vals ~f:(fun (v, _) ->
               (v, fresh_local ctx `Flex ktype)
             )
           in
@@ -558,7 +558,7 @@ and synth: context -> 'i DE.t -> u_var =
             )
           in
           let checked_vals =
-            List.map letrec_vals ~f:(fun (v, e) ->
+            List.map rec_vals ~f:(fun (v, e) ->
               with_locals ctx' (fun ctx ->
                 check ctx
                   e
@@ -569,7 +569,7 @@ and synth: context -> 'i DE.t -> u_var =
             )
           in
           let checked_vals =
-            List.map2_exn letrec_vals checked_vals ~f:(fun (v, _) ty ->
+            List.map2_exn rec_vals checked_vals ~f:(fun (v, _) ty ->
               (v, ty)
             )
           in

@@ -89,27 +89,27 @@ let translate_expr ~get_import expr =
                 Js.Switch (go_lbl_match env lm_cases lm_default arg)
           end
           )
-    | D.Expr.LetRec {letrec_vals; letrec_body; _} ->
+    | D.Expr.LetRec {letrec_binds = {rec_vals; _}; letrec_body; _} ->
         let env' =
-          List.fold letrec_vals ~init:env ~f:(fun env (v, _) ->
+          List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
             snd (add_lazy_var env v)
           )
         in
         let binds =
-          List.map letrec_vals ~f:(fun (v, body) ->
+          List.map rec_vals ~f:(fun (v, body) ->
             ( get_var env' v
             , Js.Lazy (go env' body)
             )
           )
         in
         let env'' =
-          List.fold letrec_vals ~init:env ~f:(fun env (v, _) ->
+          List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
             snd (add_var env v)
           )
         in
         let body' =
           List.fold
-            letrec_vals
+            rec_vals
             ~init:(go env'' letrec_body)
             ~f:(fun body (v, _) ->
               js_let

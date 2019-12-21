@@ -18,10 +18,10 @@ let translate
           (0, R.Const (Const.Text e_value))
       | D.Import{i_resolved_path; _} ->
           (0, get_import i_resolved_path)
-      | D.LetRec {letrec_vals = []; letrec_body; _} ->
+      | D.LetRec {letrec_binds = {rec_vals = []; _}; letrec_body; _} ->
           go_expr depth env letrec_body
-      | D.LetRec {letrec_vals; letrec_body; _} ->
-          go_letrec depth env letrec_vals letrec_body
+      | D.LetRec {letrec_binds = {rec_vals; _}; letrec_body; _} ->
+          go_letrec depth env rec_vals letrec_body
       | D.Const {const_val = c} -> (0, R.Const c)
       | D.Var {v_var = v; _} ->
           begin match Util.find_exn env v with

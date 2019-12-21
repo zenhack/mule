@@ -59,8 +59,7 @@ type 'i t =
       let_body : 'i t;
     }
   | LetRec of {
-      letrec_vals: (Var.t * 'i t) list;
-      letrec_types: (Var.t * 'i Type_t.t) list;
+      letrec_binds : 'i rec_bind;
       letrec_body: 'i t;
     }
   | Const of {
@@ -79,4 +78,8 @@ and 'i branch =
 and 'i leaf = {
   lf_var: Var.t option;
   lf_body: 'i t;
+}
+and 'i rec_bind = {
+  rec_vals: (Var.t * 'i t) list;
+  rec_types: (Var.t * 'i Type_t.t) list;
 }
