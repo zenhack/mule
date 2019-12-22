@@ -21,15 +21,24 @@ let translate
       | D.LetRec {letrec_binds = {rec_vals = []; _}; letrec_body; _} ->
           go_expr depth env letrec_body
       | D.LetRec {letrec_binds = {rec_vals; _}; letrec_body; _} ->
-          go_letrec depth env rec_vals letrec_body
+          go_letrec depth env rec_vals ~mkbody:(fun depth env ->
+            go_expr depth env letrec_body
+          )
+      | D.Record {rec_vals; _} ->
+          go_letrec depth env rec_vals ~mkbody:(fun depth env ->
+            List.map rec_vals ~f:(fun (v, _) ->
+              (var_to_label v, go_var depth env v)
+            )
+            |> List.map ~f:(fun (v, (d, e)) -> (d, (v, e)))
+            |> List.fold
+              ~init:(0, Map.empty (module Label))
+              ~f:(fun (d, m) (d', (v, e)) ->
+                (Int.max d d', Map.set m ~key:v ~data:e)
+              )
+            |> (fun (d, m) -> (d, R.Record m))
+          )
       | D.Const {const_val = c} -> (0, R.Const c)
-      | D.Var {v_var = v; _} ->
-          begin match Util.find_exn env v with
-            | `Index m ->
-                let n = depth - m in
-                (n+1, R.Var n)
-            | `Term t -> (0, t)
-          end
+      | D.Var {v_var = v; _} -> go_var depth env v
       | D.Lam {l_param; l_body} ->
           let (ncap, body') =
             go_expr (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
@@ -68,6 +77,13 @@ let translate
                 };
               app_arg = e;
             })
+  and go_var depth env v =
+    begin match Util.find_exn env v with
+      | `Index m ->
+          let n = depth - m in
+          (n+1, R.Var n)
+      | `Term t -> (0, t)
+    end
   and go_branch depth env b =
     match b with
     | D.BLeaf lf ->
@@ -118,7 +134,7 @@ let translate
         | None -> Gensym.anon_var ()
       in
       go_expr depth env (D.Lam{l_param; l_body = lf.lf_body})
-  and go_letrec depth env bindings body =
+  and go_letrec depth env bindings ~mkbody =
     let env' =
       bindings
       |> List.rev
@@ -128,7 +144,7 @@ let translate
     let len = List.length bindings in
     let depth' = depth + len in
     let binds = List.map bindings ~f:(fun (_, v) -> go_expr depth' env' v) in
-    let (bcap, body) = go_expr depth' env' body in
+    let (bcap, body) = mkbody depth' env' in
     let cap =
       List.fold ~init:0 ~f:Int.max (bcap - len :: List.map binds ~f:(fun (cap, _) -> cap - len))
     in

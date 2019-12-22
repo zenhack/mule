@@ -29,6 +29,7 @@ type 'i t =
       app_arg : 'i t;
     }
   | EmptyRecord
+  | Record of 'i rec_bind
   | GetField of {
       gf_lbl : Label.t;
       gf_record : 'i t;

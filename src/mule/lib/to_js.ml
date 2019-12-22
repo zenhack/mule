@@ -90,36 +90,45 @@ let translate_expr ~get_import expr =
           end
           )
     | D.Expr.LetRec {letrec_binds = {rec_vals; _}; letrec_body; _} ->
-        let env' =
-          List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
-            snd (add_lazy_var env v)
-          )
-        in
-        let binds =
-          List.map rec_vals ~f:(fun (v, body) ->
-            ( get_var env' v
-            , Js.Lazy (go env' body)
+        go_letrec env rec_vals ~mkbody:(fun env -> go env letrec_body)
+    | D.Expr.Record {rec_vals; _}->
+        go_letrec
+          env
+          rec_vals
+          ~mkbody:(fun env ->
+            (Js.Object (List.map rec_vals ~f:(fun (v, _) ->
+                  (var_to_label v, translate_var env v)))))
+  and go_letrec env rec_vals ~mkbody =
+    let env' =
+      List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
+        snd (add_lazy_var env v)
+      )
+    in
+    let binds =
+      List.map rec_vals ~f:(fun (v, body) ->
+        ( get_var env' v
+        , Js.Lazy (go env' body)
+        )
+      )
+    in
+    let env'' =
+      List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
+        snd (add_var env v)
+      )
+    in
+    let body' =
+      List.fold
+        rec_vals
+        ~init:(mkbody env'')
+        ~f:(fun body (v, _) ->
+          js_let
+            ( get_var env'' v
+            , translate_var env' v
+            , body
             )
-          )
-        in
-        let env'' =
-          List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
-            snd (add_var env v)
-          )
-        in
-        let body' =
-          List.fold
-            rec_vals
-            ~init:(go env'' letrec_body)
-            ~f:(fun body (v, _) ->
-              js_let
-                ( get_var env'' v
-                , translate_var env' v
-                , body
-                )
-            )
-        in
-        Js.LetRec(binds, body')
+        )
+    in
+    Js.LetRec(binds, body')
   and go_branch env b arg =
     match b with
     | D.Expr.BLeaf lf -> Js.BLeaf (go_leaf env lf arg)

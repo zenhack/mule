@@ -542,6 +542,23 @@ and synth: context -> 'i DE.t -> u_var =
           in
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )
+    | DE.Record r ->
+        with_locals ctx (fun ctx ->
+          with_rec_binds ctx r (fun ctx ->
+            let build_row env fields init =
+              let fields = List.map fields ~f:(fun (v, _) ->
+                  (v, Util.find_exn env v)
+                )
+              in
+              List.fold fields ~init ~f:(fun tail (v, t) ->
+                extend (Common_ast.var_to_label v) t tail
+              )
+            in
+            record
+              (build_row ctx.type_env r.rec_types (all krow (fun r -> r)))
+              (build_row ctx.vals_env r.rec_vals empty)
+          )
+        )
     | DE.EmptyRecord ->
         record (all krow (fun r -> r)) empty
     | DE.Ctor{c_lbl; c_arg} ->

@@ -16,6 +16,8 @@ let rec sexp_of_t = function
       Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
   | App{app_fn; app_arg} ->
       Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
+  | Record r ->
+      Sexp.List (Sexp.Atom "record" :: sexps_of_rec_bind r)
   | EmptyRecord -> Sexp.Atom "{}"
   | GetField{gf_lbl; gf_record} -> Sexp.List [
       Sexp.Atom ".";
@@ -50,27 +52,12 @@ let rec sexp_of_t = function
         Sexp.List [Var.sexp_of_t v; sexp_of_t e];
         sexp_of_t body;
       ]
-  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
-      Sexp.List [
-        Sexp.Atom "letrec";
-        Sexp.List [
-          Sexp.Atom "types";
-          Sexp.List
-            ( List.map rec_types ~f:(fun (v, ty) ->
-                  Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-                )
-            )
-        ];
-        Sexp.List [
-          Sexp.Atom "values";
-          Sexp.List
-            ( List.map rec_vals ~f:(fun (var, value) ->
-                  Sexp.List [Var.sexp_of_t var; sexp_of_t value]
-                )
-            )
-        ];
-        sexp_of_t letrec_body;
-      ]
+  | LetRec{letrec_binds; letrec_body} ->
+      Sexp.List (
+        [Sexp.Atom "letrec"]
+        @ sexps_of_rec_bind letrec_binds
+        @ [sexp_of_t letrec_body]
+      )
   | Const {const_val = c} ->
       Const.sexp_of_t c
 and sexp_of_branch =
@@ -96,6 +83,24 @@ and sexp_of_leaf {lf_var; lf_body} =
     | None -> Sexp.Atom "_"
   in
   Sexp.List [v; sexp_of_t lf_body]
+and sexps_of_rec_bind {rec_types; rec_vals} = [
+    Sexp.List [
+      Sexp.Atom "types";
+      Sexp.List
+        ( List.map rec_types ~f:(fun (v, ty) ->
+              Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+            )
+        )
+    ];
+    Sexp.List [
+      Sexp.Atom "values";
+      Sexp.List
+        ( List.map rec_vals ~f:(fun (var, value) ->
+              Sexp.List [Var.sexp_of_t var; sexp_of_t value]
+            )
+        )
+    ];
+  ]
 
 let leaf_apply_kid lf ~f =
   { lf with lf_body = f lf.lf_body }
@@ -112,7 +117,7 @@ let rec branch_apply_kids b ~f =
       cm_default = Option.map cm_default ~f:(leaf_apply_kid ~f);
     }
 
-let apply_to_kids e ~f = match e with
+let rec apply_to_kids e ~f = match e with
   | Lam {l_param; l_body} -> Lam {
       l_param;
       l_body = f l_body
@@ -128,14 +133,13 @@ let apply_to_kids e ~f = match e with
       let_e = f let_e;
       let_body = f let_body
     }
-  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
+  | LetRec{letrec_binds; letrec_body} ->
       LetRec {
-        letrec_binds = {
-          rec_types;
-          rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
-        };
+        letrec_binds = apply_to_rec_kids letrec_binds ~f;
         letrec_body = f letrec_body;
       }
+  | Record r ->
+      Record (apply_to_rec_kids r ~f)
   | UpdateType{ut_lbl; ut_type; ut_record} ->
       UpdateType {
         ut_lbl;
@@ -164,7 +168,10 @@ let apply_to_kids e ~f = match e with
   | Embed _
   | Import _
   | Const _ -> e
-
+and apply_to_rec_kids {rec_types; rec_vals} ~f = {
+    rec_types;
+    rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
+  }
 let rec map e ~f =
   match e with
   | WithType {wt_src; wt_expr = e; wt_type = ty} ->
@@ -186,14 +193,13 @@ let rec map e ~f =
       let_e = map let_e ~f;
       let_body = map let_body ~f;
     }
-  | LetRec{letrec_binds = {rec_types; rec_vals}; letrec_body} ->
+  | LetRec{letrec_binds; letrec_body} ->
       LetRec {
-        letrec_binds = {
-          rec_types = List.map rec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
-          rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
-        };
+        letrec_binds = map_rec_bind letrec_binds ~f;
         letrec_body = map letrec_body ~f;
       }
+  | Record r ->
+      Record (map_rec_bind r ~f)
   | UpdateType{ut_lbl; ut_type; ut_record} ->
       UpdateType {
         ut_lbl;
@@ -227,3 +233,7 @@ and map_branch b ~f = match b with
       cm_default = Option.map cm_default ~f:(map_leaf ~f);
     }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
+and map_rec_bind {rec_types; rec_vals} ~f = {
+    rec_types = List.map rec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
+    rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
+  };
