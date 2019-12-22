@@ -165,15 +165,6 @@ let apply_to_kids e ~f = match e with
   | Import _
   | Const _ -> e
 
-let rec subst_ty old new_ = function
-  | WithType {wt_src; wt_expr = e; wt_type = ty} ->
-      WithType {
-        wt_src;
-        wt_expr = subst_ty old new_ e;
-        wt_type = Type.subst old new_ ty;
-      }
-  | e -> apply_to_kids e ~f:(subst_ty old new_)
-
 let rec map e ~f =
   match e with
   | WithType {wt_src; wt_expr = e; wt_type = ty} ->
@@ -236,74 +227,3 @@ and map_branch b ~f = match b with
       cm_default = Option.map cm_default ~f:(map_leaf ~f);
     }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
-
-let rec subst: (Var.t, 'a t, 'cmp) Map.t -> 'a t -> 'a t = fun env expr ->
-  match expr with
-  (* TODO: do stuff with type variables *)
-  | Var {v_var = v; _} ->
-      begin match Map.find env v with
-        | None -> expr
-        | Some e -> e
-      end
-  | Ctor{ c_lbl; c_arg } ->
-      Ctor{ c_lbl; c_arg = subst env c_arg }
-  | Lam {l_param; l_body} ->
-      Lam {
-        l_param;
-        l_body = subst
-            (Map.remove env l_param)
-            l_body;
-      }
-  | App{ app_fn = f; app_arg = x } ->
-      App {
-        app_fn = subst env f;
-        app_arg = subst env x;
-      }
-  | Match b -> Match (subst_branch env b)
-  | Let{let_v; let_e; let_body} ->
-      Let {
-        let_v;
-        let_e = subst env let_e;
-        let_body = subst (Map.remove env let_v) let_body;
-      }
-  | LetRec _ ->
-      MuleErr.bug "TODO"
-  | UpdateType{ut_lbl; ut_type; ut_record} ->
-      UpdateType{
-        ut_lbl;
-        ut_type;
-        ut_record = subst env ut_record;
-      }
-  | WithType {wt_src; wt_expr; wt_type} ->
-      WithType {
-        wt_src;
-        wt_expr = subst env wt_expr;
-        wt_type;
-      }
-  | GetField {gf_lbl; gf_record} ->
-      GetField {
-        gf_lbl;
-        gf_record = subst env gf_record;
-      }
-  | UpdateVal {uv_lbl; uv_val; uv_record} ->
-      UpdateVal {
-        uv_lbl;
-        uv_val = subst env uv_val;
-        uv_record = subst env uv_record;
-      }
-  | Const _ | EmptyRecord | Embed _ | Import _ ->
-      expr
-and subst_branch env b = match b with
-  | BLeaf lf -> BLeaf (subst_leaf env lf)
-  | BLabel {lm_cases; lm_default} -> BLabel {
-      lm_cases = Map.map lm_cases ~f:(subst_branch env);
-      lm_default = Option.map lm_default ~f:(subst_leaf env);
-    }
-  | BConst {cm_cases; cm_default} -> BConst {
-      cm_cases = Map.map cm_cases ~f:(subst env);
-      cm_default = Option.map cm_default ~f:(subst_leaf env);
-    }
-and subst_leaf env lf =
-  match lf.lf_var with
-  | None -> leaf_apply_kid lf ~f:(subst env)
-  | Some v -> leaf_apply_kid lf ~f:(subst (Map.remove env v))
