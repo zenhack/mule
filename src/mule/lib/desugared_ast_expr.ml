@@ -84,23 +84,23 @@ and sexp_of_leaf {lf_var; lf_body} =
   in
   Sexp.List [v; sexp_of_t lf_body]
 and sexps_of_rec_bind {rec_types; rec_vals} = [
-    Sexp.List [
-      Sexp.Atom "types";
-      Sexp.List
-        ( List.map rec_types ~f:(fun (v, ty) ->
-              Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-            )
-        )
-    ];
-    Sexp.List [
-      Sexp.Atom "values";
-      Sexp.List
-        ( List.map rec_vals ~f:(fun (var, value) ->
-              Sexp.List [Var.sexp_of_t var; sexp_of_t value]
-            )
-        )
-    ];
-  ]
+  Sexp.List [
+    Sexp.Atom "types";
+    Sexp.List
+      ( List.map rec_types ~f:(fun (v, ty) ->
+            Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+          )
+      )
+  ];
+  Sexp.List [
+    Sexp.Atom "values";
+    Sexp.List
+      ( List.map rec_vals ~f:(fun (var, value) ->
+            Sexp.List [Var.sexp_of_t var; sexp_of_t value]
+          )
+      )
+  ];
+]
 
 let leaf_apply_kid lf ~f =
   { lf with lf_body = f lf.lf_body }
@@ -169,9 +169,9 @@ let rec apply_to_kids e ~f = match e with
   | Import _
   | Const _ -> e
 and apply_to_rec_kids {rec_types; rec_vals} ~f = {
-    rec_types;
-    rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
-  }
+  rec_types;
+  rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
+}
 let rec map e ~f =
   match e with
   | WithType {wt_src; wt_expr = e; wt_type = ty} ->
@@ -234,6 +234,6 @@ and map_branch b ~f = match b with
     }
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 and map_rec_bind {rec_types; rec_vals} ~f = {
-    rec_types = List.map rec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
-    rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
-  };
+  rec_types = List.map rec_types ~f:(fun (v, ty) -> (v, Type.map ty ~f));
+  rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
+};

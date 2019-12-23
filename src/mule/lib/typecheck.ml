@@ -97,11 +97,11 @@ module Graphviz = struct
   (* This traverses the contexts and emtis everything reachable from it.
    * we are not currently using it, because this ends up printing out the
    * types of all the builtins too, which is too much clutter.
-  let emit_ctx seen ctx =
-    Map.iter ctx.type_env ~f:(emit_u_var seen);
-    Map.iter ctx.vals_env ~f:(emit_u_var seen);
-    List.iter !(ctx.locals) ~f:(fun v -> emit_u_var seen v)
-     *)
+     let emit_ctx seen ctx =
+     Map.iter ctx.type_env ~f:(emit_u_var seen);
+     Map.iter ctx.vals_env ~f:(emit_u_var seen);
+     List.iter !(ctx.locals) ~f:(fun v -> emit_u_var seen v)
+  *)
 end
 
 let cant_instantiate info other_ty ~path ~reason =
