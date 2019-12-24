@@ -82,5 +82,5 @@ and 'i leaf = {
 }
 and 'i rec_bind = {
   rec_vals: (Var.t * 'i t) list;
-  rec_types: (Var.t * 'i Type_t.t) list;
+  rec_types: (Var.t * 'i Type_t.t) list list;
 }

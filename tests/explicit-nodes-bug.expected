@@ -3,17 +3,15 @@ Desugared:
 
 	(letrec
 	 (types
-	  ((sig (lam k (rec sig (exist $6 (record (types ((t $6))) (values ()))))))))
-	 (values ())
-	 (letrec (types ())
-	  (values
-	   ((from-order
-	     (:
-	      (fn ord
-	       (letrec (types ((t (lam v (rec t (. ord t)))))) (values ())
-	        (.type= t {} t)))
-	      (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))))))
-	  (Integer 0)))
+	  (((sig (lam k (rec sig (exist $6 (record (types ((t $6))) (values ())))))))))
+	 (values
+	  ((from-order
+	    (:
+	     (fn ord
+	      (letrec (types (((t (lam v (rec t (. ord t))))))) (values ())
+	       (.type= t {} t)))
+	     (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))))))
+	 (Integer 0))
 
 inferred type:
 

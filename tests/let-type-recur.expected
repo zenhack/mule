@@ -3,11 +3,11 @@ Desugared:
 
 	(letrec
 	 (types
-	  ((int-list
-	    (rec int-list
-	     (union
-	      ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
-	       (Nil (record (types ()) (values ())))))))))
+	  (((int-list
+	     (rec int-list
+	      (union
+	       ((Cons (record (types ()) (values ((tl int-list) (hd int)))))
+	        (Nil (record (types ()) (values ()))))))))))
 	 (values ())
 	 (:
 	  ((fn x (Cons x))

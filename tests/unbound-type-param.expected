@@ -1,5 +1,6 @@
 
 Desugared:
 
-	(letrec (types ((t (lam a (rec t int))))) (values ()) (: (Integer 4) (t a)))
+	(letrec (types (((t (lam a (rec t int)))))) (values ())
+	 (: (Integer 4) (t a)))
 Unbound variable `a` at line 4, column 7

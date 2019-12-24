@@ -322,7 +322,7 @@ let rec make_initial_context ~get_import_type =
 
 and with_rec_binds ctx DE.{rec_types; rec_vals} f =
   (* TODO: mutual recursion among types. *)
-  let ctx = List.fold rec_types ~init:ctx ~f:(fun ctx (v, ty) ->
+  let ctx = List.fold (List.concat rec_types) ~init:ctx ~f:(fun ctx (v, ty) ->
       { ctx with type_env =
                    Map.set
                      ctx.type_env
@@ -555,7 +555,7 @@ and synth: context -> 'i DE.t -> u_var =
               )
             in
             record
-              (build_row ctx.type_env r.rec_types (all krow (fun r -> r)))
+              (build_row ctx.type_env (List.concat r.rec_types) (all krow (fun r -> r)))
               (build_row ctx.vals_env r.rec_vals empty)
           )
         )

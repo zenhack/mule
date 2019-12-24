@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(letrec (types ((t (lam a (rec t ((t : t) -> int)))))) (values ())
+	(letrec (types (((t (lam a (rec t ((t : t) -> int))))))) (values ())
 	 (.type= t {} t))
 
 inferred type:

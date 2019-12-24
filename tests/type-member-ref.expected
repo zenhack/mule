@@ -3,7 +3,7 @@ Desugared:
 
 	(letrec (types ())
 	 (values
-	  ((x (letrec (types ((t (rec t int)))) (values ()) (.type= t {} t)))))
+	  ((x (letrec (types (((t (rec t int))))) (values ()) (.type= t {} t)))))
 	 (: (Integer 4) (. x t)))
 
 inferred type:

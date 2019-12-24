@@ -3,12 +3,12 @@ Desugared:
 
 	(letrec
 	 (types
-	  ((list
-	    (lam a
-	     (rec list
-	      (union
-	       ((Cons (record (types ()) (values ((tl list) (hd a)))))
-	        (Nil (record (types ()) (values ()))))))))))
+	  (((list
+	     (lam a
+	      (rec list
+	       (union
+	        ((Cons (record (types ()) (values ((tl list) (hd a)))))
+	         (Nil (record (types ()) (values ())))))))))))
 	 (values ())
 	 (letrec (types ())
 	  (values

@@ -40,24 +40,27 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
     sorted_vars
     ~f:(List.map ~f:(fun v -> (v, Util.find_exn map v)))
 
-let sort_let ~rec_types ~rec_vals ~letrec_body =
+let sort_rec_binds ~rec_types ~rec_vals =
   let types = sort_let_types rec_types in
   List.fold_right
     types
-    ~init:(D.LetRec{
-        letrec_binds = {
-          rec_types = [];
-          rec_vals;
-        };
-        letrec_body;
-      })
-    ~f:(fun rec_types letrec_body -> D.LetRec {
-        letrec_binds = {
-          rec_types;
-          rec_vals = [];
-        };
-        letrec_body;
-      })
+    ~init:D.{
+        rec_types = [];
+        rec_vals;
+      }
+    ~f:(fun tys D.{rec_types; rec_vals} ->
+      D.{
+        rec_types = tys :: rec_types;
+        rec_vals;
+      }
+    )
+
+
+let sort_let ~rec_types ~rec_vals ~letrec_body =
+  D.LetRec {
+    letrec_binds = sort_rec_binds ~rec_types ~rec_vals;
+    letrec_body;
+  }
 
 (* [substitute_type_apps f params ty] replaces occurances of [f] applied to
  * the list of parameters in [ty] with just [f]. *)
