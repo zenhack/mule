@@ -148,7 +148,9 @@ let translate
     let cap =
       List.fold ~init:0 ~f:Int.max (bcap - len :: List.map binds ~f:(fun (cap, _) -> cap - len))
     in
-    (cap, R.LetRec(binds, body))
+    match binds with
+    | [] -> (cap, body)
+    | _ -> (cap, R.LetRec(binds, body))
   in
   go_expr
 

@@ -1,12 +1,11 @@
 
 Desugared:
 
-	(letrec (types (((t (rec t int))) ((u (rec u t))))) (values ())
-	 (.type= t (.type= u {} u) t))
+	(record (types (((t (rec t int))) ((u (rec u t))))) (values ()))
 
 inferred type:
 
-	(record (types ((t int) (u int))) (values ()))
+	(record (types ((u int) (t int))) (values ()))
 
 Runtime term:
 

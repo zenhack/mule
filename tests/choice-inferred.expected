@@ -2,8 +2,7 @@
 Desugared:
 
 	(fn choice
-	 (letrec (types ())
-	  (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))
-	  (.= x x (.= y y {}))))
+	 (record (types ())
+	  (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))))
 Type error: <TODO>: Get rid of unspecified reasons.
 Mismatched type constructors: a -> a is not a subtype of {}

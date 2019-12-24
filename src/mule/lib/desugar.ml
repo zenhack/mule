@@ -570,40 +570,13 @@ and desugar_record fields =
           )
     )
   in
-  let body = List.fold_right fields ~init:D.EmptyRecord ~f:(fun bind old ->
-      match bind.Loc.l_value with
-      | `Value (l, _, _) ->
-          let lbl = l.Loc.l_value in
-          let var = Ast.var_of_label lbl in
-          D.UpdateVal {
-            uv_lbl = lbl;
-            uv_val = D.Var {
-                v_var = Ast.var_of_label lbl;
-                v_src = `Sourced Loc.{
-                    l_value = var;
-                    l_loc = l.Loc.l_loc;
-                  };
-              };
-            uv_record = old;
-          }
-      | `Type (l, _, _) ->
-          let Loc.{l_value; l_loc} = l in
-          let v = Ast.var_of_label l_value in
-          D.UpdateType{
-            ut_lbl = l_value;
-            ut_type = DT.Var {
-                v_info = `Unknown;
-                v_var = v;
-                v_src = `Sourced Loc.{l_value = v; l_loc};
-              };
-            ut_record = old;
-          }
-    )
+  let types = sort_let_types types in
+  let binds = D.{
+      rec_types = types;
+      rec_vals = values;
+    }
   in
-  sort_let
-    ~rec_vals:values
-    ~rec_types:types
-    ~letrec_body:body
+  D.Record binds
 and desugar_match cases =
   begin match cases with
     | (Loc.{l_value = SP.Ctor _; _}, _) :: _ ->

@@ -7,9 +7,7 @@ Desugared:
 	 (values
 	  ((from-order
 	    (:
-	     (fn ord
-	      (letrec (types (((t (lam v (rec t (. ord t))))))) (values ())
-	       (.type= t {} t)))
+	     (fn ord (record (types (((t (lam v (rec t (. ord t))))))) (values ())))
 	     (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))))))
 	 (Integer 0))
 

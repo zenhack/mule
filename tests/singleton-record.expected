@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(letrec (types ()) (values ((x {}))) (.= x x {}))
+	(record (types ()) (values ((x {}))))
 
 inferred type:
 
@@ -9,8 +9,7 @@ inferred type:
 
 Runtime term:
 
-	(LetRec
-	 (((0 (Record ()))) (Update (old (Record ())) (label x) (field (Var 0)))))
+	(LetRec (((0 (Record ()))) (Record ((x (Var 0))))))
 
 Evaluated:
 

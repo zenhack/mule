@@ -11,8 +11,7 @@ Desugared:
 	 (values ())
 	 (:
 	  ((fn x (Cons x))
-	   (letrec (types ()) (values ((hd (Integer 4)) (tl ((fn x (Nil x)) {}))))
-	    (.= hd hd (.= tl tl {}))))
+	   (record (types ()) (values ((hd (Integer 4)) (tl ((fn x (Nil x)) {}))))))
 	  int-list))
 
 inferred type:
@@ -29,8 +28,7 @@ Runtime term:
 	  (LetRec
 	   (((0 (Const (Integer 4)))
 	     (0 (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ())))))
-	    (Update (old (Update (old (Record ())) (label tl) (field (Var 1))))
-	     (label hd) (field (Var 0)))))))
+	    (Record ((hd (Var 0)) (tl (Var 1))))))))
 
 Evaluated:
 

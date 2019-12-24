@@ -4,9 +4,7 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((m
-	    (:
-	     (letrec (types ()) (values ((x (Integer 4)) (y (fn z z))))
-	      (.= x x (.= y y {})))
+	    (: (record (types ()) (values ((x (Integer 4)) (y (fn z z)))))
 	     (exist $6 (record (types ((t $6))) (values ((y ($6 -> int)) (x $6)))))))))
 	 ((. m y) (. m x)))
 
@@ -20,8 +18,7 @@ Runtime term:
 	 (((0
 	    (LetRec
 	     (((0 (Const (Integer 4))) (0 (Lam (0 () (Var 0)))))
-	      (Update (old (Update (old (Record ())) (label y) (field (Var 1))))
-	       (label x) (field (Var 0)))))))
+	      (Record ((x (Var 0)) (y (Var 1))))))))
 	  (App ((App ((GetField y) (Var 0))) (App ((GetField x) (Var 0)))))))
 
 Evaluated:

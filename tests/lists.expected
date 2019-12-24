@@ -22,21 +22,18 @@ Desugared:
 	      (all a ((list a) -> int))))))
 	  (length
 	   ((fn x (Cons x))
-	    (letrec (types ())
+	    (record (types ())
 	     (values
 	      ((hd (Integer 4))
 	       (tl
 	        ((fn x (Cons x))
-	         (letrec (types ())
+	         (record (types ())
 	          (values
 	           ((hd (Integer 0))
 	            (tl
 	             ((fn x (Cons x))
-	              (letrec (types ())
-	               (values ((hd (Integer 1)) (tl ((fn x (Nil x)) {}))))
-	               (.= hd hd (.= tl tl {})))))))
-	          (.= hd hd (.= tl tl {})))))))
-	     (.= hd hd (.= tl tl {})))))))
+	              (record (types ())
+	               (values ((hd (Integer 1)) (tl ((fn x (Nil x)) {})))))))))))))))))))
 
 inferred type:
 
@@ -87,15 +84,9 @@ Runtime term:
 	                   (((0 (Const (Integer 1)))
 	                     (0
 	                      (App ((Lam (0 () (Ctor (Nil (Var 0))))) (Record ())))))
-	                    (Update
-	                     (old
-	                      (Update (old (Record ())) (label tl) (field (Var 1))))
-	                     (label hd) (field (Var 0)))))))))
-	              (Update
-	               (old (Update (old (Record ())) (label tl) (field (Var 1))))
-	               (label hd) (field (Var 0)))))))))
-	        (Update (old (Update (old (Record ())) (label tl) (field (Var 1))))
-	         (label hd) (field (Var 0)))))))))))
+	                    (Record ((hd (Var 0)) (tl (Var 1))))))))))
+	              (Record ((hd (Var 0)) (tl (Var 1))))))))))
+	        (Record ((hd (Var 0)) (tl (Var 1))))))))))))
 
 Evaluated:
 

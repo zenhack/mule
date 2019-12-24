@@ -2,7 +2,7 @@
 Desugared:
 
 	((.
-	  (letrec (types ())
+	  (record (types ())
 	   (values
 	    ((even
 	      (: (fn x ((match ((S (k (odd k))) (Z (_ ((fn x (True x)) {}))))) x))
@@ -15,8 +15,7 @@ Desugared:
 	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
 	        (union
 	         ((True (record (types ()) (values ())))
-	          (False (record (types ()) (values ()))))))))))
-	   (.= even even (.= odd odd {})))
+	          (False (record (types ()) (values ())))))))))))
 	  odd)
 	 ((fn x (S x))
 	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
@@ -63,8 +62,7 @@ Runtime term:
 	                    (App ((Lam (0 () (Ctor (False (Var 0))))) (Record ())))))))))
 	              (lm_default ())))
 	            (Var 0)))))))
-	      (Update (old (Update (old (Record ())) (label odd) (field (Var 1))))
-	       (label even) (field (Var 0)))))))
+	      (Record ((even (Var 0)) (odd (Var 1))))))))
 	  (App
 	   ((Lam (0 () (Ctor (S (Var 0)))))
 	    (App

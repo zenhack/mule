@@ -2,8 +2,8 @@
 Desugared:
 
 	(:
-	 (letrec (types (((t (lam a (rec t (record (types ()) (values ()))))))))
-	  (values ()) (.type= t {} t))
+	 (record (types (((t (lam a (rec t (record (types ()) (values ()))))))))
+	  (values ()))
 	 (exist b (record (types ((t (lam a (rec t b))))) (values ()))))
 
 inferred type:
