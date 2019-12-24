@@ -51,7 +51,6 @@ let translate
           (max fcap xcap, R.App(f', x'))
       | D.WithType {wt_expr = e; _} ->
           go_expr depth env e
-      | D.EmptyRecord -> (0, R.Record (Map.empty(module Label)))
       | D.GetField {gf_lbl; gf_record} ->
           let (n, record) = go_expr depth env gf_record in
           (n, R.App(R.GetField gf_lbl, record))

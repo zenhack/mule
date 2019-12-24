@@ -1,7 +1,7 @@
 
 Desugared:
 
-	((fn x (Ok x)) {})
+	((fn x (Ok x)) (record (types ()) (values ())))
 
 inferred type:
 

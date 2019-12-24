@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(: (record (types ()) (values ((x {}))))
+	(: (record (types ()) (values ((x (record (types ()) (values ()))))))
 	 (record (types ((t (rec t (record (types ()) (values ()))))))
 	  (values ((x (rec t (record (types ()) (values ()))))))))
 

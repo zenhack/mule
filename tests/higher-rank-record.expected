@@ -3,7 +3,8 @@ Desugared:
 
 	(letrec (types ()) (values ((r (record (types ()) (values ((y (fn x x))))))))
 	 (letrec (types ()) (values ((f (: (. r y) (all a (a -> a))))))
-	  (record (types ()) (values ((l (f {})) (k (f (fn z z))))))))
+	  (record (types ())
+	   (values ((l (f (record (types ()) (values ())))) (k (f (fn z z))))))))
 
 inferred type:
 

@@ -559,8 +559,6 @@ and synth: context -> 'i DE.t -> u_var =
               (build_row ctx.vals_env r.rec_vals empty)
           )
         )
-    | DE.EmptyRecord ->
-        record (all krow (fun r -> r)) empty
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
         union (extend c_lbl arg_t (all krow (fun r -> r)))

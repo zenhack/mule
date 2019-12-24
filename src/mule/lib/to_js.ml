@@ -50,8 +50,6 @@ let translate_expr ~get_import expr =
     | D.Expr.UpdateType{ut_record; _} -> go env ut_record
     | D.Expr.App {app_fn; app_arg} ->
         Js.Call1(go env app_fn, go env app_arg)
-    | D.Expr.EmptyRecord ->
-        Js.Object []
     | D.Expr.GetField{gf_lbl; gf_record} ->
         Js.Index
           ( go env gf_record

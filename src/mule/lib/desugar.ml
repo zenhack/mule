@@ -434,7 +434,6 @@ and desugar Loc.{l_value = e; l_loc} = match e with
             app_arg = tl;
           }
         )
-  | S.Record {r_fields = []; _} -> D.EmptyRecord
   | S.Record {r_fields = fields; _} -> desugar_record fields
   | S.Update{up_arg; up_fields; _} -> desugar_update up_arg up_fields
   | S.GetField {gf_arg = e; gf_lbl = l; _} ->

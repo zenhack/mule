@@ -4,7 +4,11 @@ Desugared:
 	(fn choice
 	 (let (choice (: choice (all a (a -> (a -> a)))))
 	  (record (types ())
-	   (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x))))))))
+	   (values
+	    ((x
+	      ((choice (record (types ()) (values ())))
+	       (record (types ()) (values ()))))
+	     (y ((choice (fn x x)) (fn x x))))))))
 
 inferred type:
 

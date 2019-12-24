@@ -18,7 +18,6 @@ let rec sexp_of_t = function
       Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
   | Record r ->
       Sexp.List (Sexp.Atom "record" :: sexps_of_rec_bind r)
-  | EmptyRecord -> Sexp.Atom "{}"
   | GetField{gf_lbl; gf_record} -> Sexp.List [
       Sexp.Atom ".";
       sexp_of_t gf_record;
@@ -165,7 +164,6 @@ let rec apply_to_kids e ~f = match e with
         uv_val = f uv_val;
       }
   | Var _
-  | EmptyRecord
   | Embed _
   | Import _
   | Const _ -> e
@@ -219,7 +217,6 @@ let rec map e ~f =
         uv_record = map uv_record ~f;
       }
   | Var x -> Var x
-  | EmptyRecord -> EmptyRecord
   | Const x -> Const x
   | Embed x -> Embed x
   | Import x -> Import x

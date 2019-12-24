@@ -11,7 +11,9 @@ Desugared:
 	 (values ())
 	 (:
 	  ((fn x (Cons x))
-	   (record (types ()) (values ((hd (Integer 4)) (tl ((fn x (Nil x)) {}))))))
+	   (record (types ())
+	    (values
+	     ((hd (Integer 4)) (tl ((fn x (Nil x)) (record (types ()) (values ()))))))))
 	  int-list))
 
 inferred type:

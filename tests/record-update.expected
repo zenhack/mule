@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(.= y (record (types ()) (values ((z {}))))
-	 (record (types ()) (values ((x {})))))
+	(.= y (record (types ()) (values ((z (record (types ()) (values ()))))))
+	 (record (types ()) (values ((x (record (types ()) (values ())))))))
 
 inferred type:
 

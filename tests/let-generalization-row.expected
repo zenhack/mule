@@ -4,11 +4,14 @@ Desugared:
 	(letrec (types ()) (values ((f (fn x (. x y)))))
 	 (record (types ())
 	  (values
-	   ((a (f (record (types ()) (values ((y {}))))))
+	   ((a
+	     (f (record (types ()) (values ((y (record (types ()) (values ()))))))))
 	    (b
 	     (f
 	      (record (types ())
-	       (values ((y (record (types ()) (values ((z {}))))))))))))))
+	       (values
+	        ((y
+	          (record (types ()) (values ((z (record (types ()) (values ()))))))))))))))))
 
 inferred type:
 

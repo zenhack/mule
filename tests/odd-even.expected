@@ -5,20 +5,32 @@ Desugared:
 	  (record (types ())
 	   (values
 	    ((even
-	      (: (fn x ((match ((S (k (odd k))) (Z (_ ((fn x (True x)) {}))))) x))
+	      (:
+	       (fn x
+	        ((match
+	          ((S (k (odd k)))
+	           (Z (_ ((fn x (True x)) (record (types ()) (values ())))))))
+	         x))
 	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
 	        (union
 	         ((True (record (types ()) (values ())))
 	          (False (record (types ()) (values ()))))))))
 	     (odd
-	      (: (fn x ((match ((S (k (even k))) (Z (_ ((fn x (False x)) {}))))) x))
+	      (:
+	       (fn x
+	        ((match
+	          ((S (k (even k)))
+	           (Z (_ ((fn x (False x)) (record (types ()) (values ())))))))
+	         x))
 	       ((rec n (union ((Z (record (types ()) (values ()))) (S n)))) ->
 	        (union
 	         ((True (record (types ()) (values ())))
 	          (False (record (types ()) (values ())))))))))))
 	  odd)
 	 ((fn x (S x))
-	  ((fn x (S x)) ((fn x (S x)) ((fn x (S x)) ((fn x (Z x)) {}))))))
+	  ((fn x (S x))
+	   ((fn x (S x))
+	    ((fn x (S x)) ((fn x (Z x)) (record (types ()) (values ()))))))))
 
 inferred type:
 

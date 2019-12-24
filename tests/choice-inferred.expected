@@ -3,6 +3,10 @@ Desugared:
 
 	(fn choice
 	 (record (types ())
-	  (values ((x ((choice {}) {})) (y ((choice (fn x x)) (fn x x)))))))
+	  (values
+	   ((x
+	     ((choice (record (types ()) (values ())))
+	      (record (types ()) (values ()))))
+	    (y ((choice (fn x x)) (fn x x)))))))
 Type error: <TODO>: Get rid of unspecified reasons.
 Mismatched type constructors: a -> a is not a subtype of {}

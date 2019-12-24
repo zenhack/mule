@@ -1,7 +1,7 @@
 
 Desugared:
 
-	{}
+	(record (types ()) (values ()))
 
 inferred type:
 

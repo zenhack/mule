@@ -11,7 +11,7 @@ Desugared:
 	    (: (fn x (.= y (Integer 2) x))
 	     ((record (types ()) (values ((y int)))) ->
 	      (record (types ()) (values ((y int)))))))))
-	 {})
+	 (record (types ()) (values ())))
 
 inferred type:
 

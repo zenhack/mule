@@ -33,7 +33,9 @@ Desugared:
 	            (tl
 	             ((fn x (Cons x))
 	              (record (types ())
-	               (values ((hd (Integer 1)) (tl ((fn x (Nil x)) {})))))))))))))))))))
+	               (values
+	                ((hd (Integer 1))
+	                 (tl ((fn x (Nil x)) (record (types ()) (values ())))))))))))))))))))))
 
 inferred type:
 

@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(fn x (.= y {} x))
+	(fn x (.= y (record (types ()) (values ())) x))
 
 inferred type:
 
