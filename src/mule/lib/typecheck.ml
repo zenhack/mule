@@ -785,7 +785,7 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
         ~super:ty_want;
       ty_got
 and check_maybe_flex ctx e ty_want ~f =
-  let want = unroll_all_quants ctx `Super ty_want in
+  let want = unroll_all_quants ctx `Super (whnf ty_want) in
   match UnionFind.get want with
   | `Free{ty_flag = `Flex; ty_kind; _} ->
       require_kind ty_kind ktype;
