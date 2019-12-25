@@ -762,20 +762,20 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
         )
       )
   | DE.Record r ->
-    with_locals ctx (fun ctx ->
-      check_maybe_flex ctx e ty_want  ~f:(fun want -> match UnionFind.get want with
-        | `Const(_, `Named `Record, [tys, _; vals, _], _) ->
-            check_record ctx r tys vals ~reason
-        | _ ->
-            let sub, super = synth ctx e, ty_want in
-            let path = TypePath.base sub super in
-            throw_mismatch
-              ~sub
-              ~super
-              ~path
-              ~reason
+      with_locals ctx (fun ctx ->
+        check_maybe_flex ctx e ty_want  ~f:(fun want -> match UnionFind.get want with
+          | `Const(_, `Named `Record, [tys, _; vals, _], _) ->
+              check_record ctx r tys vals ~reason
+          | _ ->
+              let sub, super = synth ctx e, ty_want in
+              let path = TypePath.base sub super in
+              throw_mismatch
+                ~sub
+                ~super
+                ~path
+                ~reason
+        )
       )
-    )
   | _ ->
       let ty_got = synth ctx e in
       require_subtype
@@ -841,12 +841,12 @@ and check_record ctx DE.{rec_types; rec_vals} tys vals ~reason =
     }
   in
   List.iter rec_vals ~f:(fun (v, e) ->
-      ignore (check
+    ignore (check
         ctx
         e
         (Util.find_exn ctx.vals_env v)
         ~reason
-      )
+    )
   );
   want_ty
 and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -> u_var =

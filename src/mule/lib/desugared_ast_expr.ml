@@ -87,10 +87,10 @@ and sexps_of_rec_bind {rec_types; rec_vals} = [
     Sexp.Atom "types";
     Sexp.List
       (List.map rec_types ~f:(fun ts ->
-        (List.map ts ~f:(fun (v, ty) ->
-            Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
-          )
-        |> fun l -> Sexp.List l)))
+            (List.map ts ~f:(fun (v, ty) ->
+                  Sexp.List [Var.sexp_of_t v; Type.sexp_of_t ty]
+                )
+             |> fun l -> Sexp.List l)))
   ];
   Sexp.List [
     Sexp.Atom "values";
