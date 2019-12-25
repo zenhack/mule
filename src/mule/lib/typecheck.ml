@@ -521,15 +521,17 @@ and synth: context -> 'i DE.t -> u_var =
           head
         )
     | DE.UpdateVal {uv_lbl; uv_val; uv_record} ->
-        let rt = fresh_local ctx `Flex krow in
-        let rv = fresh_local ctx `Flex krow in
-        ignore
-          (check ctx
-              uv_record
-              (record rt rv)
-              ~reason:(NonEmpty.singleton (`RecordUpdate e)));
-        let val_t = synth ctx uv_val in
-        record rt (extend uv_lbl val_t rv)
+        with_locals ctx (fun ctx ->
+          let rt = fresh_local ctx `Flex krow in
+          let rv = fresh_local ctx `Flex krow in
+          ignore
+            (check ctx
+                uv_record
+                (record rt rv)
+                ~reason:(NonEmpty.singleton (`RecordUpdate e)));
+          let val_t = synth ctx uv_val in
+          record rt (extend uv_lbl val_t rv)
+        )
     | DE.UpdateType {ut_lbl; ut_type; ut_record} ->
         with_locals ctx (fun ctx ->
           let rv = fresh_local ctx `Flex krow in
