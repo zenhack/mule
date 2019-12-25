@@ -1,0 +1,16 @@
+# This tests the branch for records in the type checker's checking mode.
+# Importantly, the below does not type check if left to the catchall
+# (synth followed by require_subytpe), becuase the type annotations must
+# be "pushed into" the record, so that they can affect individual fields
+# before those fields are checked.
+{
+  , type t a = Cons { hd : a, tl : t a } | Nil {}
+  , empty? =
+      fn list. match list with
+        | Nil _ -> True {}
+        | Cons _ -> False {}
+      end
+} : {
+  , type t a
+  , empty? : all a. t a -> (True {} | False {})
+}

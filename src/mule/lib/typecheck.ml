@@ -761,6 +761,21 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
                 ~reason
         )
       )
+  | DE.Record r ->
+    with_locals ctx (fun ctx ->
+      check_maybe_flex ctx e ty_want  ~f:(fun want -> match UnionFind.get want with
+        | `Const(_, `Named `Record, [tys, _; vals, _], _) ->
+            check_record ctx r tys vals ~reason
+        | _ ->
+            let sub, super = synth ctx e, ty_want in
+            let path = TypePath.base sub super in
+            throw_mismatch
+              ~sub
+              ~super
+              ~path
+              ~reason
+      )
+    )
   | _ ->
       let ty_got = synth ctx e in
       require_subtype
@@ -779,6 +794,61 @@ and check_maybe_flex ctx e ty_want ~f =
       got
   | _ ->
       f want
+and check_record ctx DE.{rec_types; rec_vals} tys vals ~reason =
+  let want_ty = record tys vals in
+  (* TODO: handle mutually recursive types. *)
+  let have_types = List.map (List.concat rec_types) ~f:(fun (v, t) ->
+      let want = fresh_local ctx `Flex (gen_k ()) in
+      require_subtype
+        ctx
+        ~reason
+        ~sub:(record
+            (extend (Common_ast.var_to_label v) want (fresh_local ctx `Flex krow))
+            (fresh_local ctx `Flex krow)
+        )
+        ~super:want_ty;
+      let have = make_type ctx t in
+      require_type_eq ctx want have;
+      (v, have)
+    )
+  in
+  let have_vals = List.map rec_vals ~f:(fun (v, _) ->
+      let t = fresh_local ctx `Flex ktype in
+      let sub = record
+          (fresh_local ctx `Flex krow)
+          (extend
+              (Common_ast.var_to_label v)
+              t
+              (fresh_local ctx `Flex krow))
+      in
+      require_subtype
+        ctx
+        ~reason
+        ~sub
+        ~super:want_ty;
+      (v, t)
+    )
+  in
+  let update_env env =
+    List.fold_right ~init:env ~f:(fun (v, t) env ->
+      Map.set env ~key:v ~data:t
+    )
+  in
+  let ctx =
+    { ctx with
+      type_env = update_env ctx.type_env have_types;
+      vals_env = update_env ctx.vals_env have_vals;
+    }
+  in
+  List.iter rec_vals ~f:(fun (v, e) ->
+      ignore (check
+        ctx
+        e
+        (Util.find_exn ctx.vals_env v)
+        ~reason
+      )
+  );
+  want_ty
 and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -> u_var =
   fun ctx b ?default (p_want, r_want) ->
   let ty_want = p_want **> r_want in

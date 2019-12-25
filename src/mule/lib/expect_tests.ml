@@ -39,6 +39,7 @@ let xfail = not
 let%test _ = tst "annotated-type"
 let%test _ = tst "associated-type"
 let%test _ = tst "bad-rank2"
+let%test _ = tst "check-record"
 let%test _ = tst "choice-annotated"
 let%test _ = tst "choice-inferred"
 let%test _ = tst "double-type-annotation"
