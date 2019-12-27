@@ -9,7 +9,7 @@
 
   , length =
       let go =
-        fn accum lst. match lst with
+        fn accum list. match list with
           | Nil _ -> accum
           | Cons l -> go (int.add accum 1) l.tl
         end
@@ -43,7 +43,7 @@
 #      fn l r. go (reverse l) r
 
 #  , take =
-#      fn count lst. match lst with
+#      fn count list. match list with
 #        | Nil _ -> Nil {}
 #        | Cons l -> match int.compare count 0 with
 #            | GT _ -> Cons {
@@ -55,12 +55,12 @@
 #      end
 
   , drop =
-      fn count lst. match lst with
+      fn count list. match list with
         | Nil _ -> Nil {}
         | Cons l ->
             match int.compare count 0 with
               | GT _ -> drop (int.sub count 1) l.tl
-              | _ -> lst
+              | _ -> list
             end
       end
 
