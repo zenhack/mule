@@ -46,6 +46,26 @@ let unionType r = D.Type.Union { u_row = row r }
 
 let unionVal c v = R.Expr.Ctor(Label.of_string c, v)
 
+let cmp_t = unionType [
+    "LT", recordType [] [];
+    "GT", recordType [] [];
+    "EQ", recordType [] [];
+  ]
+
+let cmp_binop_t arg = fn_t arg (fn_t arg cmp_t)
+
+let lt = unionVal "LT" (recordVal [])
+let gt = unionVal "GT" (recordVal [])
+let eq = unionVal "EQ" (recordVal [])
+
+let cmp_binop get_arg compare =
+  R.prim (fun l -> R.prim (fun r -> match compare (get_arg l) (get_arg r) with
+      | -1 -> lt
+      | 0 -> eq
+      | 1 -> gt
+      | _ -> failwith "Impossible"
+    ))
+
 let maybe t = unionType [ "Some", t; "None", (recordType [] []) ]
 
 let values = dict [
@@ -56,6 +76,7 @@ let values = dict [
           "mul", int_binop_t;
           "div", int_binop_t;
           "rem", int_binop_t;
+          "compare", cmp_binop_t int_t;
         ]
     , recordVal [
           "add", int_binop_v Z.add;
@@ -63,6 +84,7 @@ let values = dict [
           "mul", int_binop_v Z.mul;
           "div", int_binop_v Z.div;
           "rem", int_binop_v Z.rem;
+          "compare", cmp_binop R.assert_int Z.compare;
         ]
     );
     "text",
@@ -71,6 +93,7 @@ let values = dict [
           "from-int", fn_t int_t text_t;
           "length", fn_t text_t int_t;
           "uncons", fn_t text_t (maybe (recordType [] ["head", char_t; "tail", text_t]));
+          "compare", cmp_binop_t text_t;
         ]
     , recordVal [
           "append", R.prim (fun l -> R.prim (fun r -> R.text (R.assert_text l ^ R.assert_text r)));
@@ -88,15 +111,20 @@ let values = dict [
                         "tail", R.text (String.drop_prefix txt 1);
                       ]
                   )
-          )
+          );
+          "compare", cmp_binop R.assert_text String.compare;
         ]
     );
     "char",
     ( recordType
         [ "t", char_t ]
-        [ "to-text", fn_t char_t text_t ]
+        [
+          "to-text", fn_t char_t text_t;
+          "compare", cmp_binop_t char_t;
+        ]
     , recordVal [
         "to-text", R.prim (fun c -> R.text (String.make 1 (R.assert_char c)));
+        "compare", cmp_binop R.assert_char Char.compare;
       ]
     );
   ]

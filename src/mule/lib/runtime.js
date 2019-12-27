@@ -32,16 +32,33 @@ const $fn1 = (f) => (x, k) => () => k(f(x))
 const $fn2 = (f) => (l, k) => () => k((r, k) => () => k(f(l, r)))
 const $fn3 = (f) => (x, k) => () => k((y, k) => () => k((z, k) => () => k(f(x, y, z))))
 
+const $lt = ['LT', {}]
+const $gt = ['GT', {}]
+const $eq = ['EQ', {}]
+
+const $cmp = $fn2((l, r) => {
+  if(l < r) {
+      return $lt
+  } else if(l > r)  {
+      return $gt
+  } else {
+      return $eq
+  }
+})
+
 const int = {
   add: $fn2((x, y) => x + y),
   sub: $fn2((x, y) => x - y),
   mul: $fn2((x, y) => x * y),
   div: $fn2((x, y) => x / y),
   rem: $fn2((x, y) => x % y),
+  compare: $cmp,
+  })
 }
 
 const char = {
-	'to-text': (c, k) => k(c)
+  'to-text': (c, k) => k(c),
+  compare: $cmp,
 }
 
 const text = {
@@ -57,6 +74,7 @@ const text = {
       }]
     }
   }),
+  compare: $cmp,
   'from-int': $fn1(String),
 }
 
