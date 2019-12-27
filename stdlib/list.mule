@@ -72,5 +72,14 @@
         end
       in
       go empty
+
+  , map =
+      fn f list. match list with
+        | Nil _ -> Nil {}
+        | Cons l -> Cons {
+            , hd = f l.hd
+            , tl = map f l.tl
+          }
+      end
 }
 

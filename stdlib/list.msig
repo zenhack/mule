@@ -52,7 +52,7 @@
 #    "O(1): get the last element of the list. Return `None` if it is empty."
 #
 #  , filter : all a. (a -> bool) -> t a -> t a
-#  , map    : all a b. (a -> b) -> t a -> t b
+  , map    : all a b. (a -> b) -> t a -> t b
 #
 #  , fold       : (r : reducer) : t r.t -> r.t
 #  , fold-map   : all a. (r : reducer) -> (a -> r.t) -> r.t
