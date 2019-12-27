@@ -32,9 +32,9 @@ Runtime term:
 	                 ((App
 	                   ((GetField mul)
 	                    (Record
-	                     ((add (Prim <fun>)) (div (Prim <fun>))
-	                      (mul (Prim <fun>)) (rem (Prim <fun>))
-	                      (sub (Prim <fun>))))))
+	                     ((add (Prim <fun>)) (compare (Prim <fun>))
+	                      (div (Prim <fun>)) (mul (Prim <fun>))
+	                      (rem (Prim <fun>)) (sub (Prim <fun>))))))
 	                  (Var 0)))
 	                (App
 	                 ((Var 2)
@@ -43,9 +43,9 @@ Runtime term:
 	                     ((App
 	                       ((GetField sub)
 	                        (Record
-	                         ((add (Prim <fun>)) (div (Prim <fun>))
-	                          (mul (Prim <fun>)) (rem (Prim <fun>))
-	                          (sub (Prim <fun>))))))
+	                         ((add (Prim <fun>)) (compare (Prim <fun>))
+	                          (div (Prim <fun>)) (mul (Prim <fun>))
+	                          (rem (Prim <fun>)) (sub (Prim <fun>))))))
 	                      (Var 0)))
 	                    (Const (Integer 1))))))))))))))
 	        (Var 0)))))))

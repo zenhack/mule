@@ -60,9 +60,9 @@ Runtime term:
 	                   ((App
 	                     ((GetField add)
 	                      (Record
-	                       ((add (Prim <fun>)) (div (Prim <fun>))
-	                        (mul (Prim <fun>)) (rem (Prim <fun>))
-	                        (sub (Prim <fun>))))))
+	                       ((add (Prim <fun>)) (compare (Prim <fun>))
+	                        (div (Prim <fun>)) (mul (Prim <fun>))
+	                        (rem (Prim <fun>)) (sub (Prim <fun>))))))
 	                    (Const (Integer 1))))
 	                  (App ((Var 2) (App ((GetField tl) (Var 0)))))))))))
 	            (Nil (BLeaf (Lam (0 () (Const (Integer 0))))))))
