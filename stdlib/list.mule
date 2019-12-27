@@ -42,6 +42,28 @@
 #      in
 #      fn l r. go (reverse l) r
 
+#  , take =
+#      fn count lst. match lst with
+#        | Nil _ -> Nil {}
+#        | Cons l -> match int.compare count 0 with
+#            | GT _ -> Cons {
+#                , hd = l.hd
+#                , tl = take (int.sub count 1) l.tl
+#              }
+#            | _ -> Nil {}
+#          end
+#      end
+
+  , drop =
+      fn count lst. match lst with
+        | Nil _ -> Nil {}
+        | Cons l ->
+            match int.compare count 0 with
+              | GT _ -> drop (int.sub count 1) l.tl
+              | _ -> lst
+            end
+      end
+
   , reverse =
       let go =
         fn accum list. match list with

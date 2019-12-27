@@ -23,12 +23,12 @@
 #  , append : all a. t a -> t a -> t a
 #    "O(log n): Append two lists."
 #
-#  , take  : all a. int -> t a -> t a
+#  , take : all a. int -> t a -> t a
 #    "O(log n): Take the first n elements of the list."
-#
-#  , drop  : all a. int -> t a -> t a
-#    "O(log n): Drop the first n elements of the list."
-#
+
+  , drop : all a. int -> t a -> t a
+    "O(log n): Drop the first n elements of the list."
+
 #  , slice : all a. int -> int -> t a -> t a
 #    """O(log n): Extract a sub-range of the list.
 #
