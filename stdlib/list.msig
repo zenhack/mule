@@ -17,7 +17,7 @@
   , cons : all a. a -> t a -> t a
     "O(1): Add an element to the front of the list."
 
-#  , snoc : all a. a -> t a -> t a
+#  , snoc : all a. t a -> a -> t a
 #    "O(1): Add an element to the back of the list."
 #
 #  , append : all a. t a -> t a -> t a

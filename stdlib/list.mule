@@ -22,7 +22,7 @@
         | Cons _ -> False {}
       end
 
-#  , singleton = fn x. cons x empty
+  , singleton = fn x. cons x empty
 
   , cons =
       fn x xs. Cons {
