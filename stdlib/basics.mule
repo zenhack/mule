@@ -1,31 +1,13 @@
 {
-  , type bool = True {} | False {}
-  , bool = {
-      , type t = bool
-      , or : bool -> bool -> bool =
-          fn x y. match x with
-            | False _ -> y
-            | _ -> x
-          end
-      , and : bool -> bool -> bool =
-          fn x y. match x with
-            | True _ -> y
-            | _ -> x
-          end
-      , not : bool -> bool =
-          fn x. match x with
-            | True _ -> False {}
-            | False _ -> True {}
-          end
-    }
-  , type ordering = LT {} | EQ {} | GT {}
-  , type order = {
-      , type t
-      , compare : t -> t -> ordering
-    }
-
-  , maybe = import "maybe"
+  , type bool = import "bool".t
   , type maybe a = import "maybe".t a
 
+  , bool = import "bool"
+  , maybe = import "maybe"
+
+  , order = import "order"
+
+  , type order = import "order".sig
   , type mappable = import "mappable".sig
+  , type thenable = import "thenable".sig
 }

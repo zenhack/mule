@@ -1,0 +1,6 @@
+{
+  , type sig = {
+      , type cmd a
+      , then : all a b. cmd a -> (a -> cmd b) -> cmd b
+    }
+}

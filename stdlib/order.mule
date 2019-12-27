@@ -1,0 +1,7 @@
+{
+  , type result = LT {} | EQ {} | GT {}
+  , type sig = {
+      , type t
+      , compare : t -> t -> result
+    }
+}

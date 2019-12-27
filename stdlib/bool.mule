@@ -1,0 +1,18 @@
+{
+  , type t = True {} | False {}
+  , or : t -> t -> t =
+      fn x y. match x with
+        | False _ -> y
+        | _ -> x
+      end
+  , and : t -> t -> t =
+      fn x y. match x with
+        | True _ -> y
+        | _ -> x
+      end
+  , not : t -> t =
+      fn x. match x with
+        | True _ -> False {}
+        | False _ -> True {}
+      end
+}
