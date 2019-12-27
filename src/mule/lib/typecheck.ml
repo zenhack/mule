@@ -803,7 +803,7 @@ and check_record ctx DE.{rec_types; rec_vals} want_types want_vals ~reason =
       (List.concat rec_types)
       ~init:( all krow (fun x -> x)
             , ctx
-            )
+      )
       ~f:(fun (r, ctx) (v, t) ->
         let t' = make_type ctx t in
         let r' = extend (Common_ast.var_to_label v) t' r in
@@ -821,7 +821,7 @@ and check_record ctx DE.{rec_types; rec_vals} want_types want_vals ~reason =
       ~init:( empty
             , Map.empty (module Var)
             , ctx
-            )
+      )
       ~f:(fun (row, exp_map, ctx) (v, e) ->
         let tyvar = fresh_local ctx `Flex ktype in
         ( extend (Common_ast.var_to_label v) tyvar row
