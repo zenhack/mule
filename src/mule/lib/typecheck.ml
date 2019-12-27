@@ -1336,7 +1336,7 @@ let rec gen_kind = function
   | `Row -> krow
   | `Unknown -> gen_k ()
 
-let typecheck ~get_import_type ~want exp =
+let typecheck ~get_import_type ~want ~export exp =
   let ctx = make_initial_context ~get_import_type in
   let exp = List.fold_left want ~init:exp ~f:(fun wt_expr (wt_src, wt_type) ->
       DE.WithType {
@@ -1347,7 +1347,11 @@ let typecheck ~get_import_type ~want exp =
     )
   in
   let exp = DE.map exp ~f:gen_kind in
-  synth ctx exp
+  let ty = synth ctx exp in
+  if export then
+    unpack_exist ctx ty
+  else
+    ty
 
 module Tests = struct
   module Helpers = struct

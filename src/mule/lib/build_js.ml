@@ -20,6 +20,7 @@ let build src dest =
     Load.load_file
       loader
       ~base_path:src
+      ~export:true (* Arbitrary, since we don't use the type directly. *)
       ~types:(if Config.no_js_type_requirement () then
           []
         else

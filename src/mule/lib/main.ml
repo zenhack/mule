@@ -2,7 +2,11 @@ let interp_cmd = function
   | `Repl ->
       Repl.loop ()
   | `Eval path ->
-      Load.load_file (Load.new_loader ()) ~base_path:path ~types:[]
+      Load.load_file
+        (Load.new_loader ())
+        ~base_path:path
+        ~types:[]
+        ~export:false
       |> Run.run_load_result
   | `Build_js Cli.{src; dest} ->
       Build_js.build src dest
@@ -16,6 +20,7 @@ let interp_cmd = function
               Load.load_file
                 (Load.new_loader ())
                 ~base_path:file
+                ~export:true (* Arbitrary, since we don't use the type. *)
                 ~types:[(`Main, runner.Runners.want_type)]
             in
             Lazy.force rt_expr

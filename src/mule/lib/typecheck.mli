@@ -6,5 +6,6 @@ val typecheck
    * e.g. if want is `[a; b; c]`, then the expression `e` will be
    * type checked like `(((e : a) : b) : c)`. *)
   -> want:(requirement list)
+  -> export:bool
   -> Desugared_ast.Kind.maybe_kind Desugared_ast_expr_t.t
   -> Typecheck_types_t.u_var

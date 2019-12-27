@@ -8,12 +8,14 @@ val load_surface_ast
   : loader
   -> expr:Surface_ast.Expr.lt
   -> extra_types:(Typecheck_t.requirement list)
+  -> export:bool
   -> result
 
 val load_file
   : loader
   -> base_path:string
   -> types:(Typecheck_t.requirement list)
+  -> export:bool
   -> result
 
 (* Return a list of all the files loaded by the loader, in dependency order. *)

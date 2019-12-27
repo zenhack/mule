@@ -20,7 +20,7 @@ let maybe_chop_suffix str suffix =
     str
 
 
-let rec load_surface_ast loader ~typ ~expr ~extra_types =
+let rec load_surface_ast loader ~typ ~expr ~export ~extra_types =
   Lint.check_expr expr;
   Option.iter typ ~f:(fun (_, t) -> Lint.check_type t);
   let dexp = Desugar.desugar expr in
@@ -35,6 +35,7 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
     Typecheck.typecheck
       dexp
       ~want:(Option.to_list dtyp @ extra_types)
+      ~export
       ~get_import_type:(fun path ->
         let {typ_var; _} = get_or_load loader path in
         typ_var
@@ -75,12 +76,13 @@ let rec load_surface_ast loader ~typ ~expr ~extra_types =
   in
   let var = Gensym.anon_var () in
   {typ; typ_var; rt_expr; js_expr; var}
-and load_file loader ~base_path ~types =
+and load_file loader ~base_path ~types ~export =
   load_path
     loader
     ~base_path:(maybe_chop_suffix base_path ".mule")
+    ~export
     ~types
-and load_path loader ~base_path ~types =
+and load_path loader ~base_path ~types ~export =
   let parse_all parser_ path =
     let full_path = Caml.Sys.getcwd () ^ "/" ^ path in
     let src = Stdio.In_channel.read_all path in
@@ -109,7 +111,7 @@ and load_path loader ~base_path ~types =
     else
       None
   in
-  let result = load_surface_ast loader ~typ ~expr ~extra_types:types in
+  let result = load_surface_ast loader ~typ ~expr ~extra_types:types ~export in
   (* TODO: normalize the path; right now it's still relative. *)
   loader.results := Map.set !(loader.results) ~key:base_path ~data:result;
   result
@@ -130,6 +132,7 @@ and get_or_load loader path =
         { loader with current = Some path }
         ~base_path:path
         ~types:[]
+        ~export:true
 
 
 let load_surface_ast loader ~expr ~extra_types =
