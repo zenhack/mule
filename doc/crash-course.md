@@ -165,6 +165,17 @@ That is:
 * A dot `.`
 * The body of the expression, which is a function.
 
+We'll see later that the parameters can be any "pattern," not just
+variables, but for now we'll assume they are variables. Legal variable
+names must:
+
+* Start with a lower case letter or underscore
+* Consisit of only letters, numbers, and the characters `_`, `-`, `!`,
+  and `?`.
+* Right now identifiers are ascii-only. Eventually we will likely allow
+  any unicode letter, to support developers who speak languages other
+  than English.
+
 You'll notice that the repl won't display the details of a function;
 instead, it will just say `<lambda>`. It will still give you the type
 however. There are a few other sorts of value that will do something
@@ -204,12 +215,84 @@ Is equivalent to:
 (f x) y
 ```
 
-## Let expressions
+## Unions
+
+Like most ML dialects, mule supports (tagged) union types. Unlike
+most ML dialects, you don't have to declare them anywhere (somewhat like
+OCaml's polymorphic variants).  A union tag starts with an uppercase
+letter, and otherwise allows the same characters as variable names.
+
+```
+#mule> SomeTaggedValue 4
+it : SomeTaggedValue int =
+  SomeTaggedValue 4
+#mule> ATagIJustMadeUp "hello"
+it : ATagIJustMadeUp text
+  ATagIJustMadeUp
+```
+
+Currently tags always accept exactly one argument. This will probably
+change in the future, to allow zero or multiple arguments.
+
+## Match expressions
 
 If you've been following along in the repl thus far, you may now want to
 switch to editing a `.mule` source file and running `mule eval`, as our
 expressions are about to get bigger, and we'll want more than one line
 to work with.
+
+Unions are most useful when combined with the match expression, a
+cornerstone of the ML family. In Mule it looks like this:
+
+```
+match ValueToLookAt "Hello" with
+| UnViewable n -> int.add n 4
+| ValueToLookAt "Goodbye" -> 0
+| ValueToLookAt t -> text.length t
+end
+```
+
+That is, it takes the form:
+
+```
+match <expression> with
+| <pattern> -> <expression>
+| <pattern> -> <expression>
+| ...
+end
+```
+
+The first pipe is optional, so if you have a short list of patterns you
+can do:
+
+```
+match x with Left y -> y | Right z -> z end
+```
+
+Patterns can be any of:
+
+* A variable name
+* A tag applied to another pattern
+* A constant literal, like `"hello"`, `4`, `'x'`
+* The wildcard pattern `_`
+
+In terms of evaluation, match expressions work the same way they do in
+other ML dialects: The first expression is compared against the
+patterns, and the whole match expression evaluates to the expression
+in the first branch that matches. Inside the expression, any variables
+in the pattern are bound to the corresponding part of the value.
+
+Mule will insist that the patterns in a match are exhaustive, so for
+example, this will be rejected:
+
+```
+match x with
+| 1 -> "one"
+| 2 -> "two"
+end
+```
+
+## Let expressions
 
 Let expressions can be used to bind the value of an expression to a
 variable, which can be used in the body of the let. The most basic
@@ -237,15 +320,6 @@ it : int =
   5
 ```
 
-Legal variable names must:
-
-* Start with a lower case letter or underscore
-* Consisit of only letters, numbers, and the characters `_`, `-`, `!`,
-  and `?`.
-* Right now identifiers are ascii-only. Eventually we will likely allow
-  any unicode letter, to support developers who speak languages other
-  than English.
-
 There is no special syntax for defining functions; just use a `let` and
 a lambda:
 
@@ -266,7 +340,6 @@ mule is to put commas *in front* of the definitions, at the beginning of
 the line, rather than after them at the end.  To make editing lists of
 bindings easier, a leading comma is allowed before the first binding:
 
-
 ```
 let
   , sender = "alice"
@@ -282,6 +355,35 @@ comma. Think of it as a bulleted list if that helps you.
 
 In general, wherever commas are used as separators in Mule, a leading
 comma is permitted.
+
+Let expressions create (mutually) recursive bindings, so these are
+legal:
+
+```
+let length =
+  fn list. match list with
+    | Nil _ -> 0
+    | Cons l -> 1 + length l.tail
+  end
+in
+length (Cons { head = 'x', tail = Nil {} })
+```
+
+```
+let
+  , even =
+      fn n. match n with
+        | 0 -> True {}
+        | _ -> odd (int.sub n 1)
+      end
+  , odd =
+      fn n. match n with
+        | 0 -> False {}
+        | _ -> even n
+      end
+in
+even 2
+```
 
 ## Records
 
