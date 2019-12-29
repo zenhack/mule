@@ -70,6 +70,43 @@ let show_type_annotation_err (src, ty) =
   end
   ^ "\n\n" ^ Desugared_ast_type.to_string ty
 
+let show_getfield_error ~path:TypePath.{segs; _} ~actual =
+  let rec which_record_part = function
+    | `RecordPart p :: _ -> p
+    | _ :: ps -> which_record_part ps
+    | [] ->
+        MuleErr.bug (
+          "TypePath for record field access doesn't include a "
+            ^ "`RecordPart segment."
+          )
+  in
+  let rec go = function
+    | [] -> String.concat [
+        "The expression at "; "<TODO>"; " is not a record; you cannot ";
+        "access its fields with the `.` operator.\n";
+        "For reference, its actual type is:\n\n";
+        Desugared_ast_type.to_string actual;
+      ]
+    | `RowLabel lbl :: ps -> String.concat [
+        "The record at "; "<TODO>"; " does not have ";
+        begin match which_record_part ps with
+          | `Type -> "an associated type";
+          | `Value -> "a field"
+        end;
+        " named "; Label.to_string lbl; " it cannot be accessed using";
+        " the `.` operator.\n";
+        "For reference, its actual type is:\n\n";
+        Desugared_ast_type.to_string actual;
+      ]
+    | `RowTail :: rest -> go rest
+    | ps ->
+       MuleErr.bug (
+         "Unexpected TypePath for `GetField reason: "
+         ^ Sexp.to_string_hum (List.sexp_of_t TypePath.sexp_of_seg ps)
+       )
+  in
+  go segs
+
 let show_cant_instantiate
     {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path; ci_reason}
   =
@@ -80,8 +117,10 @@ let show_cant_instantiate
   match vi_binder, ci_other with
   | Some (`Quant q), `Type ty ->
       let sub, super = ci_path.TypePath.roots in
-      let sub = sub |> Extract.get_var_type |> Desugared_ast_type.to_string  in
-      let super = super |> Extract.get_var_type |> Desugared_ast_type.to_string in
+      let sub = sub |> Extract.get_var_type in
+      let sub_str = sub |> Desugared_ast_type.to_string in
+      let super = super |> Extract.get_var_type in
+      let super_str = super |> Desugared_ast_type.to_string in
       let ty = Desugared_ast_type.to_string ty in
       String.concat [
         begin match NonEmpty.rev ci_reason with
@@ -90,11 +129,13 @@ let show_cant_instantiate
               "\n\n";
               "but its actual type is:";
               "\n\n";
-              sub;
+              sub_str;
               "\n\n";
             ]
+          | (`GetField _, _) ->
+              show_getfield_error ~path:ci_path ~actual:sub
           | _ -> String.concat [
-              "Mismatched types: `"; sub ; "` and `"; super ; "`.\n";
+              "Mismatched types: `"; sub_str ; "` and `"; super_str ; "`.\n";
             ]
         end;
         "We can't set the type variable `"; name; "` to "; ty; ", because ";
@@ -172,42 +213,7 @@ let show_type_error err = match err with
             "For reference, its actual type is:\n\n";
             Desugared_ast_type.to_string se_sub;
           ]
-        | (`GetField _, _) ->
-            let rec which_record_part = function
-              | `RecordPart p :: _ -> p
-              | _ :: ps -> which_record_part ps
-              | [] ->
-                  MuleErr.bug (
-                    "TypePath for record field access doesn't include a "
-                      ^ "`RecordPart segment."
-                    )
-            in
-            let rec go = function
-              | [] -> String.concat [
-                  "The expression at "; "<TODO>"; " is not a record; you cannot ";
-                  "access its fields with the `.` operator.\n";
-                  "For reference, its actual type is:\n\n";
-                  Desugared_ast_type.to_string se_sub;
-                ]
-              | `RowLabel lbl :: ps -> String.concat [
-                  "The record at "; "<TODO>"; " does not have ";
-                  begin match which_record_part ps with
-                    | `Type -> "an associated type";
-                    | `Value -> "a field"
-                  end;
-                  " named "; Label.to_string lbl; " it cannot be accessed using";
-                  " the `.` operator.\n";
-                  "For reference, its actual type is:\n\n";
-                  Desugared_ast_type.to_string se_sub;
-                ]
-              | `RowTail :: rest -> go rest
-              | ps ->
-                 MuleErr.bug (
-                   "Unexpected TypePath for `GetField reason: "
-                   ^ Sexp.to_string_hum (List.sexp_of_t TypePath.sexp_of_seg ps)
-                 )
-            in
-            go se_path.TypePath.segs
+        | (`GetField _, _) -> show_getfield_error ~path:se_path ~actual:se_sub
         | (`Unspecified, _) ->
             String.concat [
               "<TODO>: Get rid of unspecified reasons.\n";
