@@ -2,6 +2,22 @@ include Desugared_ast_expr_t
 open Common_ast
 module Type = Desugared_ast_type
 
+let get_src_expr: 'a t -> Surface_ast.Expr.lt option = function
+  | Var {v_src = `Sourced v; _} ->
+      Some Loc.{
+          l_value = Surface_ast.Expr.Var {v_var = v};
+          l_loc = v.l_loc;
+        }
+  | WithType {wt_src = `WithType(e, ty); _} -> Some Loc.{
+      l_loc = spanning e.l_loc ty.l_loc;
+      l_value = Surface_ast.Expr.WithType {
+          wt_term = e;
+          wt_type = ty;
+        }
+    }
+  | _ ->
+      None
+
 let rec sexp_of_t = function
   | Embed { e_path; _ } ->
       Sexp.List [Sexp.Atom "embed"; Sexp.Atom e_path]

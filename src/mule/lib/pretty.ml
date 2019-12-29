@@ -70,7 +70,12 @@ let show_type_annotation_err (src, ty) =
   end
   ^ "\n\n" ^ Desugared_ast_type.to_string ty
 
-let show_getfield_error ~path:TypePath.{segs; _} ~actual =
+let expr_loc expr =
+  Desugared_ast_expr.get_src_expr expr
+  |> Option.map ~f:(fun Loc.{l_loc; _} -> Loc.pretty_t l_loc)
+  |> Option.value ~default:"<TODO>"
+
+let show_getfield_error (_, expr) ~path:TypePath.{segs; _} ~actual =
   let rec which_record_part = function
     | `RecordPart p :: _ -> p
     | _ :: ps -> which_record_part ps
@@ -80,15 +85,16 @@ let show_getfield_error ~path:TypePath.{segs; _} ~actual =
             ^ "`RecordPart segment."
           )
   in
+  let expr_loc = expr_loc expr in
   let rec go = function
     | [] -> String.concat [
-        "The expression at "; "<TODO>"; " is not a record; you cannot ";
+        "The expression at "; expr_loc; " is not a record; you cannot ";
         "access its fields with the `.` operator.\n";
         "For reference, its actual type is:\n\n";
         Desugared_ast_type.to_string actual;
       ]
     | `RowLabel lbl :: ps -> String.concat [
-        "The record at "; "<TODO>"; " does not have ";
+        "The record at "; expr_loc; " does not have ";
         begin match which_record_part ps with
           | `Type -> "an associated type";
           | `Value -> "a field"
@@ -132,8 +138,8 @@ let show_cant_instantiate
               sub_str;
               "\n\n";
             ]
-          | (`GetField _, _) ->
-              show_getfield_error ~path:ci_path ~actual:sub
+          | (`GetField gf, _) ->
+              show_getfield_error gf ~path:ci_path ~actual:sub
           | _ -> String.concat [
               "Mismatched types: `"; sub_str ; "` and `"; super_str ; "`.\n";
             ]
@@ -207,13 +213,14 @@ let show_type_error err = match err with
             "\n\n";
             Desugared_ast_type.to_string se_super;
           ]
-        | (`RecordUpdate(_lbl, _record, _new), _) -> String.concat [
-            "The expression at "; "<TODO>"; " is not a record; it cannot be ";
-            "updated using `where`.\n";
-            "For reference, its actual type is:\n\n";
-            Desugared_ast_type.to_string se_sub;
-          ]
-        | (`GetField _, _) -> show_getfield_error ~path:se_path ~actual:se_sub
+        | (`RecordUpdate(_lbl, record, _new), _) ->
+            String.concat [
+              "The expression at "; expr_loc record; " is not a record; it cannot be ";
+              "updated using `where`.\n";
+              "For reference, its actual type is:\n\n";
+              Desugared_ast_type.to_string se_sub;
+            ]
+        | (`GetField gf, _) -> show_getfield_error gf ~path:se_path ~actual:se_sub
         | (`Unspecified, _) ->
             String.concat [
               "<TODO>: Get rid of unspecified reasons.\n";
