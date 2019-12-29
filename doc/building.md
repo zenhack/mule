@@ -47,8 +47,6 @@ $ ./mule
 To install mule as an opam package, type `make install`. This should put
 a `mule` executable in your path.
 
-TODO: talk about MULE_PATH.
-
 [1]: https://opam.ocaml.org
 [2]: https://brew.sh
 [3]: https://opam.ocaml.org/doc/Install.html
