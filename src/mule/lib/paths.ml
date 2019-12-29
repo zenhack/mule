@@ -1,6 +1,15 @@
 
 include Paths_t
 
+let mule_root = match Caml.Sys.getenv_opt "MULE_ROOT" with
+  | Some p -> p
+  | None ->
+      failwith (String.concat [
+        "ERROR: the environment variable $MULE_ROOT is not set. ";
+        "Please set it to the directory containing the mule standard ";
+        "library, and try again.";
+      ])
+
 let sexp_of_t = function
   | `Relative s -> Sexp.List [Sexp.Atom "Relative"; Sexp.Atom s]
   | `Absolute s -> Sexp.List [Sexp.Atom "Absolute"; Sexp.Atom s]
@@ -8,13 +17,23 @@ let sexp_of_t = function
 let base_filepath = function
   | `Relative p -> p
   | `Absolute p ->
-      let mule_path =
-        match Caml.Sys.getenv_opt "MULE_PATH" with
-        | Some p -> p
-        | None ->
-            Caml.Sys.getenv "HOME" ^ "/mule-src"
-      in
-      mule_path ^ "/" ^ p
+    (* If the first path segment contains a dot, then it's a url-ish
+     * path like gitlab.com/user/repo, and we should look in $MULE_PATH
+     * for a third-party package. Otherwise, it's part of the stdlib,
+     * and we should look in $MULE_ROOT.
+     *)
+      begin match String.find p ~f:(fun c -> Char.equal c '/' || Char.equal c '.') with
+        | Some '.' ->
+            let mule_path =
+              match Caml.Sys.getenv_opt "MULE_PATH" with
+              | Some p -> p
+              | None ->
+                  Caml.Sys.getenv "HOME" ^ "/mule-src"
+            in
+            mule_path ^ "/" ^ p
+        | _ ->
+            mule_root ^ "/" ^ p
+      end
 
 let validate_parts ~loc parts =
   let path = String.concat ~sep:"/" parts in

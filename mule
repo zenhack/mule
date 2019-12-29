@@ -2,6 +2,6 @@
 
 set -e
 cd $(dirname $0)
-export MULE_PATH="$PWD/stdlib"
+export MULE_ROOT="$PWD/stdlib"
 make
 ./_build/default/src/mule/mule.exe $@
