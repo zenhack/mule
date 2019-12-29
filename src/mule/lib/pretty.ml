@@ -82,8 +82,8 @@ let show_getfield_error (_, expr) ~path:TypePath.{segs; _} ~actual =
     | [] ->
         MuleErr.bug (
           "TypePath for record field access doesn't include a "
-            ^ "`RecordPart segment."
-          )
+          ^ "`RecordPart segment."
+        )
   in
   let expr_loc = expr_loc expr in
   let rec go = function
@@ -106,10 +106,10 @@ let show_getfield_error (_, expr) ~path:TypePath.{segs; _} ~actual =
       ]
     | `RowTail :: rest -> go rest
     | ps ->
-       MuleErr.bug (
-         "Unexpected TypePath for `GetField reason: "
-         ^ Sexp.to_string_hum (List.sexp_of_t TypePath.sexp_of_seg ps)
-       )
+        MuleErr.bug (
+          "Unexpected TypePath for `GetField reason: "
+          ^ Sexp.to_string_hum (List.sexp_of_t TypePath.sexp_of_seg ps)
+        )
   in
   go segs
 

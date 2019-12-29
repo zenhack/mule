@@ -4,7 +4,7 @@ type import_src =
   [ `Generated
   | `SurfaceImport of Surface_ast.Import.lt
   ]
-  [@@deriving sexp_of]
+[@@deriving sexp_of]
 
 type import = {
   i_orig_path: string;
