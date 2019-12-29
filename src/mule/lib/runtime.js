@@ -53,7 +53,6 @@ const int = {
   div: $fn2((x, y) => x / y),
   rem: $fn2((x, y) => x % y),
   compare: $cmp,
-  })
 }
 
 const char = {
