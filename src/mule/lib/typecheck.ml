@@ -528,7 +528,9 @@ and synth: context -> 'i DE.t -> u_var =
             (check ctx
                 uv_record
                 (record rt rv)
-                ~reason:(NonEmpty.singleton (`RecordUpdate e)));
+                ~reason:(NonEmpty.singleton (
+                    `RecordUpdate(uv_lbl, uv_record, `Val(uv_val))
+                  )));
           let val_t = synth ctx uv_val in
           record rt (extend uv_lbl val_t rv)
         )
@@ -540,7 +542,9 @@ and synth: context -> 'i DE.t -> u_var =
             check ctx
               ut_record
               (record rt rv)
-              ~reason:(NonEmpty.singleton (`RecordUpdate e))
+              ~reason:(NonEmpty.singleton (
+                  `RecordUpdate (ut_lbl, ut_record, `Type(ut_type))
+                ))
           in
           record (extend ut_lbl (make_type ctx ut_type) rt) rv
         )

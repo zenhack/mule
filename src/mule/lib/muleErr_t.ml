@@ -7,7 +7,13 @@ module TT = Typecheck_types_t
 
 (* A reason for a subtyping constraint. *)
 type subtype_reason =
-  [ `RecordUpdate of TT.k_var DE.t
+  [ `RecordUpdate of
+      ( Label.t
+        * TT.k_var DE.t
+        * [ `Val of TT.k_var DE.t
+          | `Type of TT.k_var DT.t
+        ]
+      )
   | `TypeAnnotation of  (DE.withtype_src * TT.k_var DT.t)
   | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t * TT.u_var)
   | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src
