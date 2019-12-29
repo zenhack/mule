@@ -11,7 +11,7 @@ install: all
 	dune install mule
 	dune install mule-stdlib
 check: all
-	dune runtest
+	MULE_ROOT=$(PWD)/stdlib dune runtest
 clean:
 	rm -rf _build tests/*.check tests/*.actual
 format:
