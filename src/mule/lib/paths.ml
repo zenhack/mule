@@ -4,11 +4,17 @@ include Paths_t
 let mule_root = match Caml.Sys.getenv_opt "MULE_ROOT" with
   | Some p -> p
   | None ->
-      failwith (String.concat [
-        "ERROR: the environment variable $MULE_ROOT is not set. ";
-        "Please set it to the directory containing the mule standard ";
-        "library, and try again.";
-      ])
+      try
+        Findlib.package_directory "mule-stdlib"
+          ^ "/../../share/mule-stdlib"
+      with Findlib.No_such_package _ ->
+        failwith (String.concat [
+          "ERROR: the environment variable $MULE_ROOT is not set, ";
+          "and the mule standard library is not installed. Please ";
+          "either install the mule-stdlib ocaml package or set ";
+          "$MULE_ROOT to the directory containing the mule standard ";
+          "library, and try again.";
+        ])
 
 let sexp_of_t = function
   | `Relative s -> Sexp.List [Sexp.Atom "Relative"; Sexp.Atom s]

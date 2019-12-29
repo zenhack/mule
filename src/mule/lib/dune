@@ -16,6 +16,7 @@
     unionFind
     tsort
 
+    findlib
     base
     stdio
     lwt

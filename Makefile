@@ -9,6 +9,7 @@ all:
 install: all
 	dune build @install
 	dune install mule
+	dune install mule-stdlib
 check: all
 	dune runtest
 clean:

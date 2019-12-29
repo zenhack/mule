@@ -19,3 +19,6 @@
 
 (package
   (name tsort))
+
+(package
+  (name mule-stdlib))

@@ -1,0 +1,15 @@
+(install
+  (files
+    ; find . -type f -name '*.m*'
+    ./thenable.mule
+    ./basics.mule
+    ./list.msig
+    ./order.mule
+    ./ffi/js.mule
+    ./mappable.mule
+    ./bool.mule
+    ./list.mule
+    ./maybe.mule
+    )
+  (section share)
+  (package mule-stdlib))
