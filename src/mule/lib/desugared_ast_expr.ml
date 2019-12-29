@@ -15,6 +15,8 @@ let get_src_expr: 'a t -> Surface_ast.Expr.lt option = function
           wt_type = ty;
         }
     }
+  | Import {i_src = `SurfaceImport li; _} ->
+      Some (Loc.map li ~f:(fun i -> Surface_ast.Expr.Import i))
   | _ ->
       None
 

@@ -13,6 +13,9 @@ module Import = struct
     i_from: string;
   }
   [@@deriving sexp_of]
+
+  type lt = t Loc.located
+  [@@deriving sexp_of]
 end
 
 module Type = struct

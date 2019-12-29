@@ -295,7 +295,7 @@ let rec desugar_type' ty = match ty.Loc.l_value with
             , Loc.{l_value = `Var l_value; l_loc}
             )
         | `Import Loc.{l_value; l_loc} ->
-            ( `Import (desugar_import l_value)
+            ( `Import (desugar_import l_loc l_value)
             , Loc.{l_value = `Import l_value; l_loc}
             )
       in
@@ -376,7 +376,7 @@ and desugar_type t =
   desugar_type' t
   |> quantify_opaques
   |> hoist_assoc_types
-and desugar_import {i_path; i_from} =
+and desugar_import imp_loc ({i_path; i_from} as i) =
   let Loc.{l_value; l_loc} = i_path in
   {
     i_loc = Some l_loc;
@@ -386,10 +386,14 @@ and desugar_import {i_path; i_from} =
         ~here:i_from
         ~loc:l_loc
         ~target:l_value;
+    i_src = `SurfaceImport Loc.{
+        l_loc = imp_loc;
+        l_value = i;
+      };
   }
 and desugar Loc.{l_value = e; l_loc} = match e with
   | S.Import i ->
-      D.Import (desugar_import i)
+      D.Import (desugar_import l_loc i)
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
@@ -413,13 +417,13 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       let empty =
         D.GetField {
           gf_lbl = Label.of_string "empty";
-          gf_record = D.Import (DC.import_abs "list");
+          gf_record = D.Import (DC.import_abs `Generated "list");
         }
       in
       let cons =
         D.GetField{
           gf_lbl = Label.of_string "cons";
-          gf_record = D.Import (DC.import_abs "list");
+          gf_record = D.Import (DC.import_abs `Generated "list");
         };
       in
       List.fold_right
