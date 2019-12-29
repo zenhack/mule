@@ -2,6 +2,9 @@
 #
 # Obviously, this is very low-level; you wouldn't really write
 # hello world this way; it's just to demo the ffi.
+#
+# Build with `mule build-js hello-js.mule`. The output should
+# work either as a stand-alone node.js script or in the browser.
 fn js global.
   js.then (js.get-prop "console" global) fn console.
   js.then (js.get-prop "log" console) fn log.

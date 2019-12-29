@@ -2,18 +2,18 @@
 #
 # This uses a few features that are not yet implemented. In particular:
 #
-# * Macros (~run and ~if)
+# * Macros (~run, ~if, etc).
 # * Infix operators (<=, <|, and ==).
 fn io.
   let go = fn n.
-    ~run io [
-      , ~if (n <= 100) <|
-          ~if [
+    ~run io <|
+      ~if (n <= 100) <| ~seq [
+        , ~if [
             , [ mod n 15 == 0, ~do io.println "FizzBuzz" ]
             , [ mod n 3 == 0, ~do io.println "Fizz" ]
             , [ mod n 5 == 0, ~do io.println "Buzz" ]
           ]
-      , go (n + 1)
-    ]
+        , go (n + 1)
+      ]
   in
   go 0

@@ -1,2 +1,3 @@
 # Read a line of input from the user, then print it back out.
+# Run this with `mule run root-io echo.mule`.
 fn io. io.then io.get-line io.print
