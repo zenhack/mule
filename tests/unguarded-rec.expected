@@ -1,0 +1,5 @@
+
+Desugared:
+
+	(: (Integer 4) (rec a a))
+Type error: Unguarded recursive type `rec a. a`. Recursively-bound type variables must be "guarded" by a union, record, or function.

@@ -52,6 +52,7 @@ type type_error =
   | `MismatchedKinds of (kind * kind)
   | `OccursCheckKind
   | `CantInstantiate of cant_instantiate
+  | `UnguardedRecursiveType of string
   ]
 
 type path_error =  {

@@ -969,8 +969,10 @@ and unify_already_whnf
             (* This can happen if the user supplies the type `rec a. a`. Normally,
              * the rec-bound variable gets replaced with the body but if the variable
              * is ungarded like that it sticks around. *)
-            MuleErr.bug ("TODO(better errors): unguarded recursive type: rec " ^ var ^ ". " ^ var)
-
+            MuleErr.throw
+              (`TypeError
+                (`UnguardedRecursiveType
+                    ("rec " ^ var ^ ". " ^ var)))
         | _, `Bound _ | `Bound _, _ ->
             (* This should never happen. *)
             MuleErr.bug "Tried to unify distinct bound variables!"

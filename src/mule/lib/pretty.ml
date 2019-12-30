@@ -171,6 +171,10 @@ let show_cant_instantiate
       ]
 
 let show_type_error err = match err with
+  | `UnguardedRecursiveType t -> String.concat [
+      "Unguarded recursive type `"; t; "`. Recursively-bound type variables ";
+      "must be \"guarded\" by a union, record, or function.";
+    ]
   | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
   | `OccursCheckKind ->
