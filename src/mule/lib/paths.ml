@@ -53,7 +53,7 @@ let validate_parts ~loc parts =
               })
       )
     | _ -> String.iter part ~f:(fun c ->
-        if not (Char.is_alphanum c ) then
+        if not (Char.is_alphanum c) || Char.is_uppercase c then
           begin match c with
             | '-' | '_' | '.' -> ()
             | _ -> MuleErr.(
