@@ -387,4 +387,220 @@ even 2
 
 ## Records
 
-...
+Records are used to group multiple values. Example:
+
+```
+#mule> { age = 34, name = "Alice" }
+it : {name : text, age : int} =
+  {age = 34, name = "Alice"}
+```
+
+You can access individual fields using the dot (`.`) operator:
+
+```
+#mule> { age = 34, name = "Alice" }.name
+it : text =
+  "Alice"
+```
+
+You can create a modified copy of the record, with fields added or
+replaced, using `where`. This:
+
+```
+let alice = { age = 34, name = "Alice" } in
+alice where { age = 39 }
+```
+
+...results in:
+
+```
+it : {name : text, age : int} =
+  { age = 39, name = "Alice }
+```
+
+You can add fields. This:
+
+```
+let alice = { age = 34, name = "Alice" } in
+alice where { favorite-color = "blue" }
+```
+
+Yields:
+
+```
+it : {favorite-color : text, name : text, age : int} =
+  {age = 34, favorite-color = "blue", name = "Alice"}
+```
+
+You can also change the type of an existing field:
+
+```
+let alice = { age = 34, name = "Alice" } in
+alice where { name = { first = "Alice", last = "Smith" } }
+```
+
+...giving:
+
+```
+it : {name : {last : text, first : text}, name : text, age : int} =
+  {age = 34, name = {first = "Alice", last = "Smith"}}
+```
+
+Note that the fields to update (after the `where`) must be a record
+*literal*; the following is not allowed:
+
+```
+let
+  , alice = { age 34, name = "Alice" }
+  , extra-info = { favorite-color = "blue" }
+in
+alice where extra-info
+```
+
+The field names in a record can be defined reursively, or refer to one
+another, like in a let binding:
+
+```
+{
+  , even =
+      fn n. match n with
+        | 0 -> True {}
+        | _ -> odd (int.sub n 1)
+      end
+  , odd =
+      fn n. match n with
+        | 0 -> False {}
+        | _ -> even n
+      end
+}
+```
+
+## Import
+
+So far we've been working within a single file (or at the repl). As
+programs get bigger, we'll want to split them up.
+
+The `import` expression imports the value defined in another source
+file. Given the files `big-number.mule`:
+
+```
+1_000_000_000_000
+```
+
+...and `bigger-number.mule`:
+
+```
+import "./big-number" + 1
+```
+
+the latter will evaluate to:
+
+
+```
+1000000000001
+```
+
+`import` takes a string literal. Imports can be used anywhere in an
+expression, but the contents of a given file are only ever evaluated
+once, and the import happens at compile time, not dynamically.
+
+The file referenced by the import is located as follows:
+
+- If the string starts with `./`, it is treated as a path relative to
+  the file containing the import expression. The suffix `.mule` is added
+  to the path to locate the actual file.
+- If the string does *not* start with `./`, and the first path segment
+  contains a dot, it is assumed to be a third party package, and the
+  source file is expected to be found at
+  `${MULE_PATH}/<import path>.mule`, or `~/mule-src/<import path>.mule`
+  if the `MULE_PATH` environment variable is not defined. For example,
+  `import "example.org/alice/crypto"` imports the file
+  `${MULE_PATH}/example.org/alice/crypto.mule`. Eventually we will have
+  a package manager that fetches third party packages based on URL, but
+  for now you have to put things in `MULE_PATH` yourself.
+- Otherwise, the path is assumed to be part of the standard library.
+  If the environment variable `MULE_ROOT` is defined, mule will look
+  there, otherwise it will look in a location determined at install
+  time.
+
+The set of characters allowed in import paths is limited to lowercase
+ascii letters, `'.'`, `'-'`, and `'_'`.
+
+Most of the time, the value defined in a file will be a record. For
+example:
+
+```
+#mule> import "maybe"
+it : {
+  , type cmd a = <type lambda> a
+  , type t b = Some b | None {}
+  , then : all c d. <type lambda> c -> (c -> <type lambda> d) -> <type lambda> d
+  , flatten : all e. <type lambda> (<type lambda>) e -> <type lambda> e
+  , just : all f. f -> <type lambda> f
+  , map : all g h. (g -> h) -> <type lambda> g -> <type lambda> h
+  , with-default : all i. i -> <type lambda> i -> i
+  } =
+  {
+  , flatten = <lambda>
+  , just = <lambda>
+  , map = <lambda>
+  , then = <lambda>
+  , with-default = <lambda>
+  }
+```
+
+The above contains some things we haven't talked about yet (chiefly
+associated types); we'll get to that. But for now, observe that we
+can use the import expression and a let binding to use this record
+much like we would a module in another language:
+
+```
+let maybe = import "maybe" in
+maybe.with-default "no value" (None {})
+```
+
+Note that the functions we've been using like `int.add` are actually
+themselves stored in records; to find out what other functions are
+available from the int "module," you can ask the repl:
+
+```
+#mule> int
+it : {
+  , type t = int
+  , add : int -> int -> int
+  , sub : int -> int -> int
+  , mul : int -> int -> int
+  , div : int -> int -> int
+  , rem : int -> int -> int
+  , compare : int -> int -> (LT {} | GT {} | EQ {})
+  } =
+  {
+  , add = <primitive-function>
+  , compare = <primitive-function>
+  , div = <primitive-function>
+  , mul = <primitive-function>
+  , rem = <primitive-function>
+  , sub = <primitive-function>
+  }
+```
+
+This is also true of the other "modules" we've seen, like `text` and
+`char`.
+
+## Embed
+
+Related to `import` is `embed`. Embed allows you to embed the raw text
+of another file into your program, as a string literal. For example:
+
+
+```
+$ echo 'Hello, World!' > hello.txt
+$ mule
+#mule> embed "./hello.txt"
+it : text =
+  "Hello, World!\n"
+```
+
+This is occasionally a useful feature on its own, but is most useful
+when combined with macros (which we've not yet discussed, and aren't
+actually implemented yet at the time of writing).
