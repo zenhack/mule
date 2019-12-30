@@ -971,8 +971,8 @@ and unify_already_whnf
              * is ungarded like that it sticks around. *)
             MuleErr.throw
               (`TypeError
-                (`UnguardedRecursiveType
-                    ("rec " ^ var ^ ". " ^ var)))
+                  (`UnguardedRecursiveType
+                      ("rec " ^ var ^ ". " ^ var)))
         | _, `Bound _ | `Bound _, _ ->
             (* This should never happen. *)
             MuleErr.bug "Tried to unify distinct bound variables!"
