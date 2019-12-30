@@ -524,7 +524,8 @@ The file referenced by the import is located as follows:
   time.
 
 The set of characters allowed in import paths is limited to lowercase
-ascii letters, `'.'`, `'-'`, and `'_'`.
+ascii letters, digits, `'.'`, `'-'`, and `'_'`. The path segment `".."`
+is not allowed.
 
 Most of the time, the value defined in a file will be a record. For
 example:
@@ -604,3 +605,6 @@ it : text =
 This is occasionally a useful feature on its own, but is most useful
 when combined with macros (which we've not yet discussed, and aren't
 actually implemented yet at the time of writing).
+
+Legal values for the embed path are the same as for import, except that
+only the relative version (starting with `./`) is allowed.
