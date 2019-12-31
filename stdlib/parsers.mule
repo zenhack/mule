@@ -1,0 +1,48 @@
+{
+  , type t a =
+      | More (text -> t a)
+      | Done {
+          , value : a
+          , rest : text
+        }
+      | Failed {
+          , error : text
+          , rest : text
+        }
+  , type cmd a = t a
+
+  , just : all a. a -> t a =
+      fn x. Done { value = x, rest = "" }
+  , then : all a b. cmd a -> (a -> cmd b) -> cmd b =
+      fn p f. match p with
+        | More g -> More fn input. then (g input) f
+        | Done v -> feed v.rest (f v.value)
+        | Failed v -> Failed v
+      end
+  , fail : all a. text -> t a =
+      fn txt. Failed { error = txt, rest = "" }
+  , feed : all a. text -> t a -> t a =
+      fn txt p. match p with
+        | More f -> f txt
+        | Done v -> Done v where { rest = text.append v.rest txt }
+        | Failed v -> Failed v where { rest = text.append v.rest txt }
+      end
+
+#  , eof : t {} = More
+#      fn input. match input with
+#        | "" -> just {}
+#        | _ -> Failed {
+#            , error = "Expected end of file"
+#            , rest = input
+#          }
+#      end
+#
+#  , any-char : t char = More
+#      fn input. match text.uncons input with
+#        | None _ -> fail "Unexpected end of file."
+#        | Some r -> Done {
+#            , value = r.head
+#            , rest = r.tail
+#          }
+#      end
+}
