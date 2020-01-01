@@ -702,12 +702,17 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
         ty_want
         ~reason
   | DE.App{app_fn; app_arg} ->
-      let p = synth ctx app_arg in
+      let p = fresh_local ctx `Flex ktype in
       ignore
         (check ctx
             app_fn
             (p **> ty_want)
             ~reason:(NonEmpty.cons (`ApplyFn(app_fn, app_arg, p)) reason));
+      ignore
+        (check ctx
+            app_arg
+            p
+            ~reason:(NonEmpty.cons (`ApplyArg(app_fn, app_arg, ty_want)) reason));
       ty_want
   | DE.WithType{wt_src; wt_expr; wt_type} ->
       let ty_want_inner = make_type ctx wt_type |> with_kind ktype in

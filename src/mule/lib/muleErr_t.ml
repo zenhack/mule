@@ -16,6 +16,7 @@ type subtype_reason =
       )
   | `TypeAnnotation of  (DE.withtype_src * TT.k_var DT.t)
   | `ApplyFn of (TT.k_var DE.t * TT.k_var DE.t * TT.u_var)
+  | `ApplyArg of (TT.k_var DE.t * TT.k_var DE.t * TT.u_var)
   | `Path of [ `Var of Var.t | `Import of Surface_ast.Import.t ] DT.src
   | `GetField of (Label.t * TT.k_var DE.t)
 

@@ -28,15 +28,15 @@
         | Failed v -> Failed v where { rest = text.append v.rest txt }
       end
 
-#  , eof : t {} = More
-#      fn input. match input with
-#        | "" -> just {}
-#        | _ -> Failed {
-#            , error = "Expected end of file"
-#            , rest = input
-#          }
-#      end
-#
+   , eof : t {} = More
+       fn input. match input with
+         | "" -> just {}
+         | _ -> Failed {
+             , error = "Expected end of file"
+             , rest = input
+           }
+       end
+
 #  , any-char : t char = More
 #      fn input. match text.uncons input with
 #        | None _ -> fail "Unexpected end of file."
