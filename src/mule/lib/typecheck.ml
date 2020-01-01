@@ -262,7 +262,7 @@ let with_locals ctx f =
   List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
 
 (* Create a new local with the given flag and kind. *)
-let fresh_local ?(vinfo={vi_name = None; vi_binder = None}) ctx ty_flag k =
+let fresh_local ?(vinfo={vi_ident = `Unknown; vi_binder = None}) ctx ty_flag k =
   let ty_id = Gensym.gensym () in
   let ty_scope = ctx.scope in
   let v = UnionFind.make (`Free {
@@ -371,7 +371,7 @@ and make_type ctx ty = match ty with
         ~var:v_var
         ~src:v_src
   | DT.Quant {q_quant; q_var; q_body; _} ->
-      quant ~vname:(Var.to_string q_var) q_quant (gen_k ()) (fun v ->
+      quant ~ident:(`VarName (Var.to_string q_var)) q_quant (gen_k ()) (fun v ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:q_var ~data:v }
           q_body
@@ -401,7 +401,7 @@ and make_type ctx ty = match ty with
   | DT.Union{u_row} ->
       union (make_row ctx `Union u_row)
   | DT.Recur{mu_var; mu_body; _} ->
-      let t = recur ~vname:(Var.to_string mu_var) (fun v ->
+      let t = recur ~ident:(`VarName (Var.to_string mu_var)) (fun v ->
           make_type
             { ctx with type_env = Map.set ctx.type_env ~key:mu_var ~data:v }
             mu_body
@@ -410,7 +410,7 @@ and make_type ctx ty = match ty with
       require_kind (get_kind t) ktype;
       t
   | DT.TypeLam{tl_param; tl_body; _} ->
-      lambda ~vname:(Var.to_string tl_param) (gen_k ()) (fun p ->
+      lambda ~ident:(`VarName (Var.to_string tl_param)) (gen_k ()) (fun p ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:tl_param ~data:p }
           tl_body
@@ -459,11 +459,11 @@ and make_path_type result_type lbls =
     | (last :: rest) ->
         List.fold_left
           rest
-          ~init:(exist krow (fun rv -> (exist krow (fun rt ->
+          ~init:(exist ~ident:`Unknown krow (fun rv -> (exist ~ident:`Unknown krow (fun rt ->
               record (extend last result_type rt) rv
             ))))
           ~f:(fun tail next ->
-            exist krow (fun rv -> (exist krow (fun rt ->
+            exist ~ident:`Unknown krow (fun rv -> (exist ~ident:`Unknown krow (fun rt ->
                 record
                   rt
                   (extend next tail rv)
@@ -482,8 +482,9 @@ and strip_param_exists ctx pty =
       pty
 and make_row ctx parent {row_fields; row_rest; _} =
   let tail = match row_rest, parent with
-    | None, `Record `Type | None, `Union -> all krow (fun x -> x)
-    | None, `Record `Value -> empty
+    | None, `Record `Type -> empty_record_types
+    | None, `Union -> empty_union
+    | None, `Record `Value -> empty_record_vals
     | Some t, _ -> with_kind krow (make_type ctx t)
   in
   List.fold_right row_fields ~init:tail ~f:(fun (lbl, ty) rest ->
@@ -561,13 +562,13 @@ and synth: context -> 'i DE.t -> u_var =
               )
             in
             record
-              (build_row ctx.type_env (List.concat r.rec_types) (all krow (fun r -> r)))
-              (build_row ctx.vals_env r.rec_vals empty)
+              (build_row ctx.type_env (List.concat r.rec_types) empty_record_types)
+              (build_row ctx.vals_env r.rec_vals empty_record_vals)
           )
         )
     | DE.Ctor{c_lbl; c_arg} ->
         let arg_t = synth ctx c_arg in
-        union (extend c_lbl arg_t (all krow (fun r -> r)))
+        union (extend c_lbl arg_t empty_union)
     | DE.WithType {wt_src; wt_expr; wt_type} ->
         let want_ty = make_type ctx wt_type |> with_kind ktype in
         let _ = check ctx
@@ -657,8 +658,8 @@ and synth_branch ctx ?have_default:(have_default=false) b =
         let result = fresh_local ctx `Flex ktype in
         Map.fold map
           ~init:begin match lm_default with
-            | None when have_default -> (empty, result)
-            | None -> (all krow (fun r -> r), result)
+            | None when have_default -> (some_union, result)
+            | None -> (empty_union, result)
             | Some lf ->
                 let row = fresh_local ctx `Flex krow in
                 ignore (check_leaf ctx lf (union row **> result));
@@ -805,7 +806,7 @@ and check_record ctx DE.{rec_types; rec_vals} want_types want_vals ~reason =
   let (have_types_row, ctx) =
     List.fold_left
       (List.concat rec_types)
-      ~init:( all krow (fun x -> x)
+      ~init:( empty_record_types
             , ctx
       )
       ~f:(fun (r, ctx) (v, t) ->
@@ -822,7 +823,7 @@ and check_record ctx DE.{rec_types; rec_vals} want_types want_vals ~reason =
   let (have_vals_row, have_vals_exp_map, ctx) =
     List.fold_left
       rec_vals
-      ~init:( empty
+      ~init:( empty_record_vals
             , Map.empty (module Var)
             , ctx
       )
@@ -891,8 +892,8 @@ and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -
 and make_match_row ctx ~have_default lm_cases lm_default =
   Map.fold lm_cases
     ~init:begin match lm_default with
-      | None when have_default -> empty
-      | None -> all krow (fun r -> r)
+      | None when have_default -> some_union
+      | None -> empty_union
       | Some _ -> fresh_local ctx `Flex krow
     end
     ~f:(fun ~key ~data:_ tl ->
@@ -964,8 +965,8 @@ and unify_already_whnf
             UnionFind.merge (fun _ r -> r) sub super;
             sub
 
-        | `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _}, _
-        | _, `Bound {bv_info = { vi_binder = Some `Rec; vi_name = Some var }; _} ->
+        | `Bound {bv_info = { vi_binder = Some `Rec; vi_ident = `VarName var }; _}, _
+        | _, `Bound {bv_info = { vi_binder = Some `Rec; vi_ident = `VarName var }; _} ->
             (* This can happen if the user supplies the type `rec a. a`. Normally,
              * the rec-bound variable gets replaced with the body but if the variable
              * is ungarded like that it sticks around. *)
@@ -1129,7 +1130,7 @@ and unify_already_whnf
                 ~reason
                 ~path:(TypePath.append path `TypeLamBody)
             in
-            lambda (get_kind p) (fun p' ->
+            lambda ~ident:`Unknown (get_kind p) (fun p' ->
               subst
                 ~target:(get_id (UnionFind.get p))
                 ~replacement:p'
@@ -1385,8 +1386,8 @@ module Tests = struct
     ignore (
       join (mk_context ())
         ~reason:(NonEmpty.singleton `Unspecified)
-        (extend (Label.of_string "A") int (all krow (fun r -> r)))
-        (extend (Label.of_string "B") int (all krow (fun r -> r)))
+        (extend (Label.of_string "A") int empty_union)
+        (extend (Label.of_string "B") int empty_union)
     );
     true
 

@@ -3,8 +3,8 @@ Desugared:
 
 	(letrec (types ())
 	 (values
-	  ((x (: $6 (all a (a -> a))))
-	   ($6 ((match ((Ok ($7 $7)))) ((fn x (Ok x)) (fn x x))))))
+	  ((x (: $12 (all a (a -> a))))
+	   ($12 ((match ((Ok ($13 $13)))) ((fn x (Ok x)) (fn x x))))))
 	 (record (types ())
 	  (values ((k (x (record (types ()) (values ())))) (v (x (fn y y)))))))
 

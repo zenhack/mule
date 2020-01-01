@@ -17,12 +17,12 @@ Desugared:
 	        ((Cons (_ ((fn x (False x)) (record (types ()) (values ())))))
 	         (Nil (_ ((fn x (True x)) (record (types ()) (values ())))))))
 	       list))))))
-	 (exist $6
-	  (record (types ((t $6)))
+	 (exist $12
+	  (record (types ((t $12)))
 	   (values
 	    ((empty?
 	      (all a
-	       (($6 a) ->
+	       (($12 a) ->
 	        (union
 	         ((True (record (types ()) (values ())))
 	          (False (record (types ()) (values ())))))))))))))

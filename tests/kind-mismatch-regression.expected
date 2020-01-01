@@ -2,11 +2,11 @@
 Desugared:
 
 	(: (Integer 4)
-	 ((e : (exist $6 (record (types ((t $6))) (values ())))) -> ((. e t) int)))
+	 ((e : (exist $12 (record (types ((t $12))) (values ())))) -> ((. e t) int)))
 Type error: The expression at line 4, columns 1-2 does not match its type annotation.
 The annotation says its type should be:
 
-(e : exist $6. {type t = $6}) -> e.t int
+(e : exist $12. {type t = $12}) -> e.t int
 
 but its actual type is:
 

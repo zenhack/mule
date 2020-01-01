@@ -2,7 +2,7 @@
 Desugared:
 
 	(: (fn x (. x f))
-	 ((y : (exist $6 (record (types ((t $6))) (values ((f $6)))))) -> (. y t)))
+	 ((y : (exist $12 (record (types ((t $12))) (values ((f $12)))))) -> (. y t)))
 
 inferred type:
 

@@ -5,7 +5,8 @@ Desugared:
 	 (values
 	  ((m
 	    (: (record (types ()) (values ((x (Integer 4)) (y (fn z z)))))
-	     (exist $6 (record (types ((t $6))) (values ((y ($6 -> int)) (x $6)))))))))
+	     (exist $12
+	      (record (types ((t $12))) (values ((y ($12 -> int)) (x $12)))))))))
 	 ((. m y) (. m x)))
 
 inferred type:

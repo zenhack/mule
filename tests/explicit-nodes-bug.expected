@@ -3,7 +3,8 @@ Desugared:
 
 	(letrec
 	 (types
-	  (((sig (lam k (rec sig (exist $6 (record (types ((t $6))) (values ())))))))))
+	  (((sig
+	     (lam k (rec sig (exist $12 (record (types ((t $12))) (values ())))))))))
 	 (values
 	  ((from-order
 	    (:

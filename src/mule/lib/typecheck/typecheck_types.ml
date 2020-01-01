@@ -88,25 +88,25 @@ let apply: u_var -> u_var -> u_var = fun f x ->
               )
           )
   end
-let recur : vname:string -> (u_var -> u_var) -> u_var = fun ~vname mkbody ->
+let recur : ident:var_ident -> (u_var -> u_var) -> u_var = fun ~ident mkbody ->
   let ty_id = Gensym.gensym () in
   let v = UnionFind.make (`Bound {
       bv_id = ty_id;
-      bv_info = {vi_name = Some vname; vi_binder = Some `Rec};
+      bv_info = {vi_ident = ident; vi_binder = Some `Rec};
       bv_kind = ktype;
     })
   in
   let body = mkbody v in
   UnionFind.merge (fun _ r -> r) v body;
   body
-let quant : ?vname:string -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
-  fun ?vname q k mkbody ->
+let quant : ident:var_ident -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
+  fun ~ident q k mkbody ->
   let q_id = Gensym.gensym () in
   let ty_id = Gensym.gensym () in
   let bv = {
     bv_id = ty_id;
     bv_info = {
-      vi_name = vname;
+      vi_ident = ident;
       vi_binder = Some (`Quant q);
     };
     bv_kind =  k;
@@ -121,22 +121,31 @@ let quant : ?vname:string -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var
       q_body = mkbody v;
     })
 
-let all : ?vname:string -> k_var -> (u_var -> u_var) -> u_var =
-  fun ?vname k mkbody -> quant ?vname `All k mkbody
+let all : ident:var_ident -> k_var -> (u_var -> u_var) -> u_var =
+  fun ~ident k mkbody -> quant ~ident `All k mkbody
 
-let exist : ?vname:string -> k_var -> (u_var -> u_var) -> u_var =
-  fun ?vname k mkbody -> quant ?vname `Exist k mkbody
+let exist : ident:var_ident -> k_var -> (u_var -> u_var) -> u_var =
+  fun ~ident k mkbody -> quant ~ident `Exist k mkbody
 
-let empty: u_var =
-  exist krow (fun r -> r)
+let empty_record_vals: u_var =
+  exist ~ident:`EmptyRecordVals krow (fun r -> r)
 
-let lambda : ?vname:string -> k_var -> (u_var -> u_var) -> u_var =
-  fun ?vname kparam mkbody ->
+let empty_record_types: u_var =
+  all ~ident:`EmptyRecordTypes krow (fun r -> r)
+
+let empty_union: u_var =
+  all ~ident:`EmptyUnion krow (fun r -> r)
+
+let some_union: u_var =
+  exist ~ident:`SomeUnion krow (fun r -> r)
+
+let lambda : ident:var_ident -> k_var -> (u_var -> u_var) -> u_var =
+  fun ~ident kparam mkbody ->
   let id = Gensym.gensym () in
   let param = UnionFind.make (`Bound {
       bv_id = Gensym.gensym();
       bv_info = {
-        vi_name = vname;
+        vi_ident = ident;
         vi_binder = Some `Lambda;
       };
       bv_kind = kparam;

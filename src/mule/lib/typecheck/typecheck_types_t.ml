@@ -20,6 +20,16 @@ type typeconst_name =
   | `Lambda
   ]
 
+type var_ident =
+  [ `VarName of string
+  | `EmptyRecordVals
+  | `EmptyRecordTypes
+  | `EmptyUnion
+  | `SomeUnion
+  | `Unknown
+  ]
+
+
 type u_typeconst =
   [ `Named of typeconst_name
   | `Extend of Label.t
@@ -52,7 +62,7 @@ and tyvar = {
   ty_kind: k_var;
 }
 and var_info = {
-  vi_name: string option;
+  vi_ident: var_ident;
   vi_binder: [ `Rec | `Lambda | `Quant of [ `All | `Exist ] ] option;
 }
 and u_var = u_type UnionFind.var

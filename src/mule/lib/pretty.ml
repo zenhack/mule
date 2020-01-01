@@ -114,11 +114,11 @@ let show_getfield_error (_, expr) ~path:TypePath.{segs; _} ~actual =
   go segs
 
 let show_cant_instantiate
-    {ci_info = TT.{vi_name; vi_binder}; ci_other; ci_path; ci_reason}
+    {ci_info = TT.{vi_ident; vi_binder}; ci_other; ci_path; ci_reason}
   =
-  let name = match vi_name with
-    | Some name -> name
-    | None -> "<generated type variable>"
+  let name = match vi_ident with
+    | `VarName name -> name
+    | _ -> "<generated type variable>"
   in
   match vi_binder, ci_other with
   | Some (`Quant q), `Type ty ->
