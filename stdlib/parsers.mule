@@ -37,12 +37,12 @@
            }
        end
 
-#  , any-char : t char = More
-#      fn input. match text.uncons input with
-#        | None _ -> fail "Unexpected end of file."
-#        | Some r -> Done {
-#            , value = r.head
-#            , rest = r.tail
-#          }
-#      end
+   , any-char : t char = More
+       fn input. match text.uncons input with
+         | None _ -> fail "Unexpected end of file."
+         | Some r -> Done {
+             , value = r.head
+             , rest = r.tail
+           }
+       end
 }
