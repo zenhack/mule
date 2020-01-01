@@ -2,4 +2,4 @@
 Desugared:
 
 	((match ((Err (x x)))) ((fn x (Ok x)) (record (types ()) (values ()))))
-Type error: Could not instantiate rigid type variable <generated type variable>. Rigid variables must be treated as opaque.
+Type error: Missing union tags: Ok

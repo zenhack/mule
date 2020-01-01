@@ -120,8 +120,8 @@ let show_cant_instantiate
     | `VarName name -> name
     | _ -> "<generated type variable>"
   in
-  match vi_binder, ci_other with
-  | Some (`Quant q), `Type ty ->
+  match vi_ident, vi_binder, ci_other with
+  | _, Some (`Quant q), `Type ty ->
       let sub, super = ci_path.TypePath.roots in
       let sub = sub |> Extract.get_var_type in
       let sub_str = sub |> Desugared_ast_type.to_string in
@@ -155,6 +155,21 @@ let show_cant_instantiate
               "what type it actually is, so we can't assume it's "; ty; ".";
             ]
         end;
+      ]
+  | `EmptyRecordVals, _, `Row {row_fields; _}
+  | `EmptyRecordTypes, _, `Row {row_fields; _}
+  | `EmptyUnion, _, `Row {row_fields; _} ->
+      String.concat [
+        "Missing ";
+        begin match vi_ident with
+          | `EmptyRecordVals -> "record fields"
+          | `EmptyRecordTypes -> "associated types"
+          | `EmptyUnion -> "union tags"
+          | _ -> MuleErr.bug "impossible"
+        end;
+        ": ";
+        List.map row_fields ~f:(fun (lbl, _) -> Label.to_string lbl)
+          |> String.concat ~sep:", ";
       ]
   | _ ->
       String.concat [
