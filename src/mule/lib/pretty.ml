@@ -169,7 +169,7 @@ let show_cant_instantiate
         end;
         ": ";
         List.map row_fields ~f:(fun (lbl, _) -> Label.to_string lbl)
-          |> String.concat ~sep:", ";
+        |> String.concat ~sep:", ";
       ]
   | _ ->
       String.concat [
