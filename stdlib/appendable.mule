@@ -1,0 +1,7 @@
+{
+  , type sig = {
+      , type t
+      , empty : t
+      , append : t -> t -> t
+    }
+}

@@ -10,4 +10,5 @@
   , type order = import "order".sig
   , type mappable = import "mappable".sig
   , type thenable = import "thenable".sig
+  , type appendable = import "appendable".sig
 }
