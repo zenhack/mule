@@ -26,6 +26,7 @@ type var_ident =
   | `EmptyRecordTypes
   | `EmptyUnion
   | `SomeUnion
+  | `RecBindVal of (Var.t * Surface_ast.Expr.lt option)
   | `Unknown
   ]
 

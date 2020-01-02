@@ -332,8 +332,13 @@ and with_rec_binds ctx DE.{rec_types; rec_vals} f =
     )
   in
   let new_vars =
-    List.map rec_vals ~f:(fun (v, _) ->
-      (v, fresh_local ctx `Flex ktype)
+    List.map rec_vals ~f:(fun (v, e) ->
+      ( v
+      , fresh_local ctx `Flex ktype ~vinfo:{
+          vi_ident = `RecBindVal(v, DE.get_src_expr e);
+          vi_binder = None;
+        }
+      )
     )
   in
   let ctx' =
