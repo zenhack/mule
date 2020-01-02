@@ -61,7 +61,7 @@ const char = {
 }
 
 const text = {
-  length: $fn1((x) => x.length),
+  length: $fn1((x) => BigInt(x.length)),
   append: $fn2((x, y) => x + y),
   uncons: $fn1((x) => {
     if(x.length === 0) {
@@ -75,6 +75,8 @@ const text = {
   }),
   compare: $cmp,
   'from-int': $fn1(String),
+  take: $fn2((n, s) => s.slice(0, Number(n))),
+  drop: $fn2((n, s) => s.slice(Number(n), s.length)),
 }
 
 const $call0 = (f) => {

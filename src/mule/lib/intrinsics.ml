@@ -94,6 +94,8 @@ let values = dict [
           "length", fn_t text_t int_t;
           "uncons", fn_t text_t (maybe (recordType [] ["head", char_t; "tail", text_t]));
           "compare", cmp_binop_t text_t;
+          "take", fn_t int_t (fn_t text_t text_t);
+          "drop", fn_t int_t (fn_t text_t text_t);
         ]
     , recordVal [
           "append", R.prim (fun l -> R.prim (fun r -> R.text (R.assert_text l ^ R.assert_text r)));
@@ -113,6 +115,16 @@ let values = dict [
                   )
           );
           "compare", cmp_binop R.assert_text String.compare;
+          "take", R.prim (fun n -> R.prim (fun s ->
+              let s = R.assert_text s in
+              let n = Z.to_int (R.assert_int n) in
+              R.text (String.drop_suffix s (String.length s - n))
+            ));
+          "drop", R.prim (fun n -> R.prim (fun s ->
+              let s = R.assert_text s in
+              let n = Z.to_int (R.assert_int n) in
+              R.text (String.drop_prefix s n)
+            ));
         ]
     );
     "char",
