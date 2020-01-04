@@ -1263,10 +1263,10 @@ and trace_req_subtype ~sub ~super =
       Stdio.print_endline ""
     end
 and unpack_exist ctx ty = match UnionFind.get ty with
-  | `Quant {q_quant  = `Exist; q_var = {bv_id; _}; q_kind = k; q_body = body; _} ->
+  | `Quant {q_quant  = `Exist; q_var = {bv_id; bv_info; _}; q_kind = k; q_body = body; _} ->
       subst
         ~target:bv_id
-        ~replacement:(fresh_local ctx `Rigid k)
+        ~replacement:(fresh_local ctx `Rigid k ~vinfo:bv_info)
         body
       |> unpack_exist ctx
   | _ ->
