@@ -10,10 +10,31 @@ type withtype_src =
   | `Main
   ]
 
+type lam_src =
+  [ (* This was a union tag/ctor, but it was wrapped
+       in a lambda since ctors have to be fully applied after
+       desugaring: *)
+    `Ctor of Label.t Loc.located
+
+  (* This was part of an actually lambda. We do desugaring of currying
+   * though, so we keep track of how many arguments have been stripped
+   * off the front via an argument index, and record the pattern
+   * corresponding to this argument, and record the depth of the
+   * pattern into our argument. *)
+  | `PartialLambda of
+      ( int (* Argument index *)
+        * Surface_ast.Pattern.lt
+        * int (* Pattern depth *)
+        * Surface_ast.Expr.lt (* The original lambda. *)
+      )
+  | `Generated
+  ]
+
 type 'i t =
   | Embed of {
       e_path: string;
       e_value: string;
+      e_src: Surface_ast.Expr.lt;
     }
   | Import of import
   | Var of {
@@ -23,7 +44,11 @@ type 'i t =
         | `Sourced of Var.t Loc.located
         ]
     }
-  | Lam of { l_param : Var.t; l_body : 'i t }
+  | Lam of {
+      l_param : Var.t;
+      l_body : 'i t;
+      l_src : lam_src;
+    }
   | App of {
       app_fn : 'i t;
       app_arg : 'i t;

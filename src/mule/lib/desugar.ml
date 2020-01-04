@@ -391,12 +391,13 @@ and desugar_import imp_loc ({i_path; i_from} as i) =
         l_value = i;
       };
   }
-and desugar Loc.{l_value = e; l_loc} = match e with
+and desugar (Loc.{l_value = e; l_loc} as le) = match e with
   | S.Import i ->
       D.Import (desugar_import l_loc i)
   | S.Embed {e_path; e_from; _} ->
       D.Embed {
         e_path;
+        e_src = le;
         e_value = Paths.resolve_embed
             ~loc:l_loc
             ~here:e_from
@@ -412,7 +413,7 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       app_fn = desugar f;
       app_arg = desugar x;
     }
-  | S.Lam{lam_params; lam_body; _} -> desugar_lambda lam_params lam_body
+  | S.Lam{lam_params; lam_body; _} -> desugar_lambda le lam_params lam_body
   | S.List {l_elts} ->
       let empty =
         D.GetField {
@@ -451,6 +452,7 @@ and desugar Loc.{l_value = e; l_loc} = match e with
       let l_param = Ast.Var.of_string "x" in
       D.Lam {
         l_param;
+        l_src = `Ctor label;
         l_body = D.Ctor {
             c_lbl = label.Loc.l_value;
             c_arg = D.Var {
@@ -500,20 +502,26 @@ and desugar_update e fields =
         }
   in
   go e (List.map fields ~f:(fun Loc.{l_value = v; _} -> v))
-and desugar_lambda ps body =
-  let rec go = function
+and desugar_lambda _src ps body =
+  let rec go arg_idx pat_depth = function
     | [] -> desugar body
 
     | (SP.Var {v_var; v_type = None; _} :: pats) ->
-        D.Lam {l_param = v_var.Loc.l_value; l_body = go pats}
+        D.Lam {
+          l_param = v_var.Loc.l_value;
+          l_body = go (arg_idx + 1) 0 pats;
+          l_src = `Generated;
+        }
     | (SP.Wild :: pats) ->
         D.Lam {
           l_param = Gensym.anon_var ();
-          l_body = go pats;
+          l_body = go (arg_idx + 1) 0 pats;
+          l_src = `Generated;
         }
     | (SP.Var {v_var; v_type = Some ty} :: pats) ->
         let v = v_var.Loc.l_value in
         D.Lam {
+          l_src = `Generated;
           l_param = v;
           l_body = D.Let {
               let_v = v;
@@ -526,7 +534,7 @@ and desugar_lambda ps body =
                     };
                   wt_type = desugar_type ty;
                 };
-              let_body = go pats;
+              let_body = go (arg_idx + 1) 0 pats;
             };
         }
     | ((SP.Const _) :: _) -> incomplete_pattern ()
@@ -539,7 +547,7 @@ and desugar_lambda ps body =
                 D.(BLeaf {
                     lf_var = Some v;
                     lf_body = D.App {
-                        app_fn = go (c_arg.Loc.l_value :: pats);
+                        app_fn = go arg_idx (pat_depth + 1) (c_arg.Loc.l_value :: pats);
                         app_arg = D.Var {
                             v_var = v;
                             v_src = `Generated;
@@ -548,7 +556,7 @@ and desugar_lambda ps body =
                   });
           })
   in
-  go (List.map ps ~f:(fun p -> p.Loc.l_value))
+  go 0 0 (List.map ps ~f:(fun p -> p.Loc.l_value))
 and desugar_record fields =
   let types, values =
     List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->

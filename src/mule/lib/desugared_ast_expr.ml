@@ -17,6 +17,8 @@ let get_src_expr: 'a t -> Surface_ast.Expr.lt option = function
     }
   | Import {i_src = `SurfaceImport li; _} ->
       Some (Loc.map li ~f:(fun i -> Surface_ast.Expr.Import i))
+  | Embed {e_src; _} ->
+      Some e_src
   | _ ->
       None
 
@@ -30,7 +32,7 @@ let rec sexp_of_t = function
         Paths.sexp_of_t i_resolved_path;
       ]
   | Var { v_var = v; _ } -> Sexp.Atom (Var.to_string v)
-  | Lam{ l_param = v; l_body = body } ->
+  | Lam{ l_param = v; l_body = body; l_src = _ } ->
       Sexp.List [Sexp.Atom "fn"; Var.sexp_of_t v; sexp_of_t body]
   | App{app_fn; app_arg} ->
       Sexp.List [sexp_of_t app_fn; sexp_of_t app_arg]
@@ -136,8 +138,9 @@ let rec branch_apply_kids b ~f =
     }
 
 let rec apply_to_kids e ~f = match e with
-  | Lam {l_param; l_body} -> Lam {
+  | Lam {l_param; l_body; l_src} -> Lam {
       l_param;
+      l_src;
       l_body = f l_body
     }
   | App{app_fn; app_arg} -> App {
@@ -197,8 +200,8 @@ let rec map e ~f =
         wt_type = Type.map ty ~f;
         wt_expr = map e ~f;
       }
-  | Lam{l_param; l_body} ->
-      Lam{l_param; l_body = map l_body ~f}
+  | Lam{l_param; l_src; l_body} ->
+      Lam{l_param; l_src; l_body = map l_body ~f}
   | App{app_fn; app_arg}-> App {
       app_fn = map app_fn ~f;
       app_arg = map app_arg ~f;

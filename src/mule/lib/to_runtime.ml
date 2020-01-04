@@ -39,7 +39,7 @@ let translate
           )
       | D.Const {const_val = c} -> (0, R.Const c)
       | D.Var {v_var = v; _} -> go_var depth env v
-      | D.Lam {l_param; l_body} ->
+      | D.Lam {l_param; l_body; _} ->
           let (ncap, body') =
             go_expr (depth + 1) (Map.set env ~key:l_param ~data:(`Index (depth + 1))) l_body
           in
@@ -71,6 +71,7 @@ let translate
       | D.Let {let_v = v; let_e = e; let_body = body} ->
           go_expr depth env (D.App {
               app_fn = D.Lam {
+                  l_src = `Generated;
                   l_param = v;
                   l_body = body;
                 };
@@ -132,7 +133,7 @@ let translate
         | Some v -> v
         | None -> Gensym.anon_var ()
       in
-      go_expr depth env (D.Lam{l_param; l_body = lf.lf_body})
+      go_expr depth env (D.Lam{l_param; l_body = lf.lf_body; l_src = `Generated})
   and go_letrec depth env bindings ~mkbody =
     let env' =
       bindings

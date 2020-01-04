@@ -504,7 +504,7 @@ and synth: context -> 'i DE.t -> u_var =
         ctx.get_import_type i_resolved_path
     | DE.Var {v_var; v_src} ->
         find_bound ~env:ctx.vals_env ~var:v_var ~src:v_src
-    | DE.Lam{l_param; l_body} ->
+    | DE.Lam{l_param; l_body; l_src = _} ->
         with_locals ctx (fun ctx ->
           let p = fresh_local ctx `Flex ktype in
           let r =
@@ -741,7 +741,7 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
             ty_want_inner
             ~reason:(NonEmpty.singleton (`TypeAnnotation(wt_src, wt_type))));
       ty_want_outer
-  | DE.Lam{l_param; l_body} ->
+  | DE.Lam{l_param; l_body; l_src = _} ->
       with_locals ctx (fun ctx ->
         check_maybe_flex ctx e ty_want ~f:(fun want -> match UnionFind.get want with
           | `Const(_, `Named `Fn, [p, _; r, _], _) ->

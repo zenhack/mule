@@ -44,7 +44,7 @@ let translate_expr ~get_import expr =
         Js.Var (get_import i_resolved_path)
     | D.Expr.Var {v_var; _} ->
         translate_var env v_var
-    | D.Expr.Lam{l_param; l_body} ->
+    | D.Expr.Lam{l_param; l_body; _} ->
         let (param, env') = add_var env l_param in
         Js.Lam1(param, go env' l_body)
     | D.Expr.UpdateType{ut_record; _} -> go env ut_record
