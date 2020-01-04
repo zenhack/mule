@@ -547,20 +547,20 @@ and desugar_lambda src ps body =
           D.Match {
             m_src = l_src p;
             m_branch = D.BLabel {
-              lm_default = None;
-              lm_cases = Map.singleton (module Label)
-                  c_lbl.Loc.l_value
-                  D.(BLeaf {
-                      lf_var = Some v;
-                      lf_body = D.App {
-                          app_fn = go arg_idx (pat_depth + 1) (c_arg :: pats);
-                          app_arg = D.Var {
-                              v_var = v;
-                              v_src = `Generated;
-                            }
-                        }
-                    });
-            };
+                lm_default = None;
+                lm_cases = Map.singleton (module Label)
+                    c_lbl.Loc.l_value
+                    D.(BLeaf {
+                        lf_var = Some v;
+                        lf_body = D.App {
+                            app_fn = go arg_idx (pat_depth + 1) (c_arg :: pats);
+                            app_arg = D.Var {
+                                v_var = v;
+                                v_src = `Generated;
+                              }
+                          }
+                      });
+              };
           }
   in
   go 0 0 ps
@@ -750,15 +750,15 @@ and desugar_let bs body =
                 D.Match {
                   m_src = `Generated;
                   m_branch = D.BLabel {
-                    lm_default = None;
-                    lm_cases = Map.singleton (module Label) lbl.Loc.l_value D.(BLeaf {
-                        lf_var = Some match_var;
-                        lf_body = Var {
-                            v_var = match_var;
-                            v_src = `Generated;
-                          }
-                      });
-                  };
+                      lm_default = None;
+                      lm_cases = Map.singleton (module Label) lbl.Loc.l_value D.(BLeaf {
+                          lf_var = Some match_var;
+                          lf_body = Var {
+                              v_var = match_var;
+                              v_src = `Generated;
+                            }
+                        });
+                    };
                 };
               app_arg = e;
             }

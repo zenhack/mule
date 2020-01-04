@@ -15,11 +15,11 @@ type partial_lambda_src =
    * stripped * off the front via an argument index, and record the pattern
    * corresponding to this argument, and record the depth of the pattern
    * into our argument. *)
-      ( int (* Argument index *)
-        * Surface_ast.Pattern.lt
-        * int (* Pattern depth *)
-        * Surface_ast.Expr.lt (* The original lambda. *)
-      )
+  ( int (* Argument index *)
+    * Surface_ast.Pattern.lt
+    * int (* Pattern depth *)
+    * Surface_ast.Expr.lt (* The original lambda. *)
+  )
 
 type lam_src =
   [ (* This was a union tag/ctor, but it was wrapped
