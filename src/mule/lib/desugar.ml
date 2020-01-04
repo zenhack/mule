@@ -502,59 +502,60 @@ and desugar_update e fields =
         }
   in
   go e (List.map fields ~f:(fun Loc.{l_value = v; _} -> v))
-and desugar_lambda _src ps body =
-  let rec go arg_idx pat_depth = function
-    | [] -> desugar body
+and desugar_lambda src ps body =
+  let rec go arg_idx pat_depth =
+    let l_src p = `PartialLambda(arg_idx, p, pat_depth, src) in function
+      | [] -> desugar body
 
-    | (Loc.{l_value = SP.Var {v_var; v_type = None; _}; _} :: pats) ->
-        D.Lam {
-          l_param = v_var.Loc.l_value;
-          l_body = go (arg_idx + 1) 0 pats;
-          l_src = `Generated;
-        }
-    | (Loc.{l_value = SP.Wild; _} :: pats) ->
-        D.Lam {
-          l_param = Gensym.anon_var ();
-          l_body = go (arg_idx + 1) 0 pats;
-          l_src = `Generated;
-        }
-    | (Loc.{l_value = SP.Var {v_var; v_type = Some ty}; _} :: pats) ->
-        let v = v_var.Loc.l_value in
-        D.Lam {
-          l_src = `Generated;
-          l_param = v;
-          l_body = D.Let {
-              let_v = v;
-              let_e =
-                D.WithType {
-                  wt_src = `Pattern(v_var, ty);
-                  wt_expr = D.Var {
-                      v_var = v;
-                      v_src = `Sourced v_var;
-                    };
-                  wt_type = desugar_type ty;
-                };
-              let_body = go (arg_idx + 1) 0 pats;
-            };
-        }
-    | (Loc.{l_value = SP.Const _; _} :: _) -> incomplete_pattern ()
-    | (Loc.{l_value = SP.Ctor{c_lbl; c_arg; _}; _} :: pats) ->
-        let v = Gensym.anon_var () in
-        D.Match (D.BLabel {
-            lm_default = None;
-            lm_cases = Map.singleton (module Label)
-                c_lbl.Loc.l_value
-                D.(BLeaf {
-                    lf_var = Some v;
-                    lf_body = D.App {
-                        app_fn = go arg_idx (pat_depth + 1) (c_arg :: pats);
-                        app_arg = D.Var {
-                            v_var = v;
-                            v_src = `Generated;
-                          }
-                      }
-                  });
-          })
+      | (Loc.{l_value = SP.Var {v_var; v_type = None; _}; _} as p :: pats) ->
+          D.Lam {
+            l_src = l_src p;
+            l_param = v_var.Loc.l_value;
+            l_body = go (arg_idx + 1) 0 pats;
+          }
+      | (Loc.{l_value = SP.Wild; _} as p :: pats) ->
+          D.Lam {
+            l_src = l_src p;
+            l_param = Gensym.anon_var ();
+            l_body = go (arg_idx + 1) 0 pats;
+          }
+      | (Loc.{l_value = SP.Var {v_var; v_type = Some ty}; _} as p :: pats) ->
+          let v = v_var.Loc.l_value in
+          D.Lam {
+            l_src = l_src p;
+            l_param = v;
+            l_body = D.Let {
+                let_v = v;
+                let_e =
+                  D.WithType {
+                    wt_src = `Pattern(v_var, ty);
+                    wt_expr = D.Var {
+                        v_var = v;
+                        v_src = `Sourced v_var;
+                      };
+                    wt_type = desugar_type ty;
+                  };
+                let_body = go (arg_idx + 1) 0 pats;
+              };
+          }
+      | (Loc.{l_value = SP.Const _; _} :: _) -> incomplete_pattern ()
+      | (Loc.{l_value = SP.Ctor{c_lbl; c_arg; _}; _} :: pats) ->
+          let v = Gensym.anon_var () in
+          D.Match (D.BLabel {
+              lm_default = None;
+              lm_cases = Map.singleton (module Label)
+                  c_lbl.Loc.l_value
+                  D.(BLeaf {
+                      lf_var = Some v;
+                      lf_body = D.App {
+                          app_fn = go arg_idx (pat_depth + 1) (c_arg :: pats);
+                          app_arg = D.Var {
+                              v_var = v;
+                              v_src = `Generated;
+                            }
+                        }
+                    });
+            })
   in
   go 0 0 ps
 and desugar_record fields =
