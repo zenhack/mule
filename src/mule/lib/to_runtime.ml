@@ -65,8 +65,8 @@ let translate
       | D.Ctor { c_lbl = label; c_arg = e } ->
           let (ncap, e') = go_expr depth env e in
           (ncap, R.Ctor(label, e'))
-      | D.Match b ->
-          let (n, b) = go_branch depth env b in
+      | D.Match {m_branch; _} ->
+          let (n, b) = go_branch depth env m_branch in
           (n, R.Match b)
       | D.Let {let_v = v; let_e = e; let_body = body} ->
           go_expr depth env (D.App {

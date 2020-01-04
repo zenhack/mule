@@ -59,9 +59,9 @@ let rec sexp_of_t = function
       Label.sexp_of_t c_lbl;
       sexp_of_t c_arg;
     ]
-  | Match b -> Sexp.List [
+  | Match {m_branch; m_src = _} -> Sexp.List [
       Sexp.Atom "match";
-      sexp_of_branch b;
+      sexp_of_branch m_branch;
     ]
   | WithType {wt_expr = e; wt_type = ty; _} ->
       Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
@@ -148,7 +148,10 @@ let rec apply_to_kids e ~f = match e with
       app_arg = f app_arg;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = f c_arg}
-  | Match b -> Match (branch_apply_kids b ~f)
+  | Match {m_branch; m_src} -> Match {
+      m_branch = branch_apply_kids m_branch ~f;
+      m_src;
+    }
   | Let{let_v; let_e; let_body} -> Let {
       let_v;
       let_e = f let_e;
@@ -207,7 +210,10 @@ let rec map e ~f =
       app_arg = map app_arg ~f;
     }
   | Ctor{c_lbl; c_arg} -> Ctor{c_lbl; c_arg = map c_arg ~f}
-  | Match b -> Match (map_branch b ~f)
+  | Match {m_branch; m_src} -> Match {
+      m_branch = map_branch m_branch ~f;
+      m_src;
+    }
   | Let{let_v; let_e; let_body} -> Let{
       let_v;
       let_e = map let_e ~f;

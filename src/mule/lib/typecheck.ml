@@ -600,9 +600,9 @@ and synth: context -> 'i DE.t -> u_var =
           in
           r
         )
-    | DE.Match b ->
+    | DE.Match {m_branch; _}->
         with_locals ctx (fun ctx ->
-          let (p, r) = synth_branch ctx b in
+          let (p, r) = synth_branch ctx m_branch in
           p **> r
         )
     | DE.LetRec{letrec_binds; letrec_body} ->
@@ -763,11 +763,11 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
                 ~reason
         )
       )
-  | DE.Match b ->
+  | DE.Match {m_branch; _} ->
       with_locals ctx (fun ctx ->
         check_maybe_flex ctx e ty_want ~f:(fun want -> match UnionFind.get want with
           | `Const(_, `Named `Fn, [p, _; r, _], _) ->
-              check_branch ctx b (p, r)
+              check_branch ctx m_branch (p, r)
           | _ ->
               let sub, super = synth ctx e, ty_want in
               let path = TypePath.base sub super in

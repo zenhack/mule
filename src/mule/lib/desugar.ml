@@ -463,7 +463,10 @@ and desugar (Loc.{l_value = e; l_loc} as le) = match e with
       }
   | S.Match {match_arg = e; match_cases = cases; _} ->
       D.App {
-        app_fn = D.Match (desugar_match cases);
+        app_fn = D.Match {
+            m_branch = desugar_match cases;
+            m_src = `Generated;
+          };
         app_arg = desugar e;
       }
   | S.WithType{wt_term = e; wt_type = ty; _} ->
@@ -539,9 +542,11 @@ and desugar_lambda src ps body =
               };
           }
       | (Loc.{l_value = SP.Const _; _} :: _) -> incomplete_pattern ()
-      | (Loc.{l_value = SP.Ctor{c_lbl; c_arg; _}; _} :: pats) ->
+      | (Loc.{l_value = SP.Ctor{c_lbl; c_arg; _}; _} as p :: pats) ->
           let v = Gensym.anon_var () in
-          D.Match (D.BLabel {
+          D.Match {
+            m_src = l_src p;
+            m_branch = D.BLabel {
               lm_default = None;
               lm_cases = Map.singleton (module Label)
                   c_lbl.Loc.l_value
@@ -555,7 +560,8 @@ and desugar_lambda src ps body =
                             }
                         }
                     });
-            })
+            };
+          }
   in
   go 0 0 ps
 and desugar_record fields =
@@ -741,7 +747,9 @@ and desugar_let bs body =
           ( bind_var
           , D.App {
               app_fn =
-                D.Match (D.BLabel {
+                D.Match {
+                  m_src = `Generated;
+                  m_branch = D.BLabel {
                     lm_default = None;
                     lm_cases = Map.singleton (module Label) lbl.Loc.l_value D.(BLeaf {
                         lf_var = Some match_var;
@@ -750,7 +758,8 @@ and desugar_let bs body =
                             v_src = `Generated;
                           }
                       });
-                  });
+                  };
+                };
               app_arg = e;
             }
           )

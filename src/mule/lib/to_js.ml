@@ -73,12 +73,12 @@ let translate_expr ~get_import expr =
           , uv_lbl
           , go env uv_val
           )
-    | D.Expr.Match b ->
+    | D.Expr.Match {m_branch; _} ->
         let v = Var.of_string "p" in
         let arg = Js.Var v in
         Js.Lam1
           ( v
-          , begin match b with
+          , begin match m_branch with
             | D.Expr.BLeaf lf ->
                 go_leaf env lf arg
             | D.Expr.BConst {cm_cases; cm_default} ->

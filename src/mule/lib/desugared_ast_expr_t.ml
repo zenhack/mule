@@ -9,6 +9,17 @@ type withtype_src =
   | `Msig
   | `Main
   ]
+type partial_lambda_src =
+  (* Something that was part of an actually lambda. We do desugaring of
+   * currying though, so we keep track of how many arguments have been
+   * stripped * off the front via an argument index, and record the pattern
+   * corresponding to this argument, and record the depth of the pattern
+   * into our argument. *)
+      ( int (* Argument index *)
+        * Surface_ast.Pattern.lt
+        * int (* Pattern depth *)
+        * Surface_ast.Expr.lt (* The original lambda. *)
+      )
 
 type lam_src =
   [ (* This was a union tag/ctor, but it was wrapped
@@ -16,17 +27,12 @@ type lam_src =
        desugaring: *)
     `Ctor of Label.t Loc.located
 
-  (* This was part of an actually lambda. We do desugaring of currying
-   * though, so we keep track of how many arguments have been stripped
-   * off the front via an argument index, and record the pattern
-   * corresponding to this argument, and record the depth of the
-   * pattern into our argument. *)
-  | `PartialLambda of
-      ( int (* Argument index *)
-        * Surface_ast.Pattern.lt
-        * int (* Pattern depth *)
-        * Surface_ast.Expr.lt (* The original lambda. *)
-      )
+  | `PartialLambda of partial_lambda_src
+  | `Generated
+  ]
+
+type match_src =
+  [ `PartialLambda of partial_lambda_src
   | `Generated
   ]
 
@@ -72,7 +78,10 @@ type 'i t =
       c_lbl : Label.t;
       c_arg : 'i t;
     }
-  | Match of 'i branch
+  | Match of {
+      m_branch : 'i branch;
+      m_src : match_src;
+    }
   | WithType of {
       wt_src : withtype_src;
       wt_expr : 'i t;
