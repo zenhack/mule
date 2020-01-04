@@ -118,7 +118,7 @@ and backslashes must be escaped by preceding them with a backslash. So:
 * `\\` generates a single backslash
 
 Additionally, the following escape sequences exist (though you can also
-just use the literal character for each of these:
+just use the literal character for each of these):
 
 * `\'` for single quote.
 * `\n` for newline.
