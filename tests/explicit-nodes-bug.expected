@@ -7,9 +7,8 @@ Desugared:
 	     (lam k (rec sig (exist $12 (record (types ((t $12))) (values ())))))))))
 	 (values
 	  ((from-order
-	    (:
-	     (fn ord (record (types (((t (lam v (rec t (. ord t))))))) (values ())))
-	     (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))))))
+	    (all a ((record (types ((t (rec t a)))) (values ())) -> (sig a)))
+	    (fn ord (record (types (((t (lam v (rec t (. ord t))))))) (values ()))))))
 	 (Integer 0))
 
 inferred type:

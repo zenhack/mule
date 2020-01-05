@@ -114,6 +114,6 @@ and 'i leaf = {
   lf_body: 'i t;
 }
 and 'i rec_bind = {
-  rec_vals: (Var.t * 'i t) list;
+  rec_vals: (Var.t * 'i Type_t.t option * 'i t) list;
   rec_types: (Var.t * 'i Type_t.t) list list;
 }

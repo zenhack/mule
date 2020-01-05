@@ -4,15 +4,14 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((length
-	    (:
-	     (fn lst
-	      ((match ((Cons (l (length (. l tl)))) (Nil (_ (Integer 0))))) lst))
-	     (all b
-	      ((rec l
-	        (union
-	         ((Cons (record (types ()) (values ((tl l) (hd b)))))
-	          (Nil (record (types ()) (values ()))))))
-	       -> int))))))
+	    (all b
+	     ((rec l
+	       (union
+	        ((Cons (record (types ()) (values ((tl l) (hd b)))))
+	         (Nil (record (types ()) (values ()))))))
+	      -> int))
+	    (fn lst
+	     ((match ((Cons (l (length (. l tl)))) (Nil (_ (Integer 0))))) lst)))))
 	 length)
 
 inferred type:

@@ -2,7 +2,7 @@
 Desugared:
 
 	(letrec (types ()) (values ((r (record (types ()) (values ((y (fn x x))))))))
-	 (letrec (types ()) (values ((f (: (. r y) (all a (a -> a))))))
+	 (letrec (types ()) (values ((f (all a (a -> a)) (. r y))))
 	  (record (types ())
 	   (values ((l (f (record (types ()) (values ())))) (k (f (fn z z))))))))
 

@@ -26,7 +26,7 @@ let translate
           )
       | D.Record {rec_vals; _} ->
           go_letrec depth env rec_vals ~mkbody:(fun depth env ->
-            List.map rec_vals ~f:(fun (v, _) ->
+            List.map rec_vals ~f:(fun (v, _, _) ->
               (var_to_label v, go_var depth env v)
             )
             |> List.map ~f:(fun (v, (d, e)) -> (d, (v, e)))
@@ -138,12 +138,12 @@ let translate
     let env' =
       bindings
       |> List.rev
-      |> List.mapi ~f:(fun i (var, _) -> (var, `Index (depth + i + 1)))
+      |> List.mapi ~f:(fun i (var, _, _) -> (var, `Index (depth + i + 1)))
       |> List.fold ~init:env ~f:(fun env (key, data) -> Map.set env ~key ~data)
     in
     let len = List.length bindings in
     let depth' = depth + len in
-    let binds = List.map bindings ~f:(fun (_, v) -> go_expr depth' env' v) in
+    let binds = List.map bindings ~f:(fun (_, _, v) -> go_expr depth' env' v) in
     let (bcap, body) = mkbody depth' env' in
     let cap =
       List.fold ~init:0 ~f:Int.max (bcap - len :: List.map binds ~f:(fun (cap, _) -> cap - len))

@@ -4,13 +4,13 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((b
-	    (: (fn x (.= y (Integer 2) x))
-	     ((record (types ()) (values ())) ->
-	      (record (types ()) (values ((y int)))))))
+	    ((record (types ()) (values ())) ->
+	     (record (types ()) (values ((y int)))))
+	    (fn x (.= y (Integer 2) x)))
 	   (a
-	    (: (fn x (.= y (Integer 2) x))
-	     ((record (types ()) (values ((y int)))) ->
-	      (record (types ()) (values ((y int)))))))))
+	    ((record (types ()) (values ((y int)))) ->
+	     (record (types ()) (values ((y int)))))
+	    (fn x (.= y (Integer 2) x)))))
 	 (record (types ()) (values ())))
 
 inferred type:

@@ -568,18 +568,13 @@ and desugar_record fields =
   let types, values =
     List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->
       match bind.Loc.l_value with
-      | `Value(l, None, e) -> (types, ((Ast.var_of_label l.Loc.l_value, desugar e) :: values))
-      | `Value(l, Some ty, e) ->
-          ( types
-          , ( Ast.var_of_label l.Loc.l_value
-            , D.WithType {
-                wt_src = `RecordVal(l, ty, e);
-                wt_expr = desugar e;
-                wt_type = desugar_type ty;
-              };
-          )
-            :: values
-          )
+      | `Value (l, ty, e) ->
+            ( types
+            , ((Ast.var_of_label l.Loc.l_value
+                 , Option.map ty ~f:desugar_type
+                 , desugar e
+              ) :: values)
+            )
       | `Type (l, params, body) ->
           ( ( desugar_type_binding (SC.var_of_label l, params, body)
               :: types
@@ -723,28 +718,21 @@ and desugar_let bs body =
         go_val_binding vals types (p.Loc.l_value, desugar e) bs
 
   and go_val_binding vals types (pat, e) bs = match (pat, e) with
-    | (SP.Var {v_var = v; v_type = None; _}, e) ->
-        go ((v.Loc.l_value, e) :: vals) types bs
+    | (SP.Var {v_var = v; v_type; _}, e) ->
+        go ((v.Loc.l_value
+            , Option.map v_type ~f:desugar_type
+            , e
+        ) :: vals) types bs
     | ((SP.Const _), _) ->
         incomplete_pattern ()
     | (SP.Wild, e) ->
-        go ((Gensym.anon_var (), e) :: vals) types bs
-    | (SP.Var{v_var = v; v_type = Some ty}, e) ->
-        go
-          (( v.Loc.l_value
-           , D.WithType{
-               wt_src = `Pattern(v, ty);
-               wt_expr = e;
-               wt_type = desugar_type ty
-             }
-          ) :: vals)
-          types
-          bs
+        go ((Gensym.anon_var (), None, e) :: vals) types bs
     | (SP.Ctor{c_lbl = lbl; c_arg = pat; _}, e) ->
         let bind_var = Gensym.anon_var () in
         let match_var = Gensym.anon_var () in
         let bind =
           ( bind_var
+          , None
           , D.App {
               app_fn =
                 D.Match {

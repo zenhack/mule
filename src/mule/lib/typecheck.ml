@@ -331,35 +331,40 @@ and with_rec_binds ctx DE.{rec_types; rec_vals} f =
       }
     )
   in
-  let new_vars =
-    List.map rec_vals ~f:(fun (v, e) ->
-      ( v
-      , fresh_local ctx `Flex ktype ~vinfo:{
-          vi_ident = `RecBindVal(v, DE.get_src_expr e);
-          vi_binder = None;
-        }
-      )
+  let (new_check, new_synth) =
+    List.partition_map rec_vals ~f:(fun (v, ty, e) ->
+      match ty with
+        | Some ty -> `Fst(v, make_type ctx ty, e)
+        | None -> `Snd
+              ( v
+              , fresh_local ctx `Flex ktype ~vinfo:{
+                    vi_ident = `RecBindVal(v, DE.get_src_expr e);
+                    vi_binder = None;
+                  }
+              , e
+              )
     )
   in
+  (* NOTE: the order in which we concatenate these is *VERY IMPORTANT*.
+   * The un-annoated ones have to come first, because, if we check the
+   * annotated ones first, the process may instantiate the unsolved
+   * variables for the un-annotated ones with temporary rigid variables,
+   * causing spurrious failures. This is essentially the same problem
+   * that caused #22, but in a different place. *)
+  let new_vars = new_synth @ new_check in
   let ctx' =
-    List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v) ->
+    List.fold new_vars ~init:ctx ~f:(fun ctx (vname, v, _) ->
       { ctx with vals_env = Map.set ctx.vals_env ~key:vname ~data:v }
     )
   in
   let checked_vals =
-    List.map rec_vals ~f:(fun (v, e) ->
-      with_locals ctx' (fun ctx ->
-        check ctx
-          e
-          (Util.find_exn ctx.vals_env v)
-          ~reason:(NonEmpty.singleton `Unspecified)
-      )
-      |> unpack_exist ctx
-    )
-  in
-  let checked_vals =
-    List.map2_exn rec_vals checked_vals ~f:(fun (v, _) ty ->
-      (v, ty)
+    List.map new_vars ~f:(fun (v, ty, e) ->
+      ignore (
+        with_locals ctx' (fun ctx ->
+          check ctx e ty ~reason:(NonEmpty.singleton `Unspecified)
+        )
+      );
+      (v, unpack_exist ctx ty)
     )
   in
   let ctx =
@@ -566,9 +571,12 @@ and synth: context -> 'i DE.t -> u_var =
                 extend (Common_ast.var_to_label v) t tail
               )
             in
+            let rec_vals =
+              List.map r.rec_vals ~f:(fun (v, _, e) -> (v, e))
+            in
             record
               (build_row ctx.type_env (List.concat r.rec_types) empty_record_types)
-              (build_row ctx.vals_env r.rec_vals empty_record_vals)
+              (build_row ctx.vals_env rec_vals empty_record_vals)
           )
         )
     | DE.Ctor{c_lbl; c_arg} ->
@@ -837,8 +845,11 @@ and check_record ctx DE.{rec_types; rec_vals} want_types want_vals ~reason =
             , Map.empty (module Var)
             , ctx
       )
-      ~f:(fun (row, exp_map, ctx) (v, e) ->
-        let tyvar = fresh_local ctx `Flex ktype in
+      ~f:(fun (row, exp_map, ctx) (v, ty, e) ->
+        let tyvar = match ty with
+          | None -> fresh_local ctx `Flex ktype
+          | Some ty -> make_type ctx ty |> with_kind ktype
+        in
         ( extend (Common_ast.var_to_label v) tyvar row
         , Map.set exp_map ~key:v ~data:e
         , { ctx with vals_env = Map.set ctx.vals_env ~key:v ~data:tyvar }

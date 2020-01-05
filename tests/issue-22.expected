@@ -4,9 +4,9 @@ Desugared:
 	(letrec (types ())
 	 (values
 	  ((m
-	    (: (record (types ()) (values ((x (Integer 4)) (y (fn z z)))))
-	     (exist $12
-	      (record (types ((t $12))) (values ((y ($12 -> int)) (x $12)))))))))
+	    (exist $12
+	     (record (types ((t $12))) (values ((y ($12 -> int)) (x $12)))))
+	    (record (types ()) (values ((x (Integer 4)) (y (fn z z))))))))
 	 ((. m y) (. m x)))
 
 inferred type:

@@ -94,23 +94,23 @@ let translate_expr ~get_import expr =
           env
           rec_vals
           ~mkbody:(fun env ->
-            (Js.Object (List.map rec_vals ~f:(fun (v, _) ->
+            (Js.Object (List.map rec_vals ~f:(fun (v, _, _) ->
                   (var_to_label v, translate_var env v)))))
   and go_letrec env rec_vals ~mkbody =
     let env' =
-      List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
+      List.fold rec_vals ~init:env ~f:(fun env (v, _, _) ->
         snd (add_lazy_var env v)
       )
     in
     let binds =
-      List.map rec_vals ~f:(fun (v, body) ->
+      List.map rec_vals ~f:(fun (v, _, body) ->
         ( get_var env' v
         , Js.Lazy (go env' body)
         )
       )
     in
     let env'' =
-      List.fold rec_vals ~init:env ~f:(fun env (v, _) ->
+      List.fold rec_vals ~init:env ~f:(fun env (v, _, _) ->
         snd (add_var env v)
       )
     in
@@ -118,7 +118,7 @@ let translate_expr ~get_import expr =
       List.fold
         rec_vals
         ~init:(mkbody env'')
-        ~f:(fun body (v, _) ->
+        ~f:(fun body (v, _, _) ->
           js_let
             ( get_var env'' v
             , translate_var env' v

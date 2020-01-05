@@ -12,14 +12,12 @@ Desugared:
 	 (values ())
 	 (letrec (types ())
 	  (values
-	   ((length
-	     (:
-	      (fn lst
-	       ((match
-	         ((Cons (l (((. int add) (Integer 1)) (length (. l tl)))))
-	          (Nil (_ (Integer 0)))))
-	        lst))
-	      (all a ((list a) -> int))))))
+	   ((length (all a ((list a) -> int))
+	     (fn lst
+	      ((match
+	        ((Cons (l (((. int add) (Integer 1)) (length (. l tl)))))
+	         (Nil (_ (Integer 0)))))
+	       lst)))))
 	  (length
 	   ((fn x (Cons x))
 	    (record (types ())

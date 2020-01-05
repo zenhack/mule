@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(record (types (((t (rec t int))))) (values ((x (: (Integer 4) t)))))
+	(record (types (((t (rec t int))))) (values ((x t (Integer 4)))))
 
 inferred type:
 

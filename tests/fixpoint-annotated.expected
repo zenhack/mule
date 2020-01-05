@@ -3,11 +3,9 @@ Desugared:
 
 	(letrec (types ())
 	 (values
-	  ((fix
-	    (:
-	     (fn f
-	      (letrec (types ()) (values ((g (fn x (f (fn v ((x x) v))))))) (g g)))
-	     (all a (all b (((a -> b) -> (a -> b)) -> (a -> b))))))))
+	  ((fix (all a (all b (((a -> b) -> (a -> b)) -> (a -> b))))
+	    (fn f
+	     (letrec (types ()) (values ((g (fn x (f (fn v ((x x) v))))))) (g g))))))
 	 fix)
 
 inferred type:

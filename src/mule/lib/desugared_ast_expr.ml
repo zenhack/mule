@@ -115,8 +115,14 @@ and sexps_of_rec_bind {rec_types; rec_vals} = [
   Sexp.List [
     Sexp.Atom "values";
     Sexp.List
-      ( List.map rec_vals ~f:(fun (var, value) ->
-            Sexp.List [Var.sexp_of_t var; sexp_of_t value]
+      ( List.map rec_vals ~f:(fun (var, ty, value) ->
+            match ty with
+            | None -> Sexp.List [Var.sexp_of_t var; sexp_of_t value]
+            | Some ty -> Sexp.List [
+                Var.sexp_of_t var;
+                Type.sexp_of_t ty;
+                sexp_of_t value;
+              ]
           )
       )
   ];
@@ -193,7 +199,7 @@ let rec apply_to_kids e ~f = match e with
   | Const _ -> e
 and apply_to_rec_kids {rec_types; rec_vals} ~f = {
   rec_types;
-  rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, f e));
+  rec_vals = List.map rec_vals ~f:(fun (v, ty, e) -> (v, ty, f e));
 }
 let rec map e ~f =
   match e with
@@ -260,5 +266,10 @@ and map_branch b ~f = match b with
 and map_leaf lf ~f = {lf with lf_body = map lf.lf_body ~f }
 and map_rec_bind {rec_types; rec_vals} ~f = {
   rec_types = List.map rec_types ~f:(List.map ~f:(fun (v, ty) -> (v, Type.map ty ~f)));
-  rec_vals = List.map rec_vals ~f:(fun (v, e) -> (v, map e ~f));
+  rec_vals = List.map rec_vals ~f:(fun (v, ty, e) ->
+      ( v
+      , Option.map ty ~f:(Type.map ~f)
+      , map e ~f
+      )
+    );
 };
