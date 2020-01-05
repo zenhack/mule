@@ -334,15 +334,15 @@ and with_rec_binds ctx DE.{rec_types; rec_vals} f =
   let (new_check, new_synth) =
     List.partition_map rec_vals ~f:(fun (v, ty, e) ->
       match ty with
-        | Some ty -> `Fst(v, make_type ctx ty, e)
-        | None -> `Snd
-              ( v
-              , fresh_local ctx `Flex ktype ~vinfo:{
-                    vi_ident = `RecBindVal(v, DE.get_src_expr e);
-                    vi_binder = None;
-                  }
-              , e
-              )
+      | Some ty -> `Fst(v, make_type ctx ty, e)
+      | None -> `Snd
+            ( v
+            , fresh_local ctx `Flex ktype ~vinfo:{
+                vi_ident = `RecBindVal(v, DE.get_src_expr e);
+                vi_binder = None;
+              }
+            , e
+            )
     )
   in
   (* NOTE: the order in which we concatenate these is *VERY IMPORTANT*.

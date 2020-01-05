@@ -569,12 +569,12 @@ and desugar_record fields =
     List.fold_right fields ~init:([], []) ~f:(fun bind (types, values) ->
       match bind.Loc.l_value with
       | `Value (l, ty, e) ->
-            ( types
-            , ((Ast.var_of_label l.Loc.l_value
-                 , Option.map ty ~f:desugar_type
-                 , desugar e
-              ) :: values)
-            )
+          ( types
+          , ((Ast.var_of_label l.Loc.l_value
+             , Option.map ty ~f:desugar_type
+             , desugar e
+          ) :: values)
+          )
       | `Type (l, params, body) ->
           ( ( desugar_type_binding (SC.var_of_label l, params, body)
               :: types
