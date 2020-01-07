@@ -195,17 +195,7 @@ let rec subst ~target ~replacement uv =
 and copy = function
   | `Free _ | `Bound _ -> MuleErr.bug "impossible"
   | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
-  | `Quant q ->
-      let bv = { q.q_var with bv_id = Gensym.gensym () } in
-      `Quant {
-        q with
-        q_id = Gensym.gensym ();
-        q_var = bv;
-        q_body =
-          subst q.q_body
-            ~target:q.q_var.bv_id
-            ~replacement:(UnionFind.make (`Bound bv))
-      }
+  | `Quant q -> `Quant q
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
