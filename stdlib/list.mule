@@ -30,17 +30,17 @@
         , tl = xs
       }
 
-#  , snoc =
-#      fn xs x. append xs (singleton x)
-#
-#  , append =
-#      let go =
-#        fn l r. match l with
-#          | Nil _ -> r
-#          | Cons l -> go l.tl (cons l.hd r)
-#        end
-#      in
-#      fn l r. go (reverse l) r
+  , snoc =
+      fn xs x. append xs (singleton x)
+
+  , append =
+      let go =
+        fn l r. match l with
+          | Nil _ -> r
+          | Cons l -> go l.tl (cons l.hd r)
+        end
+      in
+      fn l r. go (reverse l) r
 
 #  , take =
 #      fn count list. match list with
