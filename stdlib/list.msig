@@ -8,7 +8,7 @@
   , length : all a. t a -> int
     "O(1): Get the length of the list."
 
-  , empty? : all a. t a -> import "basics".bool
+  , empty? : all a. t a -> import "bool".t
     "O(1): Check if the list is empty."
 
   , singleton : all a. a -> t a
