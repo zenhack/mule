@@ -43,8 +43,8 @@ module Graphviz = struct
   let emit_constraint_edge ldir lv rdir rv =
     let lid, rid = get_id (UnionFind.get lv), get_id (UnionFind.get rv) in
     match (ldir, lid, rdir, rid) with
-    | `Sub, sub, `Super, super
-    | `Super, super, `Sub, sub ->
+    | `Narrow, sub, `Widen, super
+    | `Widen, super, `Narrow, sub ->
         Debug.show_edge `Instance super sub
     | _ ->
         (* TODO: distinguish meet vs. join *)
@@ -129,8 +129,8 @@ let throw_mismatch ~path ~reason ~sub ~super =
             }))
 
 let flip_dir = function
-  | `Sub -> `Super
-  | `Super -> `Sub
+  | `Narrow -> `Widen
+  | `Widen -> `Narrow
 
 let unbound_var v =
   MuleErr.throw (`UnboundVar v)
@@ -800,7 +800,7 @@ and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u
         ~super:ty_want;
       ty_got
 and check_maybe_flex ctx e ty_want ~f =
-  let want = unroll_all_quants ctx `Super (whnf ty_want) in
+  let want = unroll_all_quants ctx `Widen (whnf ty_want) in
   match UnionFind.get want with
   | `Free{ty_flag = `Flex; ty_kind; _} ->
       require_kind ty_kind ktype;
@@ -929,8 +929,8 @@ and require_subtype
   ignore (unify ctx
       ~path:(TypePath.base sub super)
       ~reason
-      (sub, `Sub)
-      (super, `Super)
+      (sub, `Narrow)
+      (super, `Widen)
   )
 and unify =
   fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
@@ -945,8 +945,8 @@ and unify_already_whnf
   : context
     -> path:TypePath.t
     -> reason:(MuleErr.subtype_reason NonEmpty.t)
-    -> (u_var * subtype_side)
-    -> (u_var * subtype_side)
+    -> (u_var * unify_dir)
+    -> (u_var * unify_dir)
     -> u_var =
   fun ctx ~path ~reason (sub, sub_dir) (super, super_dir) ->
   if Config.render_constraint_graph () then
@@ -1344,8 +1344,8 @@ and join ctx ~reason l r =
   unify ctx
     ~path:(TypePath.base l r)
     ~reason
-    (l, `Sub)
-    (r, `Sub)
+    (l, `Narrow)
+    (r, `Narrow)
 
 
 let rec gen_kind = function

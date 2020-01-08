@@ -19,14 +19,14 @@ let flip_sign = function
   | `Pos -> `Neg
   | `Neg -> `Pos
 
-type subtype_side = [ `Sub | `Super ]
+type unify_dir = [ `Narrow | `Widen ]
 
-let get_flag: quantifier -> subtype_side -> bound_ty =
+let get_flag: quantifier -> unify_dir -> bound_ty =
   fun q sign-> match q, sign with
-    | `All, `Sub -> `Flex
-    | `All, `Super -> `Rigid
-    | `Exist, `Sub -> `Rigid
-    | `Exist, `Super -> `Flex
+    | `All, `Narrow -> `Flex
+    | `All, `Widen -> `Rigid
+    | `Exist, `Narrow -> `Rigid
+    | `Exist, `Widen -> `Flex
 
 let get_id = function
   | `Const(ty_id, _, _, _) -> ty_id
