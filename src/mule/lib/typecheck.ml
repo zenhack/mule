@@ -934,13 +934,19 @@ and require_subtype
   )
 and unify =
   fun ctx ~reason (sub, sub_dir) (super, super_dir) ->
-  trace_req_subtype ~sub ~super;
-  let result =
-    unify_already_whnf ctx ~reason (whnf sub, sub_dir) (whnf super, super_dir)
-  in
-  if Config.trace_require_subtype () then
-    Stdio.print_endline "Return.";
-  result
+  (* Normalize the order of the directions, so we never have to deal with
+   * (`Widen, `Narrow), which is symmetric to (`Narrow, `Widen) *)
+  match sub_dir, super_dir with
+  | `Widen, `Narrow ->
+      unify ctx ~reason (super, super_dir) (sub, sub_dir)
+  | _ ->
+      trace_req_subtype ~sub ~super;
+      let result =
+        unify_already_whnf ctx ~reason (whnf sub, sub_dir) (whnf super, super_dir)
+      in
+      if Config.trace_require_subtype () then
+        Stdio.print_endline "Return.";
+      result
 and unify_already_whnf
   : context
     -> path:TypePath.t
