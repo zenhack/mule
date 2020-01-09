@@ -43,6 +43,25 @@ let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
         , UnionFind.make (make_u_kind y)
         )
 
+let top_or_bottom_q = function
+  | `Quant {q_quant; q_var = {bv_id; _}; q_body; _} ->
+      begin match UnionFind.get q_body with
+      | `Bound{bv_id = bv_id'; _} when bv_id = bv_id' -> Some q_quant
+      | _ -> None
+      end
+  | _ -> None
+
+let is_top_or_bottom t =
+  Option.is_some (top_or_bottom_q t)
+
+let is_top t = match top_or_bottom_q t with
+  | Some `Exist -> true
+  | _ -> false
+
+let is_bottom t = match top_or_bottom_q t with
+  | Some `All -> true
+  | _ -> false
+
 (* constructors for common type constants. *)
 let const: u_typeconst -> (u_var * k_var) list -> k_var -> u_var =
   fun c args k ->
