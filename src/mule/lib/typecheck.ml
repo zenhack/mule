@@ -1090,7 +1090,7 @@ and unify_already_whnf
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
             union (
-              unify ctx
+              unify_union ctx
                 ~reason
                 ~path:(TypePath.append path `UnionRow)
                 (row_sub, sub_dir)
@@ -1102,21 +1102,11 @@ and unify_already_whnf
 
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
-            let rtype =
-              unify ctx
-                (rtype_sub, sub_dir)
-                (rtype_super, super_dir)
-                ~reason
-                ~path:(TypePath.append path (`RecordPart `Type))
-            in
-            let rvals =
-              unify ctx
-                (rvals_sub, sub_dir)
-                (rvals_super, super_dir)
-                ~reason
-                ~path:(TypePath.append path (`RecordPart `Value))
-            in
-            record rtype rvals
+            unify_record ctx
+              (rtype_sub, rvals_sub, sub_dir)
+              (rtype_super, rvals_super, super_dir)
+              ~reason
+              ~path
 
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
@@ -1172,6 +1162,27 @@ and unify_already_whnf
             MuleErr.bug ("unify: did not handle case:\n" ^ (Sexp.to_string_hum data))
       end
     end
+and unify_union ctx ~path ~reason sub super =
+  unify ctx ~path ~reason sub super
+and unify_record ctx ~path ~reason
+    (rtype_sub, rvals_sub, sub_dir)
+    (rtype_super, rvals_super, super_dir)
+  =
+  let rtype =
+    unify ctx
+      (rtype_sub, sub_dir)
+      (rtype_super, super_dir)
+      ~reason
+      ~path:(TypePath.append path (`RecordPart `Type))
+  in
+  let rvals =
+    unify ctx
+      (rvals_sub, sub_dir)
+      (rvals_super, super_dir)
+      ~reason
+      ~path:(TypePath.append path (`RecordPart `Value))
+  in
+  record rtype rvals
 and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
   let (sub_fields, sub_tail) = fold_row sub in
   let (super_fields, super_tail) = fold_row super in
