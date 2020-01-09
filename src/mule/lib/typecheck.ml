@@ -1226,11 +1226,7 @@ and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
       (!sub_tail, sub_dir)
       (!super_tail, super_dir)
   in
-  Map.fold merged
-    ~init:tail
-    ~f:(fun ~key ~data tail ->
-      extend key data tail
-    )
+  unfold_row merged tail
 and trace_req_subtype ~sub ~super =
   if Config.trace_require_subtype () then
     begin
@@ -1351,6 +1347,11 @@ and fold_row row =
         (m, row)
   in
   go (Map.empty (module Label)) row
+and unfold_row fields tail =
+  Map.fold
+    fields
+    ~init:tail
+    ~f:(fun ~key ~data tail -> extend key data tail)
 
 
 let rec gen_kind = function
