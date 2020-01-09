@@ -12,6 +12,7 @@ install: all
 	dune install mule-stdlib
 check: all
 	MULE_ROOT=$(PWD)/stdlib dune runtest
+	find stdlib/ -type f -name '*.mule' | xargs -n 1 ./mule eval
 clean:
 	rm -rf _build tests/*.check tests/*.actual
 format:
