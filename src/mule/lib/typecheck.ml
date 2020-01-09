@@ -1397,26 +1397,26 @@ module Tests = struct
       |> Stdio.print_endline
        *)
 
-    let mk_context () = make_initial_context ~get_import_type:(fun _ ->
-        failwith "unimplemented"
-      )
+      let mk_context () = make_initial_context ~get_import_type:(fun _ ->
+          failwith "unimplemented"
+        )
+    end
+
+    open Helpers
+
+    let%test _ =
+      (* Right now we are just checking that this doesn't throw an exception
+       * (and therefore at least finds a join at all). Ideally we should
+       * check that it's the correct one, though at time of writing I(isd)
+       * did so manually by inspecting the output of display_type, defined
+       * above (to automate we'd actually need to implement equality
+       * comparision, which I'm leaving as a TODO). *)
+      ignore (
+        join (mk_context ())
+          ~reason:(NonEmpty.singleton `Unspecified)
+          (extend (Label.of_string "A") int empty_union)
+          (extend (Label.of_string "B") int empty_union)
+      );
+      true
+
   end
-
-  open Helpers
-
-  let%test _ =
-    (* Right now we are just checking that this doesn't throw an exception
-     * (and therefore at least finds a join at all). Ideally we should
-     * check that it's the correct one, though at time of writing I(isd)
-     * did so manually by inspecting the output of display_type, defined
-     * above (to automate we'd actually need to implement equality
-     * comparision, which I'm leaving as a TODO). *)
-    ignore (
-      join (mk_context ())
-        ~reason:(NonEmpty.singleton `Unspecified)
-        (extend (Label.of_string "A") int empty_union)
-        (extend (Label.of_string "B") int empty_union)
-    );
-    true
-
-end

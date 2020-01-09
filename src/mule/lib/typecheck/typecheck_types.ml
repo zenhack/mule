@@ -46,8 +46,8 @@ let rec make_u_kind: Desugared_ast.Kind.t -> u_kind = function
 let top_or_bottom_q = function
   | `Quant {q_quant; q_var = {bv_id; _}; q_body; _} ->
       begin match UnionFind.get q_body with
-      | `Bound{bv_id = bv_id'; _} when bv_id = bv_id' -> Some q_quant
-      | _ -> None
+        | `Bound{bv_id = bv_id'; _} when bv_id = bv_id' -> Some q_quant
+        | _ -> None
       end
   | _ -> None
 
