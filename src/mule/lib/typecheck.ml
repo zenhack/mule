@@ -1173,25 +1173,6 @@ and unify_already_whnf
       end
     end
 and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
-  let fold_row =
-    let rec go m row =
-      require_kind (get_kind row) krow;
-      let row = whnf row in
-      match UnionFind.get row with
-      | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
-          require_kind krow k;
-          require_kind krow tk;
-          go
-            (Map.update m lbl ~f:(function
-                  | None -> (h, hk)
-                  | Some v -> v
-                ))
-            t
-      | _ ->
-          (m, row)
-    in
-    go (Map.empty (module Label))
-  in
   let (sub_fields, sub_tail) = fold_row sub in
   let (super_fields, super_tail) = fold_row super in
   let sub_tail = ref sub_tail in
@@ -1352,6 +1333,24 @@ and join ctx ~reason l r =
     ~reason
     (l, `Narrow)
     (r, `Narrow)
+and fold_row row =
+  let rec go m row =
+    require_kind (get_kind row) krow;
+    let row = whnf row in
+    match UnionFind.get row with
+    | `Const(_, `Extend lbl, [h, hk; t, tk], k) ->
+        require_kind krow k;
+        require_kind krow tk;
+        go
+          (Map.update m lbl ~f:(function
+                | None -> (h, hk)
+                | Some v -> v
+              ))
+          t
+    | _ ->
+        (m, row)
+  in
+  go (Map.empty (module Label)) row
 
 
 let rec gen_kind = function
