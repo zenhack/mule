@@ -22,53 +22,56 @@
         | Cons _ -> False {}
       end
 
-  , singleton = fn x. cons x empty
+  , singleton = fn x. left.push x empty
 
-  , cons =
-      fn x xs. Cons {
-        , hd = x
-        , tl = xs
-      }
+  , left = {
+      , push =
+          fn x xs. Cons {
+            , hd = x
+            , tl = xs
+          }
 
-  , snoc =
-      fn xs x. append xs (singleton x)
+      , drop =
+          fn count list. match list with
+            | Nil _ -> Nil {}
+            | Cons l ->
+                match int.compare count 0 with
+                  | GT _ -> drop (int.sub count 1) l.tl
+                  | _ -> list
+                end
+          end
+
+    #  , take =
+    #      fn count list. match list with
+    #        | Nil _ -> Nil {}
+    #        | Cons l -> match int.compare count 0 with
+    #            | GT _ -> Cons {
+    #                , hd = l.hd
+    #                , tl = take (int.sub count 1) l.tl
+    #              }
+    #            | _ -> Nil {}
+    #          end
+    #      end
+    }
+  , right = {
+      , push = fn x xs. append xs (singleton x)
+      , drop = fn n xs. reverse (drop n (reverse xs))
+    }
 
   , append =
       let go =
         fn l r. match l with
           | Nil _ -> r
-          | Cons l -> go l.tl (cons l.hd r)
+          | Cons l -> go l.tl (left.push l.hd r)
         end
       in
       fn l r. go (reverse l) r
-
-#  , take =
-#      fn count list. match list with
-#        | Nil _ -> Nil {}
-#        | Cons l -> match int.compare count 0 with
-#            | GT _ -> Cons {
-#                , hd = l.hd
-#                , tl = take (int.sub count 1) l.tl
-#              }
-#            | _ -> Nil {}
-#          end
-#      end
-
-  , drop =
-      fn count list. match list with
-        | Nil _ -> Nil {}
-        | Cons l ->
-            match int.compare count 0 with
-              | GT _ -> drop (int.sub count 1) l.tl
-              | _ -> list
-            end
-      end
 
   , reverse =
       let go =
         fn accum list. match list with
           | Nil _ -> accum
-          | Cons l -> go (cons l.hd accum) l.tl
+          | Cons l -> go (left.push l.hd accum) l.tl
         end
       in
       go empty

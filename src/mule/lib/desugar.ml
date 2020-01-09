@@ -422,10 +422,13 @@ and desugar (Loc.{l_value = e; l_loc} as le) = match e with
         }
       in
       let cons =
-        D.GetField{
-          gf_lbl = Label.of_string "cons";
-          gf_record = D.Import (DC.import_abs `Generated "list");
-        };
+        D.GetField {
+          gf_lbl = Label.of_string "push";
+          gf_record = D.GetField {
+            gf_lbl = Label.of_string "left";
+            gf_record = D.Import (DC.import_abs `Generated "list");
+          };
+        }
       in
       List.fold_right
         l_elts
