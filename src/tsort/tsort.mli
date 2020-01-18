@@ -14,4 +14,4 @@ val sort
   : 'n comparator
   -> nodes:('n list)
   -> edges:('n edge list)
-  -> 'n list list
+  -> [ `Single of 'n | `Cycle of 'n list ] list

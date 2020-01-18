@@ -12,6 +12,7 @@ type ('n, 'cmp) node_set = {
   ns_nodes: ('n, 'cmp) Set.t; (* The actual set. *)
   ns_repr: 'n; (* A distinguished "representative" of the set. *)
   ns_to: ('n, 'cmp) Set.t; (* The set of outgoing edges from these nodes. *)
+  ns_is_cycle: bool; (* True iff this is a cycle. *)
 }
 
 (* Make an initial map mapping each node to a singleton [node_set UnionFind.var]
@@ -25,6 +26,7 @@ let make_init_map comparator ~nodes =
           ns_nodes = Set.singleton comparator n;
           ns_repr = n;
           ns_to = Set.empty comparator;
+          ns_is_cycle = false;
         })
     )
 
@@ -65,6 +67,7 @@ let join_cycles comparator map =
                 ns_nodes = Set.union l.ns_nodes r.ns_nodes;
                 ns_repr = l.ns_repr;
                 ns_to = Set.union l.ns_to r.ns_to;
+                ns_is_cycle = true;
               })
               lsv
               (Map.find_exn map r);
@@ -117,7 +120,7 @@ let prune_non_reprs comparator map =
 *)
 let iter_depth_first comparator map ~f =
   let seen = ref (Set.empty comparator) in
-  let rec go {ns_nodes; ns_repr; ns_to} =
+  let rec go ({ns_nodes = _; ns_repr; ns_to; ns_is_cycle = _} as ns) =
     if Set.mem !seen ns_repr then
       ()
     else
@@ -126,7 +129,7 @@ let iter_depth_first comparator map ~f =
         Set.iter ns_to ~f:(fun n ->
           go (Map.find_exn map n)
         );
-        f ns_nodes
+        f ns
       end
   in
   Map.iter map ~f:go
@@ -138,7 +141,17 @@ let sort (type n) (module Node : Comparator.S with type t = n) ~nodes ~edges =
   let map = prune_non_reprs (module Node) map in
   let ret = ref [] in
   iter_depth_first (module Node) map ~f:(fun ns ->
-    ret := (Set.to_list ns) :: !ret
+    let item =
+      if ns.ns_is_cycle then
+        `Cycle (Set.to_list ns.ns_nodes)
+      else
+        match Set.to_list ns.ns_nodes with
+        | [item] -> `Single item
+        | _ ->
+            failwith
+              "BUG: Item was marked as non-cycle, but it has more than one element."
+    in
+    ret := item :: !ret
   );
   List.rev !ret
 
@@ -151,14 +164,17 @@ module TestHelpers : sig
   val expect
     : nodes:(string list)
     -> edges:(string edge list)
-    -> result:(string list list)
+    -> result:([ `Single of string | `Cycle of string list ] list)
     -> bool
 
 end = struct
 
   let result_to_string result =
     result
-    |> List.sexp_of_t (List.sexp_of_t String.sexp_of_t)
+    |> List.sexp_of_t (function
+      | `Single s -> String.sexp_of_t s
+      | `Cycle cs -> (List.sexp_of_t String.sexp_of_t cs)
+    )
     |> Sexp.to_string_hum
 
   let compare_result ~want ~got =
@@ -187,7 +203,7 @@ module Tests = struct
     expect
       ~nodes:["A"; "B"]
       ~edges:[{from = "A"; to_ = "B"}]
-      ~result:[["B"]; ["A"]]
+      ~result:[`Single "B"; `Single "A"]
 
   let%test _ =
     expect
@@ -198,7 +214,7 @@ module Tests = struct
         {from = "B"; to_ = "A"};
       ]
       ~result:[
-        ["C"];
-        ["A"; "B"];
+        `Single "C";
+        `Cycle ["A"; "B"];
       ]
 end

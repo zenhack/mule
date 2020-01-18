@@ -38,7 +38,11 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   let map = Map.of_alist_exn (module Var) nodes in
   List.map
     sorted_vars
-    ~f:(List.map ~f:(fun v -> (v, Util.find_exn map v)))
+    ~f:(function
+      (* TODO: manage cycles vs. singles differently. *)
+      | `Cycle vs -> List.map vs ~f:(fun v -> (v, Util.find_exn map v))
+      | `Single v -> [(v, Util.find_exn map v)]
+    )
 
 let sort_rec_binds ~rec_types ~rec_vals =
   let types = sort_let_types rec_types in
