@@ -26,7 +26,9 @@
     we are biased towards, while the 'end' is the other end.
     " = {
       , push : all a. a -> t a -> t a
-        "O(1): Add an element to this end of the list."
+        "O(1): Add an element to the front of the list."
+      , pop : all a. t a -> import "maybe".t { hd : a, tl : t a }
+        "O(1): return the first element from the list, and the rest of the list."
       , drop : all a. int -> t a -> t a
         "O(log n): Drop the first n elements from this end of the list."
     # , take : all a. int -> t a -> t a

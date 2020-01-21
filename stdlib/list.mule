@@ -31,6 +31,12 @@
             , tl = xs
           }
 
+      , pop =
+          fn list. match list with
+            | Nil _ -> None {}
+            | Cons l -> Some l
+          end
+
       , drop =
           fn count list. match list with
             | Nil _ -> Nil {}
@@ -55,6 +61,14 @@
     }
   , right = {
       , push = fn x xs. append xs (singleton x)
+      , pop =
+          fn list. match reverse list with
+            | Nil _ -> None {}
+            | Cons l -> Some {
+                , hd = l.hd
+                , tl = reverse l.tl
+              }
+          end
       , drop = fn n xs. reverse (drop n (reverse xs))
     }
 
