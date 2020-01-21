@@ -4,3 +4,6 @@ type 'n edge = {
   to_: 'n;
   from: 'n;
 }
+
+type 'n result =
+  [ `Single of 'n | `Cycle of 'n list ] list
