@@ -40,7 +40,7 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
     sorted_vars
     ~f:(function
       (* TODO: manage cycles vs. singles differently. *)
-      | `Cycle vs -> List.map vs ~f:(fun v -> (v, Util.find_exn map v))
+      | `Cycle (v, vs) -> List.map (v::vs) ~f:(fun v -> (v, Util.find_exn map v))
       | `Single v -> [(v, Util.find_exn map v)]
     )
 

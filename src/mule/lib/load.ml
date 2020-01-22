@@ -144,8 +144,8 @@ let all_files {edges; results; _} =
     ~edges:(!edges)
   |> List.map ~f:(function
     | `Single k -> k
-    | `Cycle ks ->
+    | `Cycle (k, ks) ->
         MuleErr.bug
-          ("Module cycle: " ^ String.concat ~sep:" -> " ks)
+          ("Module cycle: " ^ String.concat ~sep:" -> " (k::ks))
   )
   |> List.map ~f:(fun k -> (k, Util.find_exn !results k))

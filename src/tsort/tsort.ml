@@ -142,14 +142,13 @@ let sort (type n) (module Node : Comparator.S with type t = n) ~nodes ~edges =
   let ret = ref [] in
   iter_depth_first (module Node) map ~f:(fun ns ->
     let item =
-      if ns.ns_is_cycle then
-        `Cycle (Set.to_list ns.ns_nodes)
-      else
-        match Set.to_list ns.ns_nodes with
-        | [item] -> `Single item
-        | _ ->
-            failwith
-              "BUG: Item was marked as non-cycle, but it has more than one element."
+      match ns.ns_is_cycle, Set.to_list ns.ns_nodes with
+      | false, [item] -> `Single item
+      | true, (x::xs) -> `Cycle(x, xs)
+      | _, [] ->  failwith "BUG: group had zero elements."
+      | false, _ ->
+          failwith
+            "BUG: Item was marked as non-cycle, but it has more than one element."
     in
     ret := item :: !ret
   );
@@ -164,7 +163,7 @@ module TestHelpers : sig
   val expect
     : nodes:(string list)
     -> edges:(string edge list)
-    -> result:([ `Single of string | `Cycle of string list ] list)
+    -> result:([ `Single of string | `Cycle of (string * string list) ] list)
     -> bool
 
 end = struct
@@ -173,7 +172,7 @@ end = struct
     result
     |> List.sexp_of_t (function
       | `Single s -> String.sexp_of_t s
-      | `Cycle cs -> (List.sexp_of_t String.sexp_of_t cs)
+      | `Cycle (c, cs) -> (List.sexp_of_t String.sexp_of_t (c :: cs))
     )
     |> Sexp.to_string_hum
 
@@ -215,6 +214,6 @@ module Tests = struct
       ]
       ~result:[
         `Single "C";
-        `Cycle ["A"; "B"];
+        `Cycle ("A", ["B"]);
       ]
 end

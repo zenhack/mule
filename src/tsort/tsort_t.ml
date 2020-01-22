@@ -6,4 +6,4 @@ type 'n edge = {
 }
 
 type 'n result =
-  [ `Single of 'n | `Cycle of 'n list ] list
+  [ `Single of 'n | `Cycle of ('n * 'n list) ] list
