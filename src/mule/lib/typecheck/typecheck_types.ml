@@ -19,6 +19,10 @@ let flip_sign = function
   | `Pos -> `Neg
   | `Neg -> `Pos
 
+let flip_quant = function
+  | `All -> `Exist
+  | `Exist -> `All
+
 type unify_dir = [ `Narrow | `Widen ]
 
 let get_flag: quantifier -> unify_dir -> bound_ty =

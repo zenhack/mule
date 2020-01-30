@@ -211,6 +211,178 @@ let wrong_num_args ctor want gotl gotr =
           ").";
         ])
 
+module PushQuants : sig
+  val push_down_quants : u_var -> unit
+end = struct
+  type intcmp = Int.comparator_witness
+  type 'v intmap = (int, 'v, intcmp) Map.t
+  type intset = (int, intcmp) Set.t
+
+  let make_edge_map: u_var -> intset intmap =
+    fun t ->
+    let seen = ref (Map.empty (module Int)) in
+    let rec go t =
+      let id = get_id (UnionFind.get t)  in
+      match Map.find !seen id with
+      | Some _ -> ()
+      | None ->
+          begin match UnionFind.get t with
+            | `Free _ | `Bound _ ->
+                seen := Map.set !seen ~key:id ~data:(Set.empty (module Int))
+            | `Quant {q_body; _} ->
+                seen := Map.set !seen
+                    ~key:id
+                    ~data:(Set.singleton (module Int) (get_id (UnionFind.get q_body)));
+                go q_body
+            | `Const(_, _, args, _) ->
+                let kids =
+                  List.map args ~f:(fun (t, _k) -> get_id (UnionFind.get t))
+                  |> Set.of_list (module Int)
+                in
+                seen := Map.set !seen ~key:id ~data:kids;
+                List.iter args ~f:(fun (t, _k) -> go t)
+          end
+    in
+    go t;
+    !seen
+
+  let tsort_edge_map: intset intmap -> int Tsort.result =
+    fun edgemap ->
+    let edges =
+      Map.mapi edgemap ~f:(fun ~key ~data ->
+        Set.to_list data
+        |> List.map ~f:(fun to_ -> Tsort.{from = key; to_})
+      )
+      |> Map.data
+      |> List.concat
+    in
+    Tsort.sort
+      (module Int)
+      ~nodes:(Map.keys edgemap)
+      ~edges
+
+  let make_contains_map: u_var -> intset intmap =
+    fun uv ->
+    let edge_map = make_edge_map uv in
+    let sort_res = tsort_edge_map edge_map in
+    let contains_map = ref edge_map in
+    List.iter sort_res ~f:(
+      let collect_descendants from =
+        let kids = Map.find_exn edge_map from in
+        Set.fold
+          kids
+          ~init:kids
+          ~f:(fun all kid ->
+            Set.union all (Map.find_exn !contains_map kid)
+          )
+      in
+      function
+      | `Single from ->
+          contains_map := Map.set
+              !contains_map
+              ~key:from
+              ~data:(collect_descendants from)
+      | `Cycle (f, fs) ->
+          let froms = f :: fs in
+          let descendants =
+            List.fold
+              froms
+              ~init:(Set.of_list (module Int) froms)
+              ~f:(fun all from ->
+                Set.union all (collect_descendants from)
+              )
+          in
+          List.iter froms ~f:(fun from ->
+            contains_map := Map.set !contains_map ~key:from ~data:descendants
+          )
+    );
+    !contains_map
+
+  let push_down_quants cmap uv =
+    let seen = ref (Set.empty (module Int)) in
+    let rec actual_push q uv =
+      let u = UnionFind.get uv in
+      match u with
+        | `Free _ -> ()
+        | `Bound bv ->
+            (* Insert the quantifier right above this node: *)
+            UnionFind.set
+              (`Quant { q with q_body = UnionFind.make (`Bound bv) })
+              uv
+        | `Quant q' ->
+            if Poly.equal q.q_quant q'.q_quant then
+              begin
+                actual_push q q'.q_body
+              end
+            else
+              (* If the quantifiers are unequal, we have to stop, as flipping
+               * them would be unsound. *)
+              UnionFind.set
+                (`Quant { q with q_body = UnionFind.make u })
+                uv
+        | `Const (_, c, args, _) ->
+            (* Check which branches contain our variable.
+             * - If it is exactly one, we descend into that branch. If that
+             *   branch is the parameter to a function, we flip the quantifier.
+             * - If it is more than one, we stop here, and wrap this node in
+             *   the quantifier.
+             * - We shouldn't get here if it is zero because of optimizations
+             *   elsewhere, but if so we just drop the quantifier and do
+             *   nothing
+             *)
+            let xs =
+              List.filter_mapi args ~f:(fun i (uv, _) ->
+                let contains = Util.find_exn cmap (get_id (UnionFind.get uv)) in
+                if Set.mem contains q.q_var.bv_id then
+                  Some(i, uv)
+                else
+                  None
+              )
+            in
+            match c, xs with
+            | `Named `Fn, [0, uv] ->
+                (* Flip the quantifier for contravariance: *)
+                actual_push
+                  { q with q_quant = flip_quant q.q_quant }
+                  uv
+            | _, [_, uv] ->
+                actual_push q uv
+            | _, (_::_) ->
+                UnionFind.set
+                  (`Quant { q with q_body = UnionFind.make u })
+                  uv
+            | _, [] -> ()
+    in
+    let rec go uv =
+      let u = UnionFind.get uv in
+      if not (Set.mem !seen (get_id u)) then
+        begin
+          seen := Set.add !seen (get_id u);
+          match u with
+          | `Free _ | `Bound _ -> ()
+          | `Const (_, _, args, _) ->
+                List.iter args ~f:(fun (uv, _k) -> go uv)
+          | `Quant q ->
+              go q.q_body;
+              let body = UnionFind.get q.q_body in
+              let body_contains = Util.find_exn cmap (get_id body) in
+              begin
+                if Set.mem body_contains q.q_var.bv_id then
+                  (* Optimization: we only need to do this if the body actually contains
+                   * the variable; otherwise we can just drop the quantifier entirely. *)
+                  actual_push q q.q_body
+              end;
+              UnionFind.merge (fun _ r -> r) uv q.q_body
+        end
+    in
+    go uv
+
+  let push_down_quants uv =
+    push_down_quants (make_contains_map uv) uv
+end
+
+let _ = PushQuants.push_down_quants
+
 (* Run f with an empty locals stack. When it returns, the result will be quantified over
  * any locals created that remain un-substituted. *)
 let with_locals ctx f =
@@ -249,7 +421,11 @@ let with_locals ctx f =
     )
   in
   ctx.locals := raised @ !(ctx.locals);
-  List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
+  let res =
+    List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
+  in
+  (* PushQuants.push_down_quants res; *)
+  res
 
 (* Create a new local with the given flag and kind. *)
 let fresh_local ?(vinfo={vi_ident = `Unknown; vi_binder = None}) ctx ty_flag k =
@@ -1387,105 +1563,6 @@ let typecheck ~get_import_type ~want ~export exp =
     unpack_exist ctx ty
   else
     ty
-
-module PushQuants = struct
-  type intcmp = Int.comparator_witness
-  type 'v intmap = (int, 'v, intcmp) Map.t
-  type intset = (int, intcmp) Set.t
-
-  let make_edge_map: u_var -> intset intmap =
-    fun t ->
-    let seen = ref (Map.empty (module Int)) in
-    let rec go t =
-      let id = get_id (UnionFind.get t)  in
-      match Map.find !seen id with
-      | Some _ -> ()
-      | None ->
-          begin match UnionFind.get t with
-            | `Free _ | `Bound _ ->
-                seen := Map.set !seen ~key:id ~data:(Set.empty (module Int))
-            | `Quant {q_body; _} ->
-                seen := Map.set !seen
-                    ~key:id
-                    ~data:(Set.singleton (module Int) (get_id (UnionFind.get q_body)));
-                go q_body
-            | `Const(_, _, args, _) ->
-                let kids =
-                  List.map args ~f:(fun (t, _k) -> get_id (UnionFind.get t))
-                  |> Set.of_list (module Int)
-                in
-                seen := Map.set !seen ~key:id ~data:kids;
-                List.iter args ~f:(fun (t, _k) -> go t)
-          end
-    in
-    go t;
-    !seen
-
-  let tsort_edge_map: intset intmap -> int Tsort.result =
-    fun edgemap ->
-    let edges =
-      Map.mapi edgemap ~f:(fun ~key ~data ->
-        Set.to_list data
-        |> List.map ~f:(fun to_ -> Tsort.{from = key; to_})
-      )
-      |> Map.data
-      |> List.concat
-    in
-    Tsort.sort
-      (module Int)
-      ~nodes:(Map.keys edgemap)
-      ~edges
-
-  let make_contains_map: u_var -> intset intmap =
-    fun uv ->
-    let edge_map = make_edge_map uv in
-    let sort_res = tsort_edge_map edge_map in
-    let contains_map = ref edge_map in
-    List.iter sort_res ~f:(
-      let collect_descendants from =
-        let kids = Map.find_exn edge_map from in
-        Set.fold
-          kids
-          ~init:kids
-          ~f:(fun all kid ->
-            Set.union all (Map.find_exn !contains_map kid)
-          )
-      in
-      function
-      | `Single from ->
-          contains_map := Map.set
-              !contains_map
-              ~key:from
-              ~data:(collect_descendants from)
-      | `Cycle (f, fs) ->
-          let froms = f :: fs in
-          let descendants =
-            List.fold
-              froms
-              ~init:(Set.of_list (module Int) froms)
-              ~f:(fun all from ->
-                Set.union all (collect_descendants from)
-              )
-          in
-          List.iter froms ~f:(fun from ->
-            contains_map := Map.set !contains_map ~key:from ~data:descendants
-          )
-    );
-    !contains_map
-
-  (* TODO:
-   * - Use the descendents map to guide the process of pushing down quantifiers.
-   *   At each level:
-   *    - If exactly one child contains a quantifier's bound variable, we should
-   *      push the quantifier down into that subtree.
-   *    - If more than one child contains the variable, we have to stop here.
-   *    - If zero children include the variable, we can drop the quantifier as
-   *      an optimization, but we don't *need* to do anything.
-  *)
-
-  (* Silence a compiler warning about the unused variable until I finish this: *)
-  let _ = make_contains_map
-end
 
 module Tests = struct
   module Helpers = struct
