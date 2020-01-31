@@ -303,55 +303,55 @@ end = struct
     let rec actual_push q uv =
       let u = UnionFind.get uv in
       match u with
-        | `Free _ -> ()
-        | `Bound bv ->
-            (* Insert the quantifier right above this node: *)
+      | `Free _ -> ()
+      | `Bound bv ->
+          (* Insert the quantifier right above this node: *)
+          UnionFind.set
+            (`Quant { q with q_body = UnionFind.make (`Bound bv) })
+            uv
+      | `Quant q' ->
+          if Poly.equal q.q_quant q'.q_quant then
+            begin
+              actual_push q q'.q_body
+            end
+          else
+            (* If the quantifiers are unequal, we have to stop, as flipping
+             * them would be unsound. *)
             UnionFind.set
-              (`Quant { q with q_body = UnionFind.make (`Bound bv) })
+              (`Quant { q with q_body = UnionFind.make u })
               uv
-        | `Quant q' ->
-            if Poly.equal q.q_quant q'.q_quant then
-              begin
-                actual_push q q'.q_body
-              end
-            else
-              (* If the quantifiers are unequal, we have to stop, as flipping
-               * them would be unsound. *)
+      | `Const (_, c, args, _) ->
+          (* Check which branches contain our variable.
+           * - If it is exactly one, we descend into that branch. If that
+           *   branch is the parameter to a function, we flip the quantifier.
+           * - If it is more than one, we stop here, and wrap this node in
+           *   the quantifier.
+           * - We shouldn't get here if it is zero because of optimizations
+           *   elsewhere, but if so we just drop the quantifier and do
+           *   nothing
+          *)
+          let xs =
+            List.filter_mapi args ~f:(fun i (uv, _) ->
+              let contains = Util.find_exn cmap (get_id (UnionFind.get uv)) in
+              if Set.mem contains q.q_var.bv_id then
+                Some(i, uv)
+              else
+                None
+            )
+          in
+          match c, xs with
+          | `Named `Fn, [0, uv] ->
+              (* Flip the quantifier for contravariance: *)
+              actual_push
+                { q with q_quant = flip_quant q.q_quant }
+                uv
+          | _, [_, uv] ->
+              actual_push q uv
+          | _, (_::_) ->
               UnionFind.set
                 (`Quant { q with q_body = UnionFind.make u })
                 uv
-        | `Const (_, c, args, _) ->
-            (* Check which branches contain our variable.
-             * - If it is exactly one, we descend into that branch. If that
-             *   branch is the parameter to a function, we flip the quantifier.
-             * - If it is more than one, we stop here, and wrap this node in
-             *   the quantifier.
-             * - We shouldn't get here if it is zero because of optimizations
-             *   elsewhere, but if so we just drop the quantifier and do
-             *   nothing
-             *)
-            let xs =
-              List.filter_mapi args ~f:(fun i (uv, _) ->
-                let contains = Util.find_exn cmap (get_id (UnionFind.get uv)) in
-                if Set.mem contains q.q_var.bv_id then
-                  Some(i, uv)
-                else
-                  None
-              )
-            in
-            match c, xs with
-            | `Named `Fn, [0, uv] ->
-                (* Flip the quantifier for contravariance: *)
-                actual_push
-                  { q with q_quant = flip_quant q.q_quant }
-                  uv
-            | _, [_, uv] ->
-                actual_push q uv
-            | _, (_::_) ->
-                UnionFind.set
-                  (`Quant { q with q_body = UnionFind.make u })
-                  uv
-            | _, [] -> ()
+          | _, [] -> ()
     in
     let rec go uv =
       let u = UnionFind.get uv in
@@ -361,7 +361,7 @@ end = struct
           match u with
           | `Free _ | `Bound _ -> ()
           | `Const (_, _, args, _) ->
-                List.iter args ~f:(fun (uv, _k) -> go uv)
+              List.iter args ~f:(fun (uv, _k) -> go uv)
           | `Quant q ->
               go q.q_body;
               let body = UnionFind.get q.q_body in
