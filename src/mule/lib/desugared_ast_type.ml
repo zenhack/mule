@@ -282,8 +282,8 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
         match parts with
         | [part] -> part
         | _ ->
-          PP.(Prec.(parens_if_tighter_than prec Pipe
-                (opt_fst (break 1 ^^ bar) parts)))
+            PP.(Prec.(parens_if_tighter_than prec Pipe
+                  (opt_fst (break 1 ^^ bar) parts)))
       end
   | Quant{q_quant; q_var; q_body; _} ->
       pretty_quant prec q_quant q_var q_body
