@@ -187,13 +187,13 @@ let strip_needless_quantifiers ty =
 
     (* These we just apply recursivley; no special logic for them. *)
     | DT.Record{r_info; r_types; r_values; r_src} ->
-        let r_types, fv_types = go_row r_types (`Record `Type) in
-        let r_values, fv_values = go_row r_values (`Record `Value) in
+        let r_types, fv_types = go_row r_types in
+        let r_values, fv_values = go_row r_values in
         ( DT.Record{r_info; r_types; r_values; r_src}
         , Set.union fv_types fv_values
         )
     | DT.Union{u_row} ->
-        let u_row, fvs = go_row u_row `Union in
+        let u_row, fvs = go_row u_row in
         (DT.Union{u_row}, fvs)
     | DT.App{app_info; app_fn; app_arg} ->
         let app_fn, fv_fn = go app_fn in
@@ -201,7 +201,7 @@ let strip_needless_quantifiers ty =
         ( DT.App{app_info; app_fn; app_arg}
         , Set.union fv_fn fv_arg
         )
-  and go_row {row_info; row_fields; row_rest} parent =
+  and go_row {row_info; row_fields; row_rest} =
     let row_fields, fv_fields =
       List.fold_right
         row_fields
@@ -216,21 +216,8 @@ let strip_needless_quantifiers ty =
     let row_rest, fvs = match row_rest with
       | None -> (None, fv_fields)
       | Some rest ->
-          match rest with
-          | DT.Quant{q_var; q_quant; q_body = DT.Var{v_var; _}; _}
-            when Var.equal q_var v_var ->
-              begin match q_quant, parent with
-                | `All, `Union
-                | `All, `Record `Type
-                | `Exist, `Record `Value ->
-                    (None, fv_fields)
-                | _ ->
-                    let (rest, fv) = go rest in
-                    (Some rest, fv)
-              end
-          | _ ->
-              let (rest, fv) = go rest in
-              (Some rest, fv)
+          let (rest, fv) = go rest in
+          (Some rest, fv)
     in
     ({row_info; row_fields; row_rest}, fvs)
   in
