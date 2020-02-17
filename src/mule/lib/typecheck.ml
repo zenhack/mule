@@ -332,8 +332,9 @@ end = struct
           *)
           let xs =
             List.filter_mapi args ~f:(fun i (uv, _) ->
-              let contains = Util.find_exn cmap (get_id (UnionFind.get uv)) in
-              if Set.mem contains q.q_var.bv_id then
+              let id = get_id (UnionFind.get uv) in
+              let contains = Util.find_exn cmap id in
+              if id = q.q_var.bv_id || Set.mem contains q.q_var.bv_id then
                 Some(i, uv)
               else
                 None
