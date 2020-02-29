@@ -102,6 +102,16 @@ module Graphviz = struct
      Map.iter ctx.vals_env ~f:(emit_u_var seen);
      List.iter !(ctx.locals) ~f:(fun v -> emit_u_var seen v)
   *)
+
+  let render_u_var uv =
+    Debug.start_graph ();
+    emit_u_var (ref (Set.empty (module Int))) uv;
+    Debug.set_root (get_id (UnionFind.get uv));
+    Debug.end_graph()
+
+  let maybe_render_u_var uv =
+    if Config.render_constraint_graph () then
+      render_u_var uv
 end
 
 let cant_instantiate info other_ty ~path ~reason =
@@ -788,13 +798,7 @@ and synth: context -> 'i DE.t -> u_var =
         )
   end
   in
-  if Config.render_constraint_graph () then
-    begin
-      Debug.start_graph ();
-      Graphviz.emit_u_var (ref (Set.empty (module Int))) result;
-      Debug.set_root (get_id (UnionFind.get result));
-      Debug.end_graph()
-    end;
+  Graphviz.maybe_render_u_var result;
   result
 and synth_branch ctx ?have_default:(have_default=false) b =
   match b with
@@ -865,13 +869,7 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
   )
 and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
-  if Config.render_constraint_graph () then
-    begin
-      Debug.start_graph ();
-      Graphviz.emit_u_var (ref (Set.empty (module Int))) ty_want;
-      Debug.set_root (get_id (UnionFind.get ty_want));
-      Debug.end_graph ()
-    end;
+  Graphviz.maybe_render_u_var ty_want;
   require_kind (get_kind ty_want) ktype;
   match e with
   | DE.Let{let_v; let_e; let_body} ->
