@@ -308,6 +308,12 @@ end = struct
     );
     !contains_map
 
+  let subtree_contains cmap q uv =
+    let id = get_id (UnionFind.get uv) in
+    let contains = Util.find_exn cmap id in
+    id = q.q_var.bv_id || Set.mem contains q.q_var.bv_id
+
+
   let push_down_quants cmap uv =
     let seen = ref (Set.empty (module Int)) in
     let rec actual_push q uv =
@@ -342,9 +348,7 @@ end = struct
           *)
           let xs =
             List.filter_mapi args ~f:(fun i (uv, _) ->
-              let id = get_id (UnionFind.get uv) in
-              let contains = Util.find_exn cmap id in
-              if id = q.q_var.bv_id || Set.mem contains q.q_var.bv_id then
+              if subtree_contains cmap q uv then
                 Some(i, uv)
               else
                 None
@@ -375,10 +379,8 @@ end = struct
               List.iter args ~f:(fun (uv, _k) -> go uv)
           | `Quant q ->
               go q.q_body;
-              let body = UnionFind.get q.q_body in
-              let body_contains = Util.find_exn cmap (get_id body) in
               begin
-                if Set.mem body_contains q.q_var.bv_id then
+                if subtree_contains cmap q q.q_body then
                   (* Optimization: we only need to do this if the body actually contains
                    * the variable; otherwise we can just drop the quantifier entirely. *)
                   actual_push q q.q_body
@@ -391,8 +393,6 @@ end = struct
   let push_down_quants uv =
     push_down_quants (make_contains_map uv) uv
 end
-
-let _ = PushQuants.push_down_quants
 
 (* Run f with an empty locals stack. When it returns, the result will be quantified over
  * any locals created that remain un-substituted. *)
@@ -435,7 +435,7 @@ let with_locals ctx f =
   let res =
     List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
   in
-  (* PushQuants.push_down_quants res; *)
+  PushQuants.push_down_quants res;
   res
 
 (* Create a new local with the given flag and kind. *)
