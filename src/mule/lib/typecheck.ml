@@ -1371,6 +1371,22 @@ and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
       lbl
       (ty, _kind)
     =
+    (* Merge a row containing the label [lbl] with another row
+       not containing that label.
+
+       parameters:
+
+       - [path] is the path into the type, for assisting with error
+         messages.
+       - tailref is a reference containing the row without [lbl]. It
+         will be updated with the result of unification.
+       - taildir is the direction of the row without [lbl].
+       - [lbl] is the label we're interested in.
+       - [lbldir] is the direction of the row including [lbl].
+       - [ty] is the field for [lbl] in the row that contains it.
+         We accept a tuple [(ty, _kind)] for convienence at the
+         call site, but [_kind] is unused.
+    *)
     let tail' =
       unify
         ctx
@@ -1516,6 +1532,10 @@ and join ctx ~reason l r =
     (l, `Narrow)
     (r, `Narrow)
 and fold_row row =
+  (* Fold a row (`Const(_, `Extend _, [_; `Const(_, `Extend _, ..., _), _], _))
+     into a pair (fields, tail). `fields` is a map from labels to the fields,
+     tail is the first item in the chain that is not (`Const(_, `Extend _, ...)).
+  *)
   let rec go m row =
     require_kind (get_kind row) krow;
     let row = whnf row in
@@ -1534,6 +1554,7 @@ and fold_row row =
   in
   go (Map.empty (module Label)) row
 and unfold_row fields tail =
+  (* Inverse of fold_row *)
   Map.fold
     fields
     ~init:tail
