@@ -1185,6 +1185,7 @@ and unify_already_whnf
                   })
               sub super;
             sub
+
         (* One side is flexible; set it equal to the other one. *)
         | `Free{ty_flag = `Flex; ty_scope; _}, _ ->
             hoist_scope ty_scope super;
@@ -1194,6 +1195,9 @@ and unify_already_whnf
             hoist_scope ty_scope sub;
             UnionFind.merge (fun l _ -> l) sub super;
             sub
+
+        (* If we see a quantifier, we "unroll" it, introducing an unknown
+           variable, and then try to unify with the resulting body. *)
         | `Quant q, _ ->
             unify
               ctx
@@ -1216,8 +1220,9 @@ and unify_already_whnf
               , super_dir
               )
 
-        (* Rigid variable should fail (If they were the same already, they would have been
-         * covered above): *)
+        (* Unifying two distinct rigid variables should fail. If we hit rigid variables
+           here we know they are distinct, because if they were the same already, they
+           would have been covered above: *)
         | `Free{ty_flag = `Rigid; ty_info; _}, _ ->
             cant_instantiate ty_info super ~path ~reason
         | _, `Free{ty_flag = `Rigid; ty_info; _} ->
@@ -1258,10 +1263,10 @@ and unify_already_whnf
                 (rsuper, super_dir)
             in
             (param **> result)
-
         | `Const (_, `Named `Fn, x, _), `Const (_, `Named `Fn, y, _) ->
             wrong_num_args `Fn 2 x y
 
+        (* Unions *)
         | `Const(_, `Named `Union, [row_sub, _], _),
           `Const(_, `Named `Union, [row_super, _], _) ->
             union (
@@ -1271,10 +1276,10 @@ and unify_already_whnf
                 (row_sub, sub_dir)
                 (row_super, super_dir)
             )
-
         | `Const(_, `Named `Union, x, _), `Const(_, `Named `Union, y, _) ->
             wrong_num_args `Union 1 x y
 
+        (* Records *)
         | `Const(_, `Named `Record, [rtype_sub, _; rvals_sub, _], _),
           `Const(_, `Named `Record, [rtype_super, _; rvals_super, _], _) ->
             unify_record ctx
@@ -1282,7 +1287,6 @@ and unify_already_whnf
               (rtype_super, rvals_super, super_dir)
               ~reason
               ~path
-
         | `Const(_, `Named `Record, x, _), `Const(_, `Named `Record, y, _) ->
             wrong_num_args `Record 2 x y
 
@@ -1292,12 +1296,18 @@ and unify_already_whnf
               ~path
               (sub, sub_dir)
               (super, super_dir)
+
+        (* Type-level lambdas *)
         | `Const(_, `Named `Lambda, [pl, kpl; bl, kbl], _),
           `Const(_, `Named `Lambda, [pr, kpr; br, kbr], _) ->
             require_kind kpl kpr;
             require_kind kbl kbr;
             (* Substitue the same rigid variable for both lambdas'
-             * parameters, and then check the bodies: *)
+             * parameters, and then check the bodies.
+             *
+             * TODO(error messages): we should probably annotate the variables
+             * so we can track them back to lambda parameters.
+            *)
             let p = fresh_local ctx `Rigid kpl in
             let check p_old b_old =
               subst
@@ -1318,6 +1328,11 @@ and unify_already_whnf
                 ~replacement:p'
                 body
             )
+
+        (* Type-level function application. We should only get here if
+           the functions are opaque (variables), since otherwise this
+           isn't in whnf. TODO: add a sanity check?
+        *)
         | `Const(_, `Named `Apply, [fl, flk; argl, arglk], retlk),
           `Const(_, `Named `Apply, [fr, frk; argr, argrk], retrk) ->
             require_kind flk frk;
@@ -1327,6 +1342,13 @@ and unify_already_whnf
             require_type_eq ctx argl argr;
             apply fl argl
 
+        (* Something else, should be impossible. TODO: it would be nice to refactor all
+           this so that we don't need a catchall panic; this defeats static exauhstiveness
+           checking, but unfortunately right now there are a bunch of "can't happen" cases
+           that depend on higher-level logic not captured by the types, or things that are
+           actually covered, but are handled by by guards (e.g. `Const, `Const where the
+           ctors are different), and it would be rather tedious to enumerate all of them
+           as-is in a way the exhaustiveness checker can understand. *)
         | _ ->
             let data =
               Sexp.List [
@@ -1359,6 +1381,7 @@ and unify_record ctx ~path ~reason
   in
   record rtype rvals
 and unify_extend ctx ~path ~reason (sub, sub_dir) (super, super_dir) =
+  (* Unify two rows that start with an `Extend. *)
   let (sub_fields, sub_tail) = fold_row sub in
   let (super_fields, super_tail) = fold_row super in
   let sub_tail = ref sub_tail in
