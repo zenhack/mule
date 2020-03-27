@@ -1,3 +1,4 @@
+#SKIP
 # Basic test of mutual recursion.
 { even : (rec n. Z {} | S n) -> (True {} | False {}) =
     fn x. match x with

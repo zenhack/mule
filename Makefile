@@ -16,6 +16,11 @@ check: check_stdlib check_dunetest
 check_dunetest:
 	MULE_ROOT=$(PWD)/stdlib dune runtest
 
+check_expect:
+	@find tests/ -type f -name '*.mule' \
+		| xargs -n 1 \
+		./scripts/expect-test.sh $(main_exe_path)
+
 check_stdlib:
 	@find stdlib/ -type f -name '*.mule' \
 		| xargs -n 1 \
