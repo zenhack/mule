@@ -179,33 +179,29 @@ let hoist_scope: Scope.t -> u_var -> unit =
   in
   go uv
 
-let rec subst ~target ~replacement uv =
+let subst ~target ~replacement uv =
   (* Nodes we've already seen, to detect cycles and avoid traversing
-   * shared sub-graphs. *)
+   * shared sub-graphs: *)
   let seen = ref (Map.empty (module Int)) in
   let rec go uv =
-    begin match UnionFind.get uv with
-      | u when get_id u = target -> replacement
-      | u when Map.mem !seen (get_id u) -> Util.find_exn !seen (get_id u)
-      | `Free _ | `Bound _ -> uv
-      | `Quant q when q.q_var.bv_id = target ->
-          (* Shadowing the target; stop here. *)
-          uv
-      | u ->
-          (* Add an entry to `seen` before traversing, in case we hit
-           * ourselves further down. *)
-          let result = copy u in
-          let result_v = UnionFind.make result in
-          seen := Map.set !seen ~key:(get_id u) ~data:result_v;
-          UnionFind.set (apply_kids result ~f:go) result_v;
-          result_v
-    end
+    match UnionFind.get uv with
+    | u when get_id u = target -> replacement
+    | u when Map.mem !seen (get_id u) -> Util.find_exn !seen (get_id u)
+    | `Free _ | `Bound _ -> uv
+    | `Quant q when q.q_var.bv_id = target ->
+        (* Shadowing the target; stop here. *)
+        uv
+    | `Quant q -> recurse (`Quant q)
+    | `Const(_, c, args, k) -> recurse (`Const(Gensym.gensym (), c, args, k))
+  and recurse result =
+    (* Add an entry to `seen` before recursing, in case we hit
+     * ourselves further down: *)
+    let result_v = UnionFind.make result in
+    seen := Map.set !seen ~key:(get_id result) ~data:result_v;
+    UnionFind.set (apply_kids result ~f:go) result_v;
+    result_v
   in
   go uv
-and copy = function
-  | `Free _ | `Bound _ -> MuleErr.bug "impossible"
-  | `Const(_, c, args, k) -> `Const(Gensym.gensym (), c, args, k)
-  | `Quant q -> `Quant q
 
 let wrong_num_args ctor want gotl gotr =
   MuleErr.bug
