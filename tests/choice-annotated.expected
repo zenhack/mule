@@ -13,8 +13,11 @@ Desugared:
 inferred type:
 
 	((all a (a -> (a -> a))) ->
-	 (record (types ())
-	  (values ((y (all b (b -> b))) (x (record (types ()) (values ())))))))
+	 (record (types ((... (all b b))))
+	  (values
+	   ((y (all c (c -> c)))
+	    (x (record (types ((... (all b b)))) (values ((... (exist d d))))))
+	    (... (exist d d))))))
 
 Runtime term:
 

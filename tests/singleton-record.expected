@@ -5,7 +5,10 @@ Desugared:
 
 inferred type:
 
-	(record (types ()) (values ((x (record (types ()) (values ()))))))
+	(record (types ((... (all a a))))
+	 (values
+	  ((x (record (types ((... (all a a)))) (values ((... (exist b b))))))
+	   (... (exist b b)))))
 
 Runtime term:
 
