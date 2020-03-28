@@ -1,0 +1,12 @@
+#XFAIL
+# This test makes sure the type checker correctly joins the union tags
+# in the result, without any extra hints. The type should be:
+#
+# int -> (Ok int | Err text)
+#
+# Currently the test is failing. We haven't filled in the .expected file yet;
+# we can do that once this is working.
+fn x. match x with
+  | 0 -> Ok 1
+  | _ -> Err "x"
+end
