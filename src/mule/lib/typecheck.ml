@@ -191,12 +191,13 @@ let subst ~target ~replacement uv =
     | `Quant q when q.q_var.bv_id = target ->
         (* Shadowing the target; stop here. *)
         uv
-    | `Quant q -> recurse (`Quant q)
-    | `Const(_, c, args, k) -> recurse (`Const(Gensym.gensym (), c, args, k))
-  and recurse result =
-    (* Add an entry to `seen` before recursing, in case we hit
-     * ourselves further down: *)
+    | `Quant q -> recurse q.q_id (`Quant { q with q_id = Gensym.gensym () })
+    | `Const(old_id, c, args, k) -> recurse old_id (`Const(Gensym.gensym (), c, args, k))
+  and recurse old_id result =
     let result_v = UnionFind.make result in
+    (* Add an entry to `seen` before recursing, in case we hit
+     * ourselves further down. Do this for both the old id and the new one: *)
+    seen := Map.set !seen ~key:old_id ~data:result_v;
     seen := Map.set !seen ~key:(get_id result) ~data:result_v;
     UnionFind.set (apply_kids result ~f:go) result_v;
     result_v
