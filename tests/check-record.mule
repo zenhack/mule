@@ -1,3 +1,4 @@
+#SKIP
 # This tests the branch for records in the type checker's checking mode.
 # Importantly, the below does not type check if left to the catchall
 # (synth followed by require_subytpe), becuase the type annotations must
