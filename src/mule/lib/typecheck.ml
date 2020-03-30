@@ -1551,6 +1551,12 @@ and join ctx ~reason l r =
     ~reason
     (l, `Narrow)
     (r, `Narrow)
+and meet ctx ~reason l r =
+  unify ctx
+    ~path:(TypePath.base l r)
+    ~reason
+    (l, `Widen)
+    (r, `Widen)
 and fold_row row =
   (* Fold a row (`Const(_, `Extend _, [_; `Const(_, `Extend _, ..., _), _], _))
      into a pair (fields, tail). `fields` is a map from labels to the fields,
@@ -1616,23 +1622,91 @@ module Tests = struct
     let mk_context () = make_initial_context ~get_import_type:(fun _ ->
         failwith "unimplemented"
       )
+
+    let should_type_error f =
+      try
+        begin
+          ignore (f ());
+          false
+        end
+      with
+        | MuleErr.MuleExn(`TypeError _) -> true
+
+    let eq to_s x y =
+      let xs = to_s x in
+      let ys = to_s y in
+      let ok = String.equal xs ys in
+      if not ok then
+        begin
+          Stdio.print_endline
+            ("Test failure: Mismatched types:\n\n" ^ xs ^ "\n\nvs.\n\n" ^ ys)
+        end;
+      ok
+
+    let types_eq x y =
+      eq
+        (fun uv ->
+          Extract.get_var_type uv
+          |> Relabel.relabel_type ()
+          |> Desugared_ast_type.to_string
+        )
+        x y
+
+    let rows_eq x y =
+      eq
+        (fun uv ->
+            let u_row = Extract.get_var_row uv in
+            Desugared_ast_type.(
+              to_string (Relabel.relabel_type () (Union{u_row}))
+            )
+        )
+        x y
+
+    let with_ctx f =
+      with_locals (mk_context ()) f
   end
 
   open Helpers
 
-  let%test _ =
-    (* Right now we are just checking that this doesn't throw an exception
-     * (and therefore at least finds a join at all). Ideally we should
-     * check that it's the correct one, though at time of writing I(isd)
-     * did so manually by inspecting the output of display_type, defined
-     * above (to automate we'd actually need to implement equality
-     * comparision, which I'm leaving as a TODO). *)
-    ignore (
-      join (mk_context ())
-        ~reason:(NonEmpty.singleton `Unspecified)
-        (extend (Label.of_string "A") int empty_union)
-        (extend (Label.of_string "B") int empty_union)
-    );
-    true
+  let reason = NonEmpty.singleton `Unspecified
 
+  let%test _ =
+    (* This test is a bit fragile, since we're just doing string
+       comparison of the ouptut but the order of labels is in
+       principle irrelevant. *)
+    rows_eq
+      (with_ctx (fun ctx ->
+        (join ctx
+          ~reason
+          (extend (Label.of_string "A") int empty_union)
+          (extend (Label.of_string "B") int empty_union)
+        )
+      ))
+      (extend (Label.of_string "B") int
+        (extend (Label.of_string "A") int empty_union)
+      )
+
+  let%test _ =
+    types_eq
+      (with_ctx (fun ctx ->
+        (join ctx
+          ~reason
+          (union (extend (Label.of_string "A") int empty_union))
+          (exist ~ident:`Unknown ktype (fun a -> a))
+        )
+      ))
+      (union (extend (Label.of_string "A") int empty_union))
+
+  let%test _ =
+    should_type_error (fun () ->
+      meet (mk_context ())
+        ~reason
+        (extend (Label.of_string "A") int empty_union)
+        (exist ~ident:`Unknown ktype (fun a -> a))
+    )
+
+  let%test _ =
+    should_type_error (fun () ->
+      meet (mk_context ()) ~reason int text
+    )
 end
