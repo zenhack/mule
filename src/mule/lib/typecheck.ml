@@ -219,6 +219,37 @@ let wrong_num_args ctor want gotl gotr =
         ])
 
 module PushQuants : sig
+  (* Push the quantifiers in a type as far down as they will go.
+
+     conceptually, types like:
+
+      all a. int -> t a
+
+     and:
+
+      int -> all a. t a
+
+     Are equivalent; since `a` is free in in `int`, narrowing its
+     scope to the part of the type where it's actually used doesn't
+     change what values could conceptually satisfy the type.
+
+     However, because of the way we handle quantifiers during unification,
+     the latter is actually more general, because in the even that we have
+     to unify the type with another function, it allows part of the type
+     to stay polymorphic for longer.
+
+     So, by pushing the quantifiers deeper into the type, we improve
+     type inference.
+
+     Note that we have to be careful with contravariance; when pushing
+     into a negative position we need to flip the quantifier, e.g.
+
+      all a. a -> int
+
+     becomes:
+
+      (exist a. a) -> int
+  *)
   val push_down_quants : u_var -> unit
 end = struct
   type intcmp = Int.comparator_witness
