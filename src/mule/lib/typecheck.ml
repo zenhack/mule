@@ -1643,6 +1643,7 @@ module Tests = struct
         end;
       ok
 
+    (*
     let types_eq x y =
       eq
         (fun uv ->
@@ -1651,6 +1652,7 @@ module Tests = struct
           |> Desugared_ast_type.to_string
         )
         x y
+       *)
 
     let rows_eq x y =
       eq
@@ -1687,15 +1689,12 @@ module Tests = struct
       )
 
   let%test _ =
-    types_eq
-      (with_ctx (fun ctx ->
-        (join ctx
-          ~reason
-          (union (extend (Label.of_string "A") int empty_union))
-          (exist ~ident:`Unknown ktype (fun a -> a))
-        )
-      ))
-      (union (extend (Label.of_string "A") int empty_union))
+    should_type_error (fun () ->
+      join (mk_context ())
+        ~reason
+        (union (extend (Label.of_string "A") int empty_union))
+        (exist ~ident:`Unknown ktype (fun a -> a))
+    )
 
   let%test _ =
     should_type_error (fun () ->

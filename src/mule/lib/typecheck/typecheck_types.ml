@@ -23,10 +23,18 @@ let flip_quant = function
   | `All -> `Exist
   | `Exist -> `All
 
+(* The "direction" of changes that are allowed on a type during unification.
+
+   "narrowing" a type means reducing the number of values it contains, i.e.
+   finding a supertype.
+
+   "widening" a type does the opposite -- it finds a subtype, increasing the
+   number of values contained.
+*)
 type unify_dir = [ `Narrow | `Widen ]
 
 let get_flag: quantifier -> unify_dir -> bound_ty =
-  fun q sign-> match q, sign with
+  fun q sign -> match q, sign with
     | `All, `Narrow -> `Flex
     | `All, `Widen -> `Rigid
     | `Exist, `Narrow -> `Rigid
