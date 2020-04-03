@@ -1753,5 +1753,17 @@ module Tests = struct
       types_eq
         ((exist ktype (fun a -> a)) **> int)
         (with_pushed_quant `All ktype (fun a -> a **> int))
+
+    let%test _ =
+      types_eq
+        (all ktype (fun a -> a **> a))
+        (with_pushed_quant `All ktype (fun a -> a **> a))
+
+    let%test _ =
+      types_eq
+        (union (extend (Label.of_string "A") int empty_union))
+        (with_pushed_quant `All ktype (fun a ->
+              union (extend (Label.of_string "A") int a)
+            ))
   end
 end
