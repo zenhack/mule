@@ -398,17 +398,13 @@ end = struct
                 uv
           | _, [] -> ()
     in
-    let rec go uv =
+    let go uv =
       let u = UnionFind.get uv in
       if not (Set.mem !seen (get_id u)) then
         begin
-          seen := Set.add !seen (get_id u);
           match u with
-          | `Free _ | `Bound _ -> ()
-          | `Const (_, _, args, _) ->
-              List.iter args ~f:(fun (uv, _k) -> go uv)
+          | `Free _ | `Bound _ | `Const _ -> ()
           | `Quant q ->
-              go q.q_body;
               begin
                 if subtree_contains cmap q q.q_body then
                   (* Optimization: we only need to do this if the body actually contains
@@ -445,28 +441,28 @@ let with_locals ctx f =
           }
           in
           `Trd (fun acc ->
-            UnionFind.make
-              (`Quant {
-                    q_id = Gensym.gensym ();
-                    q_quant = q;
-                    q_var = bv;
-                    q_kind = k;
-                    q_body =
-                      subst acc
-                        ~target:ty_id
-                        ~replacement:(UnionFind.make (`Bound bv));
-                  })
+            let res =
+              UnionFind.make
+                (`Quant {
+                      q_id = Gensym.gensym ();
+                      q_quant = q;
+                      q_var = bv;
+                      q_kind = k;
+                      q_body =
+                        subst acc
+                          ~target:ty_id
+                          ~replacement:(UnionFind.make (`Bound bv));
+                    })
+            in
+            PushQuants.push_down_quants res;
+            res
           )
       | `Free _ -> `Snd v
       | _ -> `Fst ()
     )
   in
   ctx.locals := raised @ !(ctx.locals);
-  let res =
-    List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
-  in
-  PushQuants.push_down_quants res;
-  res
+  List.fold to_generalize ~init:result ~f:(fun acc f -> f acc)
 
 (* Create a new local with the given flag and kind. *)
 let fresh_local ?(vinfo={vi_ident = `Unknown; vi_binder = None}) ctx ty_flag k =
