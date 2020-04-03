@@ -4,3 +4,7 @@ _build
 *.install
 *.mule.js
 .mule_history
+
+# Profiler output:
+perf.data
+perf.data.*
