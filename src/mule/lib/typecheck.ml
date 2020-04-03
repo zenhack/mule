@@ -252,7 +252,7 @@ module PushQuants : sig
 
       (exist a. a) -> int
   *)
-  val push_down_quants : u_var -> unit
+  val push_down_quants : u_quant -> unit
 end = struct
   type intcmp = Int.comparator_witness
   type 'v intmap = (int, 'v, intcmp) Map.t
@@ -344,8 +344,7 @@ end = struct
     id = q.q_var.bv_id || Set.mem contains q.q_var.bv_id
 
 
-  let push_down_quants cmap uv =
-    let seen = ref (Set.empty (module Int)) in
+  let push_down_quants cmap q =
     let rec actual_push q uv =
       let u = UnionFind.get uv in
       match u with
@@ -398,26 +397,10 @@ end = struct
                 uv
           | _, [] -> ()
     in
-    let go uv =
-      let u = UnionFind.get uv in
-      if not (Set.mem !seen (get_id u)) then
-        begin
-          match u with
-          | `Free _ | `Bound _ | `Const _ -> ()
-          | `Quant q ->
-              begin
-                if subtree_contains cmap q q.q_body then
-                  (* Optimization: we only need to do this if the body actually contains
-                   * the variable; otherwise we can just drop the quantifier entirely. *)
-                  actual_push q q.q_body
-              end;
-              UnionFind.merge (fun _ r -> r) uv q.q_body
-        end
-    in
-    go uv
+    actual_push q q.q_body
 
-  let push_down_quants uv =
-    push_down_quants (make_contains_map uv) uv
+  let push_down_quants q =
+    push_down_quants (make_contains_map q.q_body) q
 end
 
 (* Run f with an empty locals stack. When it returns, the result will be quantified over
@@ -440,22 +423,18 @@ let with_locals ctx f =
             bv_kind = k;
           }
           in
+          UnionFind.set (`Bound bv) v;
           `Trd (fun acc ->
-            let res =
-              UnionFind.make
-                (`Quant {
-                      q_id = Gensym.gensym ();
-                      q_quant = q;
-                      q_var = bv;
-                      q_kind = k;
-                      q_body =
-                        subst acc
-                          ~target:ty_id
-                          ~replacement:(UnionFind.make (`Bound bv));
-                    })
+            let res = {
+                q_id = Gensym.gensym ();
+                q_quant = q;
+                q_var = bv;
+                q_kind = k;
+                q_body = acc;
+              }
             in
             PushQuants.push_down_quants res;
-            res
+            res.q_body
           )
       | `Free _ -> `Snd v
       | _ -> `Fst ()
