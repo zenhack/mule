@@ -1651,7 +1651,6 @@ module Tests = struct
         end;
       ok
 
-    (*
     let types_eq x y =
       eq
         (fun uv ->
@@ -1660,7 +1659,6 @@ module Tests = struct
           |> Desugared_ast_type.to_string
         )
         x y
-       *)
 
     let rows_eq x y =
       eq
@@ -1674,11 +1672,34 @@ module Tests = struct
 
     let with_ctx f =
       with_locals (mk_context ()) f
+
+    let with_pushed_quant q k f =
+      let bv = {
+        bv_id = Gensym.gensym ();
+        bv_kind = k;
+        bv_info = {
+          vi_ident = `Unknown;
+          vi_binder = None;
+        };
+      }
+      in
+      let quant = {
+        q_id = Gensym.gensym ();
+        q_quant = q;
+        q_var = bv;
+        q_kind = k;
+        q_body = f (UnionFind.make (`Bound bv));
+      }
+      in
+      PushQuants.push_down_quants quant;
+      quant.q_body
   end
 
   open Helpers
 
   let reason = NonEmpty.singleton `Unspecified
+  let exist k f = exist ~ident:`Unknown k f
+  let all k f = all ~ident:`Unknown k f
 
   let%test _ =
     (* This test is a bit fragile, since we're just doing string
@@ -1701,7 +1722,7 @@ module Tests = struct
       join (mk_context ())
         ~reason
         (union (extend (Label.of_string "A") int empty_union))
-        (exist ~ident:`Unknown ktype (fun a -> a))
+        (exist ktype (fun a -> a))
     )
 
   let%test _ =
@@ -1709,11 +1730,28 @@ module Tests = struct
       meet (mk_context ())
         ~reason
         (extend (Label.of_string "A") int empty_union)
-        (exist ~ident:`Unknown ktype (fun a -> a))
+        (exist ktype (fun a -> a))
     )
 
   let%test _ =
     should_type_error (fun () ->
       meet (mk_context ()) ~reason int text
     )
+
+  module PushQuantTests = struct
+    let%test _ =
+      types_eq
+        int
+        (with_pushed_quant `All ktype (fun _ -> int))
+
+    let%test _ =
+      types_eq
+        (int **> all ktype (fun a -> a))
+        (with_pushed_quant `All ktype (fun a -> int **> a))
+
+    let%test _ =
+      types_eq
+        ((exist ktype (fun a -> a)) **> int)
+        (with_pushed_quant `All ktype (fun a -> a **> int))
+  end
 end
