@@ -32,6 +32,8 @@ type context = {
   get_import_type : Paths_t.t -> u_var;
 }
 
+(* Helpers for rendering a constraint graph via graphviz.
+   TODO(cleanup): move this out into its own file. *)
 module Graphviz = struct
   let once_for_id seen id ~f =
     if not (Set.mem !seen id) then
@@ -234,7 +236,7 @@ module PushQuants : sig
      change what values could conceptually satisfy the type.
 
      However, because of the way we handle quantifiers during unification,
-     the latter is actually more general, because in the even that we have
+     the latter is actually more general, because in the event that we have
      to unify the type with another function, it allows part of the type
      to stay polymorphic for longer.
 
