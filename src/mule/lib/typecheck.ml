@@ -1740,12 +1740,14 @@ module Tests = struct
     )
 
   let%test _ =
-    should_type_error (fun () ->
-      meet (mk_context ())
-        ~reason
-        (extend (Label.of_string "A") int empty_union)
-        (exist ktype (fun a -> a))
-    )
+    types_eq
+      (with_ctx (fun ctx ->
+        meet ctx
+          ~reason
+          (union (extend (Label.of_string "A") int empty_union))
+          (exist ktype (fun a -> a))
+      ))
+      (union (extend (Label.of_string "A") int empty_union))
 
   let%test _ =
     should_type_error (fun () ->
