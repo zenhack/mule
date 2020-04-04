@@ -235,7 +235,7 @@ let wrong_num_args ctor want gotl gotr =
         ])
 
 module PushQuants : sig
-  (* Push the quantifiers in a type as far down as they will go.
+  (* Push a quantifier in a type as far down as it will go.
 
      conceptually, types like:
 
