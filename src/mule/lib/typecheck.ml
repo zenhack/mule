@@ -1741,6 +1741,11 @@ module Tests = struct
 
   let%test _ =
     types_eq
+      (with_ctx (fun ctx -> meet ctx ~reason int (exist ktype (fun a -> a))))
+      int
+
+  let%test _ =
+    types_eq
       (with_ctx (fun ctx ->
         meet ctx
           ~reason
