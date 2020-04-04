@@ -828,27 +828,18 @@ and synth_branch ctx ?have_default:(have_default=false) b =
       (param, result)
   | DE.BConst {cm_cases; cm_default} ->
       let param = fresh_local ctx `Flex ktype in
-      let result =
-        Option.map cm_default ~f:(fun lf ->
-          let result = fresh_local ctx `Flex ktype in
-          ignore (check_leaf ctx lf (param **> result));
-          result
-        )
-      in
-      let result = match result with
-        | Some r -> r
-        | None -> fresh_local ctx `Flex ktype
-      in
+      let result = fresh_local ctx `Flex ktype in
+      Option.iter cm_default ~f:(fun lf ->
+        ignore (check_leaf ctx lf (param **> result))
+      );
       Map.fold cm_cases
         ~init:(param, result)
         ~f:(fun ~key ~data (param, result) ->
-          ignore (check_const ctx key param);
-          let result = join ctx
+          ( meet ctx param (synth_const key)
               ~reason:(NonEmpty.singleton `Unspecified)
-              result
-              (synth ctx data)
-          in
-          (param, result)
+          , join ctx result (synth ctx data)
+              ~reason:(NonEmpty.singleton `Unspecified)
+          )
         )
   | DE.BLabel {lm_cases; lm_default} ->
       let map = Map.map lm_cases ~f:(
