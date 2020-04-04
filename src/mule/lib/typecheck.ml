@@ -157,7 +157,11 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
         `Const(c_id, c, List.map args ~f:(fun (t, k) -> (f t, k)), k)
 
 (* [hoist_scope scope uv] adjusts [uv] so that all of the free
- * variables underneath it have a scope at least as great as [scope]. *)
+ * variables underneath it have a scope at least as great as [scope].
+ *
+ * If this would require changing the scope of a rigid variable,
+ * fail, as that would be unsound.
+ *)
 let hoist_scope: Scope.t -> u_var -> unit =
   fun scope uv ->
   let seen = ref (Set.empty (module Int)) in
@@ -169,9 +173,19 @@ let hoist_scope: Scope.t -> u_var -> unit =
         seen := Set.add !seen id;
         match u with
         | `Free tv ->
-            UnionFind.set
-              (`Free{tv with ty_scope = Scope.lca scope tv.ty_scope})
-              uv
+            let ty_scope = Scope.lca scope tv.ty_scope in
+            begin match tv.ty_flag with
+              | `Flex -> UnionFind.set (`Free{tv with ty_scope}) uv
+              | `Rigid ->
+                  if Scope.equal ty_scope tv.ty_scope then
+                    UnionFind.set (`Free{tv with ty_scope}) uv
+                  else
+                    (* unifying would require changing the scope of a rigid
+                       variable; fail: TODO: add a proper error message
+                       here.
+                    *)
+                    MuleErr.bug "Ill-scoped unification."
+            end
         | `Bound _ -> ()
         | `Quant {q_body; _} ->
             go q_body
