@@ -163,7 +163,7 @@ That is:
 * The keyword `fn`
 * A list of parameters (in this case `x y`)
 * A dot `.`
-* The body of the expression, which is a function.
+* The body of the function, which is an expression.
 
 We'll see later that the parameters can be any "pattern," not just
 variables, but for now we'll assume they are variables. Legal variable
