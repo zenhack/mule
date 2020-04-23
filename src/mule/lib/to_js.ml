@@ -26,11 +26,11 @@ let get_var env v =
   | `LazyVar var -> var
 
 let add_var env v =
-  let name = Gensym.anon_var () in
+  let name = Gensym.anon_var Gensym.global in
   (name, Map.set env ~key:v ~data:(`Var name))
 
 let add_lazy_var env v =
-  let name = Gensym.anon_var () in
+  let name = Gensym.anon_var Gensym.global in
   (name, Map.set env ~key:v ~data:(`LazyVar name))
 
 let js_let (v, e, body) =

@@ -32,51 +32,51 @@ and branch =
   | BBranch of switch
 [@@deriving sexp_of]
 
-let lam1 f =
-  let v = Gensym.anon_var () in
+let lam1 ctr f =
+  let v = Gensym.anon_var ctr in
   Lam1(v, f (Var v))
 
 let return k v =
   Js.Return (Js.Lam([], `E (Js.Call(k, [v]))))
 
-let rec cps k e = match e with
+let rec cps ctr k e = match e with
   | Var _ | Null | Const _ -> k e
   | Lam1(p, body) ->
-      let kv = Gensym.anon_var () in
+      let kv = Gensym.anon_var ctr in
       let k' v = Continue (Call1(Var kv, v)) in
-      k (Lam2(p, kv, cps k' body))
+      k (Lam2(p, kv, cps ctr k' body))
   | Call1(f, x) ->
-      f |> cps (fun f' ->
-        x |> cps (fun x' ->
-          Continue(Call2(f', x', lam1 k))))
+      f |> cps ctr (fun f' ->
+        x |> cps ctr (fun x' ->
+          Continue(Call2(f', x', lam1 ctr k))))
   | Switch {sw_arg; sw_cases; sw_default} ->
-      sw_arg |> cps (fun e ->
-        Switch (cps_switch k {sw_arg = e; sw_cases; sw_default})
+      sw_arg |> cps ctr (fun e ->
+        Switch (cps_switch ctr k {sw_arg = e; sw_cases; sw_default})
       )
   | LetRec(binds, body) ->
       let binds' =
-        List.map binds ~f:(fun (v, e) -> (v, cps (fun x -> x) e))
+        List.map binds ~f:(fun (v, e) -> (v, cps ctr (fun x -> x) e))
       in
-      LetRec(binds', cps k body)
+      LetRec(binds', cps ctr k body)
   | Lazy e ->
-      let k' = Gensym.anon_var () in
-      k (Lazy(Lam1(k', e |> cps (fun e -> Call1(Var k', e)))))
+      let k' = Gensym.anon_var ctr in
+      k (Lazy(Lam1(k', e |> cps ctr (fun e -> Call1(Var k', e)))))
   | Object props ->
       []
       |> List.fold
         props
         ~init:(fun ls -> k (Object ls))
         ~f:(fun acc (l, e) ->
-          fun ls -> e |> cps (fun e -> acc ((l, e) :: ls))
+          fun ls -> e |> cps ctr (fun e -> acc ((l, e) :: ls))
         )
   | Tagged(l, e) ->
-      e |> cps (fun e -> k (Tagged(l, e)))
-  | Index (e, i) -> e |> cps (fun e -> i |> cps (fun i -> k (Index (e, i))))
-  | GetTag    e -> e |> cps (fun e -> k (GetTag    e))
-  | GetTagArg e -> e |> cps (fun e -> k (GetTagArg e))
+      e |> cps ctr (fun e -> k (Tagged(l, e)))
+  | Index (e, i) -> e |> cps ctr (fun e -> i |> cps ctr (fun i -> k (Index (e, i))))
+  | GetTag    e -> e |> cps ctr (fun e -> k (GetTag    e))
+  | GetTagArg e -> e |> cps ctr (fun e -> k (GetTagArg e))
   | Update(old, lbl, value) ->
-      old |> cps (fun old ->
-        value |> cps (fun value ->
+      old |> cps ctr (fun old ->
+        value |> cps ctr (fun value ->
           k (Update(old, lbl, value))
         )
       )
@@ -84,20 +84,22 @@ let rec cps k e = match e with
       (* We shouldn't see these, since we only generate them via cps itself,
        * which we only call once. *)
       failwith "BUG"
-and cps_switch k {sw_arg; sw_cases; sw_default} = {
+and cps_switch ctr k {sw_arg; sw_cases; sw_default} = {
   sw_arg;
-  sw_cases = List.map sw_cases ~f:(fun (c, b) -> (c, cps_branch k b));
-  sw_default = Option.map sw_default ~f:(cps k)
+  sw_cases = List.map sw_cases ~f:(fun (c, b) -> (c, cps_branch ctr k b));
+  sw_default = Option.map sw_default ~f:(cps ctr k)
 }
-and cps_branch k = function
-  | BLeaf e -> BLeaf (cps k e)
-  | BBranch sw -> BBranch (cps_switch k sw)
+and cps_branch ctr k = function
+  | BLeaf e -> BLeaf (cps ctr k e)
+  | BBranch sw -> BBranch (cps_switch ctr k sw)
 
-let cps e =
+let cps ctr e =
   Call1
     ( Var (Var.of_string "$call0")
-    , lam1 (fun k -> e |> cps (fun e -> Call1(k, e)))
+    , lam1 ctr (fun k -> e |> cps ctr (fun e -> Call1(k, e)))
     )
+
+let cps e = cps Gensym.global e
 
 let const_to_js = function
   | Const.Integer n -> Js.BigInt n

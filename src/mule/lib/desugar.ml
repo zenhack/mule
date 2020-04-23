@@ -198,7 +198,7 @@ let rec quantify_opaques t = match DT.apply_to_kids t ~f:quantify_opaques with
       let row_fields = List.map row_fields ~f:(fun (lbl, ty) ->
           match ty with
           | DT.Opaque {o_info} ->
-              let var = Gensym.anon_var () in
+              let var = Gensym.anon_var Gensym.global in
               vars := var :: !vars;
               (lbl, DT.Var {
                    v_info = o_info;
@@ -513,6 +513,7 @@ and desugar_update e fields =
   in
   go e (List.map fields ~f:(fun Loc.{l_value = v; _} -> v))
 and desugar_lambda src ps body =
+  let ctr = Gensym.global in
   let rec go arg_idx pat_depth =
     let l_src p = `PartialLambda(arg_idx, p, pat_depth, src) in function
       | [] -> desugar body
@@ -526,7 +527,7 @@ and desugar_lambda src ps body =
       | (Loc.{l_value = SP.Wild; _} as p :: pats) ->
           D.Lam {
             l_src = l_src p;
-            l_param = Gensym.anon_var ();
+            l_param = Gensym.anon_var ctr;
             l_body = go (arg_idx + 1) 0 pats;
           }
       | (Loc.{l_value = SP.Var {v_var; v_type = Some ty}; _} as p :: pats) ->
@@ -550,7 +551,7 @@ and desugar_lambda src ps body =
           }
       | (Loc.{l_value = SP.Const _; _} :: _) -> incomplete_pattern ()
       | (Loc.{l_value = SP.Ctor{c_lbl; c_arg; _}; _} as p :: pats) ->
-          let v = Gensym.anon_var () in
+          let v = Gensym.anon_var ctr in
           D.Match {
             m_src = l_src p;
             m_branch = D.BLabel {
@@ -678,7 +679,7 @@ and desugar_lbl_match dict = function
         lm_cases = finalize_dict dict;
       }
   | [Loc.{l_value = SP.Var {v_var = v; v_type = Some ty}; _}, body] ->
-      let v' = Gensym.anon_var () in
+      let v' = Gensym.anon_var Gensym.global in
       let let_ = D.Let {
           let_v = v.Loc.l_value;
           let_e =
@@ -733,10 +734,11 @@ and desugar_let bs body =
     | ((SP.Const _), _) ->
         incomplete_pattern ()
     | (SP.Wild, e) ->
-        go ((Gensym.anon_var (), None, e) :: vals) types bs
+        go ((Gensym.anon_var Gensym.global, None, e) :: vals) types bs
     | (SP.Ctor{c_lbl = lbl; c_arg = pat; _}, e) ->
-        let bind_var = Gensym.anon_var () in
-        let match_var = Gensym.anon_var () in
+        let ctr = Gensym.global in
+        let bind_var = Gensym.anon_var ctr in
+        let match_var = Gensym.anon_var ctr in
         let bind =
           ( bind_var
           , None

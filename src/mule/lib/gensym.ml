@@ -1,4 +1,8 @@
+type counter = unit
+
 let next = ref 0
+
+let global = ()
 
 let gensym () =
   let result = !next in

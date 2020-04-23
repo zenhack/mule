@@ -131,7 +131,7 @@ let translate
       let l_param =
         match lf.lf_var with
         | Some v -> v
-        | None -> Gensym.anon_var ()
+        | None -> Gensym.anon_var Gensym.global
       in
       go_expr depth env (D.Lam{l_param; l_body = lf.lf_body; l_src = `Generated})
   and go_letrec depth env bindings ~mkbody =

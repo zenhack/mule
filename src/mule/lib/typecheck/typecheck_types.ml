@@ -6,8 +6,8 @@ include Typecheck_types_t
 let ktype = UnionFind.make `Type
 let krow = UnionFind.make `Row
 
-let gen_k: unit -> k_var =
-  fun () -> UnionFind.make (`Free (Gensym.gensym ()))
+let gen_k: Gensym.counter -> k_var =
+  fun ctr -> UnionFind.make (`Free (Gensym.gensym ctr))
 
 let rec get_kind: u_var -> k_var = fun uv -> match UnionFind.get uv with
   | `Const(_, _, _, k) -> k
@@ -77,7 +77,7 @@ let is_bottom t = match top_or_bottom_q t with
 (* constructors for common type constants. *)
 let const: u_typeconst -> (u_var * k_var) list -> k_var -> u_var =
   fun c args k ->
-  UnionFind.make (`Const(Gensym.gensym (), c, args, k))
+  UnionFind.make (`Const(Gensym.gensym Gensym.global, c, args, k))
 let const_ty name = const (`Named name) [] ktype
 let int = const_ty `Int
 let text = const_ty `Text
@@ -98,7 +98,7 @@ let apply: u_var -> u_var -> u_var = fun f x ->
     | `Arrow(_, rk) ->
         const (`Named `Apply) [f, fk; x, xk] rk
     | `Free _ ->
-        let rk = gen_k () in
+        let rk = gen_k Gensym.global in
         UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
         const (`Named `Apply) [f, fk; x, xk] rk
     | k ->
@@ -120,7 +120,7 @@ let apply: u_var -> u_var -> u_var = fun f x ->
           )
   end
 let recur : ident:var_ident -> (u_var -> u_var) -> u_var = fun ~ident mkbody ->
-  let ty_id = Gensym.gensym () in
+  let ty_id = Gensym.gensym Gensym.global in
   let v = UnionFind.make (`Bound {
       bv_id = ty_id;
       bv_info = {vi_ident = ident; vi_binder = Some `Rec};
@@ -132,8 +132,9 @@ let recur : ident:var_ident -> (u_var -> u_var) -> u_var = fun ~ident mkbody ->
   body
 let quant : ident:var_ident -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun ~ident q k mkbody ->
-  let q_id = Gensym.gensym () in
-  let ty_id = Gensym.gensym () in
+  let ctr = Gensym.global in
+  let q_id = Gensym.gensym ctr in
+  let ty_id = Gensym.gensym ctr in
   let bv = {
     bv_id = ty_id;
     bv_info = {
@@ -172,9 +173,10 @@ let some_union: u_var =
 
 let lambda : ident:var_ident -> k_var -> (u_var -> u_var) -> u_var =
   fun ~ident kparam mkbody ->
-  let id = Gensym.gensym () in
+  let ctr = Gensym.global in
+  let id = Gensym.gensym ctr in
   let param = UnionFind.make (`Bound {
-      bv_id = Gensym.gensym();
+      bv_id = Gensym.gensym ctr;
       bv_info = {
         vi_ident = ident;
         vi_binder = Some `Lambda;

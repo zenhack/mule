@@ -74,7 +74,7 @@ let rec load_surface_ast loader ~typ ~expr ~export ~extra_types =
       Js_pre.to_js e
     )
   in
-  let var = Gensym.anon_var () in
+  let var = Gensym.anon_var Gensym.global in
   {typ; typ_var; rt_expr; js_expr; var}
 and load_file loader ~base_path ~types ~export =
   load_path

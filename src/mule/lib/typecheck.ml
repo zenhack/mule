@@ -196,6 +196,7 @@ let hoist_scope: Scope.t -> u_var -> unit =
   go uv
 
 let subst ~target ~replacement uv =
+  let ctr = Gensym.global in
   (* Nodes we've already seen, to detect cycles and avoid traversing
    * shared sub-graphs: *)
   let seen = ref (Map.empty (module Int)) in
@@ -207,8 +208,8 @@ let subst ~target ~replacement uv =
     | `Quant q when q.q_var.bv_id = target ->
         (* Shadowing the target; stop here. *)
         uv
-    | `Quant q -> recurse q.q_id (`Quant { q with q_id = Gensym.gensym () })
-    | `Const(old_id, c, args, k) -> recurse old_id (`Const(Gensym.gensym (), c, args, k))
+    | `Quant q -> recurse q.q_id (`Quant { q with q_id = Gensym.gensym ctr })
+    | `Const(old_id, c, args, k) -> recurse old_id (`Const(Gensym.gensym ctr, c, args, k))
   and recurse old_id result =
     let result_v = UnionFind.make result in
     (* Add an entry to `seen` before recursing, in case we hit
@@ -440,7 +441,7 @@ let with_locals ctx f =
           UnionFind.set (`Bound bv) v;
           `Trd (fun acc ->
             let res = {
-                q_id = Gensym.gensym ();
+                q_id = Gensym.gensym Gensym.global;
                 q_quant = q;
                 q_var = bv;
                 q_kind = k;
@@ -459,7 +460,7 @@ let with_locals ctx f =
 
 (* Create a new local with the given flag and kind. *)
 let fresh_local ?(vinfo={vi_ident = `Unknown; vi_binder = None}) ctx ty_flag k =
-  let ty_id = Gensym.gensym () in
+  let ty_id = Gensym.gensym Gensym.global in
   let ty_scope = ctx.scope in
   let v = UnionFind.make (`Free {
       ty_id;
@@ -570,14 +571,16 @@ and with_rec_binds ctx DE.{rec_types; rec_vals} f =
   in
   f ctx
 (* Turn a type in the AST into a type in the type checker: *)
-and make_type ctx ty = match ty with
+and make_type ctx ty =
+  let ctr = Gensym.global in
+  match ty with
   | DT.Var {v_var; v_src; _} ->
       find_bound
         ~env:ctx.type_env
         ~var:v_var
         ~src:v_src
   | DT.Quant {q_quant; q_var; q_body; _} ->
-      quant ~ident:(`VarName (Var.to_string q_var)) q_quant (gen_k ()) (fun v ->
+      quant ~ident:(`VarName (Var.to_string q_var)) q_quant (gen_k ctr) (fun v ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:q_var ~data:v }
           q_body
@@ -616,7 +619,7 @@ and make_type ctx ty = match ty with
       require_kind (get_kind t) ktype;
       t
   | DT.TypeLam{tl_param; tl_body; _} ->
-      lambda ~ident:(`VarName (Var.to_string tl_param)) (gen_k ()) (fun p ->
+      lambda ~ident:(`VarName (Var.to_string tl_param)) (gen_k ctr) (fun p ->
         make_type
           { ctx with type_env = Map.set ctx.type_env ~key:tl_param ~data:p }
           tl_body
@@ -626,7 +629,7 @@ and make_type ctx ty = match ty with
       let k_arg = get_kind arg in
       apply
         (make_type ctx app_fn
-         |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ())))
+         |> with_kind (UnionFind.make(`Arrow(k_arg, gen_k ctr)))
         )
         arg
   | DT.Path{p_var; p_lbls; p_src; _} ->
@@ -649,7 +652,7 @@ and make_type ctx ty = match ty with
               ctx.get_import_type i_resolved_path
         end
       in
-      let result_type = fresh_local ctx `Flex (gen_k ()) in
+      let result_type = fresh_local ctx `Flex (gen_k ctr) in
       let path_type = make_path_type result_type p_lbls in
       require_subtype
         ctx
@@ -1604,7 +1607,7 @@ let rec gen_kind = function
   | `Arrow(p, r) -> UnionFind.make (`Arrow(gen_kind p, gen_kind r))
   | `Type -> ktype
   | `Row -> krow
-  | `Unknown -> gen_k ()
+  | `Unknown -> gen_k Gensym.global
 
 let typecheck ~get_import_type ~want ~export exp =
   let ctx = make_initial_context ~get_import_type in
@@ -1680,7 +1683,7 @@ module Tests = struct
 
     let with_pushed_quant q k f =
       let bv = {
-        bv_id = Gensym.gensym ();
+        bv_id = Gensym.gensym Gensym.global;
         bv_kind = k;
         bv_info = {
           vi_ident = `Unknown;
@@ -1689,7 +1692,7 @@ module Tests = struct
       }
       in
       let quant = {
-        q_id = Gensym.gensym ();
+        q_id = Gensym.gensym Gensym.global;
         q_quant = q;
         q_var = bv;
         q_kind = k;

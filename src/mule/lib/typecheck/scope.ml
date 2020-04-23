@@ -22,4 +22,4 @@ let sexp_of_t ls =
 let empty = []
 
 let make_child s =
-  Gensym.gensym () :: s
+  Gensym.gensym Gensym.global :: s
