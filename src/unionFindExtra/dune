@@ -1,12 +1,9 @@
 (library
-  (name tsort)
-  (public_name tsort)
+  (name unionFindExtra)
+  (public_name unionFindExtra)
   (flags (:standard -open Base))
   (inline_tests)
   (preprocess (pps ppx_inline_test))
   (libraries
-    ;; Elsewhere in this repo:
-    unionFindExtra
-
     unionFind
     base))

@@ -15,7 +15,7 @@ type ('n, 'cmp) node_set = {
   ns_is_cycle: bool; (* True iff this is a cycle. *)
 }
 
-(* Make an initial map mapping each node to a singleton [node_set UnionFind.var]
+(* Make an initial map mapping each node to a singleton [node_set UnionFind.elem]
  * containing only itself, with no edges. *)
 let make_init_map comparator ~nodes =
   List.fold
@@ -32,7 +32,7 @@ let make_init_map comparator ~nodes =
 
 (* Add the list of edges to the map.
  *
- * - [map] is a map from nodes to [node_set UnionFind.var]s, where the keys are
+ * - [map] is a map from nodes to [node_set UnionFind.elem]s, where the keys are
  *   members of their corresponding sets.
  * - [edges] is a list of edges.
  *
@@ -44,8 +44,8 @@ let add_edges map ~edges =
     let fsv = Map.find_exn map from in
     let fs = UnionFind.get fsv in
     UnionFind.set
-      { fs with ns_to = Set.add fs.ns_to to_ }
       fsv
+      { fs with ns_to = Set.add fs.ns_to to_ }
   )
 
 (* Join sets in [map] that have cycles.
@@ -63,7 +63,7 @@ let join_cycles comparator map =
       ignore (Set.fold
           parents
           ~init:nsv
-          ~f:(fun lsv r -> UnionFind.merge (fun l r -> {
+          ~f:(fun lsv r -> UnionFindExtra.union_with ~f:(fun l r -> {
                 ns_nodes = Set.union l.ns_nodes r.ns_nodes;
                 ns_repr = l.ns_repr;
                 ns_to = Set.union l.ns_to r.ns_to;

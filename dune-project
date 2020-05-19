@@ -15,7 +15,7 @@
   (name libmule))
 
 (package
-  (name unionFind))
+  (name unionFindExtra))
 
 (package
   (name tsort))

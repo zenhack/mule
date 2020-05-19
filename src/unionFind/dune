@@ -1,5 +1,0 @@
-(library
-  (name unionFind)
-  (public_name unionFind)
-  (flags (:standard -open Base))
-  (libraries base))

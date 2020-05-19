@@ -99,7 +99,7 @@ let apply: u_var -> u_var -> u_var = fun f x ->
         const (`Named `Apply) [f, fk; x, xk] rk
     | `Free _ ->
         let rk = gen_k Gensym.global in
-        UnionFind.merge (fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
+        UnionFindExtra.union_with ~f:(fun _ r -> r) fk (UnionFind.make (`Arrow(xk, rk)));
         const (`Named `Apply) [f, fk; x, xk] rk
     | k ->
         MuleErr.throw
@@ -128,7 +128,7 @@ let recur : ident:var_ident -> (u_var -> u_var) -> u_var = fun ~ident mkbody ->
     })
   in
   let body = mkbody v in
-  UnionFind.merge (fun _ r -> r) v body;
+  UnionFindExtra.union_with ~f:(fun _ r -> r) v body;
   body
 let quant : ident:var_ident -> [`All|`Exist] -> k_var -> (u_var -> u_var) -> u_var =
   fun ~ident q k mkbody ->

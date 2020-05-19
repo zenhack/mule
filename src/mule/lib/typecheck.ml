@@ -175,10 +175,10 @@ let hoist_scope: Scope.t -> u_var -> unit =
         | `Free tv ->
             let ty_scope = Scope.lca scope tv.ty_scope in
             begin match tv.ty_flag with
-              | `Flex -> UnionFind.set (`Free{tv with ty_scope}) uv
+              | `Flex -> UnionFind.set uv (`Free{tv with ty_scope})
               | `Rigid ->
                   if Scope.equal ty_scope tv.ty_scope then
-                    UnionFind.set (`Free{tv with ty_scope}) uv
+                    UnionFind.set uv (`Free{tv with ty_scope})
                   else
                     (* unifying would require changing the scope of a rigid
                        variable; fail: TODO: add a proper error message
@@ -216,7 +216,7 @@ let subst ~target ~replacement uv =
      * ourselves further down. Do this for both the old id and the new one: *)
     seen := Map.set !seen ~key:old_id ~data:result_v;
     seen := Map.set !seen ~key:(get_id result) ~data:result_v;
-    UnionFind.set (apply_kids result ~f:go) result_v;
+    UnionFind.set result_v (apply_kids result ~f:go);
     result_v
   in
   go uv
@@ -367,8 +367,8 @@ end = struct
       | `Bound bv ->
           (* Insert the quantifier right above this node: *)
           UnionFind.set
-            (`Quant { q with q_body = UnionFind.make (`Bound bv) })
             uv
+            (`Quant { q with q_body = UnionFind.make (`Bound bv) })
       | `Quant q' ->
           if Poly.equal q.q_quant q'.q_quant then
             begin
@@ -378,8 +378,8 @@ end = struct
             (* If the quantifiers are unequal, we have to stop, as flipping
              * them would be unsound. *)
             UnionFind.set
-              (`Quant { q with q_body = UnionFind.make u })
               uv
+              (`Quant { q with q_body = UnionFind.make u })
       | `Const (_, c, args, _) ->
           (* Check which branches contain our variable.
            * - If it is exactly one, we descend into that branch. If that
@@ -408,8 +408,8 @@ end = struct
               actual_push q uv
           | _, (_::_) ->
               UnionFind.set
-                (`Quant { q with q_body = UnionFind.make u })
                 uv
+                (`Quant { q with q_body = UnionFind.make u })
           | _, [] -> ()
     in
     actual_push q q.q_body
@@ -438,7 +438,7 @@ let with_locals ctx f =
             bv_kind = k;
           }
           in
-          UnionFind.set (`Bound bv) v;
+          UnionFind.set v (`Bound bv);
           `Trd (fun acc ->
             let res = {
                 q_id = Gensym.gensym Gensym.global;
@@ -993,7 +993,7 @@ and check_maybe_flex ctx e ty_want ~f =
   | `Free{ty_flag = `Flex; ty_kind; _} ->
       require_kind ty_kind ktype;
       let got = synth ctx e in
-      UnionFind.merge (fun _ r -> r) want got;
+      UnionFindExtra.union_with ~f:(fun _ r -> r) want got;
       got
   | _ ->
       f want
@@ -1074,7 +1074,7 @@ and check_branch: context -> 'i DE.branch -> ?default:u_var -> (u_var * u_var) -
         )
       in
       require_subtype ctx
-        ~sub:p_want
+        ~sub:p_want (* ???? *)
         ~super:p_lbls
         ~reason:(NonEmpty.singleton `Unspecified);
       Map.iteri lm_cases ~f:(fun ~key ~data ->
@@ -1162,12 +1162,12 @@ and unify_already_whnf
       require_kind (get_kind sub) (get_kind super);
       ctx.assumptions := Set.add !(ctx.assumptions) (sub_id, super_id);
       begin match UnionFind.get sub, UnionFind.get super with
-        | _ when UnionFind.equal sub super -> sub
+        | _ when UnionFind.eq sub super -> sub
         (* The UnionFind variables are different, but the IDs are the same. I(isd) am not
          * sure this can actually come up, but if it does, this is the behavior that
          * makes sense. *)
         | _ when sub_id = super_id ->
-            UnionFind.merge (fun _ r -> r) sub super;
+            UnionFindExtra.union_with ~f:(fun _ r -> r) sub super;
             sub
 
         | `Bound {bv_info = { vi_binder = Some `Rec; vi_ident = `VarName var }; _}, _
@@ -1188,8 +1188,8 @@ and unify_already_whnf
             (* Both sides are flexible variables; merge them, using the lca of their
              * scopes. *)
             require_kind kl kr;
-            UnionFind.merge
-              (fun _ _ -> `Free {
+            UnionFindExtra.union_with
+              ~f:(fun _ _ -> `Free {
                     ty_flag = `Flex;
                     ty_info = l_info;
                     ty_id = l_id;
@@ -1202,11 +1202,11 @@ and unify_already_whnf
         (* One side is flexible; set it equal to the other one. *)
         | `Free{ty_flag = `Flex; ty_scope; _}, _ ->
             hoist_scope ty_scope super;
-            UnionFind.merge (fun _ r -> r) sub super;
+            UnionFindExtra.union_with ~f:(fun _ r -> r) sub super;
             sub
         | _, `Free{ty_flag = `Flex; ty_scope; _} ->
             hoist_scope ty_scope sub;
-            UnionFind.merge (fun l _ -> l) sub super;
+            UnionFindExtra.union_with ~f:(fun l _ -> l) sub super;
             sub
 
         (* If we see a quantifier, we "unroll" it, introducing an unknown
@@ -1516,14 +1516,14 @@ and check_const ctx c ty_want =
     ~super:ty_want
     ~reason:(NonEmpty.singleton `Unspecified)
 and with_kind k u = require_kind k (get_kind u); u
-and require_kind l r = UnionFind.merge unify_kind l r
+and require_kind l r = UnionFindExtra.union_with ~f:unify_kind l r
 and unify_kind l r =
   begin match l, r with
     | `Free n, k | k, `Free n -> kind_occurs_check n k; k
     | `Type, `Type | `Row, `Row -> r
     | `Arrow(pl, pr), `Arrow(rl, rr) ->
-        UnionFind.merge unify_kind pl pr;
-        UnionFind.merge unify_kind rl rr;
+        UnionFindExtra.union_with ~f:unify_kind pl pr;
+        UnionFindExtra.union_with ~f:unify_kind rl rr;
         r
     | _ ->
         MuleErr.throw (`TypeError(`MismatchedKinds (Extract.kind l, Extract.kind r)))
@@ -1541,8 +1541,8 @@ and whnf: u_var -> u_var =
   match UnionFind.get t with
   | `Quant q ->
       UnionFind.set
-        (`Quant { q with q_body = whnf q.q_body })
-        t;
+        t
+        (`Quant { q with q_body = whnf q.q_body });
       t
   | `Const(_, `Named `Apply, [f, fk; x, xk], k) ->
       require_kind (UnionFind.make(`Arrow(xk, k))) fk;
@@ -1555,7 +1555,7 @@ and apply_type app f arg =
       let result =
         subst body ~target:(get_id (UnionFind.get p)) ~replacement:arg
       in
-      UnionFind.merge (fun _ r -> r) app result;
+      UnionFindExtra.union_with ~f:(fun _ r -> r) app result;
       ignore (whnf result)
   | _ -> ()
 and require_type_eq ctx l r =

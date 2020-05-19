@@ -7,7 +7,7 @@ type u_kind =
   | `Type
   | `Arrow of k_var * k_var
   ]
-and k_var = u_kind UnionFind.var
+and k_var = u_kind UnionFind.elem
 
 type typeconst_name =
   [ `Text
@@ -66,7 +66,7 @@ and var_info = {
   vi_ident: var_ident;
   vi_binder: [ `Rec | `Lambda | `Quant of [ `All | `Exist ] ] option;
 }
-and u_var = u_type UnionFind.var
+and u_var = u_type UnionFind.elem
 
 type sign = [ `Pos | `Neg ]
 

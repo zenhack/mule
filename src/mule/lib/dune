@@ -13,9 +13,9 @@
   (flags (:standard -open Base))
   (libraries
     ;; Elsewhere in this repo:
-    unionFind
     tsort
 
+    unionFind
     findlib
     base
     stdio
