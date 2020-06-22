@@ -14,7 +14,7 @@ module type M_sig = sig
   val make_qbound : ctx -> GT.qbound -> GT.qbound GT.var
 
   val with_quant : ctx -> GT.qbound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
-  val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> g_node
+  val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
   val get_ctr : ctx -> Gensym.counter
 end
@@ -117,30 +117,31 @@ module M : M_sig = struct
 end
 
 module Gen : sig
-  val gen_expr : M.ctx -> 'a DE.t -> GT.quant GT.var
+  val gen_expr : M.ctx -> 'a DE.t -> GT.g_node
 end = struct
+  let flex_var ctx q =
+    let ctr = M.get_ctr ctx in
+    M.make_type ctx (`Free {
+      tv_id = GT.Ids.Type.fresh ctr;
+      tv_bound = M.make_tbound ctx {
+        b_target = q;
+        b_flag = `Flex;
+      };
+    })
+
   let rec gen_expr ctx = function
     | DE.App {app_fn; app_arg} -> M.with_sub_g ctx (fun ctx g ->
-        let g_fn = gen_expr ctx app_fn in
-        let g_arg = gen_expr ctx app_arg in
-        let ctr = M.get_ctr ctx in
-        let ta = M.make_type ctx (`Free {
-            tv_id = GT.Ids.Type.fresh ctr;
-
-
-        (*
-        let%bind (qid, fid, pid, aid) = M.with_ctr (fun ctr -> M.return
-            GT.Ids.(
-              Quant.fresh ctr,
-              Type.fresh ctr,
-              Type.fresh ctr,
-              Type.fresh ctr
-            )
-          )
-        in
-           *)
-        failwith "TODO"
+        let _g_fn = gen_expr ctx app_fn in
+        let _g_arg = gen_expr ctx app_arg in
+        M.with_quant ctx GT.{ b_target = `G g; b_flag = `Flex } (fun q ->
+          let bnd = GT.{ b_target = `Q q; b_flag = `Flex } in
+          let q_arg = M.with_quant ctx bnd (fun _ -> flex_var ctx q) in
+          let q_ret = M.with_quant ctx bnd (fun _ -> flex_var ctx q) in
+          let t_fn = M.make_type ctx (`Lambda(q_arg, q_ret)) in
+          (* TODO: add instance constraints. *)
+          t_fn
+        )
       )
-    | _ -> failwith "TODO"
-     *)
+    | _ ->
+        failwith "TODO"
 end
