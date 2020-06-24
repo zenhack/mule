@@ -3,11 +3,14 @@ module DE = Desugared_ast_expr_t
 
 (* Reason for an instance constraint *)
 type instance_why =
-  [ (* An argument must be an instance of the paraemter's type. *)
+  [ (* In a function application, the function's parameter type must be an
+       instance of the type of its argument. *)
     `ParamArg of
       ( unit DE.t (* Function *)
       * unit DE.t (* Argument *)
       )
+  | (* If in expresssion is being applied, it must be a function. *)
+      `FnApply of (unit DE.t) (* The expression for the function *)
   ]
 
 (* Reason for a unification constraint *)

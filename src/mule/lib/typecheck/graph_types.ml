@@ -82,9 +82,8 @@ and typ =
   ]
 and tyvar = {
   tv_id: Ids.Type.t;
-  tv_bound: tbound var;
+  tv_bound: bound var;
 }
-and tbound = quant var bound
 and ctor =
   [ `Type of type_ctor
   | `Row of row_ctor
@@ -102,20 +101,16 @@ and row_ctor =
 and const = [ `Text | `Int | `Char ]
 and quant = {
   q_id: Ids.Quant.t;
-  q_bound: qbound var;
+  q_bound: bound var;
   q_body: typ var Lazy.t;
 }
-and qbound = quant_parent bound
-and quant_parent =
+and bound_target =
   [ `G of g_node
   | `Q of quant var
   ]
 and g_node = quant var Lazy.t GNode.t
-and free = {
-  fr_bound: quant var bound var;
-}
-and 'tgt bound = {
-  b_target: 'tgt;
+and bound = {
+  b_target: bound_target;
   b_flag: bound_flag;
 }
 and bound_flag =

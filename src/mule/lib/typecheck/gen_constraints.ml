@@ -3,6 +3,7 @@
 module GT = Graph_types
 module DE = Desugared_ast_expr_t
 module UF = Union_find
+module C = Constraint_t
 
 module type M_sig = sig
   type ctx
@@ -10,13 +11,14 @@ module type M_sig = sig
   val make_quant : ctx -> GT.quant -> GT.quant GT.var
   val make_type : ctx -> GT.typ -> GT.typ GT.var
   val make_kind : ctx -> GT.kind -> GT.kind GT.var
-  val make_tbound : ctx -> GT.tbound -> GT.tbound GT.var
-  val make_qbound : ctx -> GT.qbound -> GT.qbound GT.var
+  val make_bound : ctx -> GT.bound -> GT.bound GT.var
 
-  val with_quant : ctx -> GT.qbound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
+  val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
   val get_ctr : ctx -> Gensym.counter
+
+  val constrain : ctx -> C.constr -> unit
 end
 
 module M : M_sig = struct
@@ -30,8 +32,7 @@ module M : M_sig = struct
       s_quants: GT.quant Union_find.store;
       s_kinds: GT.kind Union_find.store;
       s_types: GT.typ Union_find.store;
-      s_tbounds: GT.tbound Union_find.store;
-      s_qbounds: GT.qbound Union_find.store;
+      s_bounds: GT.bound Union_find.store;
     }
 
     module Lens = struct
@@ -51,14 +52,9 @@ module M : M_sig = struct
         set = (fun s_types s -> { s with s_types });
       }
 
-      let tbounds = {
-        get = (fun s -> s.s_tbounds);
-        set = (fun s_tbounds s -> { s with s_tbounds });
-      }
-
-      let qbounds = {
-        get = (fun s -> s.s_qbounds);
-        set = (fun s_qbounds s -> { s with s_qbounds });
+      let bounds = {
+        get = (fun s -> s.s_bounds);
+        set = (fun s_bounds s -> { s with s_bounds });
       }
     end
   end
@@ -67,6 +63,7 @@ module M : M_sig = struct
     ctx_g: GT.g_node;
     ctx_ctr: Gensym.counter;
     ctx_uf_stores: Stores.t ref;
+    ctx_constraints: C.constr list ref;
   }
 
   let make_var ctx lens v =
@@ -84,17 +81,14 @@ module M : M_sig = struct
   let make_kind ctx v =
     make_var ctx Stores.Lens.kinds v
 
-  let make_tbound ctx v =
-    make_var ctx Stores.Lens.tbounds v
-
-  let make_qbound ctx v =
-    make_var ctx Stores.Lens.qbounds v
+  let make_bound ctx v =
+    make_var ctx Stores.Lens.bounds v
 
   let with_quant ctx bnd f =
     let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
     let rec q = lazy (make_quant ctx {
       q_id;
-      q_bound = make_qbound ctx bnd;
+      q_bound = make_bound ctx bnd;
       q_body;
     })
     and q_body = lazy (f (Lazy.force q))
@@ -114,32 +108,35 @@ module M : M_sig = struct
 
   let get_ctr c =
     c.ctx_ctr
+
+  let constrain ctx c =
+    let cs = ctx.ctx_constraints in
+    cs := (c :: !cs)
 end
 
 module Gen : sig
   val gen_expr : M.ctx -> 'a DE.t -> GT.g_node
 end = struct
-  let flex_var ctx q =
+  let make_tyvar ctx bnd =
     let ctr = M.get_ctr ctx in
     M.make_type ctx (`Free {
       tv_id = GT.Ids.Type.fresh ctr;
-      tv_bound = M.make_tbound ctx {
-        b_target = q;
-        b_flag = `Flex;
-      };
+      tv_bound = M.make_bound ctx bnd;
     })
 
   let rec gen_expr ctx = function
     | DE.App {app_fn; app_arg} -> M.with_sub_g ctx (fun ctx g ->
-        let _g_fn = gen_expr ctx app_fn in
-        let _g_arg = gen_expr ctx app_arg in
-        M.with_quant ctx GT.{ b_target = `G g; b_flag = `Flex } (fun q ->
-          let bnd = GT.{ b_target = `Q q; b_flag = `Flex } in
-          let q_arg = M.with_quant ctx bnd (fun _ -> flex_var ctx q) in
-          let q_ret = M.with_quant ctx bnd (fun _ -> flex_var ctx q) in
-          let t_fn = M.make_type ctx (`Lambda(q_arg, q_ret)) in
-          (* TODO: add instance constraints. *)
-          t_fn
+        let g_fn = gen_expr ctx app_fn in
+        let g_arg = gen_expr ctx app_arg in
+        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+        M.with_quant ctx bnd (fun q_ret ->
+          let t_ret = make_tyvar ctx bnd in
+          let with_quant f = M.with_quant ctx bnd f in
+          let q_arg = with_quant (fun _ -> make_tyvar ctx bnd) in
+          let q_fn = with_quant (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_arg, q_ret))))) in
+          M.constrain ctx (`Instance (g_arg, q_arg, `ParamArg(app_fn, app_arg)));
+          M.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
+          t_ret
         )
       )
     | _ ->
