@@ -27,7 +27,7 @@ type constr =
         * unify_why
       )
   | `Instance of
-      ( GT.g_node GT.var
+      ( GT.g_node
         * GT.quant GT.var
         * instance_why
       )

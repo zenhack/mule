@@ -115,7 +115,7 @@ module M : M_sig = struct
 end
 
 module Gen : sig
-  val gen_expr : M.ctx -> 'a DE.t -> GT.g_node
+  val gen_expr : M.ctx -> unit DE.t -> GT.g_node
 end = struct
   let make_tyvar ctx bnd =
     let ctr = M.get_ctr ctx in
@@ -124,7 +124,7 @@ end = struct
       tv_bound = M.make_bound ctx bnd;
     })
 
-  let rec gen_expr ctx = function
+  let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node = match expr with
     | DE.App {app_fn; app_arg} -> M.with_sub_g ctx (fun ctx g ->
         let g_fn = gen_expr ctx app_fn in
         let g_arg = gen_expr ctx app_arg in
