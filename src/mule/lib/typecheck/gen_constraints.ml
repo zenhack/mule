@@ -5,6 +5,16 @@ module DE = Desugared_ast_expr_t
 module UF = Union_find
 module C = Constraint_t
 
+open Common_ast
+
+type var_binding =
+  [ `Lambda of
+      ( GT.quant GT.var
+      * DE.lam_src
+      )
+  | `Let of GT.g_node
+  ]
+
 module type M_sig = sig
   type ctx
 
@@ -15,6 +25,9 @@ module type M_sig = sig
 
   val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
+
+  val with_binding : ctx -> Var.t -> var_binding -> (ctx -> 'a) -> 'a
+  val lookup_var : ctx -> Var.t -> var_binding option
 
   val get_ctr : ctx -> Gensym.counter
 
@@ -64,6 +77,7 @@ module M : M_sig = struct
     ctx_ctr: Gensym.counter;
     ctx_uf_stores: Stores.t ref;
     ctx_constraints: C.constr list ref;
+    ctx_vars: var_binding VarMap.t;
   }
 
   let make_var ctx lens v =
@@ -112,6 +126,12 @@ module M : M_sig = struct
   let constrain ctx c =
     let cs = ctx.ctx_constraints in
     cs := (c :: !cs)
+
+  let with_binding ctx var value f =
+    f { ctx with ctx_vars = Map.set ~key:var ~data:value ctx.ctx_vars }
+
+  let lookup_var ctx var =
+    Map.find ctx.ctx_vars var
 end
 
 module Gen : sig
@@ -137,6 +157,15 @@ end = struct
           M.constrain ctx (`Instance (g_arg, q_arg, `ParamArg(app_fn, app_arg)));
           M.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
           t_ret
+        )
+      )
+    | DE.Lam {l_param; l_body; l_src} -> M.with_sub_g ctx (fun ctx g ->
+        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+        let q_param = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
+        M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
+          let g_ret = gen_expr ctx l_body in
+          let q_ret = Lazy.force (GT.GNode.get g_ret) in
+          M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_param, q_ret)))))
         )
       )
     | _ ->
