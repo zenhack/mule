@@ -144,8 +144,31 @@ end = struct
       tv_bound = M.make_bound ctx bnd;
     })
 
-  let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node = match expr with
-    | DE.App {app_fn; app_arg} -> M.with_sub_g ctx (fun ctx g ->
+  let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
+    M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
+  and gen_expr_q ctx g expr = match expr with
+    (* The first four of these come unmodified from {Yakobowski 2008} *)
+    | DE.Var {v_var; v_src} ->
+        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+        let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
+        begin match M.lookup_var ctx v_var with
+          | Some binding ->
+              begin match binding with
+                | `Let g ->
+                    M.constrain ctx (`Instance (g, q_var, `VarUse v_src))
+                | `Lambda (q_param, l_src) ->
+                    M.constrain ctx (`Unify(q_param, q_var, `VarUse(v_src, l_src)))
+              end;
+              q_var
+          | None ->
+              begin match v_src with
+                | `Sourced v ->
+                    MuleErr.throw (`UnboundVar v)
+                | `Generated ->
+                    MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
+              end
+        end
+    | DE.App {app_fn; app_arg} ->
         let g_fn = gen_expr ctx app_fn in
         let g_arg = gen_expr ctx app_arg in
         let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
@@ -158,16 +181,19 @@ end = struct
           M.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
           t_ret
         )
-      )
-    | DE.Lam {l_param; l_body; l_src} -> M.with_sub_g ctx (fun ctx g ->
+    | DE.Lam {l_param; l_body; l_src} ->
         let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         let q_param = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
         M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
           M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_param, q_ret)))))
-        )
       )
+    | DE.Let {let_v; let_e; let_body} ->
+        let g_e = gen_expr ctx let_e in
+        M.with_binding ctx let_v (`Let g_e) (fun ctx ->
+          gen_expr_q ctx g let_body
+        )
     | _ ->
         failwith "TODO"
 end

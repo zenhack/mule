@@ -11,12 +11,18 @@ type instance_why =
       )
   | (* If in expresssion is being applied, it must be a function. *)
       `FnApply of (unit DE.t) (* The expression for the function *)
+
+    (* Use of a let-bound variable: *)
+  | `VarUse of DE.var_src
   ]
 
 (* Reason for a unification constraint *)
 type unify_why =
   [ (* This was an instance constraint, demoted after expansion: *)
     `Instance of instance_why
+
+    (* Use of a lambda bound variable: *)
+  | `VarUse of (DE.var_src * DE.lam_src)
   ]
 
 (* A constraint to be solved *)

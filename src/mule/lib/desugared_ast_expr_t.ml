@@ -36,6 +36,11 @@ type match_src =
   | `Generated
   ]
 
+type var_src =
+  [ `Generated
+  | `Sourced of Var.t Loc.located
+  ]
+
 type 'i t =
   | Embed of {
       e_path: string;
@@ -45,10 +50,7 @@ type 'i t =
   | Import of import
   | Var of {
       v_var : Var.t;
-      v_src :
-        [ `Generated
-        | `Sourced of Var.t Loc.located
-        ]
+      v_src : var_src
     }
   | Lam of {
       l_param : Var.t;
