@@ -8,5 +8,5 @@
  * wins" rule. It is *not* concurrency safe.
  *
  * If the merge function throws an exception, the variables are not unified.
- *)
+*)
 val union_with : f:('a -> 'a -> 'a) -> 'a UnionFind.elem -> 'a UnionFind.elem -> unit

@@ -161,7 +161,7 @@ let apply_kids: u_type -> f:(u_var -> u_var) -> u_type =
  *
  * If this would require changing the scope of a rigid variable,
  * fail, as that would be unsound.
- *)
+*)
 let hoist_scope: Scope.t -> u_var -> unit =
   fun scope uv ->
   let seen = ref (Set.empty (module Int)) in
@@ -441,12 +441,12 @@ let with_locals ctx f =
           UnionFind.set v (`Bound bv);
           `Trd (fun acc ->
             let res = {
-                q_id = Gensym.gensym Gensym.global;
-                q_quant = q;
-                q_var = bv;
-                q_kind = k;
-                q_body = acc;
-              }
+              q_id = Gensym.gensym Gensym.global;
+              q_quant = q;
+              q_var = bv;
+              q_kind = k;
+              q_body = acc;
+            }
             in
             PushQuants.push_down_quants res;
             res.q_body
@@ -839,9 +839,9 @@ and synth_branch ctx ?have_default:(have_default=false) b =
         ~init:(param, result)
         ~f:(fun ~key ~data (param, result) ->
           ( meet ctx param (synth_const key)
-              ~reason:(NonEmpty.singleton `Unspecified)
+                ~reason:(NonEmpty.singleton `Unspecified)
           , join ctx result (synth ctx data)
-              ~reason:(NonEmpty.singleton `Unspecified)
+                ~reason:(NonEmpty.singleton `Unspecified)
           )
         )
   | DE.BLabel {lm_cases; lm_default} ->
@@ -1190,12 +1190,12 @@ and unify_already_whnf
             require_kind kl kr;
             UnionFindExtra.union_with
               ~f:(fun _ _ -> `Free {
-                    ty_flag = `Flex;
-                    ty_info = l_info;
-                    ty_id = l_id;
-                    ty_scope = Scope.lca l_scope r_scope;
-                    ty_kind = kl;
-                  })
+                  ty_flag = `Flex;
+                  ty_info = l_info;
+                  ty_id = l_id;
+                  ty_scope = Scope.lca l_scope r_scope;
+                  ty_kind = kl;
+                })
               sub super;
             sub
 
@@ -1646,7 +1646,7 @@ module Tests = struct
           false
         end
       with
-        | MuleErr.MuleExn(`TypeError _) -> true
+      | MuleErr.MuleExn(`TypeError _) -> true
 
     let eq to_s x y =
       let xs = to_s x in
@@ -1662,9 +1662,9 @@ module Tests = struct
     let types_eq x y =
       eq
         (fun uv ->
-          Extract.get_var_type uv
-          |> Relabel.relabel_type ()
-          |> Desugared_ast_type.to_string
+            Extract.get_var_type uv
+            |> Relabel.relabel_type ()
+            |> Desugared_ast_type.to_string
         )
         x y
 
@@ -1715,14 +1715,14 @@ module Tests = struct
        principle irrelevant. *)
     rows_eq
       (with_ctx (fun ctx ->
-        (join ctx
-          ~reason
-          (extend (Label.of_string "A") int empty_union)
-          (extend (Label.of_string "B") int empty_union)
-        )
-      ))
+            (join ctx
+                ~reason
+                (extend (Label.of_string "A") int empty_union)
+                (extend (Label.of_string "B") int empty_union)
+            )
+          ))
       (extend (Label.of_string "B") int
-        (extend (Label.of_string "A") int empty_union)
+            (extend (Label.of_string "A") int empty_union)
       )
 
   let%test _ =
@@ -1741,11 +1741,11 @@ module Tests = struct
   let%test _ =
     types_eq
       (with_ctx (fun ctx ->
-        meet ctx
-          ~reason
-          (union (extend (Label.of_string "A") int empty_union))
-          (exist ktype (fun a -> a))
-      ))
+            meet ctx
+              ~reason
+              (union (extend (Label.of_string "A") int empty_union))
+              (exist ktype (fun a -> a))
+          ))
       (union (extend (Label.of_string "A") int empty_union))
 
   let%test _ =

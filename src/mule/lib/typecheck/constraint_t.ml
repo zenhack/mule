@@ -7,12 +7,12 @@ type instance_why =
        instance of the type of its argument. *)
     `ParamArg of
       ( unit DE.t (* Function *)
-      * unit DE.t (* Argument *)
+        * unit DE.t (* Argument *)
       )
   | (* If in expresssion is being applied, it must be a function. *)
-      `FnApply of (unit DE.t) (* The expression for the function *)
+    `FnApply of (unit DE.t) (* The expression for the function *)
 
-    (* Use of a let-bound variable: *)
+  (* Use of a let-bound variable: *)
   | `VarUse of DE.var_src
   ]
 
@@ -21,7 +21,7 @@ type unify_why =
   [ (* This was an instance constraint, demoted after expansion: *)
     `Instance of instance_why
 
-    (* Use of a lambda bound variable: *)
+  (* Use of a lambda bound variable: *)
   | `VarUse of (DE.var_src * DE.lam_src)
   ]
 

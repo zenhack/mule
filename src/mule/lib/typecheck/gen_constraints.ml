@@ -10,7 +10,7 @@ open Common_ast
 type var_binding =
   [ `Lambda of
       ( GT.quant GT.var
-      * DE.lam_src
+        * DE.lam_src
       )
   | `Let of GT.g_node
   ]
@@ -101,10 +101,10 @@ module M : M_sig = struct
   let with_quant ctx bnd f =
     let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
     let rec q = lazy (make_quant ctx {
-      q_id;
-      q_bound = make_bound ctx bnd;
-      q_body;
-    })
+        q_id;
+        q_bound = make_bound ctx bnd;
+        q_body;
+      })
     and q_body = lazy (f (Lazy.force q))
     in
     ignore (Lazy.force q_body);
@@ -140,9 +140,9 @@ end = struct
   let make_tyvar ctx bnd =
     let ctr = M.get_ctr ctx in
     M.make_type ctx (`Free {
-      tv_id = GT.Ids.Type.fresh ctr;
-      tv_bound = M.make_bound ctx bnd;
-    })
+        tv_id = GT.Ids.Type.fresh ctr;
+        tv_bound = M.make_bound ctx bnd;
+      })
 
   let make_tyvar_q ctx bnd =
     M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd)
@@ -193,7 +193,7 @@ end = struct
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
           M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_param, q_ret)))))
-      )
+        )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
         M.with_binding ctx let_v (`Let g_e) (fun ctx ->
@@ -213,7 +213,7 @@ end = struct
         make_type_q ctx bnd
           (`Ctor
               (`Type
-                 (`Union
+                  (`Union
                       (make_type_q ctx bnd
                           (`Ctor(`Row(`Extend(c_lbl, q_head, q_tail))))))))
 
