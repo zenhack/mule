@@ -146,10 +146,11 @@ end = struct
 
   let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
     M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
-  and gen_expr_q ctx g expr = match expr with
+  and gen_expr_q ctx g expr =
+    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+    match expr with
     (* The first four of these come unmodified from {Yakobowski 2008} *)
     | DE.Var {v_var; v_src} ->
-        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
         begin match M.lookup_var ctx v_var with
           | Some binding ->
@@ -171,7 +172,6 @@ end = struct
     | DE.App {app_fn; app_arg} ->
         let g_fn = gen_expr ctx app_fn in
         let g_arg = gen_expr ctx app_arg in
-        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         M.with_quant ctx bnd (fun q_ret ->
           let t_ret = make_tyvar ctx bnd in
           let with_quant f = M.with_quant ctx bnd f in
@@ -182,7 +182,6 @@ end = struct
           t_ret
         )
     | DE.Lam {l_param; l_body; l_src} ->
-        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         let q_param = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
         M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
@@ -197,10 +196,8 @@ end = struct
 
     (* Boring stuff like constant literals *)
     | DE.Const {const_val} ->
-        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         M.with_quant ctx bnd (fun _ -> gen_const ctx const_val)
     | DE.Embed _ ->
-        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
         M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Const(`Text)))))
 
     | _ ->
