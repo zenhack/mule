@@ -194,6 +194,23 @@ end = struct
         M.with_binding ctx let_v (`Let g_e) (fun ctx ->
           gen_expr_q ctx g let_body
         )
+
+    (* Boring stuff like constant literals *)
+    | DE.Const {const_val} ->
+        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+        M.with_quant ctx bnd (fun _ -> gen_const ctx const_val)
+    | DE.Embed _ ->
+        let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+        M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Const(`Text)))))
+
     | _ ->
         failwith "TODO"
+  and gen_const ctx const =
+    let ty = match const with
+      | Const.Integer _ -> `Int
+      | Const.Text _ -> `Text
+      | Const.Char _ -> `Char
+    in
+    M.make_type ctx (`Ctor(`Type(`Const(ty))))
+
 end
