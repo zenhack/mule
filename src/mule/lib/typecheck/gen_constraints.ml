@@ -144,6 +144,12 @@ end = struct
       tv_bound = M.make_bound ctx bnd;
     })
 
+  let make_tyvar_q ctx bnd =
+    M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd)
+
+  let make_type_q ctx bnd typ =
+    M.with_quant ctx bnd (fun _ -> M.make_type ctx typ)
+
   let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
     M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
   and gen_expr_q ctx g expr =
@@ -175,14 +181,14 @@ end = struct
         M.with_quant ctx bnd (fun q_ret ->
           let t_ret = make_tyvar ctx bnd in
           let with_quant f = M.with_quant ctx bnd f in
-          let q_arg = with_quant (fun _ -> make_tyvar ctx bnd) in
+          let q_arg = make_tyvar_q ctx bnd in
           let q_fn = with_quant (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_arg, q_ret))))) in
           M.constrain ctx (`Instance (g_arg, q_arg, `ParamArg(app_fn, app_arg)));
           M.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
           t_ret
         )
     | DE.Lam {l_param; l_body; l_src} ->
-        let q_param = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
+        let q_param = make_tyvar_q ctx bnd in
         M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
@@ -199,6 +205,17 @@ end = struct
         M.with_quant ctx bnd (fun _ -> gen_const ctx const_val)
     | DE.Embed _ ->
         M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Const(`Text)))))
+
+    | DE.Ctor {c_lbl; c_arg} ->
+        let g_arg = gen_expr ctx c_arg in
+        let q_head = Lazy.force (GT.GNode.get g_arg) in
+        let q_tail = make_tyvar_q ctx bnd in
+        make_type_q ctx bnd
+          (`Ctor
+              (`Type
+                 (`Union
+                      (make_type_q ctx bnd
+                          (`Ctor(`Row(`Extend(c_lbl, q_head, q_tail))))))))
 
     | _ ->
         failwith "TODO"
