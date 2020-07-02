@@ -64,13 +64,24 @@ end = struct
   let get g = g.g_value
 end
 
-type kind =
+type guard =
+  [ `Free
+  | `Guarded
+  | `Unguarded
+  ]
+
+type prekind =
   [ `Free of Ids.Kind.t
   | `Row
   | `Type
   | `Arrow of kind var * kind var
   ]
-and typ =
+and kind = {
+  k_prekind: prekind var;
+  k_guard: guard var;
+}
+
+type typ =
   [ `Free of tyvar
   | `Ctor of ctor
   | `Lambda of (quant var * quant var)
@@ -83,6 +94,7 @@ and typ =
 and tyvar = {
   tv_id: Ids.Type.t;
   tv_bound: bound var;
+  tv_kind: kind var;
 }
 and ctor =
   [ `Type of type_ctor

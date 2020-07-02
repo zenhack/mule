@@ -20,8 +20,11 @@ module type M_sig = sig
 
   val make_quant : ctx -> GT.quant -> GT.quant GT.var
   val make_type : ctx -> GT.typ -> GT.typ GT.var
-  val make_kind : ctx -> GT.kind -> GT.kind GT.var
   val make_bound : ctx -> GT.bound -> GT.bound GT.var
+
+  val make_kind : ctx -> GT.kind -> GT.kind GT.var
+  val make_prekind : ctx -> GT.prekind -> GT.prekind GT.var
+  val make_guard : ctx -> GT.guard -> GT.guard GT.var
 
   val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
@@ -43,9 +46,11 @@ module M : M_sig = struct
   module Stores = struct
     type t = {
       s_quants: GT.quant Union_find.store;
-      s_kinds: GT.kind Union_find.store;
       s_types: GT.typ Union_find.store;
       s_bounds: GT.bound Union_find.store;
+      s_prekinds: GT.prekind Union_find.store;
+      s_kinds: GT.kind Union_find.store;
+      s_guards: GT.guard Union_find.store;
     }
 
     module Lens = struct
@@ -53,11 +58,6 @@ module M : M_sig = struct
       let quants = {
         get = (fun s -> s.s_quants );
         set = (fun s_quants s -> { s with s_quants });
-      }
-
-      let kinds = {
-        get = (fun s -> s.s_kinds);
-        set = (fun s_kinds s -> { s with s_kinds });
       }
 
       let types = {
@@ -68,6 +68,21 @@ module M : M_sig = struct
       let bounds = {
         get = (fun s -> s.s_bounds);
         set = (fun s_bounds s -> { s with s_bounds });
+      }
+
+      let prekinds = {
+        get = (fun s -> s.s_prekinds);
+        set = (fun s_prekinds s -> { s with s_prekinds });
+      }
+
+      let kinds = {
+        get = (fun s -> s.s_kinds);
+        set = (fun s_kinds s -> { s with s_kinds });
+      }
+
+      let guards = {
+        get = (fun s -> s.s_guards);
+        set = (fun s_guards s -> { s with s_guards });
       }
     end
   end
@@ -92,11 +107,17 @@ module M : M_sig = struct
   let make_type ctx v =
     make_var ctx Stores.Lens.types v
 
+  let make_bound ctx v =
+    make_var ctx Stores.Lens.bounds v
+
+  let make_prekind ctx v =
+    make_var ctx Stores.Lens.prekinds v
+
   let make_kind ctx v =
     make_var ctx Stores.Lens.kinds v
 
-  let make_bound ctx v =
-    make_var ctx Stores.Lens.bounds v
+  let make_guard ctx v =
+    make_var ctx Stores.Lens.guards v
 
   let with_quant ctx bnd f =
     let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
@@ -137,18 +158,25 @@ end
 module Gen : sig
   val gen_expr : M.ctx -> unit DE.t -> GT.g_node
 end = struct
-  let make_tyvar ctx bnd =
+  let make_tyvar ctx bnd tv_kind =
     let ctr = M.get_ctr ctx in
     M.make_type ctx (`Free {
         tv_id = GT.Ids.Type.fresh ctr;
         tv_bound = M.make_bound ctx bnd;
+        tv_kind;
       })
 
-  let make_tyvar_q ctx bnd =
-    M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd)
+  let make_tyvar_q ctx bnd kind =
+    M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd kind)
 
   let make_type_q ctx bnd typ =
     M.with_quant ctx bnd (fun _ -> M.make_type ctx typ)
+
+  let make_kind ctx pk =
+    M.make_kind ctx GT.{
+        k_prekind = M.make_prekind ctx pk;
+        k_guard = M.make_guard ctx `Free;
+      }
 
   let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
     M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
@@ -157,7 +185,7 @@ end = struct
     match expr with
     (* The first four of these come unmodified from {Yakobowski 2008} *)
     | DE.Var {v_var; v_src} ->
-        let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd) in
+        let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd (make_kind ctx `Type)) in
         begin match M.lookup_var ctx v_var with
           | Some binding ->
               begin match binding with
@@ -179,16 +207,16 @@ end = struct
         let g_fn = gen_expr ctx app_fn in
         let g_arg = gen_expr ctx app_arg in
         M.with_quant ctx bnd (fun q_ret ->
-          let t_ret = make_tyvar ctx bnd in
+          let t_ret = make_tyvar ctx bnd (make_kind ctx `Type) in
           let with_quant f = M.with_quant ctx bnd f in
-          let q_arg = make_tyvar_q ctx bnd in
+          let q_arg = make_tyvar_q ctx bnd (make_kind ctx `Type) in
           let q_fn = with_quant (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_arg, q_ret))))) in
           M.constrain ctx (`Instance (g_arg, q_arg, `ParamArg(app_fn, app_arg)));
           M.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
           t_ret
         )
     | DE.Lam {l_param; l_body; l_src} ->
-        let q_param = make_tyvar_q ctx bnd in
+        let q_param = make_tyvar_q ctx bnd (make_kind ctx `Type) in
         M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
@@ -209,7 +237,7 @@ end = struct
     | DE.Ctor {c_lbl; c_arg} ->
         let g_arg = gen_expr ctx c_arg in
         let q_head = Lazy.force (GT.GNode.get g_arg) in
-        let q_tail = make_tyvar_q ctx bnd in
+        let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
         make_type_q ctx bnd
           (`Ctor
               (`Type
