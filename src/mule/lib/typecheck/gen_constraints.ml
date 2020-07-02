@@ -244,6 +244,23 @@ end = struct
                   (`Union
                       (make_type_q ctx bnd
                           (`Ctor(`Row(`Extend(c_lbl, q_head, q_tail))))))))
+    | DE.GetField {gf_lbl; gf_record} ->
+        let g_record = gen_expr ctx gf_record in
+
+        let q_head = make_tyvar_q ctx bnd (make_kind ctx `Type) in
+        let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+        let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+
+        let q_record = make_type_q ctx bnd
+          (`Ctor
+              (`Type
+                  (`Record
+                    ( q_types
+                    , make_type_q ctx bnd (`Ctor(`Row(`Extend(gf_lbl, q_head, q_tail))))
+                    ))))
+        in
+        M.constrain ctx (`Instance(g_record, q_record, `GetField(gf_lbl, gf_record)));
+        q_head
 
     | _ ->
         failwith "TODO"

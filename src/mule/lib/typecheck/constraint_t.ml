@@ -1,3 +1,4 @@
+open Common_ast
 module GT = Graph_types
 module DE = Desugared_ast_expr_t
 
@@ -14,6 +15,9 @@ type instance_why =
 
   (* Use of a let-bound variable: *)
   | `VarUse of DE.var_src
+
+  (* Record field access *)
+  | `GetField of (Label.t * unit DE.t)
   ]
 
 (* Reason for a unification constraint *)

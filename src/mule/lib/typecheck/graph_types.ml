@@ -102,7 +102,10 @@ and ctor =
   ]
 and type_ctor =
   [ `Fn of (quant var * quant var)
-  | `Record of (quant var * quant var)
+  | `Record of
+        ( quant var (* types *)
+        * quant var (* values *)
+        )
   | `Union of (quant var)
   | `Const of const
   ]
