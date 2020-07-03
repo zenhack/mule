@@ -16,8 +16,11 @@ type instance_why =
   (* Use of a let-bound variable: *)
   | `VarUse of DE.var_src
 
-  (* Record field access *)
+  (* Record field access -- argument must be a record with the given field. *)
   | `GetField of (Label.t * unit DE.t)
+
+  (* Record update -- argument must be a record. *)
+  | `RecordUpdate of unit DE.t
   ]
 
 (* Reason for a unification constraint *)

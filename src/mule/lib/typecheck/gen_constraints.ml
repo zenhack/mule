@@ -261,7 +261,17 @@ end = struct
         in
         M.constrain ctx (`Instance(g_record, q_record, `GetField(gf_lbl, gf_record)));
         q_head
+    | DE.UpdateVal {uv_lbl; uv_val; uv_record} ->
+        let g_val = gen_expr ctx uv_val in
+        let g_record = gen_expr ctx uv_record in
+        let q_head = Lazy.force (GT.GNode.get g_val) in
+        let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+        let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
 
+        let q_record = make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_tail)))) in
+        M.constrain ctx (`Instance(g_record, q_record, `RecordUpdate(uv_record)));
+        let q_values = make_type_q ctx bnd (`Ctor(`Row(`Extend(uv_lbl, q_head, q_tail)))) in
+        make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_values))));
     | _ ->
         failwith "TODO"
   and gen_const ctx const =
