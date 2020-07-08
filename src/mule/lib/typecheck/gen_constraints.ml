@@ -15,10 +15,15 @@ type val_binding =
   | `Let of GT.g_node
   ]
 
-type type_binding = {
-  type_pos: GT.g_node;
-  type_neg: GT.g_node;
+type 'a polar = {
+  pos: 'a;
+  neg: 'a;
 }
+
+type type_binding =
+  [ `Lambda of GT.typ GT.var
+  | `Let of GT.g_node polar
+  ]
 
 module type M_sig = sig
   type ctx
@@ -36,6 +41,9 @@ module type M_sig = sig
 
   val with_val_binding : ctx -> Var.t -> val_binding -> (ctx -> 'a) -> 'a
   val lookup_val : ctx -> Var.t -> val_binding option
+
+  val with_type_binding : ctx -> Var.t -> type_binding -> (ctx -> 'a) -> 'a
+  val lookup_type : ctx -> Var.t -> type_binding option
 
   val get_ctr : ctx -> Gensym.counter
 
@@ -159,6 +167,12 @@ module M : M_sig = struct
 
   let lookup_val ctx var =
     Map.find ctx.ctx_val_vars var
+
+  let with_type_binding ctx var binding f =
+    f { ctx with ctx_type_vars = Map.set ~key:var ~data:binding ctx.ctx_type_vars }
+
+  let lookup_type ctx var =
+    Map.find ctx.ctx_type_vars var
 end
 
 module Gen : sig
