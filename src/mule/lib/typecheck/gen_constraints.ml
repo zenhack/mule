@@ -15,6 +15,11 @@ type val_binding =
   | `Let of GT.g_node
   ]
 
+type type_binding = {
+  type_pos: GT.g_node;
+  type_neg: GT.g_node;
+}
+
 module type M_sig = sig
   type ctx
 
@@ -29,8 +34,8 @@ module type M_sig = sig
   val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
-  val with_binding : ctx -> Var.t -> val_binding -> (ctx -> 'a) -> 'a
-  val lookup_var : ctx -> Var.t -> val_binding option
+  val with_val_binding : ctx -> Var.t -> val_binding -> (ctx -> 'a) -> 'a
+  val lookup_val : ctx -> Var.t -> val_binding option
 
   val get_ctr : ctx -> Gensym.counter
 
@@ -92,7 +97,8 @@ module M : M_sig = struct
     ctx_ctr: Gensym.counter;
     ctx_uf_stores: Stores.t ref;
     ctx_constraints: C.constr list ref;
-    ctx_vars: val_binding VarMap.t;
+    ctx_val_vars: val_binding VarMap.t;
+    ctx_type_vars: type_binding VarMap.t;
   }
 
   let make_var ctx lens v =
@@ -148,11 +154,11 @@ module M : M_sig = struct
     let cs = ctx.ctx_constraints in
     cs := (c :: !cs)
 
-  let with_binding ctx var value f =
-    f { ctx with ctx_vars = Map.set ~key:var ~data:value ctx.ctx_vars }
+  let with_val_binding ctx var value f =
+    f { ctx with ctx_val_vars = Map.set ~key:var ~data:value ctx.ctx_val_vars }
 
-  let lookup_var ctx var =
-    Map.find ctx.ctx_vars var
+  let lookup_val ctx var =
+    Map.find ctx.ctx_val_vars var
 end
 
 module Gen : sig
@@ -186,7 +192,7 @@ end = struct
     (* The first four of these come unmodified from {Yakobowski 2008} *)
     | DE.Var {v_var; v_src} ->
         let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd (make_kind ctx `Type)) in
-        begin match M.lookup_var ctx v_var with
+        begin match M.lookup_val ctx v_var with
           | Some binding ->
               begin match binding with
                 | `Let g ->
@@ -217,14 +223,14 @@ end = struct
         )
     | DE.Lam {l_param; l_body; l_src} ->
         let q_param = make_tyvar_q ctx bnd (make_kind ctx `Type) in
-        M.with_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
+        M.with_val_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
           M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_param, q_ret)))))
         )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
-        M.with_binding ctx let_v (`Let g_e) (fun ctx ->
+        M.with_val_binding ctx let_v (`Let g_e) (fun ctx ->
           gen_expr_q ctx g let_body
         )
 
