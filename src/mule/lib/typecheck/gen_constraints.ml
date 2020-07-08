@@ -7,7 +7,7 @@ module C = Constraint_t
 
 open Common_ast
 
-type var_binding =
+type val_binding =
   [ `Lambda of
       ( GT.quant GT.var
         * DE.lam_src
@@ -29,8 +29,8 @@ module type M_sig = sig
   val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
-  val with_binding : ctx -> Var.t -> var_binding -> (ctx -> 'a) -> 'a
-  val lookup_var : ctx -> Var.t -> var_binding option
+  val with_binding : ctx -> Var.t -> val_binding -> (ctx -> 'a) -> 'a
+  val lookup_var : ctx -> Var.t -> val_binding option
 
   val get_ctr : ctx -> Gensym.counter
 
@@ -92,7 +92,7 @@ module M : M_sig = struct
     ctx_ctr: Gensym.counter;
     ctx_uf_stores: Stores.t ref;
     ctx_constraints: C.constr list ref;
-    ctx_vars: var_binding VarMap.t;
+    ctx_vars: val_binding VarMap.t;
   }
 
   let make_var ctx lens v =
