@@ -2,28 +2,11 @@
 
 module GT = Graph_types
 module DE = Desugared_ast_expr_t
+module DT = Desugared_ast_type_t
 module UF = Union_find
 module C = Constraint_t
 
 open Common_ast
-
-type val_binding =
-  [ `Lambda of
-      ( GT.quant GT.var
-        * DE.lam_src
-      )
-  | `Let of GT.g_node
-  ]
-
-type 'a polar = {
-  pos: 'a;
-  neg: 'a;
-}
-
-type type_binding =
-  [ `Lambda of GT.typ GT.var
-  | `Let of GT.g_node polar
-  ]
 
 module type M_sig = sig
   type ctx
@@ -39,11 +22,13 @@ module type M_sig = sig
   val with_quant : ctx -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
   val with_sub_g : ctx -> (ctx -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
-  val with_val_binding : ctx -> Var.t -> val_binding -> (ctx -> 'a) -> 'a
-  val lookup_val : ctx -> Var.t -> val_binding option
+  val get_g : ctx -> GT.g_node
 
-  val with_type_binding : ctx -> Var.t -> type_binding -> (ctx -> 'a) -> 'a
-  val lookup_type : ctx -> Var.t -> type_binding option
+  val with_val_binding : ctx -> Var.t -> C.val_var -> (ctx -> 'a) -> 'a
+  val lookup_val : ctx -> Var.t -> C.val_var option
+
+  val with_type_binding : ctx -> Var.t -> C.type_var -> (ctx -> 'a) -> 'a
+  val lookup_type : ctx -> Var.t -> C.type_var option
 
   val get_ctr : ctx -> Gensym.counter
 
@@ -105,8 +90,7 @@ module M : M_sig = struct
     ctx_ctr: Gensym.counter;
     ctx_uf_stores: Stores.t ref;
     ctx_constraints: C.constr list ref;
-    ctx_val_vars: val_binding VarMap.t;
-    ctx_type_vars: type_binding VarMap.t;
+    ctx_env : C.env;
   }
 
   let make_var ctx lens v =
@@ -145,6 +129,8 @@ module M : M_sig = struct
     ignore (Lazy.force q_body);
     Lazy.force q
 
+  let get_g ctx = ctx.ctx_g
+
   let with_sub_g ctx f =
     let rec g = lazy (GT.GNode.make_child ctx.ctx_g qvar)
     and qvar = lazy (
@@ -163,16 +149,18 @@ module M : M_sig = struct
     cs := (c :: !cs)
 
   let with_val_binding ctx var value f =
-    f { ctx with ctx_val_vars = Map.set ~key:var ~data:value ctx.ctx_val_vars }
+    let vals = Map.set ~key:var ~data:value ctx.ctx_env.vals in
+    f { ctx with ctx_env = { ctx.ctx_env with vals } }
 
   let lookup_val ctx var =
-    Map.find ctx.ctx_val_vars var
+    Map.find ctx.ctx_env.vals var
 
   let with_type_binding ctx var binding f =
-    f { ctx with ctx_type_vars = Map.set ~key:var ~data:binding ctx.ctx_type_vars }
+    let types = Map.set ~key:var ~data:binding ctx.ctx_env.types in
+    f { ctx with ctx_env = { ctx.ctx_env with types } }
 
   let lookup_type ctx var =
-    Map.find ctx.ctx_type_vars var
+    Map.find ctx.ctx_env.types var
 end
 
 module Gen : sig
@@ -198,6 +186,25 @@ end = struct
         k_guard = M.make_guard ctx `Free;
       }
 
+  let throw_unbound_var v_var v_src =
+    match v_src with
+    | `Sourced v ->
+        MuleErr.throw (`UnboundVar v)
+    | `Generated ->
+        MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
+
+  let expand_type : M.ctx -> C.polarity -> unit DT.t -> GT.quant GT.var =
+    fun ctx polarity -> function
+    | DT.Var {v_var; v_src; v_info = _} ->
+      begin match M.lookup_type ctx v_var with
+        | None ->
+            throw_unbound_var v_var v_src
+        | Some (`QBound ty) ->
+            ty
+        | Some (`LetBound f) ->
+            f polarity GT.{ b_target = `G (M.get_g ctx); b_flag = `Flex }
+      end
+
   let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
     M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
   and gen_expr_q ctx g expr =
@@ -207,21 +214,16 @@ end = struct
     | DE.Var {v_var; v_src} ->
         let q_var = M.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd (make_kind ctx `Type)) in
         begin match M.lookup_val ctx v_var with
+          | None ->
+              throw_unbound_var v_var v_src
           | Some binding ->
               begin match binding with
-                | `Let g ->
+                | `LetBound g ->
                     M.constrain ctx (`Instance (g, q_var, `VarUse v_src))
-                | `Lambda (q_param, l_src) ->
+                | `LambdaBound (q_param, l_src) ->
                     M.constrain ctx (`Unify(q_param, q_var, `VarUse(v_src, l_src)))
               end;
               q_var
-          | None ->
-              begin match v_src with
-                | `Sourced v ->
-                    MuleErr.throw (`UnboundVar v)
-                | `Generated ->
-                    MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
-              end
         end
     | DE.App {app_fn; app_arg} ->
         let g_fn = gen_expr ctx app_fn in
@@ -237,14 +239,14 @@ end = struct
         )
     | DE.Lam {l_param; l_body; l_src} ->
         let q_param = make_tyvar_q ctx bnd (make_kind ctx `Type) in
-        M.with_val_binding ctx l_param (`Lambda (q_param, l_src)) (fun ctx ->
+        M.with_val_binding ctx l_param (`LambdaBound (q_param, l_src)) (fun ctx ->
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
           M.with_quant ctx bnd (fun _ -> M.make_type ctx (`Ctor(`Type(`Fn(q_param, q_ret)))))
         )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
-        M.with_val_binding ctx let_v (`Let g_e) (fun ctx ->
+        M.with_val_binding ctx let_v (`LetBound g_e) (fun ctx ->
           gen_expr_q ctx g let_body
         )
 

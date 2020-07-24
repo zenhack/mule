@@ -64,14 +64,24 @@ type unify_constraint = {
   unify_sub: GT.typ GT.var;
 }
 
-
 (* For tracking the environment while building constraints: *)
 
 type val_var =
-  [ `LambdaBound of GT.quant GT.var
-  | `LetBound of GT.g_node GT.var
+  [ `LambdaBound of
+        ( GT.quant GT.var
+         * DE.lam_src
+       )
+  | `LetBound of GT.g_node
+  ]
+
+type polarity = [ `Pos | `Neg ]
+
+type type_var =
+  [ `LetBound of (polarity -> GT.bound -> GT.quant GT.var)
+  | `QBound of GT.quant GT.var
   ]
 
 type env = {
   vals: val_var VarMap.t;
+  types: type_var VarMap.t;
 }
