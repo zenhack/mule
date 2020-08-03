@@ -193,6 +193,15 @@ end = struct
     | `Generated ->
         MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
 
+  let make_ctor_ty ctx ctor =
+    let ty = M.make_type ctx (`Ctor ctor) in
+    let bnd = GT.{ b_target = `G (M.get_g ctx); b_flag = `Flex } in
+    M.make_quant ctx GT.{
+      q_id = Ids.Quant.fresh (M.get_ctr ctx);
+      q_bound = M.make_bound ctx bnd;
+      q_body = lazy ty;
+    }
+
   let expand_type : M.ctx -> C.polarity -> unit DT.t -> GT.quant GT.var =
     fun ctx polarity -> function
     | DT.Var {v_var; v_src; v_info = _} ->
@@ -204,6 +213,11 @@ end = struct
         | Some (`LetBound f) ->
             f polarity GT.{ b_target = `G (M.get_g ctx); b_flag = `Flex }
       end
+    | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
+    | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
+    | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
+
+  let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 
   let rec gen_expr (ctx: M.ctx) (expr: unit DE.t): GT.g_node =
     M.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
