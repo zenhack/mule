@@ -216,6 +216,7 @@ end = struct
     | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
     | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
     | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
+    | _ -> failwith "TODO: other cases in expand_type"
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 
