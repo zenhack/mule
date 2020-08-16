@@ -26,3 +26,5 @@ val lookup_type : t -> Var.t -> C.type_var option
 val get_ctr : t -> Gensym.counter
 
 val constrain : t -> C.constr -> unit
+
+val get_constraints : t -> C.constr list
