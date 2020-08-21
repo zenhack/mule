@@ -58,6 +58,12 @@ type t = {
   ctx_env : C.env;
 }
 
+let checkpoint ctx = {
+  ctx with
+  ctx_uf_stores = ref (!(ctx.ctx_uf_stores));
+  ctx_constraints = ref (!(ctx.ctx_constraints));
+}
+
 let make_var ctx lens v =
   let stores = !(ctx.ctx_uf_stores) in
   let (store', var) = Union_find.make (lens.get stores) v in

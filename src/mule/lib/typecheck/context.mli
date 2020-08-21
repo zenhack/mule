@@ -28,3 +28,6 @@ val get_ctr : t -> Gensym.counter
 val constrain : t -> C.constr -> unit
 
 val get_constraints : t -> C.constr list
+
+(* Make an independent copy of the context *)
+val checkpoint : t -> t
