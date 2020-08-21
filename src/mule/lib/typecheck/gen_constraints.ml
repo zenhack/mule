@@ -79,9 +79,21 @@ end = struct
           | Some binding ->
               begin match binding with
                 | `LetBound g ->
-                    Context.constrain ctx (`Instance (g, q_var, `VarUse v_src))
+                    Context.constrain ctx C.(
+                        `Instance {
+                          inst_super = g;
+                          inst_sub = q_var;
+                          inst_why = `VarUse v_src;
+                        }
+                    )
                 | `LambdaBound (q_param, l_src) ->
-                    Context.constrain ctx (`Unify(q_param, q_var, `VarUse(v_src, l_src)))
+                    Context.constrain ctx C.(
+                        `Unify {
+                          unify_super = q_param;
+                          unify_sub = q_var;
+                          unify_why = `VarUse(v_src, l_src);
+                        }
+                      )
               end;
               q_var
         end
@@ -93,8 +105,20 @@ end = struct
           let with_quant f = Context.with_quant ctx bnd f in
           let q_arg = make_tyvar_q ctx bnd (make_kind ctx `Type) in
           let q_fn = with_quant (fun _ -> Context.make_type ctx (`Ctor(`Type(`Fn(q_arg, q_ret))))) in
-          Context.constrain ctx (`Instance (g_arg, q_arg, `ParamArg(app_fn, app_arg)));
-          Context.constrain ctx (`Instance (g_fn, q_fn, `FnApply(app_fn)));
+          Context.constrain ctx C.(
+              `Instance {
+                inst_super = g_arg;
+                inst_sub = q_arg;
+                inst_why = `ParamArg(app_fn, app_arg);
+              }
+            );
+          Context.constrain ctx C.(
+              `Instance {
+                inst_super = g_fn;
+                inst_sub = q_fn;
+                inst_why = `FnApply(app_fn);
+              }
+            );
           t_ret
         )
     | DE.Lam {l_param; l_body; l_src} ->
@@ -141,7 +165,13 @@ end = struct
                     , make_type_q ctx bnd (`Ctor(`Row(`Extend(gf_lbl, q_head, q_tail))))
                     ))))
         in
-        Context.constrain ctx (`Instance(g_record, q_record, `GetField(gf_lbl, gf_record)));
+        Context.constrain ctx C.(
+            `Instance {
+              inst_super = g_record;
+              inst_sub = q_record;
+              inst_why = `GetField(gf_lbl, gf_record);
+            }
+          );
         q_head
     | DE.UpdateVal {uv_lbl; uv_val; uv_record} ->
         let g_val = gen_expr ctx uv_val in
@@ -151,7 +181,13 @@ end = struct
         let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
 
         let q_record = make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_tail)))) in
-        Context.constrain ctx (`Instance(g_record, q_record, `RecordUpdate(uv_record)));
+        Context.constrain ctx C.(
+            `Instance {
+              inst_super = g_record;
+              inst_sub = q_record;
+              inst_why = `RecordUpdate(uv_record);
+            }
+          );
         let q_values = make_type_q ctx bnd (`Ctor(`Row(`Extend(uv_lbl, q_head, q_tail)))) in
         make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_values))));
     | _ ->
