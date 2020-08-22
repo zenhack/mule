@@ -98,6 +98,17 @@ let eval_term =
   )
   |> with_debug_flags
 
+let typecheck_term =
+    Term.(const (fun p -> `TypeCheck p) $
+          Arg.(required
+              & pos 0 (some non_dir_file) None
+              & info []
+                ~docv:"FILE"
+                ~doc:"Type check the expression in the file $(docv)"
+         )
+    )
+  |> with_debug_flags
+
 let run_term =
   Term.(const (fun r f -> `Run {
       runner = r;
@@ -159,6 +170,11 @@ let parse_cmd () =
       ( eval_term
       , Term.info "eval"
           ~doc:"Evaluate an expression in a file"
+          ~man:man_with_args
+      );
+      ( typecheck_term
+      , Term.info "typecheck"
+          ~doc:"Typecheck an expression in a file"
           ~man:man_with_args
       );
       run_term, Term.info "run";

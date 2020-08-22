@@ -23,6 +23,7 @@ type run_cmd = {
 type cmd =
   [ `Repl
   | `Eval of string
+  | `TypeCheck of string
   | `Build_js of build_js_cmd
   | `Run of run_cmd
   ]

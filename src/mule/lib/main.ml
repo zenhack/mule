@@ -1,3 +1,20 @@
+
+let typecheck path =
+  let src = Stdio.In_channel.read_all path in
+  let exp =
+    match MParser.parse_string Parser.expr_file src path with
+    | Failed(msg, _) ->
+        Stdio.eprintf "Parse error : %s\n" msg;
+        Caml.exit 1
+    | Success value ->
+        value
+  in
+  Lint.check_expr exp;
+  let dexp = Desugar.desugar exp in
+  let _ = dexp in
+  failwith "TODO"
+
+
 let interp_cmd = function
   | `Repl ->
       Repl.loop ()
@@ -8,6 +25,8 @@ let interp_cmd = function
         ~types:[]
         ~export:false
       |> Run.run_load_result
+  | `TypeCheck path ->
+      typecheck path
   | `Build_js Cli.{src; dest} ->
       Build_js.build src dest
   | `Run Cli.{runner; file} ->
