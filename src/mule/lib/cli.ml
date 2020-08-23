@@ -99,14 +99,14 @@ let eval_term =
   |> with_debug_flags
 
 let typecheck_term =
-    Term.(const (fun p -> `TypeCheck p) $
-          Arg.(required
-              & pos 0 (some non_dir_file) None
-              & info []
-                ~docv:"FILE"
-                ~doc:"Type check the expression in the file $(docv)"
-         )
-    )
+  Term.(const (fun p -> `TypeCheck p) $
+        Arg.(required
+             & pos 0 (some non_dir_file) None
+             & info []
+               ~docv:"FILE"
+               ~doc:"Type check the expression in the file $(docv)"
+        )
+  )
   |> with_debug_flags
 
 let run_term =

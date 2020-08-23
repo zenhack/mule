@@ -76,9 +76,9 @@ let make ctr f =
       };
     ctx_constraints = ref [];
     ctx_env = C.{
-      vals = Map.empty (module Var);
-      types = Map.empty (module Var);
-    };
+        vals = Map.empty (module Var);
+        types = Map.empty (module Var);
+      };
   }
   in
   Lazy.force ctx

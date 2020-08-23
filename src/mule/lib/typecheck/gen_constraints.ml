@@ -42,26 +42,26 @@ end = struct
     let ty = Context.make_type ctx (`Ctor ctor) in
     let bnd = GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex } in
     Context.make_quant ctx GT.{
-      q_id = Ids.Quant.fresh (Context.get_ctr ctx);
-      q_bound = Context.make_bound ctx bnd;
-      q_body = lazy ty;
-    }
+        q_id = Ids.Quant.fresh (Context.get_ctr ctx);
+        q_bound = Context.make_bound ctx bnd;
+        q_body = lazy ty;
+      }
 
   let expand_type : Context.t -> C.polarity -> unit DT.t -> GT.quant GT.var =
     fun ctx polarity -> function
-    | DT.Var {v_var; v_src; v_info = _} ->
-      begin match Context.lookup_type ctx v_var with
-        | None ->
-            throw_unbound_var v_var v_src
-        | Some (`QBound ty) ->
-            ty
-        | Some (`LetBound f) ->
-            f polarity GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex }
-      end
-    | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
-    | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
-    | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
-    | _ -> failwith "TODO: other cases in expand_type"
+      | DT.Var {v_var; v_src; v_info = _} ->
+          begin match Context.lookup_type ctx v_var with
+            | None ->
+                throw_unbound_var v_var v_src
+            | Some (`QBound ty) ->
+                ty
+            | Some (`LetBound f) ->
+                f polarity GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex }
+          end
+      | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
+      | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
+      | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
+      | _ -> failwith "TODO: other cases in expand_type"
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 
@@ -85,7 +85,7 @@ end = struct
                           inst_sub = q_var;
                           inst_why = `VarUse v_src;
                         }
-                    )
+                      )
                 | `LambdaBound (q_param, l_src) ->
                     Context.constrain ctx C.(
                         `Unify {
@@ -158,12 +158,12 @@ end = struct
         let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
 
         let q_record = make_type_q ctx bnd
-          (`Ctor
-              (`Type
-                  (`Record
-                    ( q_types
-                    , make_type_q ctx bnd (`Ctor(`Row(`Extend(gf_lbl, q_head, q_tail))))
-                    ))))
+            (`Ctor
+                (`Type
+                    (`Record
+                        ( q_types
+                        , make_type_q ctx bnd (`Ctor(`Row(`Extend(gf_lbl, q_head, q_tail))))
+                        ))))
         in
         Context.constrain ctx C.(
             `Instance {

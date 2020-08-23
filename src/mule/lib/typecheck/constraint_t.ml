@@ -38,7 +38,7 @@ type unify_kind_why =
      * denotes a "path" for the argument in the primitive constructor. e.g. `Fn `Param
      * indicates that the constrained kind was in the argument position of a ->
      * constructor. *)
-  | `CtorArg of [ `Fn of [ `Param | `Result ] ]
+    | `CtorArg of [ `Fn of [ `Param | `Result ] ]
   ]
 
 type instance_constraint = {
@@ -80,9 +80,9 @@ type constr =
 
 type val_var =
   [ `LambdaBound of
-        ( GT.quant GT.var
-         * DE.lam_src
-       )
+      ( GT.quant GT.var
+        * DE.lam_src
+      )
   | `LetBound of GT.g_node
   ]
 
