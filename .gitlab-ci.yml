@@ -9,7 +9,7 @@ before_script:
   # Install ocaml dependencies.
   - opam install dune base cmdliner linenoise lwt lwt_ppx mparser
   - opam install pprint ppx_compare ppx_inline_test ppx_let ppx_sexp_conv stdio
-  - opam install yojson zarith
+  - opam install yojson zarith unionFind
   # Install ocp-indent, which we use to check formatting:
   - opam install ocp-indent
 test:alltests:
