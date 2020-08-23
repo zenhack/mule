@@ -4,6 +4,8 @@ module C = Constraint_t
 
 type t
 
+val make : Gensym.counter -> (t -> GT.g_node) -> t
+
 val make_quant : t -> GT.quant -> GT.quant GT.var
 val make_type : t -> GT.typ -> GT.typ GT.var
 val make_bound : t -> GT.bound -> GT.bound GT.var

@@ -1,6 +1,8 @@
 module GT = Graph_types
 module C = Constraint_t
 
+open Common_ast
+
 type ('item, 'container) lens = {
   get : 'container -> 'item;
   set : 'item -> 'container -> 'container;
@@ -57,6 +59,29 @@ type t = {
   ctx_constraints: C.constr list ref;
   ctx_env : C.env;
 }
+
+let make ctr f =
+  let rec ctx = lazy {
+    ctx_g = GT.GNode.make_root ctr (lazy (
+        Lazy.force (GT.GNode.get (f (Lazy.force ctx)))
+      ));
+    ctx_ctr = ctr;
+    ctx_uf_stores = ref Stores.{
+        s_quants = Union_find.new_store ();
+        s_types = Union_find.new_store ();
+        s_bounds = Union_find.new_store ();
+        s_prekinds = Union_find.new_store ();
+        s_kinds = Union_find.new_store ();
+        s_guards = Union_find.new_store ();
+      };
+    ctx_constraints = ref [];
+    ctx_env = C.{
+      vals = Map.empty (module Var);
+      types = Map.empty (module Var);
+    };
+  }
+  in
+  Lazy.force ctx
 
 let checkpoint ctx = {
   ctx with
