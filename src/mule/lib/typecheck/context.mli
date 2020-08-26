@@ -4,15 +4,20 @@ module C = Constraint_t
 
 type t
 
+type 'a vtype
+
 val make : Gensym.counter -> (t -> GT.g_node) -> t
 
-val make_quant : t -> GT.quant -> GT.quant GT.var
-val make_type : t -> GT.typ -> GT.typ GT.var
-val make_bound : t -> GT.bound -> GT.bound GT.var
+val quant : GT.quant vtype
+val typ : GT.typ vtype
+val bound : GT.bound vtype
+val kind : GT.kind vtype
+val prekind : GT.prekind vtype
+val guard : GT.guard vtype
 
-val make_kind : t -> GT.kind -> GT.kind GT.var
-val make_prekind : t -> GT.prekind -> GT.prekind GT.var
-val make_guard : t -> GT.guard -> GT.guard GT.var
+val make_var : t -> 'a vtype -> 'a -> 'a GT.var
+val read_var : t -> 'a vtype -> 'a GT.var -> 'a
+val write_var : t -> 'a vtype -> 'a -> 'a GT.var -> unit
 
 val with_quant : t -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
 val with_sub_g : t -> (t -> GT.g_node -> GT.quant GT.var) -> GT.g_node

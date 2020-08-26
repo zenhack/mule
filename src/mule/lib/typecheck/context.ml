@@ -20,32 +20,32 @@ module Stores = struct
 
   module Lens = struct
     (* TODO(cleanup): auto-generate these somehow. *)
-    let quants = {
+    let quant = {
       get = (fun s -> s.s_quants );
       set = (fun s_quants s -> { s with s_quants });
     }
 
-    let types = {
+    let typ = {
       get = (fun s -> s.s_types);
       set = (fun s_types s -> { s with s_types });
     }
 
-    let bounds = {
+    let bound = {
       get = (fun s -> s.s_bounds);
       set = (fun s_bounds s -> { s with s_bounds });
     }
 
-    let prekinds = {
+    let prekind = {
       get = (fun s -> s.s_prekinds);
       set = (fun s_prekinds s -> { s with s_prekinds });
     }
 
-    let kinds = {
+    let kind = {
       get = (fun s -> s.s_kinds);
       set = (fun s_kinds s -> { s with s_kinds });
     }
 
-    let guards = {
+    let guard = {
       get = (fun s -> s.s_guards);
       set = (fun s_guards s -> { s with s_guards });
     }
@@ -59,6 +59,9 @@ type t = {
   ctx_constraints: C.constr list ref;
   ctx_env : C.env;
 }
+
+type 'a vtype = ('a Union_find.store, Stores.t) lens
+include Stores.Lens
 
 let make ctr f =
   let rec ctx = lazy {
@@ -95,29 +98,22 @@ let make_var ctx lens v =
   ctx.ctx_uf_stores := lens.set store' stores;
   var
 
-let make_quant ctx v =
-  make_var ctx Stores.Lens.quants v
+let read_var ctx lens var =
+  let stores = !(ctx.ctx_uf_stores) in
+  let store = lens.get stores in
+  let (store', value) = Union_find.get store var in
+  ctx.ctx_uf_stores := lens.set store' stores;
+  value
 
-let make_type ctx v =
-  make_var ctx Stores.Lens.types v
-
-let make_bound ctx v =
-  make_var ctx Stores.Lens.bounds v
-
-let make_prekind ctx v =
-  make_var ctx Stores.Lens.prekinds v
-
-let make_kind ctx v =
-  make_var ctx Stores.Lens.kinds v
-
-let make_guard ctx v =
-  make_var ctx Stores.Lens.guards v
+let write_var ctx lens value var =
+  let stores = !(ctx.ctx_uf_stores) in
+  ctx.ctx_uf_stores := lens.set (Union_find.set (lens.get stores) var value) stores
 
 let with_quant ctx bnd f =
   let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
-  let rec q = lazy (make_quant ctx {
+  let rec q = lazy (make_var ctx quant {
       q_id;
-      q_bound = make_bound ctx bnd;
+      q_bound = make_var ctx bound bnd;
       q_body;
     })
   and q_body = lazy (f (Lazy.force q))
