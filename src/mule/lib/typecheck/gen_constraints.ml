@@ -39,10 +39,12 @@ end = struct
         MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
 
   let make_ctor_ty ctx ctor =
-    let ty = Context.make_var ctx Context.typ (`Ctor ctor) in
+    let ctr = Context.get_ctr ctx in
+    let ty_id = GT.Ids.Type.fresh ctr in
+    let ty = Context.make_var ctx Context.typ (`Ctor (ty_id, ctor)) in
     let bnd = GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex } in
     Context.make_var ctx Context.quant GT.{
-        q_id = Ids.Quant.fresh (Context.get_ctr ctx);
+        q_id = Ids.Quant.fresh ctr;
         q_bound = Context.make_var ctx Context.bound bnd;
         q_body = lazy ty;
       }
@@ -101,10 +103,17 @@ end = struct
         let g_fn = gen_expr ctx app_fn in
         let g_arg = gen_expr ctx app_arg in
         Context.with_quant ctx bnd (fun q_ret ->
+          let ctr = Context.get_ctr ctx in
           let t_ret = make_tyvar ctx bnd (make_kind ctx `Type) in
           let with_quant f = Context.with_quant ctx bnd f in
           let q_arg = make_tyvar_q ctx bnd (make_kind ctx `Type) in
-          let q_fn = with_quant (fun _ -> Context.make_var ctx Context.typ (`Ctor(`Type(`Fn(q_arg, q_ret))))) in
+          let q_fn = with_quant (fun _ ->
+              Context.make_var
+                ctx
+                Context.typ
+                (`Ctor(GT.Ids.Type.fresh ctr, `Type(`Fn(q_arg, q_ret))))
+            )
+          in
           Context.constrain ctx C.(
               `Instance {
                 inst_super = g_arg;
@@ -124,9 +133,15 @@ end = struct
     | DE.Lam {l_param; l_body; l_src} ->
         let q_param = make_tyvar_q ctx bnd (make_kind ctx `Type) in
         Context.with_val_binding ctx l_param (`LambdaBound (q_param, l_src)) (fun ctx ->
+          let ctr = Context.get_ctr ctx in
           let g_ret = gen_expr ctx l_body in
           let q_ret = Lazy.force (GT.GNode.get g_ret) in
-          Context.with_quant ctx bnd (fun _ -> Context.make_var ctx Context.typ (`Ctor(`Type(`Fn(q_param, q_ret)))))
+          Context.with_quant ctx bnd (fun _ ->
+            Context.make_var
+              ctx
+              Context.typ
+              (`Ctor(GT.Ids.Type.fresh ctr, `Type(`Fn(q_param, q_ret))))
+          )
         )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
@@ -138,18 +153,27 @@ end = struct
     | DE.Const {const_val} ->
         Context.with_quant ctx bnd (fun _ -> gen_const ctx const_val)
     | DE.Embed _ ->
-        Context.with_quant ctx bnd (fun _ -> Context.make_var ctx Context.typ (`Ctor(`Type(`Const(`Text)))))
+        let ctr = Context.get_ctr ctx in
+        Context.with_quant ctx bnd (fun _ ->
+          Context.make_var
+            ctx
+            Context.typ
+            (`Ctor(GT.Ids.Type.fresh ctr, `Type(`Const(`Text))))
+        )
 
     | DE.Ctor {c_lbl; c_arg} ->
         let g_arg = gen_expr ctx c_arg in
         let q_head = Lazy.force (GT.GNode.get g_arg) in
         let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+        let ctr = Context.get_ctr ctx in
         make_type_q ctx bnd
           (`Ctor
-              (`Type
+              (GT.Ids.Type.fresh ctr,
+               `Type
                   (`Union
                       (make_type_q ctx bnd
-                          (`Ctor(`Row(`Extend(c_lbl, q_head, q_tail))))))))
+                          (`Ctor(GT.Ids.Type.fresh ctr,
+                                 `Row(`Extend(c_lbl, q_head, q_tail))))))))
     | DE.GetField {gf_lbl; gf_record} ->
         let g_record = gen_expr ctx gf_record in
 
@@ -157,12 +181,18 @@ end = struct
         let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
         let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
 
+        let ctr = Context.get_ctr ctx in
         let q_record = make_type_q ctx bnd
             (`Ctor
-                (`Type
+                (GT.Ids.Type.fresh ctr,
+                 `Type
                     (`Record
                         ( q_types
-                        , make_type_q ctx bnd (`Ctor(`Row(`Extend(gf_lbl, q_head, q_tail))))
+                        , make_type_q
+                            ctx
+                            bnd
+                            (`Ctor(GT.Ids.Type.fresh ctr,
+                                   `Row(`Extend(gf_lbl, q_head, q_tail))))
                         ))))
         in
         Context.constrain ctx C.(
@@ -180,7 +210,13 @@ end = struct
         let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
         let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
 
-        let q_record = make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_tail)))) in
+        let ctr = Context.get_ctr ctx in
+        let q_record = make_type_q
+            ctx
+            bnd
+            (`Ctor(GT.Ids.Type.fresh ctr,
+                   `Type(`Record(q_types, q_tail))))
+        in
         Context.constrain ctx C.(
             `Instance {
               inst_super = g_record;
@@ -188,8 +224,12 @@ end = struct
               inst_why = `RecordUpdate(uv_record);
             }
           );
-        let q_values = make_type_q ctx bnd (`Ctor(`Row(`Extend(uv_lbl, q_head, q_tail)))) in
-        make_type_q ctx bnd (`Ctor(`Type(`Record(q_types, q_values))));
+        let q_values =
+          make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
+                                     `Row(`Extend(uv_lbl, q_head, q_tail))))
+        in
+        make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
+                                   `Type(`Record(q_types, q_values))));
     | _ ->
         failwith "TODO"
   and gen_const ctx const =
@@ -198,6 +238,8 @@ end = struct
       | Const.Text _ -> `Text
       | Const.Char _ -> `Char
     in
-    Context.make_var ctx Context.typ (`Ctor(`Type(`Const(ty))))
+    let ctr = Context.get_ctr ctx in
+    Context.make_var ctx Context.typ (`Ctor(GT.Ids.Type.fresh ctr,
+                                            `Type(`Const(ty))))
 
 end

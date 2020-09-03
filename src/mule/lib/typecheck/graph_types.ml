@@ -97,13 +97,13 @@ and kind = {
 
 type typ =
   [ `Free of tyvar
-  | `Ctor of ctor
-  | `Lambda of (quant var * quant var)
-  | `Apply of (quant var * quant var)
+  | `Ctor of (Ids.Type.t * ctor)
+  | `Lambda of (Ids.Type.t * quant var * quant var)
+  | `Apply of (Ids.Type.t * quant var * quant var)
 
   (* `Posion is not a real type; it is used as part of our error handling
      strategy. TODO: write docs about error handling *)
-  | `Poison
+  | `Poison of Ids.Type.t
   ]
 and tyvar = {
   tv_id: Ids.Type.t;
