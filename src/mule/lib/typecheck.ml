@@ -82,8 +82,8 @@ module Graphviz = struct
           );
           emit_siblings_edges args
       | `Bound bv -> emit_bound_var seen bv
-      | `Quant {q_quant; q_var = {bv_id; _} as bv; q_body; _} ->
-          Debug.show_node (`Quant q_quant) u_id;
+      | `Quant {q_var = {bv_id; _} as bv; q_body; _} ->
+          Debug.show_node `Quant u_id;
           emit_bound_var seen bv;
           emit_u_var seen q_body;
           Debug.show_edge `Structural u_id bv_id;

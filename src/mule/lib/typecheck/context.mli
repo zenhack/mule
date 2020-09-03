@@ -38,3 +38,7 @@ val get_constraints : t -> C.constr list
 
 (* Make an independent copy of the context *)
 val checkpoint : t -> t
+
+module DebugGraph : sig
+  val dump : t -> unit
+end

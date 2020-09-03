@@ -156,3 +156,55 @@ let with_type_binding ctx var binding f =
 
 let lookup_type ctx var =
   Map.find ctx.ctx_env.types var
+
+
+module DebugGraph = struct
+  type seen = {
+    quant_seen: GT.Ids.QuantSet.t ref;
+    type_seen: GT.Ids.TypeSet.t ref;
+    g_seen: GT.Ids.GSet.t ref;
+  }
+
+  let empty_seen () = {
+    quant_seen = ref (Set.empty (module GT.Ids.Quant));
+    type_seen = ref (Set.empty (module GT.Ids.Type));
+    g_seen = ref (Set.empty (module GT.Ids.G));
+  }
+
+  let rec dump_g ctx seen g =
+    let id = GT.GNode.id g in
+    let g_seen = !(seen.g_seen) in
+    if not (Set.mem g_seen id) then
+      begin
+        seen.g_seen := Set.add g_seen id;
+        Debug.show_node `G (GT.Ids.G.to_int id);
+        let q_var = Lazy.force (GT.GNode.get g) in
+        let q = read_var ctx quant q_var in
+        dump_q ctx seen q;
+        Debug.show_edge `Structural
+          (GT.Ids.G.to_int id)
+          (GT.Ids.Quant.to_int q.q_id);
+      end
+  and dump_q ctx seen q =
+    let id = q.q_id in
+    let quant_seen = !(seen.quant_seen) in
+    if not (Set.mem quant_seen id) then
+      begin
+        seen.quant_seen := Set.add quant_seen id;
+        Debug.show_node `Quant (GT.Ids.Quant.to_int id);
+        let t_var = Lazy.force q.q_body in
+        let t = read_var ctx typ t_var in
+        dump_typ ctx seen t
+      end
+  and dump_typ _ctx _seen _t =
+    failwith "TODO"
+
+  let dump ctx =
+    let seen = empty_seen () in
+    Debug.start_graph ();
+    List.iter (get_constraints ctx) ~f:(function
+      | `Instance C.{inst_super; _} -> dump_g ctx seen inst_super
+      | _ -> ()
+    );
+    Debug.end_graph ()
+end

@@ -31,6 +31,7 @@ let fmt_node: node_type -> int -> string =
     ; Int.to_string n
     ; " [label=\""
     ; begin match ty with
+      | `G -> "G"
       | `Free `Flex -> "F"
       | `Free `Rigid -> "R"
       | `Bound -> "B"
@@ -40,8 +41,7 @@ let fmt_node: node_type -> int -> string =
             | `Named name -> Typecheck_types.string_of_typeconst_name name
             | `Extend lbl -> "< " ^ Label.to_string lbl ^ " _ | _ >"
           end
-      | `Quant `All -> "all"
-      | `Quant `Exist -> "exist"
+      | `Quant -> "Q"
     end
     ; " : "
     ; Int.to_string n

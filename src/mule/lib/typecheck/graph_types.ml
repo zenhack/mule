@@ -9,16 +9,20 @@ open Common_ast
 
 module type Id = sig
   (* An opaque identifier *)
-  type t
+  include Comparable.S
 
-  val compare : t -> t -> int
   val fresh : Gensym.counter -> t
   val to_string : t -> string
+  val to_int : t -> int
+
+  val t_of_sexp : Sexp.t -> t
+  val sexp_of_t : t -> Sexp.t
 end
 
 module IdImpl : Id = struct
   include Int
   let fresh ctr = Gensym.gensym ctr
+  let to_int n = n
 end
 
 module Ids = struct
@@ -26,6 +30,16 @@ module Ids = struct
   module Type : Id = IdImpl
   module Kind : Id = IdImpl
   module Quant : Id = IdImpl
+
+  module GMap = MapSet.MkMap(G)
+  module TypeMap = MapSet.MkMap(Type)
+  module KindMap = MapSet.MkMap(Kind)
+  module QuantMap = MapSet.MkMap(Quant)
+
+  module GSet = MapSet.MkSet(G)
+  module TypeSet = MapSet.MkSet(Type)
+  module KindSet = MapSet.MkSet(Kind)
+  module QuantSet = MapSet.MkSet(Quant)
 end
 
 type 'a var = 'a Union_find.rref

@@ -11,5 +11,6 @@ type node_type =
   [ `Free of [ `Flex | `Rigid ]
   | `Bound
   | `Const of u_typeconst
-  | `Quant of [ `All | `Exist ]
+  | `Quant
+  | `G
   ]
