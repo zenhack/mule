@@ -171,6 +171,20 @@ module DebugGraph = struct
     g_seen = ref (Set.empty (module GT.Ids.G));
   }
 
+  let typ_kids ctx t =
+    begin match t with
+      | `Free _ | `Poison _ -> []
+      | `Apply(_, f, arg) -> [f; arg]
+      | `Lambda(_, param, body) -> [param; body]
+      | `Ctor(_, `Type(`Fn(p, r))) -> [p; r]
+      | `Ctor(_, `Type(`Record(t, v))) -> [t; v]
+      | `Ctor(_, `Type(`Union r)) -> [r]
+      | `Ctor(_, `Type(`Const _)) -> []
+      | `Ctor(_, `Row(`Empty)) -> []
+      | `Ctor(_, `Row(`Extend (_, h, t))) -> [h; t]
+    end
+    |> List.map ~f:(read_var ctx quant)
+
   let rec dump_g ctx seen g =
     let id = GT.GNode.id g in
     let g_seen = !(seen.g_seen) in
@@ -196,8 +210,41 @@ module DebugGraph = struct
         let t = read_var ctx typ t_var in
         dump_typ ctx seen t
       end
-  and dump_typ _ctx _seen _t =
-    failwith "TODO"
+  and dump_typ ctx seen t =
+    let id = match t with
+      | `Free GT.{tv_id; _} -> tv_id
+      | `Ctor (id, _) -> id
+      | `Lambda(id, _, _) -> id
+      | `Apply(id, _, _) -> id
+      | `Poison id -> id
+    in
+    let type_seen = !(seen.type_seen) in
+    if not (Set.mem type_seen id) then
+      begin
+        seen.type_seen := Set.add type_seen id;
+        let node_type = match t with
+          | `Ctor(_, `Row(`Extend(lbl, _, _))) -> `Const (`Extend lbl)
+          | _ -> failwith "TODO"
+        in
+        Debug.show_node node_type (GT.Ids.Type.to_int id);
+        let kids = typ_kids ctx t in
+        List.iter kids ~f:(fun q ->
+          dump_q ctx seen q;
+          Debug.show_edge `Structural
+            (GT.Ids.Type.to_int id)
+            (GT.Ids.Quant.to_int q.q_id)
+        );
+        begin match kids with
+          | [] -> ()
+          | q :: qs ->
+              ignore (List.fold_left qs ~init:q ~f:(fun l r ->
+                  Debug.show_edge `Sibling
+                    (GT.Ids.Quant.to_int l.q_id)
+                    (GT.Ids.Quant.to_int r.q_id);
+                  r
+              ))
+        end
+      end
 
   let dump ctx =
     let seen = empty_seen () in
