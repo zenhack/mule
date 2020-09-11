@@ -300,6 +300,14 @@ module DebugGraph = struct
           let q_id = GT.Ids.Quant.to_int q.q_id in
           let g_id = GT.Ids.G.to_int (GT.GNode.id inst_super) in
           Debug.show_edge `Instance g_id q_id
+      | `Unify C.{unify_super; unify_sub; unify_why = _} ->
+          let q_super = read_var ctx quant unify_super in
+          let q_sub = read_var ctx quant unify_sub in
+          dump_q ctx seen q_super;
+          dump_q ctx seen q_sub;
+          Debug.show_edge `Unify
+            (GT.Ids.Quant.to_int q_super.q_id)
+            (GT.Ids.Quant.to_int q_sub.q_id)
       | _ -> ()
     );
     Debug.end_graph ()
