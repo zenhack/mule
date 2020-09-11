@@ -292,6 +292,7 @@ module DebugGraph = struct
   let dump ctx =
     let seen = empty_seen () in
     Debug.start_graph ();
+    dump_g ctx seen (get_g ctx);
     List.iter (get_constraints ctx) ~f:(function
       | `Instance C.{inst_super; inst_sub; inst_why = _} ->
           dump_g ctx seen inst_super;
