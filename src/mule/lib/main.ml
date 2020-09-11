@@ -18,6 +18,7 @@ let typecheck path =
   in
   let g = Context.get_g ctx in
   let _q = Lazy.force (Graph_types.GNode.get g) in
+  Context.DebugGraph.dump ctx;
   failwith "TODO: do stuff after generating constraints"
 
 

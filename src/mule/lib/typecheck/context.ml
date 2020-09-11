@@ -222,7 +222,7 @@ module DebugGraph = struct
           dump_q ctx seen q;
           GT.Ids.Quant.to_int q.q_id
     in
-    Debug.show_edge (`Binding b.GT.b_flag) src dest
+    Debug.show_edge (`Binding b.GT.b_flag) dest src
   and dump_typ ctx seen t =
     let id = match t with
       | `Free GT.{tv_id; _} -> tv_id
