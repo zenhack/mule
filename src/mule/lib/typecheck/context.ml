@@ -285,7 +285,7 @@ module DebugGraph = struct
                     (GT.Ids.Quant.to_int l.q_id)
                     (GT.Ids.Quant.to_int r.q_id);
                   r
-              ))
+                ))
         end
       end
 

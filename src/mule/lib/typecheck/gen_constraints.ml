@@ -170,10 +170,10 @@ end = struct
           (`Ctor
               (GT.Ids.Type.fresh ctr,
                `Type
-                  (`Union
-                      (make_type_q ctx bnd
-                          (`Ctor(GT.Ids.Type.fresh ctr,
-                                 `Row(`Extend(c_lbl, q_head, q_tail))))))))
+                 (`Union
+                     (make_type_q ctx bnd
+                         (`Ctor(GT.Ids.Type.fresh ctr,
+                                `Row(`Extend(c_lbl, q_head, q_tail))))))))
     | DE.GetField {gf_lbl; gf_record} ->
         let g_record = gen_expr ctx gf_record in
 
@@ -186,14 +186,14 @@ end = struct
             (`Ctor
                 (GT.Ids.Type.fresh ctr,
                  `Type
-                    (`Record
-                        ( q_types
-                        , make_type_q
-                            ctx
-                            bnd
-                            (`Ctor(GT.Ids.Type.fresh ctr,
-                                   `Row(`Extend(gf_lbl, q_head, q_tail))))
-                        ))))
+                   (`Record
+                       ( q_types
+                       , make_type_q
+                           ctx
+                           bnd
+                           (`Ctor(GT.Ids.Type.fresh ctr,
+                                  `Row(`Extend(gf_lbl, q_head, q_tail))))
+                       ))))
         in
         Context.constrain ctx C.(
             `Instance {
