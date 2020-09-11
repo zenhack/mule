@@ -32,90 +32,6 @@ type context = {
   get_import_type : Paths_t.t -> u_var;
 }
 
-(* Helpers for rendering a constraint graph via graphviz.
-   TODO(cleanup): move this out into its own file. *)
-module Graphviz = struct
-  let once_for_id seen id ~f =
-    if not (Set.mem !seen id) then
-      begin
-        seen := Set.add !seen id;
-        f ()
-      end
-
-  let emit_constraint_edge ldir lv rdir rv =
-    let lid, rid = get_id (UnionFind.get lv), get_id (UnionFind.get rv) in
-    match (ldir, lid, rdir, rid) with
-    | `Narrow, sub, `Widen, super
-    | `Widen, super, `Narrow, sub ->
-        Debug.show_edge `Instance super sub
-    | _ ->
-        (* TODO: distinguish meet vs. join *)
-        Debug.show_edge `Unify lid rid
-
-  let emit_bound_var seen {bv_id; _} =
-    once_for_id seen bv_id ~f:(fun () ->
-      Debug.show_node `Bound bv_id
-    )
-
-  let emit_siblings_edges args =
-    let args =
-      List.map args ~f:(fun (uv, _) -> get_id (UnionFind.get uv))
-    in
-    match args with
-    | [] -> ()
-    | (x :: xs) ->
-        List.fold_left xs ~init:x ~f:(fun l r ->
-          Debug.show_edge `Sibling l r; r
-        )
-        |> ignore
-
-  let rec emit_u_var seen uv =
-    let u = UnionFind.get uv in
-    let u_id = get_id u in
-    once_for_id seen u_id ~f:begin fun () ->
-      match u with
-      | `Const(_, c, args, _) ->
-          Debug.show_node (`Const c) u_id;
-          List.iter args ~f:(fun (ty, _) ->
-            emit_u_var seen ty;
-            Debug.show_edge `Structural u_id (get_id (UnionFind.get ty));
-          );
-          emit_siblings_edges args
-      | `Bound bv -> emit_bound_var seen bv
-      | `Quant {q_var = {bv_id; _} as bv; q_body; _} ->
-          Debug.show_node `Quant u_id;
-          emit_bound_var seen bv;
-          emit_u_var seen q_body;
-          Debug.show_edge `Structural u_id bv_id;
-          Debug.show_edge (`Binding `Explicit) u_id bv_id;
-          let body_id = get_id (UnionFind.get q_body) in
-          Debug.show_edge `Structural u_id body_id;
-          Debug.show_edge `Sibling bv_id body_id
-      | `Free {ty_id; ty_flag; _} ->
-          (* TODO: display scope. *)
-          Debug.show_node (`Free ty_flag) ty_id
-    end
-
-  (* This traverses the contexts and emtis everything reachable from it.
-   * we are not currently using it, because this ends up printing out the
-   * types of all the builtins too, which is too much clutter.
-     let emit_ctx seen ctx =
-     Map.iter ctx.type_env ~f:(emit_u_var seen);
-     Map.iter ctx.vals_env ~f:(emit_u_var seen);
-     List.iter !(ctx.locals) ~f:(fun v -> emit_u_var seen v)
-  *)
-
-  let render_u_var uv =
-    Debug.start_graph ();
-    emit_u_var (ref (Set.empty (module Int))) uv;
-    Debug.set_root (get_id (UnionFind.get uv));
-    Debug.end_graph()
-
-  let maybe_render_u_var uv =
-    if Config.render_constraint_graph () then
-      render_u_var uv
-end
-
 let cant_instantiate info other_ty ~path ~reason =
   MuleErr.throw
     (`TypeError
@@ -820,7 +736,6 @@ and synth: context -> 'i DE.t -> u_var =
         )
   end
   in
-  Graphviz.maybe_render_u_var result;
   result
 and synth_branch ctx ?have_default:(have_default=false) b =
   match b with
@@ -882,7 +797,6 @@ and synth_leaf ctx DE.{lf_var; lf_body} =
   )
 and check: context -> reason:(MuleErr.subtype_reason NonEmpty.t) -> 'i DE.t -> u_var -> u_var =
   fun ctx ~reason e ty_want ->
-  Graphviz.maybe_render_u_var ty_want;
   require_kind (get_kind ty_want) ktype;
   match e with
   | DE.Let{let_v; let_e; let_body} ->
@@ -1143,17 +1057,6 @@ and unify_already_whnf
     -> (u_var * unify_dir)
     -> u_var =
   fun ctx ~path ~reason (sub, sub_dir) (super, super_dir) ->
-  if Config.render_constraint_graph () then
-    begin
-      Debug.start_graph ();
-      let seen = ref (Set.empty (module Int)) in
-      Graphviz.emit_u_var seen sub;
-      Graphviz.emit_u_var seen super;
-      Graphviz.emit_constraint_edge sub_dir sub super_dir super;
-      Debug.set_root (get_id (UnionFind.get super));
-      (* Graphviz.emit_ctx seen ctx; *)
-      Debug.end_graph ()
-    end;
   let sub_id, super_id = get_id (UnionFind.get sub), get_id (UnionFind.get super) in
   if Set.mem !(ctx.assumptions) (sub_id, super_id) then
     sub

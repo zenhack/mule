@@ -210,6 +210,19 @@ module DebugGraph = struct
         let t = read_var ctx typ t_var in
         dump_typ ctx seen t
       end
+  and dump_bound ctx seen src b =
+    (* We don't need to track bounds in `seen`, since they're non-cyclic
+       and we already track their sources. *)
+    let dest =  match b.GT.b_target with
+      | `G g ->
+          dump_g ctx seen g;
+          GT.Ids.G.to_int (GT.GNode.id g)
+      | `Q qv ->
+          let q = read_var ctx quant qv in
+          dump_q ctx seen q;
+          GT.Ids.Quant.to_int q.q_id
+    in
+    Debug.show_edge (`Binding b.GT.b_flag) src dest
   and dump_typ ctx seen t =
     let id = match t with
       | `Free GT.{tv_id; _} -> tv_id
@@ -223,8 +236,24 @@ module DebugGraph = struct
       begin
         seen.type_seen := Set.add type_seen id;
         let node_type = match t with
+          | `Free {tv_bound; _} ->
+              dump_bound ctx seen
+                (GT.Ids.Type.to_int id)
+                (read_var ctx bound tv_bound);
+              `Free
           | `Ctor(_, `Row(`Extend(lbl, _, _))) -> `Const (`Extend lbl)
-          | _ -> failwith "TODO"
+          | `Ctor(_, `Row `Empty) -> `Const (`Named `Empty)
+          | `Ctor(_, `Type t) -> `Const (`Named (match t with
+              | `Const `Text -> `Text
+              | `Const `Int -> `Int
+              | `Const `Char -> `Char
+              | `Fn _ -> `Fn
+              | `Record _ -> `Record
+              | `Union _ -> `Union
+            ))
+          | `Lambda _ -> `Const (`Named `Lambda)
+          | `Apply _ -> `Const (`Named `Apply)
+          | `Poison _ -> `Const (`Named `Poison)
         in
         Debug.show_node node_type (GT.Ids.Type.to_int id);
         let kids = typ_kids ctx t in

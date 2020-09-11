@@ -32,13 +32,19 @@ let fmt_node: node_type -> int -> string =
     ; " [label=\""
     ; begin match ty with
       | `G -> "G"
-      | `Free `Flex -> "F"
-      | `Free `Rigid -> "R"
-      | `Bound -> "B"
+      | `Free -> "_|_"
       | `Const c ->
           begin match c with
+            | `Named `Text -> "text"
+            | `Named `Int -> "int"
+            | `Named `Char -> "char"
+            | `Named `Fn -> "->"
+            | `Named `Union -> "|"
+            | `Named `Apply -> "<apply>"
+            | `Named `Lambda -> "<lambda>"
             | `Named `Record -> "{...type _, ..._}"
-            | `Named name -> Typecheck_types.string_of_typeconst_name name
+            | `Named `Empty -> "<>"
+            | `Named `Poison -> "<poison>"
             | `Extend lbl -> "< " ^ Label.to_string lbl ^ " _ | _ >"
           end
       | `Quant -> "Q"

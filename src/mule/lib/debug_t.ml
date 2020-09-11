@@ -1,4 +1,23 @@
-open Typecheck_types_t
+open Common_ast
+
+type typeconst_name =
+  [ `Text
+  | `Int
+  | `Char
+  | `Empty
+  | `Fn
+  | `Record
+  | `Union
+  | `Apply
+  | `Lambda
+
+  | `Poison
+  ]
+
+type typeconst =
+  [ `Named of typeconst_name
+  | `Extend of Label.t
+  ]
 
 type edge_type =
   [ `Structural
@@ -8,9 +27,8 @@ type edge_type =
   | `Binding of [ `Flex | `Rigid | `Explicit ]
   ]
 type node_type =
-  [ `Free of [ `Flex | `Rigid ]
-  | `Bound
-  | `Const of u_typeconst
+  [ `Free
+  | `Const of typeconst
   | `Quant
   | `G
   ]
