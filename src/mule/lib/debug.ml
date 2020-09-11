@@ -32,7 +32,7 @@ let fmt_node: node_type -> int -> string =
     ; " [label=\""
     ; begin match ty with
       | `G -> "G"
-      | `Free -> "_|_"
+      | `Free -> "_"
       | `Const c ->
           begin match c with
             | `Named `Text -> "text"
