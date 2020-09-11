@@ -48,10 +48,11 @@ module GNode : sig
   type 'a t
 
   val id : 'a t -> Ids.G.t
+  val bound : 'a t -> 'a t option
+  val get : 'a t -> 'a
+
   val make_child : 'a t -> 'a -> 'a t
   val make_root : Gensym.counter -> 'a -> 'a t
-
-  val get : 'a t -> 'a
 end = struct
   type 'a t = {
     g_id: Ids.G.t;
@@ -61,6 +62,9 @@ end = struct
   }
 
   let id g = g.g_id
+  let bound g = g.g_bound
+  let get g = g.g_value
+
   let make_child g value = {
     g_id = Ids.G.fresh g.g_ctr;
     g_bound = Some g;
@@ -74,8 +78,6 @@ end = struct
     g_ctr = ctr;
     g_value = value;
   }
-
-  let get g = g.g_value
 end
 
 type guard =

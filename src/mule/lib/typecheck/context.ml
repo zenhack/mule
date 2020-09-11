@@ -198,6 +198,14 @@ module DebugGraph = struct
         Debug.show_edge `Structural
           (GT.Ids.G.to_int id)
           (GT.Ids.Quant.to_int q.q_id);
+        Option.iter
+          (GT.GNode.bound g)
+          ~f:(fun g_bound ->
+            dump_g ctx seen g_bound;
+            Debug.show_edge (`Binding `Flex)
+              (GT.Ids.G.to_int (GT.GNode.id g_bound))
+              (GT.Ids.G.to_int (GT.GNode.id g))
+          )
       end
   and dump_q ctx seen q =
     let id = q.q_id in
@@ -205,10 +213,16 @@ module DebugGraph = struct
     if not (Set.mem quant_seen id) then
       begin
         seen.quant_seen := Set.add quant_seen id;
-        Debug.show_node `Quant (GT.Ids.Quant.to_int id);
+        let q_id = GT.Ids.Quant.to_int id in
+        Debug.show_node `Quant q_id;
         let t_var = Lazy.force q.q_body in
         let t = read_var ctx typ t_var in
-        dump_typ ctx seen t
+        dump_typ ctx seen t;
+        let t_id = typ_id t in
+        Debug.show_edge `Structural
+          q_id
+          (GT.Ids.Type.to_int t_id);
+        dump_bound ctx seen q_id (read_var ctx bound q.q_bound)
       end
   and dump_bound ctx seen src b =
     (* We don't need to track bounds in `seen`, since they're non-cyclic
@@ -223,14 +237,14 @@ module DebugGraph = struct
           GT.Ids.Quant.to_int q.q_id
     in
     Debug.show_edge (`Binding b.GT.b_flag) dest src
+  and typ_id = function
+    | `Free GT.{tv_id; _} -> tv_id
+    | `Ctor (id, _) -> id
+    | `Lambda(id, _, _) -> id
+    | `Apply(id, _, _) -> id
+    | `Poison id -> id
   and dump_typ ctx seen t =
-    let id = match t with
-      | `Free GT.{tv_id; _} -> tv_id
-      | `Ctor (id, _) -> id
-      | `Lambda(id, _, _) -> id
-      | `Apply(id, _, _) -> id
-      | `Poison id -> id
-    in
+    let id = typ_id t in
     let type_seen = !(seen.type_seen) in
     if not (Set.mem type_seen id) then
       begin
@@ -279,7 +293,13 @@ module DebugGraph = struct
     let seen = empty_seen () in
     Debug.start_graph ();
     List.iter (get_constraints ctx) ~f:(function
-      | `Instance C.{inst_super; _} -> dump_g ctx seen inst_super
+      | `Instance C.{inst_super; inst_sub; inst_why = _} ->
+          dump_g ctx seen inst_super;
+          let q = read_var ctx quant inst_sub in
+          dump_q ctx seen q;
+          let q_id = GT.Ids.Quant.to_int q.q_id in
+          let g_id = GT.Ids.G.to_int (GT.GNode.id inst_super) in
+          Debug.show_edge `Instance g_id q_id
       | _ -> ()
     );
     Debug.end_graph ()
