@@ -30,7 +30,7 @@ module Type = struct
       }
     | Quant of {
         q_quant : quantifier Loc.located;
-        q_vars : var list;
+        q_vars : (var * lt option) list;
         q_body : lt;
       }
     | Recur of {

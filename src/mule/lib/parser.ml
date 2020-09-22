@@ -259,7 +259,7 @@ and quantifier = function
   | `Exist -> located (kwd "exist" >>$ `Exist)
 and quantified_type q = lazy (located (
     let%bind q_quant = quantifier q in
-    let%bind vs = many1 var in
+    let%bind vs = many1 (lazy_p q_binding) in
     kwd "." >>
     let%map ty = lazy_p typ in
     Type.Quant {
@@ -268,6 +268,17 @@ and quantified_type q = lazy (located (
       q_body = ty;
     }
   ))
+and q_binding = lazy (
+  choice
+    [ var |>> (fun v -> (v, None))
+    ; parens (
+          let%bind v = var in
+          kwd ":>" >>
+          let%map ty = lazy_p typ in
+          (v, Some ty)
+        )
+    ]
+)
 and all_type = lazy (lazy_p (quantified_type `All))
 and exist_type = lazy (lazy_p (quantified_type `Exist))
 and record_type = lazy (located (

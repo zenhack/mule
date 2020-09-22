@@ -50,6 +50,7 @@ type 'i t =
       q_info : 'i;
       q_quant : quantifier;
       q_var : Var.t;
+      q_bound : 'i t option;
       q_body : 'i t;
     }
   | Named of {

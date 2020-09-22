@@ -130,11 +130,12 @@ let substitue_type_apps
       end
     else
       begin match ty with
-        | DT.Quant{q_info; q_quant; q_var; q_body} ->
+        | DT.Quant{q_info; q_quant; q_var; q_bound; q_body} ->
             DT.Quant{
               q_info;
               q_quant;
               q_var;
+              q_bound = Option.map q_bound ~f:go;
               q_body = go q_body;
             }
         | DT.Recur{mu_info; mu_var = v; mu_body = body} ->
@@ -221,6 +222,7 @@ let rec quantify_opaques t = match DT.apply_to_kids t ~f:quantify_opaques with
           q_info = `Unknown;
           q_quant = `Exist;
           q_var = v;
+          q_bound = None;
           q_body = ty;
         }
       )
@@ -251,10 +253,11 @@ let rec desugar_type' ty = match ty.Loc.l_value with
       List.fold_right
         vs
         ~init:(desugar_type' body)
-        ~f:(fun v body -> DT.Quant {
+        ~f:(fun (v, bound) body -> DT.Quant {
             q_info = `Type;
             q_quant = q.Loc.l_value;
             q_var = v.Loc.l_value;
+            q_bound = Option.map ~f:desugar_type' bound;
             q_body = body;
           }
         )

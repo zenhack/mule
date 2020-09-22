@@ -58,10 +58,11 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
         let r_values = go_row r_values in
         Record { r_src; r_info; r_types; r_values }
     | Union {u_row} -> Union {u_row = go_row u_row}
-    | Quant {q_info; q_quant; q_var = v; q_body} ->
+    | Quant {q_info; q_quant; q_var = v; q_bound; q_body} ->
         let v' = get v in
         let body' = go q_body in
-        Quant {q_info; q_quant; q_var = v'; q_body = body'}
+        let bound' = Option.map q_bound ~f:go in
+        Quant {q_info; q_quant; q_var = v'; q_bound = bound'; q_body = body'}
     | Path{p_info; p_var = `Var v; p_lbls; p_src} -> Path {
         p_info;
         p_var = `Var (get v);

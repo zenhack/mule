@@ -34,6 +34,7 @@ let rec go seen uv =
                   q_info = q_id;
                   q_quant = q;
                   q_var = var_of_int v_id;
+                  q_bound = None;
                   q_body = body';
                 })
       | `Const(ty_id, `Named `Record, [rtypes, _; rvals, _], _) ->
@@ -170,10 +171,10 @@ let strip_needless_quantifiers ty =
           )
         else
           (mu_body, fvs)
-    | DT.Quant{q_info; q_quant; q_var; q_body} ->
+    | DT.Quant{q_info; q_quant; q_var; q_bound; q_body} ->
         let q_body, fvs = go q_body in
         if Set.mem fvs q_var then
-          ( DT.Quant{q_info; q_quant; q_var; q_body}
+          ( DT.Quant{q_info; q_quant; q_var; q_bound; q_body}
           , Set.remove fvs q_var
           )
         else

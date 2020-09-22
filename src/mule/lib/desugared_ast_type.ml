@@ -43,11 +43,17 @@ let rec subst old new_ ty = match ty with
       }
   | Union {u_row} ->
       Union { u_row = subst_row old new_ u_row }
-  | Quant{q_info; q_quant; q_var; q_body} ->
+  | Quant{q_info; q_quant; q_var; q_bound; q_body} ->
       if Var.equal q_var old then
-        Quant {q_info; q_quant; q_var; q_body}
+        Quant {q_info; q_quant; q_var; q_bound; q_body}
       else
-        Quant{q_info; q_quant; q_var; q_body = subst old new_ q_body}
+        Quant {
+          q_info;
+          q_quant;
+          q_var;
+          q_bound = Option.map q_bound ~f:(subst old new_);
+          q_body = subst old new_ q_body;
+        }
   | Named _ -> ty
   | Opaque _ -> ty
   | TypeLam{tl_info; tl_param; tl_body} ->
@@ -179,11 +185,12 @@ let rec map ty ~f = match ty with
       }
   | Union {u_row} ->
       Union {u_row = map_row u_row ~f}
-  | Quant {q_info; q_quant; q_var; q_body} ->
+  | Quant {q_info; q_quant; q_var; q_bound; q_body} ->
       Quant {
         q_info = f q_info;
         q_quant;
         q_var;
+        q_bound = Option.map q_bound ~f:(map ~f);
         q_body = map q_body ~f;
       }
   | TypeLam{tl_info; tl_param; tl_body} ->
@@ -363,11 +370,12 @@ let rec apply_to_kids t ~f = match t with
   | Union {u_row} -> Union {
       u_row = apply_to_row u_row ~f;
     }
-  | Quant{q_info; q_quant; q_var; q_body} ->
+  | Quant{q_info; q_quant; q_var; q_bound; q_body} ->
       Quant {
         q_info;
         q_quant;
         q_var;
+        q_bound = Option.map q_bound ~f;
         q_body = f q_body;
       }
   | TypeLam{tl_info; tl_param; tl_body} ->
