@@ -73,48 +73,48 @@ end = struct
     fun ctx polarity q_target exp ->
     let b_target = `Q q_target in
     match exp with
-      | DT.Var {v_var; v_src; v_info = _} ->
-          begin match Context.lookup_type ctx v_var with
-            | None ->
-                throw_unbound_var v_var v_src
-            | Some f ->
-                f polarity b_target
-          end
-      | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
-      | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
-      | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
-      | DT.Quant {q_quant; q_var; q_bound; q_body; q_info = _} ->
-          let b_flag = quant_flag q_quant polarity in
-          let bnd = GT.{ b_target; b_flag } in
-          let tv = match q_bound with
-            | None ->
-                let kind = make_kind ctx (`Free (GT.Ids.Kind.fresh (Context.get_ctr ctx))) in
-                make_tyvar ctx bnd kind
-            | Some ty ->
-                expand_type ctx polarity q_target ty
-          in
-          Context.with_type_binding ctx q_var (fun _ _ -> tv) begin fun ctx ->
-            expand_type ctx polarity q_target q_body
-          end
-      | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
-          (* TODO: do something with fn_pvar. *)
-          let mk_branch polarity expr =
-            (* TODO: think hard about what the bound should be here. *)
-            Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
-              begin fun q_target ->
-                expand_type ctx polarity q_target expr
-              end
-          in
-          make_ctor_ty
-            ctx
-            (`Type
-                (`Fn
-                    ( mk_branch (flip_polarity polarity) fn_param
-                    , mk_branch                polarity  fn_ret
-                    )
-                )
-            )
-      | _ -> failwith "TODO: other cases in expand_type"
+    | DT.Var {v_var; v_src; v_info = _} ->
+        begin match Context.lookup_type ctx v_var with
+          | None ->
+              throw_unbound_var v_var v_src
+          | Some f ->
+              f polarity b_target
+        end
+    | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
+    | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
+    | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
+    | DT.Quant {q_quant; q_var; q_bound; q_body; q_info = _} ->
+        let b_flag = quant_flag q_quant polarity in
+        let bnd = GT.{ b_target; b_flag } in
+        let tv = match q_bound with
+          | None ->
+              let kind = make_kind ctx (`Free (GT.Ids.Kind.fresh (Context.get_ctr ctx))) in
+              make_tyvar ctx bnd kind
+          | Some ty ->
+              expand_type ctx polarity q_target ty
+        in
+        Context.with_type_binding ctx q_var (fun _ _ -> tv) begin fun ctx ->
+          expand_type ctx polarity q_target q_body
+        end
+    | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
+        (* TODO: do something with fn_pvar. *)
+        let mk_branch polarity expr =
+          (* TODO: think hard about what the bound should be here. *)
+          Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
+            begin fun q_target ->
+              expand_type ctx polarity q_target expr
+            end
+        in
+        make_ctor_ty
+          ctx
+          (`Type
+              (`Fn
+                  ( mk_branch (flip_polarity polarity) fn_param
+                  , mk_branch                polarity  fn_ret
+                  )
+              )
+          )
+    | _ -> failwith "TODO: other cases in expand_type"
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 
