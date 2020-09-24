@@ -88,10 +88,7 @@ type val_var =
 
 type polarity = [ `Pos | `Neg ]
 
-type type_var =
-  [ `LetBound of (polarity -> GT.bound -> GT.quant GT.var)
-  | `QBound of GT.quant GT.var
-  ]
+type type_var = (polarity -> GT.bound_target -> GT.typ GT.var)
 
 type env = {
   vals: val_var VarMap.t;

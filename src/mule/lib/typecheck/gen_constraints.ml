@@ -41,13 +41,7 @@ end = struct
   let make_ctor_ty ctx ctor =
     let ctr = Context.get_ctr ctx in
     let ty_id = GT.Ids.Type.fresh ctr in
-    let ty = Context.make_var ctx Context.typ (`Ctor (ty_id, ctor)) in
-    let bnd = GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex } in
-    Context.make_var ctx Context.quant GT.{
-        q_id = Ids.Quant.fresh ctr;
-        q_bound = Context.make_var ctx Context.bound bnd;
-        q_body = lazy ty;
-      }
+    Context.make_var ctx Context.typ (`Ctor (ty_id, ctor))
 
   (* Computes a flag for a binding edge based on a quantifier and a polarity.
      universal quantifiers are flexible in positive position, and rigid in
@@ -60,23 +54,31 @@ end = struct
       | `Exist, `Pos -> `Rigid
       | `Exist, `Neg -> `Flex
 
-  let rec expand_type : Context.t -> C.polarity -> GT.bound_target -> unit DT.t -> GT.quant GT.var =
+  let flip_polarity : C.polarity -> C.polarity = function
+    | `Pos -> `Neg
+    | `Neg -> `Pos
+
+  let rec expand_type
+    : Context.t
+      -> C.polarity
+      -> GT.quant GT.var
+      -> unit DT.t
+      -> GT.typ GT.var =
     (* [expand_type ctx polarity b_target t] converts [t] into a type graph, where:
 
-       - Any top-level quantifiers are bound on [b_target].
+       - Any top-level quantifiers are bound on [q_target].
        - [polarity] is used to determine how to translate quantifiers; binding edges on
          quantifiers will be computed via [quant_flag].
     *)
-    fun ctx polarity b_target -> function
+    fun ctx polarity q_target exp ->
+    let b_target = `Q q_target in
+    match exp with
       | DT.Var {v_var; v_src; v_info = _} ->
           begin match Context.lookup_type ctx v_var with
             | None ->
                 throw_unbound_var v_var v_src
-            | Some (`QBound ty) ->
-                ty
-            | Some (`LetBound f) ->
-                (* TODO XXX: think hard about what this bound should be. *)
-                f polarity GT.{ b_target = `G (Context.get_g ctx); b_flag = `Flex }
+            | Some f ->
+                f polarity b_target
           end
       | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
       | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
@@ -84,19 +86,34 @@ end = struct
       | DT.Quant {q_quant; q_var; q_bound; q_body; q_info = _} ->
           let b_flag = quant_flag q_quant polarity in
           let bnd = GT.{ b_target; b_flag } in
-          let q = match q_bound with
+          let tv = match q_bound with
             | None ->
-                Context.with_quant ctx bnd
-                  begin fun _ ->
-                    let kind = make_kind ctx (`Free (GT.Ids.Kind.fresh (Context.get_ctr ctx))) in
-                    make_tyvar ctx bnd kind
-                  end
+                let kind = make_kind ctx (`Free (GT.Ids.Kind.fresh (Context.get_ctr ctx))) in
+                make_tyvar ctx bnd kind
             | Some ty ->
-                expand_type ctx polarity b_target ty
+                expand_type ctx polarity q_target ty
           in
-          Context.with_type_binding ctx q_var (`QBound q) begin fun ctx ->
-            expand_type ctx polarity b_target q_body
+          Context.with_type_binding ctx q_var (fun _ _ -> tv) begin fun ctx ->
+            expand_type ctx polarity q_target q_body
           end
+      | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
+          (* TODO: do something with fn_pvar. *)
+          let mk_branch polarity expr =
+            (* TODO: think hard about what the bound should be here. *)
+            Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
+              begin fun q_target ->
+                expand_type ctx polarity q_target expr
+              end
+          in
+          make_ctor_ty
+            ctx
+            (`Type
+                (`Fn
+                    ( mk_branch (flip_polarity polarity) fn_param
+                    , mk_branch                polarity  fn_ret
+                    )
+                )
+            )
       | _ -> failwith "TODO: other cases in expand_type"
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
