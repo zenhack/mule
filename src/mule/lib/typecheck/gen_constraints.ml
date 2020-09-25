@@ -99,7 +99,8 @@ end = struct
     | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
         (* TODO: do something with fn_pvar. *)
         let mk_branch polarity expr =
-          (* TODO: think hard about what the bound should be here. *)
+          (* We always bound the new q node flexibly; only true quantifiers should ever
+             be rigidly bound. *)
           Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
             begin fun q_target ->
               expand_type ctx polarity q_target expr
