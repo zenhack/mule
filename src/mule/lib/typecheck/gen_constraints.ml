@@ -115,7 +115,30 @@ end = struct
                   )
               )
           )
+    | DT.Union {u_row} ->
+        make_ctor_ty
+           ctx
+           (`Type
+             (`Union
+               (Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
+                  begin fun q_target ->
+                    expand_row ctx `Union polarity q_target u_row
+                  end
+               )
+             )
+           )
     | _ -> failwith "TODO: other cases in expand_type"
+  and expand_row
+    : Context.t
+      -> [ `Union | `Record of [ `Type | `Row ] ]
+      -> C.polarity
+      -> GT.quant GT.var
+      -> unit DT.row
+      -> GT.typ GT.var
+    = fun ctx place polarity qv DT.{row_fields; row_rest; row_info = _} ->
+      match place with
+      | `Record _ -> failwith "TODO"
+      | `Union -> failwith "TODO"
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 
