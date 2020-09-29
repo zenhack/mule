@@ -130,15 +130,54 @@ end = struct
     | _ -> failwith "TODO: other cases in expand_type"
   and expand_row
     : Context.t
-      -> [ `Union | `Record of [ `Type | `Row ] ]
+      -> [ `Union | `Record of [ `Type | `Value ] ]
       -> C.polarity
       -> GT.quant GT.var
       -> unit DT.row
       -> GT.typ GT.var
     = fun ctx place polarity qv DT.{row_fields; row_rest; row_info = _} ->
-      match place with
-      | `Record _ -> failwith "TODO"
-      | `Union -> failwith "TODO"
+      let tail = match place, polarity, row_rest with
+        | `Union, `Pos, None
+        | `Record _, `Neg, None ->
+            let kind = make_kind ctx `Row in
+            make_tyvar ctx GT.{ b_target = `Q qv; b_flag = `Flex } kind
+        | `Union, `Neg, None
+        | `Record _, `Pos, None ->
+            make_ctor_ty ctx (`Row `Empty)
+
+        | _, _, Some r ->
+            (* TODO: should we be binding this on some intermediate q node,
+               e.g. the one coming from an extends node? I don't think it
+               matters... *)
+            let tv = expand_type ctx polarity qv r in
+            let kind = make_kind ctx `Row in
+            Context.constrain ctx (`HasKind C.{
+                has_kind_why = `RowTail;
+                has_kind_kind = kind;
+                has_kind_type = tv;
+              });
+            tv
+      in
+      let bnd = GT.{ b_target = `Q qv; b_flag = `Flex } in
+      let mk_field t =
+        Context.with_quant ctx bnd (fun _ ->
+          let tv = expand_type ctx polarity qv t in
+          let kind = make_kind ctx `Type in
+          Context.constrain ctx (`HasKind C.{
+              has_kind_why = `RowHead;
+              has_kind_kind = kind;
+              has_kind_type = tv;
+            });
+          tv
+        )
+      in
+      List.fold_right row_fields ~init:tail ~f:(fun (l, h) t ->
+        make_ctor_ty ctx (`Row (`Extend
+              ( l
+              , mk_field h
+              , Context.with_quant ctx bnd (fun _ -> t)
+              )))
+      )
 
   let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
 

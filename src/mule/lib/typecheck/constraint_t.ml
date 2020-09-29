@@ -69,11 +69,24 @@ type unify_kind_constraint = {
   unify_kind_sub: GT.kind GT.var;
 }
 
+type has_kind_why =
+  [ `RowTail
+  | `RowHead
+  ]
+
+type has_kind_constraint = {
+  has_kind_why: has_kind_why;
+
+  has_kind_kind: GT.kind GT.var;
+  has_kind_type: GT.typ GT.var;
+}
+
 (* A constraint to be solved *)
 type constr =
   [ `Unify of unify_constraint
   | `Instance of instance_constraint
   | `UnifyKind of unify_kind_constraint
+  | `HasKind of has_kind_constraint
   ]
 
 (* For tracking the environment while building constraints: *)
