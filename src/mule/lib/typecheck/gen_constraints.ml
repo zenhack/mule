@@ -179,8 +179,6 @@ end = struct
               )))
       )
 
-  let _ = expand_type (* Silence the unused variable warning. TODO: actually use it. *)
-
   let rec gen_expr (ctx: Context.t) (expr: unit DE.t): GT.g_node =
     Context.with_sub_g ctx (fun ctx g -> gen_expr_q ctx g expr)
   and gen_expr_q ctx g expr =
@@ -261,6 +259,18 @@ end = struct
         let g_e = gen_expr ctx let_e in
         Context.with_val_binding ctx let_v (`LetBound g_e) (fun ctx ->
           gen_expr_q ctx g let_body
+        )
+
+    (* Type coercions are just the identity function specilized to the given
+       type. *)
+    | DE.WithType {wt_type; wt_src = _} ->
+        Context.with_quant ctx bnd (fun q ->
+          expand_type ctx `Pos q (DT.Fn {
+              fn_info = ();
+              fn_pvar = None;
+              fn_param = wt_type;
+              fn_ret = wt_type;
+          })
         )
 
     (* Boring stuff like constant literals *)
