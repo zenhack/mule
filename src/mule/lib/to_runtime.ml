@@ -45,12 +45,14 @@ let translate
           in
           let ncap = Int.max 0 (ncap - 1) in
           (ncap, R.Lam(ncap, [], body'))
+      | D.App {app_fn = D.WithType _; app_arg} ->
+          go_expr depth env app_arg
+      | D.WithType _ ->
+          MuleErr.bug "Type coercion not in function position."
       | D.App {app_fn = f; app_arg = x} ->
           let (fcap, f') = go_expr depth env f in
           let (xcap, x') = go_expr depth env x in
           (max fcap xcap, R.App(f', x'))
-      | D.WithType {wt_expr = e; _} ->
-          go_expr depth env e
       | D.GetField {gf_lbl; gf_record} ->
           let (n, record) = go_expr depth env gf_record in
           (n, R.App(R.GetField gf_lbl, record))

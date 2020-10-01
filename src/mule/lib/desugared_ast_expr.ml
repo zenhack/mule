@@ -63,8 +63,8 @@ let rec sexp_of_t = function
       Sexp.Atom "match";
       sexp_of_branch m_branch;
     ]
-  | WithType {wt_expr = e; wt_type = ty; _} ->
-      Sexp.List [Sexp.Atom ":"; sexp_of_t e; Type.sexp_of_t ty]
+  | WithType {wt_type = ty; _} ->
+      Sexp.List [Sexp.Atom ":"; Type.sexp_of_t ty]
   | Let{let_v = v; let_e = e; let_body = body} ->
       Sexp.List [
         Sexp.Atom "let";
@@ -176,10 +176,9 @@ let rec apply_to_kids e ~f = match e with
         ut_type;
         ut_record = f ut_record;
       }
-  | WithType{wt_src; wt_expr; wt_type} ->
+  | WithType{wt_src; wt_type} ->
       WithType {
         wt_src;
-        wt_expr = f wt_expr;
         wt_type;
       }
   | GetField {gf_lbl; gf_record} ->
@@ -203,11 +202,10 @@ and apply_to_rec_kids {rec_types; rec_vals} ~f = {
 }
 let rec map e ~f =
   match e with
-  | WithType {wt_src; wt_expr = e; wt_type = ty} ->
+  | WithType {wt_src; wt_type = ty} ->
       WithType {
         wt_src;
         wt_type = Type.map ty ~f;
-        wt_expr = map e ~f;
       }
   | Lam{l_param; l_src; l_body} ->
       Lam{l_param; l_src; l_body = map l_body ~f}

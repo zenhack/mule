@@ -480,10 +480,12 @@ and desugar (Loc.{l_value = e; l_loc} as le) = match e with
         app_arg = desugar e;
       }
   | S.WithType{wt_term = e; wt_type = ty; _} ->
-      D.WithType {
-        wt_src = `WithType(e, ty);
-        wt_expr = desugar e;
-        wt_type = desugar_type ty;
+      D.App {
+        app_fn =  D.WithType {
+          wt_src = `WithType(e, ty);
+          wt_type = desugar_type ty;
+        };
+        app_arg = desugar e;
       }
   | S.Let {
       let_binds = bindings;
@@ -541,13 +543,16 @@ and desugar_lambda src ps body =
             l_body = D.Let {
                 let_v = v;
                 let_e =
-                  D.WithType {
-                    wt_src = `Pattern(v_var, ty);
-                    wt_expr = D.Var {
+                  D.App {
+                    app_fn =
+                      D.WithType {
+                        wt_src = `Pattern(v_var, ty);
+                        wt_type = desugar_type ty;
+                      };
+                    app_arg = D.Var {
                         v_var = v;
                         v_src = `Sourced v_var;
                       };
-                    wt_type = desugar_type ty;
                   };
                 let_body = go (arg_idx + 1) 0 pats;
               };
@@ -686,13 +691,15 @@ and desugar_lbl_match dict = function
       let let_ = D.Let {
           let_v = v.Loc.l_value;
           let_e =
-            D.WithType {
-              wt_src = `Pattern(v, ty);
-              wt_expr = D.Var {
-                  v_var = v';
-                  v_src = `Generated;
-                };
-              wt_type = desugar_type ty
+            D.App {
+              app_fn = D.WithType {
+                wt_src = `Pattern(v, ty);
+                wt_type = desugar_type ty
+              };
+              app_arg = D.Var {
+                v_var = v';
+                v_src = `Generated;
+              };
             };
           let_body = desugar body;
         }

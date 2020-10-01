@@ -48,6 +48,10 @@ let translate_expr ~get_import expr =
         let (param, env') = add_var env l_param in
         Js.Lam1(param, go env' l_body)
     | D.Expr.UpdateType{ut_record; _} -> go env ut_record
+    | D.Expr.App {app_fn = D.Expr.WithType _; app_arg} ->
+        go env app_arg
+    | D.Expr.WithType _ ->
+        MuleErr.bug "Type coercion not in function position."
     | D.Expr.App {app_fn; app_arg} ->
         Js.Call1(go env app_fn, go env app_arg)
     | D.Expr.GetField{gf_lbl; gf_record} ->
@@ -65,8 +69,6 @@ let translate_expr ~get_import expr =
           )
     | D.Expr.Const {const_val} ->
         Js.Const const_val
-    | D.Expr.WithType {wt_expr; _} ->
-        go env wt_expr
     | D.Expr.UpdateVal {uv_lbl; uv_val; uv_record} ->
         Js.Update
           ( go env uv_record

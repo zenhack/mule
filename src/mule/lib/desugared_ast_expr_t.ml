@@ -86,7 +86,6 @@ type 'i t =
     }
   | WithType of {
       wt_src : withtype_src;
-      wt_expr : 'i t;
       wt_type : 'i Type_t.t;
     }
   | Let of {
