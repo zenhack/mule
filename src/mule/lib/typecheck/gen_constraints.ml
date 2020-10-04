@@ -10,6 +10,8 @@ open Common_ast
 
 module Gen : sig
   val gen_expr : Context.t -> unit DE.t -> GT.g_node
+
+  val with_intrinsics : Context.t -> (Context.t -> 'a) -> 'a
 end = struct
   let make_tyvar ctx bnd tv_kind =
     let ctr = Context.get_ctr ctx in
@@ -366,4 +368,43 @@ end = struct
     Context.make_var ctx Context.typ (`Ctor(GT.Ids.Type.fresh ctr,
                                             `Type(`Const(ty))))
 
+  let with_intrinsics ctx f =
+    let g = Context.get_g ctx in
+    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+    Context.with_quant ctx bnd (fun q ->
+      let with_types ctx =
+        Map.fold
+          Intrinsics.types
+          ~init:f
+          ~f:(fun ~key ~data f ->
+            Context.with_type_binding
+              ctx
+              key
+              (fun polarity b_target ->
+                expand_type ctx polarity q data
+              )
+              f
+          )
+      in
+      let with_vals ctx =
+        Map.fold
+          Intrinsics.values
+          ~init:with_types
+          ~f:(fun ~key ~data:(ty, _) f ->
+            let g = Context.with_sub_g (fun ctx g ->
+                let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+                Context.with_quant ctx bnd (fun q ->
+                  expand_type ctx `Pos q ty
+                )
+              )
+            in
+            Context.with_val_binding
+              ctx
+              key
+              (`LetBound g)
+              f
+          )
+      in
+      with_vals ctx
+    )
 end
