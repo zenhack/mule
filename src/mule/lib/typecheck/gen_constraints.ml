@@ -2,7 +2,7 @@
 
 module GT = Graph_types
 module DE = Desugared_ast_expr_t
-module DT = Desugared_ast_type_t
+module DT = Desugared_ast_type
 module UF = Union_find
 module C = Constraint_t
 
@@ -66,7 +66,7 @@ end = struct
       -> GT.quant GT.var
       -> unit DT.t
       -> GT.typ GT.var =
-    (* [expand_type ctx polarity b_target t] converts [t] into a type graph, where:
+    (* [expand_type ctx polarity q_target t] converts [t] into a type graph, where:
 
        - Any top-level quantifiers are bound on [q_target].
        - [polarity] is used to determine how to translate quantifiers; binding edges on
@@ -80,7 +80,7 @@ end = struct
           | None ->
               throw_unbound_var v_var v_src
           | Some f ->
-              f polarity b_target
+              f polarity q_target
         end
     | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
     | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
@@ -369,42 +369,39 @@ end = struct
                                             `Type(`Const(ty))))
 
   let with_intrinsics ctx f =
-    let g = Context.get_g ctx in
-    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
-    Context.with_quant ctx bnd (fun q ->
-      let with_types ctx =
+    let with_types =
         Map.fold
           Intrinsics.types
           ~init:f
-          ~f:(fun ~key ~data f ->
+          ~f:(fun ~key ~data f ctx ->
+            let ty = DT.map data ~f:(fun _ -> ()) in
             Context.with_type_binding
               ctx
               key
-              (fun polarity b_target ->
-                expand_type ctx polarity q data
+              (fun polarity q_target ->
+                expand_type ctx polarity q_target ty
               )
               f
           )
-      in
-      let with_vals ctx =
-        Map.fold
-          Intrinsics.values
-          ~init:with_types
-          ~f:(fun ~key ~data:(ty, _) f ->
-            let g = Context.with_sub_g (fun ctx g ->
-                let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
-                Context.with_quant ctx bnd (fun q ->
-                  expand_type ctx `Pos q ty
-                )
+    in
+    let with_vals =
+      Map.fold
+        Intrinsics.values
+        ~init:with_types
+        ~f:(fun ~key ~data:(ty, _) f ctx ->
+          let g = Context.with_sub_g ctx (fun ctx g ->
+              let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+              Context.with_quant ctx bnd (fun q ->
+                expand_type ctx `Pos q (DT.map ty ~f:(fun _ -> ()))
               )
-            in
-            Context.with_val_binding
-              ctx
-              key
-              (`LetBound g)
-              f
-          )
-      in
-      with_vals ctx
-    )
+            )
+          in
+          Context.with_val_binding
+            ctx
+            key
+            (`LetBound g)
+            f
+        )
+    in
+    with_vals ctx
 end
