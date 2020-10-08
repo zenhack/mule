@@ -129,6 +129,22 @@ end = struct
                )
              )
            )
+    | DT.Record {r_types; r_values; r_info = _; r_src = _} ->
+        let bnd = GT.{ b_target; b_flag = `Flex } in
+        let mk_branch place row =
+          Context.with_quant ctx bnd (fun q_target ->
+            expand_row ctx place polarity q_target row
+          )
+        in
+        make_ctor_ty
+          ctx
+          (`Type
+            (`Record
+              ( mk_branch (`Record `Type) r_types
+              , mk_branch (`Record `Value) r_values
+              )
+            )
+          )
     | _ -> failwith "TODO: other cases in expand_type"
   and expand_row
     : Context.t
