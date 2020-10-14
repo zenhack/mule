@@ -19,6 +19,12 @@ val make_var : t -> 'a vtype -> 'a -> 'a GT.var
 val read_var : t -> 'a vtype -> 'a GT.var -> 'a
 val write_var : t -> 'a vtype -> 'a -> 'a GT.var -> unit
 
+val var_eq : t -> 'a vtype -> 'a GT.var -> 'a GT.var -> bool
+
+(* Merge (union) two variables. The last argument is the value of the resulting
+   variable *)
+val merge : t -> 'a vtype -> 'a GT.var -> 'a GT.var -> 'a -> unit
+
 val with_quant : t -> GT.bound -> (GT.quant GT.var -> GT.typ GT.var) -> GT.quant GT.var
 val with_sub_g : t -> (t -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 

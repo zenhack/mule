@@ -105,6 +105,19 @@ let read_var ctx lens var =
   ctx.ctx_uf_stores := lens.set store' stores;
   value
 
+let merge ctx lens l r value =
+  let stores = !(ctx.ctx_uf_stores) in
+  let store = lens.get stores in
+  let store' = Union_find.union (fun _ _ -> value) store l r in
+  ctx.ctx_uf_stores := lens.set store' stores
+
+let var_eq ctx lens l r =
+  let stores = !(ctx.ctx_uf_stores) in
+  let store = lens.get stores in
+  let (store', is_eq) = Union_find.eq store l r in
+  ctx.ctx_uf_stores := lens.set store' stores;
+  is_eq
+
 let write_var ctx lens value var =
   let stores = !(ctx.ctx_uf_stores) in
   ctx.ctx_uf_stores := lens.set (Union_find.set (lens.get stores) var value) stores

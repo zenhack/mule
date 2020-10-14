@@ -1,3 +1,23 @@
+
+
+let unify_guard ctx lv rv =
+  if not (Context.var_eq ctx Context.guard lv rv) then
+    begin
+      let read var = Context.read_var ctx Context.guard var in
+      let merge value = Context.merge ctx Context.guard lv rv value in
+      let l = read lv in
+      let r = read rv in
+      match l, r with
+      | `Guarded, `Guarded
+      | `Unguarded, `Unguarded
+      | _, `Free ->
+          merge l
+      | `Free, _ ->
+          merge r
+      | `Guarded, `Unguarded
+      | `Unguarded, `Guarded ->
+          failwith "guard unification failed. TODO: proper error management"
+    end
 (*
 open Common_ast
 open Graph_types
