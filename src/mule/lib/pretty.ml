@@ -192,6 +192,8 @@ let show_type_error err = match err with
     ]
   | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
+  | `MismatchedGuards ->
+      "mismatched guards"
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
   | `CantInstantiate ci ->

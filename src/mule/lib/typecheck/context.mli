@@ -45,6 +45,13 @@ val get_constraints : t -> C.constr list
 (* Make an independent copy of the context *)
 val checkpoint : t -> t
 
+(* Log an error. This will cause compilation to fail, but not immediately;
+   execution continues as normal after the call. *)
+val error : t -> MuleErr.t -> unit
+
+(* Get the list of errors that have been logged *)
+val errors : t -> MuleErr.t list
+
 module DebugGraph : sig
   val dump : t -> unit
 end

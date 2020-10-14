@@ -8,6 +8,7 @@ let unify_guard ctx lv rv =
       let l = read lv in
       let r = read rv in
       match l, r with
+      | `Poison, _ | _, `Poison -> merge `Poison
       | `Guarded, `Guarded
       | `Unguarded, `Unguarded
       | _, `Free ->
@@ -16,7 +17,8 @@ let unify_guard ctx lv rv =
           merge r
       | `Guarded, `Unguarded
       | `Unguarded, `Guarded ->
-          failwith "guard unification failed. TODO: proper error management"
+          Context.error ctx (`TypeError `MismatchedGuards);
+          merge `Poison
     end
 (*
 open Common_ast

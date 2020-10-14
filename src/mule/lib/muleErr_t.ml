@@ -51,6 +51,7 @@ type cant_instantiate = {
 type type_error =
   [ `MismatchedCtors of subtype_error
   | `MismatchedKinds of (kind * kind)
+  | `MismatchedGuards
   | `OccursCheckKind
   | `CantInstantiate of cant_instantiate
   | `UnguardedRecursiveType of string

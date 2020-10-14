@@ -84,6 +84,8 @@ type guard =
   [ `Free
   | `Guarded
   | `Unguarded
+
+  | `Poison
   ]
 
 type prekind =

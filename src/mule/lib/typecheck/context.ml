@@ -56,6 +56,7 @@ type t = {
   ctx_g: GT.g_node;
   ctx_ctr: Gensym.counter;
   ctx_uf_stores: Stores.t ref;
+  ctx_errors: MuleErr.t list ref;
   ctx_constraints: C.constr list ref;
   ctx_env : C.env;
 }
@@ -78,6 +79,7 @@ let make ctr f =
         s_guards = Union_find.new_store ();
       };
     ctx_constraints = ref [];
+    ctx_errors = ref [];
     ctx_env = C.{
         vals = Map.empty (module Var);
         types = Map.empty (module Var);
@@ -171,6 +173,11 @@ let with_type_binding ctx var binding f =
 let lookup_type ctx var =
   Map.find ctx.ctx_env.types var
 
+let error ctx err =
+  ctx.ctx_errors := err :: !(ctx.ctx_errors)
+
+let errors ctx =
+  List.rev (!(ctx.ctx_errors))
 
 module DebugGraph = struct
   type seen = {
