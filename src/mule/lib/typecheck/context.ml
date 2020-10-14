@@ -92,35 +92,36 @@ let checkpoint ctx = {
   ctx_constraints = ref (!(ctx.ctx_constraints));
 }
 
-let make_var ctx lens v =
+let with_store ctx lens f =
   let stores = !(ctx.ctx_uf_stores) in
-  let (store', var) = Union_find.make (lens.get stores) v in
+  let (store', ret) = f (lens.get stores) in
   ctx.ctx_uf_stores := lens.set store' stores;
-  var
+  ret
+
+let make_var ctx lens v =
+  with_store ctx lens (fun store ->
+    Union_find.make store v
+  )
 
 let read_var ctx lens var =
-  let stores = !(ctx.ctx_uf_stores) in
-  let store = lens.get stores in
-  let (store', value) = Union_find.get store var in
-  ctx.ctx_uf_stores := lens.set store' stores;
-  value
+  with_store ctx lens (fun store ->
+    Union_find.get store var
+  )
 
 let merge ctx lens l r value =
-  let stores = !(ctx.ctx_uf_stores) in
-  let store = lens.get stores in
-  let store' = Union_find.union (fun _ _ -> value) store l r in
-  ctx.ctx_uf_stores := lens.set store' stores
+  with_store ctx lens (fun store ->
+    (Union_find.union (fun _ _ -> value) store l r, ())
+  )
 
 let var_eq ctx lens l r =
-  let stores = !(ctx.ctx_uf_stores) in
-  let store = lens.get stores in
-  let (store', is_eq) = Union_find.eq store l r in
-  ctx.ctx_uf_stores := lens.set store' stores;
-  is_eq
+  with_store ctx lens (fun store ->
+    Union_find.eq store l r
+  )
 
 let write_var ctx lens value var =
-  let stores = !(ctx.ctx_uf_stores) in
-  ctx.ctx_uf_stores := lens.set (Union_find.set (lens.get stores) var value) stores
+  with_store ctx lens (fun store ->
+    (Union_find.set store var value, ())
+  )
 
 let with_quant ctx bnd f =
   let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
