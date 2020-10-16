@@ -1,25 +1,53 @@
 
 
-let unify_guard ctx lv rv =
-  if not (Context.var_eq ctx Context.guard lv rv) then
+let unify_vars ctx vtype lv rv unify_vals =
+  if not (Context.var_eq ctx vtype lv rv) then
     begin
-      let read var = Context.read_var ctx Context.guard var in
-      let merge value = Context.merge ctx Context.guard lv rv value in
+      let read var = Context.read_var ctx vtype var in
+      let merge value = Context.merge ctx vtype lv rv value in
       let l = read lv in
       let r = read rv in
-      match l, r with
-      | `Poison, _ | _, `Poison -> merge `Poison
-      | `Guarded, `Guarded
-      | `Unguarded, `Unguarded
-      | _, `Free ->
-          merge l
-      | `Free, _ ->
-          merge r
-      | `Guarded, `Unguarded
-      | `Unguarded, `Guarded ->
-          Context.error ctx (`TypeError `MismatchedGuards);
-          merge `Poison
+      unify_vals merge l r
     end
+
+let unify_guard ctx lv rv =
+  unify_vars ctx Context.guard lv rv (fun merge l r ->
+    match l, r with
+    | `Poison, _ | _, `Poison -> merge `Poison
+    | `Guarded, `Guarded
+    | `Unguarded, `Unguarded
+    | _, `Free ->
+        merge l
+    | `Free, _ ->
+        merge r
+    | `Guarded, `Unguarded
+    | `Unguarded, `Guarded ->
+        Context.error ctx (`TypeError `MismatchedGuards);
+        merge `Poison
+  )
+
+let rec unify_kind ctx lv rv =
+  unify_vars ctx Context.kind lv rv (fun merge l r ->
+    unify_prekind ctx l.k_prekind r.k_prekind;
+    unify_guard ctx l.k_guard r.k_guard;
+    merge l
+  )
+and unify_prekind ctx lv rv =
+  unify_vars ctx Context.prekind lv rv (fun merge l r ->
+    match l, r with
+      | `Poison, _ | _, `Poison -> merge `Poison
+      | `Row, `Row | `Type, `Type -> merge l
+      | `Free _, other | other, `Free _ -> merge other
+      | `Arrow(p, r), `Arrow(p', r') ->
+          unify_kind ctx p p';
+          unify_kind ctx r r'
+          (* TODO: occurs check *)
+      | _ ->
+          let extract _value = failwith "TODO" in
+          Context.error ctx (`TypeError (`MismatchedKinds(extract l, extract r)));
+          merge `Poison
+  )
+
 (*
 open Common_ast
 open Graph_types

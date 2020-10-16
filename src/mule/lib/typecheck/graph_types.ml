@@ -93,6 +93,7 @@ type prekind =
   | `Row
   | `Type
   | `Arrow of kind var * kind var
+  | `Poison
   ]
 and kind = {
   k_prekind: prekind var;
