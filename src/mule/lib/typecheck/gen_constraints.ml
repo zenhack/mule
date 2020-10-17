@@ -33,12 +33,17 @@ end = struct
         k_guard = Context.make_var ctx Context.guard `Free;
       }
 
-  let throw_unbound_var v_var v_src =
+  let unbound_var v_var v_src =
     match v_src with
     | `Sourced v ->
-        MuleErr.throw (`UnboundVar v)
+        `UnboundVar v
     | `Generated ->
         MuleErr.bug ("Unbound compiler-generated variable: " ^ Var.to_string v_var)
+
+  let unbound_var_poison ctx v_var v_src =
+    let ctr = Context.get_ctr ctx in
+    Context.error ctx (unbound_var v_var v_src);
+    Context.make_var ctx Context.typ (`Poison (GT.Ids.Type.fresh ctr))
 
   let make_ctor_ty ctx ctor =
     let ctr = Context.get_ctr ctx in
@@ -78,7 +83,7 @@ end = struct
     | DT.Var {v_var; v_src; v_info = _} ->
         begin match Context.lookup_type ctx v_var with
           | None ->
-              throw_unbound_var v_var v_src
+              unbound_var_poison ctx v_var v_src
           | Some f ->
               f polarity q_target
         end
@@ -207,7 +212,7 @@ end = struct
         let q_var = Context.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd (make_kind ctx `Type)) in
         begin match Context.lookup_val ctx v_var with
           | None ->
-              throw_unbound_var v_var v_src
+              Context.with_quant ctx bnd (fun _ -> unbound_var_poison ctx v_var v_src)
           | Some binding ->
               begin match binding with
                 | `LetBound g ->
