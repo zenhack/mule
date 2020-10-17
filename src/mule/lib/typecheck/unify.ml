@@ -1,4 +1,14 @@
+module GT = Graph_types
 
+let rec pk_occurs_in_kind ctx id kv =
+  let GT.{k_prekind; _} = Context.read_var ctx Context.kind kv in
+  pk_occurs_in_prekind_v ctx id k_prekind
+and pk_occurs_in_prekind_v ctx id pkv =
+  pk_occurs_in_prekind ctx id (Context.read_var ctx Context.prekind pkv)
+and pk_occurs_in_prekind ctx id = function
+  | `Free id' -> GT.Ids.Kind.equal id id'
+  | `Arrow (p, r) -> pk_occurs_in_kind ctx id p || pk_occurs_in_kind ctx id r
+  | `Type | `Row | `Poison -> false
 
 let unify_vars ctx vtype lv rv unify_vals =
   if not (Context.var_eq ctx vtype lv rv) then
@@ -37,11 +47,17 @@ and unify_prekind ctx lv rv =
     match l, r with
       | `Poison, _ | _, `Poison -> merge `Poison
       | `Row, `Row | `Type, `Type -> merge l
-      | `Free _, other | other, `Free _ -> merge other
+      | `Free id, other | other, `Free id ->
+          if pk_occurs_in_prekind ctx id other then
+            begin
+              Context.error ctx (`TypeError `OccursCheckKind);
+              merge `Poison
+            end
+          else
+            merge other
       | `Arrow(p, r), `Arrow(p', r') ->
           unify_kind ctx p p';
           unify_kind ctx r r'
-          (* TODO: occurs check *)
       | _ ->
           let extract _value = failwith "TODO" in
           Context.error ctx (`TypeError (`MismatchedKinds(extract l, extract r)));
