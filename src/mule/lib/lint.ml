@@ -49,8 +49,8 @@ module Dup_fields = struct
     );
     let (val_lbls, type_lbls) =
       List.partition_map fields ~f:(fun Loc.{l_value; _} -> match l_value with
-        | `Value (lbl, _, _) -> `Fst lbl
-        | `Type (lbl, _, _) -> `Snd lbl
+        | `Value (lbl, _, _) -> First lbl
+        | `Type (lbl, _, _) -> Second lbl
       )
     in
     go_labels `Value val_lbls;
