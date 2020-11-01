@@ -59,8 +59,17 @@ and unify_prekind ctx lv rv =
           unify_kind ctx p p';
           unify_kind ctx r r'
       | _ ->
-          let extract _value = failwith "TODO" in
-          Context.error ctx (`TypeError (`MismatchedKinds(extract l, extract r)));
+          let rec extract_prekind = function
+            | `Poison -> `Unknown
+            | `Free _ -> `Unknown
+            | `Row -> `Row
+            | `Type -> `Type
+            | `Arrow(p, r) -> `Arrow(extract_kind p, extract_kind r)
+          and extract_kind kv =
+            let GT.{k_prekind; _} = Context.read_var ctx Context.kind kv in
+            extract_prekind (Context.read_var ctx Context.prekind k_prekind)
+          in
+          Context.error ctx (`TypeError (`MismatchedKinds(extract_prekind l, extract_prekind r)));
           merge `Poison
   )
 
