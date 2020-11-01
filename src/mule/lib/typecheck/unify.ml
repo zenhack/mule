@@ -45,32 +45,32 @@ let rec unify_kind ctx lv rv =
 and unify_prekind ctx lv rv =
   unify_vars ctx Context.prekind lv rv (fun merge l r ->
     match l, r with
-      | `Poison, _ | _, `Poison -> merge `Poison
-      | `Row, `Row | `Type, `Type -> merge l
-      | `Free id, other | other, `Free id ->
-          if pk_occurs_in_prekind ctx id other then
-            begin
-              Context.error ctx (`TypeError `OccursCheckKind);
-              merge `Poison
-            end
-          else
-            merge other
-      | `Arrow(p, r), `Arrow(p', r') ->
-          unify_kind ctx p p';
-          unify_kind ctx r r'
-      | _ ->
-          let rec extract_prekind = function
-            | `Poison -> `Unknown
-            | `Free _ -> `Unknown
-            | `Row -> `Row
-            | `Type -> `Type
-            | `Arrow(p, r) -> `Arrow(extract_kind p, extract_kind r)
-          and extract_kind kv =
-            let GT.{k_prekind; _} = Context.read_var ctx Context.kind kv in
-            extract_prekind (Context.read_var ctx Context.prekind k_prekind)
-          in
-          Context.error ctx (`TypeError (`MismatchedKinds(extract_prekind l, extract_prekind r)));
-          merge `Poison
+    | `Poison, _ | _, `Poison -> merge `Poison
+    | `Row, `Row | `Type, `Type -> merge l
+    | `Free id, other | other, `Free id ->
+        if pk_occurs_in_prekind ctx id other then
+          begin
+            Context.error ctx (`TypeError `OccursCheckKind);
+            merge `Poison
+          end
+        else
+          merge other
+    | `Arrow(p, r), `Arrow(p', r') ->
+        unify_kind ctx p p';
+        unify_kind ctx r r'
+    | _ ->
+        let rec extract_prekind = function
+          | `Poison -> `Unknown
+          | `Free _ -> `Unknown
+          | `Row -> `Row
+          | `Type -> `Type
+          | `Arrow(p, r) -> `Arrow(extract_kind p, extract_kind r)
+        and extract_kind kv =
+          let GT.{k_prekind; _} = Context.read_var ctx Context.kind kv in
+          extract_prekind (Context.read_var ctx Context.prekind k_prekind)
+        in
+        Context.error ctx (`TypeError (`MismatchedKinds(extract_prekind l, extract_prekind r)));
+        merge `Poison
   )
 
 (*

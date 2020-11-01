@@ -482,9 +482,9 @@ and desugar (Loc.{l_value = e; l_loc} as le) = match e with
   | S.WithType{wt_term = e; wt_type = ty; _} ->
       D.App {
         app_fn =  D.WithType {
-          wt_src = `WithType(e, ty);
-          wt_type = desugar_type ty;
-        };
+            wt_src = `WithType(e, ty);
+            wt_type = desugar_type ty;
+          };
         app_arg = desugar e;
       }
   | S.Let {
@@ -693,13 +693,13 @@ and desugar_lbl_match dict = function
           let_e =
             D.App {
               app_fn = D.WithType {
-                wt_src = `Pattern(v, ty);
-                wt_type = desugar_type ty
-              };
+                  wt_src = `Pattern(v, ty);
+                  wt_type = desugar_type ty
+                };
               app_arg = D.Var {
-                v_var = v';
-                v_src = `Generated;
-              };
+                  v_var = v';
+                  v_src = `Generated;
+                };
             };
           let_body = desugar body;
         }

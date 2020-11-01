@@ -124,16 +124,16 @@ end = struct
           )
     | DT.Union {u_row} ->
         make_ctor_ty
-           ctx
-           (`Type
-             (`Union
-               (Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
-                  begin fun q_target ->
-                    expand_row ctx `Union polarity q_target u_row
-                  end
-               )
-             )
-           )
+          ctx
+          (`Type
+              (`Union
+                  (Context.with_quant ctx GT.{ b_target; b_flag = `Flex }
+                        begin fun q_target ->
+                          expand_row ctx `Union polarity q_target u_row
+                        end
+                  )
+              )
+          )
     | DT.Record {r_types; r_values; r_info = _; r_src = _} ->
         let bnd = GT.{ b_target; b_flag = `Flex } in
         let mk_branch place row =
@@ -144,11 +144,11 @@ end = struct
         make_ctor_ty
           ctx
           (`Type
-            (`Record
-              ( mk_branch (`Record `Type) r_types
-              , mk_branch (`Record `Value) r_values
+              (`Record
+                  ( mk_branch (`Record `Type) r_types
+                  , mk_branch (`Record `Value) r_values
+                  )
               )
-            )
           )
     | _ -> failwith "TODO: other cases in expand_type"
   and expand_row
@@ -293,7 +293,7 @@ end = struct
               fn_pvar = None;
               fn_param = wt_type;
               fn_ret = wt_type;
-          })
+            })
         )
 
     (* Boring stuff like constant literals *)
@@ -391,19 +391,19 @@ end = struct
 
   let with_intrinsics ctx f =
     let with_types =
-        Map.fold
-          Intrinsics.types
-          ~init:f
-          ~f:(fun ~key ~data f ctx ->
-            let ty = DT.map data ~f:(fun _ -> ()) in
-            Context.with_type_binding
-              ctx
-              key
-              (fun polarity q_target ->
+      Map.fold
+        Intrinsics.types
+        ~init:f
+        ~f:(fun ~key ~data f ctx ->
+          let ty = DT.map data ~f:(fun _ -> ()) in
+          Context.with_type_binding
+            ctx
+            key
+            (fun polarity q_target ->
                 expand_type ctx polarity q_target ty
-              )
-              f
-          )
+            )
+            f
+        )
     in
     let with_vals =
       Map.fold
