@@ -19,7 +19,12 @@ let typecheck path =
   let g = Context.get_g ctx in
   let _q = Lazy.force (Graph_types.GNode.get g) in
   Context.DebugGraph.dump ctx;
-  failwith "TODO: do stuff after generating constraints"
+  Solve.solve ctx;
+  match Context.errors ctx with
+  | [] -> failwith "TODO: do something with resultant type."
+  | (e :: _) ->
+      (* TODO: display /all/ errors, not just the first *)
+      MuleErr.throw e
 
 
 let interp_cmd = function
