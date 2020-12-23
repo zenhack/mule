@@ -45,20 +45,10 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
     )
 
 let sort_rec_binds ~rec_types ~rec_vals =
-  let types = sort_let_types rec_types in
-  List.fold_right
-    types
-    ~init:D.{
-        rec_types = [];
-        rec_vals;
-      }
-    ~f:(fun tys D.{rec_types; rec_vals} ->
-      D.{
-        rec_types = tys :: rec_types;
-        rec_vals;
-      }
-    )
-
+  D.{
+    rec_types = sort_let_types rec_types;
+    rec_vals;
+  }
 
 let sort_let ~rec_types ~rec_vals ~letrec_body =
   D.LetRec {
