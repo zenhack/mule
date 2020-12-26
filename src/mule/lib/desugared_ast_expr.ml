@@ -2,6 +2,52 @@ include Desugared_ast_expr_t
 open Common_ast
 module Type = Desugared_ast_type
 
+let rec fv: 'a t -> VarSet.t = function
+  (* Find all free variables in the expression. *)
+  | Embed _ | Import _ | Const _ | WithType _ ->
+      Set.empty (module Var)
+  | Var {v_var; _} ->
+      Set.singleton (module Var) v_var
+  | Lam {l_param; l_body; _} ->
+      Set.remove (fv l_body) l_param
+  | App {app_fn; app_arg} ->
+      Set.union (fv app_fn) (fv app_arg)
+  | Record _ ->
+      failwith "TODO: fv(record)"
+  | GetField {gf_record; _} ->
+      fv gf_record
+  | UpdateType {ut_record; _} ->
+      fv ut_record
+  | UpdateVal {uv_record; _} ->
+      fv uv_record
+  | Match {m_branch; _} -> fv_branch m_branch
+  | Ctor {c_arg; _} ->
+      fv c_arg
+  | Let {let_v; let_e; let_body} ->
+      Set.union (fv let_e) (Set.remove (fv let_body) let_v)
+  | LetRec _ ->
+      failwith "TODO: fv(letrec)"
+and fv_branch = function
+  | BLabel {lm_cases; lm_default} ->
+      Map.fold
+        lm_cases
+        ~init:(fv_branchdef lm_default)
+        ~f:(fun ~key:_ ~data vs -> Set.union (fv_branch data) vs)
+  | BConst {cm_cases; cm_default} ->
+      Map.fold
+        cm_cases
+        ~init:(fv_branchdef cm_default)
+        ~f:(fun ~key:_ ~data vs -> Set.union (fv data) vs)
+  | BLeaf l ->
+      fv_leaf l
+and fv_branchdef = function
+  | None -> Set.empty (module Var)
+  | Some l -> fv_leaf l
+and fv_leaf {lf_var; lf_body} = match lf_var with
+  | Some v -> Set.remove (fv lf_body) v
+  | None -> fv lf_body
+
+
 let get_src_expr: 'a t -> Surface_ast.Expr.lt option = function
   | Var {v_src = `Sourced v; _} ->
       Some Loc.{
