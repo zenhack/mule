@@ -16,14 +16,14 @@ let incomplete_pattern () =
 let unreachable_cases cases =
   MuleErr.throw (`UnreachableCases cases)
 
-let sort_binds: (Var.t * 'a) list -> [ `Cycle of (Var.t * 'a) NonEmpty.t | `Single of (Var.t * 'a) ] list =
-  fun nodes ->
+let sort_binds: fv:('a -> VarSet.t) -> (Var.t * 'a) list -> (Var.t * 'a) Tsort.result =
+  fun ~fv nodes ->
   let vars =
     List.fold nodes ~init:(Set.empty (module Var)) ~f:(fun set (v, _) -> Set.add set v)
   in
   let edges =
-    List.map nodes ~f:(fun (from, t) ->
-      Set.inter vars (DT.ftv t)
+    List.map nodes ~f:(fun (from, def) ->
+      Set.inter vars (fv def)
       |> Set.to_list
       |> List.map ~f:(fun to_ -> Tsort.{from; to_})
     )
@@ -45,7 +45,7 @@ let sort_binds: (Var.t * 'a) list -> [ `Cycle of (Var.t * 'a) NonEmpty.t | `Sing
 
 let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   fun nodes ->
-    List.map (sort_binds nodes) ~f:(function
+    List.map (sort_binds ~fv:DT.ftv nodes) ~f:(function
       (* TODO: manage cycles vs. singles differently. *)
       | `Cycle (v, vs) -> v::vs
       | `Single v -> [v]
