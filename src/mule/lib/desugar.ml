@@ -59,9 +59,9 @@ let build_sorted
   )
 let build_sorted_let_vals: (Var.t * 'a D.t) Tsort.result -> 'a D.t -> 'a D.t =
   fun bindings body ->
-    build_sorted ~bindings ~body
-      ~recursive:(fun binds body ->
-        D.(LetRec {
+  build_sorted ~bindings ~body
+    ~recursive:(fun binds body ->
+      D.(LetRec {
           letrec_binds = {
             rec_types = [];
             rec_vals =
@@ -70,24 +70,24 @@ let build_sorted_let_vals: (Var.t * 'a D.t) Tsort.result -> 'a D.t -> 'a D.t =
           };
           letrec_body = body;
         })
-      )
-      ~nonrecursive:(fun (v, e) body ->
-        D.Let {
-          let_v = v;
-          let_e = e;
-          let_body = body;
-        }
-      )
+    )
+    ~nonrecursive:(fun (v, e) body ->
+      D.Let {
+        let_v = v;
+        let_e = e;
+        let_body = body;
+      }
+    )
 
 let _ = build_sorted_let_vals (* temporary, silence unused val warning from ocamlc. *)
 
 let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   fun nodes ->
-    List.map (sort_binds ~fv:DT.ftv nodes) ~f:(function
-      (* TODO: manage cycles vs. singles differently. *)
-      | `Cycle (v, vs) -> v::vs
-      | `Single v -> [v]
-    )
+  List.map (sort_binds ~fv:DT.ftv nodes) ~f:(function
+    (* TODO: manage cycles vs. singles differently. *)
+    | `Cycle (v, vs) -> v::vs
+    | `Single v -> [v]
+  )
 
 let sort_rec_binds ~rec_types ~rec_vals =
   D.{
@@ -97,7 +97,7 @@ let sort_rec_binds ~rec_types ~rec_vals =
         , Option.map t ~f:(fun (t, _src) -> t)
         , e
         )
-    );
+      );
   }
 
 let sort_let ~rec_types ~rec_vals ~letrec_body =
