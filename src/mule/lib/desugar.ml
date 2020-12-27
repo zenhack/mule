@@ -92,7 +92,12 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
 let sort_rec_binds ~rec_types ~rec_vals =
   D.{
     rec_types = sort_let_types rec_types;
-    rec_vals;
+    rec_vals = List.map rec_vals ~f:(fun (v, t, e) ->
+        ( v
+        , Option.map t ~f:(fun (t, _src) -> t)
+        , e
+        )
+    );
   }
 
 let sort_let ~rec_types ~rec_vals ~letrec_body =
@@ -773,7 +778,9 @@ and desugar_let bs body =
   and go_val_binding vals types (pat, e) bs = match (pat, e) with
     | (SP.Var {v_var = v; v_type; _}, e) ->
         go ((v.Loc.l_value
-            , Option.map v_type ~f:desugar_type
+            , Option.map v_type ~f:(fun t ->
+                (desugar_type t, `Pattern (v, t))
+              )
             , e
         ) :: vals) types bs
     | ((SP.Const _), _) ->
