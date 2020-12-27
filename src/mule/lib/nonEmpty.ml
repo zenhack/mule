@@ -9,3 +9,5 @@ let rev (x, xs) =
   match List.rev (x::xs) with
   | (y::ys) -> (y, ys)
   | [] -> failwith "Impossible"
+let to_list (x, xs) =
+  x :: xs

@@ -43,6 +43,44 @@ let sort_binds: fv:('a -> VarSet.t) -> (Var.t * 'a) list -> (Var.t * 'a) Tsort.r
       | `Single v -> `Single (v, Util.find_exn map v)
     )
 
+let build_sorted
+  : bindings:('a Tsort.result)
+    -> body:('i D.t)
+    -> recursive:('a NonEmpty.t -> 'i D.t -> 'i D.t)
+    -> nonrecursive:('a -> 'i D.t -> 'i D.t)
+    -> 'i D.t =
+  fun ~bindings ~body ~recursive ~nonrecursive ->
+  List.fold_right bindings ~init:body ~f:(fun binding body ->
+    match binding with
+    | `Single x ->
+        nonrecursive x body
+    | `Cycle binds ->
+        recursive binds body
+  )
+let build_sorted_let_vals: (Var.t * 'a D.t) Tsort.result -> 'a D.t -> 'a D.t =
+  fun bindings body ->
+    build_sorted ~bindings ~body
+      ~recursive:(fun binds body ->
+        D.(LetRec {
+          letrec_binds = {
+            rec_types = [];
+            rec_vals =
+              NonEmpty.map binds ~f:(fun (v, e) -> (v, None, e))
+              |> NonEmpty.to_list;
+          };
+          letrec_body = body;
+        })
+      )
+      ~nonrecursive:(fun (v, e) body ->
+        D.Let {
+          let_v = v;
+          let_e = e;
+          let_body = body;
+        }
+      )
+
+let _ = build_sorted_let_vals (* temporary, silence unused val warning from ocamlc. *)
+
 let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   fun nodes ->
     List.map (sort_binds ~fv:DT.ftv nodes) ~f:(function
