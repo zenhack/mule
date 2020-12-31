@@ -89,22 +89,27 @@ let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
     | `Single v -> [v]
   )
 
-let sort_rec_binds ~rec_types ~rec_vals =
-  D.{
-    rec_types = sort_let_types rec_types;
-    rec_vals = List.map rec_vals ~f:(fun (v, t, e) ->
-        ( v
-        , Option.map t ~f:(fun (t, _src) -> t)
-        , e
-        )
-      );
-  }
-
 let sort_let ~rec_types ~rec_vals ~letrec_body =
-  D.LetRec {
-    letrec_binds = sort_rec_binds ~rec_types ~rec_vals;
-    letrec_body;
-  }
+  let vals = List.map rec_vals ~f:(fun (v, t, e) -> match t with
+      | None -> (v, e)
+      | Some (t, src) ->
+          ( v
+          , D.(App {
+              app_fn = WithType { wt_src = src; wt_type = t };
+              app_arg = e;
+            })
+          )
+    )
+  in
+  let vals = sort_binds ~fv:D.fv vals in
+  D.(LetRec {
+      letrec_binds = {
+        rec_types = sort_let_types rec_types;
+        rec_vals = [];
+      };
+      letrec_body =
+        build_sorted_let_vals vals letrec_body;
+  })
 
 (* [substitute_type_apps f params ty] replaces occurances of [f] applied to
  * the list of parameters in [ty] with just [f]. *)
