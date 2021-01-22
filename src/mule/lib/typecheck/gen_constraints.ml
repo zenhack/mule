@@ -77,6 +77,7 @@ end = struct
        - [polarity] is used to determine how to translate quantifiers; binding edges on
          quantifiers will be computed via [quant_flag].
     *)
+    (* TODO: kind constraints? *)
     fun ctx polarity q_target exp ->
     let b_target = `Q q_target in
     match exp with

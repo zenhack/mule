@@ -1,12 +1,15 @@
 
 module C = Constraint_t
 
+let solve_has_kind ctx t k =
+  let k' = Infer_kind.infer_kind ctx t in
+  Unify.unify_kind ctx k k'
+
 let solve_kind_constraint ctx = function
   | `UnifyKind c ->
       Unify.unify_kind ctx c.C.unify_kind_super c.C.unify_kind_sub
-  | `HasKind _c ->
-      (* TODO *)
-      ()
+  | `HasKind c ->
+      solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
 module OrganizedConstraints = struct
   (* Organizes a list of constraints for processing *)
