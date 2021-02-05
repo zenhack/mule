@@ -22,7 +22,5 @@ and infer_kind_ctor : Context.t -> GT.ctor -> GT.kind GT.var =
 and infer_prekind_ctor : Context.t -> GT.ctor -> GT.prekind GT.var =
   fun ctx ctor ->
     match ctor with
-      (* TODO(perf): maybe have a single shared variable for these
-         defined on the context *)
-      | `Type _ -> Context.make_var ctx Context.prekind `Type
-      | `Row _ -> Context.make_var ctx Context.prekind `Row
+      | `Type _ -> Context.type_v ctx
+      | `Row _ -> Context.row_v ctx

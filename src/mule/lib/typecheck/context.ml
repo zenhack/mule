@@ -59,34 +59,13 @@ type t = {
   ctx_errors: MuleErr.t list ref;
   ctx_constraints: C.constr list ref;
   ctx_env : C.env;
+
+  ctx_type_v: GT.prekind GT.var Lazy.t;
+  ctx_row_v: GT.prekind GT.var Lazy.t;
 }
 
 type 'a vtype = ('a Union_find.store, Stores.t) lens
 include Stores.Lens
-
-let make ctr f =
-  let rec ctx = lazy {
-    ctx_g = GT.GNode.make_root ctr (lazy (
-        Lazy.force (GT.GNode.get (f (Lazy.force ctx)))
-      ));
-    ctx_ctr = ctr;
-    ctx_uf_stores = ref Stores.{
-        s_quants = Union_find.new_store ();
-        s_types = Union_find.new_store ();
-        s_bounds = Union_find.new_store ();
-        s_prekinds = Union_find.new_store ();
-        s_kinds = Union_find.new_store ();
-        s_guards = Union_find.new_store ();
-      };
-    ctx_constraints = ref [];
-    ctx_errors = ref [];
-    ctx_env = C.{
-        vals = Map.empty (module Var);
-        types = Map.empty (module Var);
-      };
-  }
-  in
-  Lazy.force ctx
 
 let checkpoint ctx = {
   ctx with
@@ -105,10 +84,42 @@ let make_var ctx lens v =
     Union_find.make store v
   )
 
+let make ctr f =
+  let stores = ref Stores.{
+      s_quants = Union_find.new_store ();
+      s_types = Union_find.new_store ();
+      s_bounds = Union_find.new_store ();
+      s_prekinds = Union_find.new_store ();
+      s_kinds = Union_find.new_store ();
+      s_guards = Union_find.new_store ();
+    }
+  in
+  let rec ctx = lazy {
+    ctx_g = GT.GNode.make_root ctr (lazy (
+        Lazy.force (GT.GNode.get (f (Lazy.force ctx)))
+      ));
+    ctx_ctr = ctr;
+    ctx_uf_stores = stores;
+    ctx_constraints = ref [];
+    ctx_errors = ref [];
+    ctx_env = C.{
+        vals = Map.empty (module Var);
+        types = Map.empty (module Var);
+      };
+    ctx_type_v = lazy (make_var (Lazy.force ctx) prekind `Type);
+    ctx_row_v = lazy (make_var (Lazy.force ctx) prekind `Row);
+  }
+  in
+  Lazy.force ctx
+
 let read_var ctx lens var =
   with_store ctx lens (fun store ->
     Union_find.get store var
   )
+
+
+let type_v ctx = Lazy.force ctx.ctx_type_v
+let row_v ctx = Lazy.force ctx.ctx_row_v
 
 let merge ctx lens l r value =
   with_store ctx lens (fun store ->

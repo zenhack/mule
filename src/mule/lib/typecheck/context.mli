@@ -19,6 +19,10 @@ val make_var : t -> 'a vtype -> 'a -> 'a GT.var
 val read_var : t -> 'a vtype -> 'a GT.var -> 'a
 val write_var : t -> 'a vtype -> 'a -> 'a GT.var -> unit
 
+(* Variables for the constant prekinds `Type and `Row. *)
+val type_v : t -> GT.prekind GT.var
+val row_v : t -> GT.prekind GT.var
+
 val var_eq : t -> 'a vtype -> 'a GT.var -> 'a GT.var -> bool
 
 (* Merge (union) two variables. The last argument is the value of the resulting
