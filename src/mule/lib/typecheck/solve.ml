@@ -38,8 +38,30 @@ module OrganizedConstraints = struct
         of_list { acc with instance = x :: acc.instance } xs
   let of_list =
     of_list { kind = []; unify = []; instance = [] }
+
+  let append x y =
+      { kind = x.kind @ y.kind
+      ; unify = x.unify @ y.unify
+      ; instance = x.instance @ y.instance
+      }
+
+  let pop cs = match cs with
+    | { kind = k :: ks; _} -> Some (`Kind k, { cs with kind = ks })
+    | { unify = u :: us; _} -> Some (`Unify u, { cs with unify = us })
+    | { instance = i :: is; _} -> Some (`Instance i, { cs with instance = is })
+    | { kind = []; unify = []; instance = [] } -> None
 end
 
 let solve ctx =
-  let ocs = OrganizedConstraints.of_list (Context.get_constraints ctx) in
-  List.iter ocs.kind ~f:(solve_kind_constraint ctx)
+  let module OCS = OrganizedConstraints in
+  let rec go ocs =
+    match OCS.pop ocs with
+    | None -> ()
+    | Some (`Kind c, cs) ->
+        solve_kind_constraint ctx c;
+        let ocs' = OCS.append (OCS.of_list (Context.take_constraints ctx)) cs in
+        go ocs'
+    | Some _ ->
+        failwith "TODO"
+  in
+  go (OCS.of_list (Context.take_constraints ctx))
