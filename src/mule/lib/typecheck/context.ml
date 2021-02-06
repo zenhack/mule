@@ -170,6 +170,11 @@ let constrain ctx c =
 let get_constraints ctx =
   !(ctx.ctx_constraints)
 
+let take_constraints ctx =
+  let ret = get_constraints ctx in
+  ctx.ctx_constraints := [];
+  ret
+
 let with_val_binding ctx var value f =
   let vals = Map.set ~key:var ~data:value ctx.ctx_env.vals in
   f { ctx with ctx_env = { ctx.ctx_env with vals } }

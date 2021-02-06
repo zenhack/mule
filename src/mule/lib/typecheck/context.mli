@@ -44,7 +44,11 @@ val get_ctr : t -> Gensym.counter
 
 val constrain : t -> C.constr -> unit
 
+(* Get the list of constraints built up so far. *)
 val get_constraints : t -> C.constr list
+
+(* Like [get_constraints], but also clears the list internally. *)
+val take_constraints : t -> C.constr list
 
 (* Make an independent copy of the context *)
 val checkpoint : t -> t
