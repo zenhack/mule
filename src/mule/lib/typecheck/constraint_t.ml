@@ -39,6 +39,8 @@ type unify_kind_why =
      * indicates that the constrained kind was in the argument position of a ->
      * constructor. *)
     | `CtorArg of [ `Fn of [ `Param | `Result ] ]
+    (* Type was applied to another type; this means it must be an arrow type. *)
+    | `Apply
   ]
 
 type instance_constraint = {
