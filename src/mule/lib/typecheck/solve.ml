@@ -11,6 +11,10 @@ let solve_kind_constraint ctx = function
   | `HasKind c ->
       solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
+let sort_instance_constraints cs =
+  (* TODO: actually sort. *)
+  cs
+
 module OrganizedConstraints = struct
   (* Organizes a list of constraints for processing *)
 
@@ -38,6 +42,9 @@ module OrganizedConstraints = struct
         of_list { acc with instance = x :: acc.instance } xs
   let of_list =
     of_list { kind = []; unify = []; instance = [] }
+  let of_list cs =
+    let cs = of_list cs in
+    { cs with instance = sort_instance_constraints cs.instance }
 
   let append x y =
       { kind = x.kind @ y.kind
@@ -62,6 +69,6 @@ let solve ctx =
         let ocs' = OCS.append (OCS.of_list (Context.take_constraints ctx)) cs in
         go ocs'
     | Some _ ->
-        failwith "TODO"
+        failwith "TODO: other constraints"
   in
   go (OCS.of_list (Context.take_constraints ctx))
