@@ -1,17 +1,11 @@
 module GT = Graph_types
 module C = Constraint_t
 
-let rec g_for_q : Context.t -> GT.quant GT.var -> GT.g_node =
-  fun ctx qv ->
-    let q = Context.read_var ctx Context.quant qv in
-    let b = Context.read_var ctx Context.bound q.GT.q_bound in
-    match b.GT.b_target with
-      | `G g -> g
-      | `Q qv' -> g_for_q ctx qv'
+module Util = Typecheck_util
 
 let constraint_edge : Context.t -> C.instance_constraint -> GT.Ids.G.t Tsort.edge =
   fun ctx C.{inst_super = g; inst_sub = q; _} ->
-    let qg = g_for_q ctx q in
+    let qg = Util.g_for_q ctx q in
     Tsort.{
       from = GT.GNode.id g;
       to_ = GT.GNode.id qg;
