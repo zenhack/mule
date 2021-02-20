@@ -23,10 +23,20 @@ type instance_why =
   | `RecordUpdate of unit DE.t
   ]
 
+type instance_constraint = {
+  inst_why: instance_why;
+  inst_super: GT.g_node;
+  inst_sub: GT.quant GT.var;
+}
+
 (* Reason for a `Unify constraint *)
 type unify_why =
-  [ (* This was an instance constraint, demoted after expansion: *)
-    `Instance of instance_why
+  [
+    (* Instance constraints, demoted after expansion: *)
+    `InstanceRoot of instance_constraint
+      (* ^ The root of the expanded type *)
+  | `InstanceLeaf of instance_constraint
+      (* ^ "leaves" of the expanded type (just outside the constraint interior) *)
 
   (* Use of a lambda bound variable: *)
   | `VarUse of (DE.var_src * DE.lam_src)
@@ -42,12 +52,6 @@ type unify_kind_why =
     (* Type was applied to another type; this means it must be an arrow type. *)
     | `Apply
   ]
-
-type instance_constraint = {
-  inst_why: instance_why;
-  inst_super: GT.g_node;
-  inst_sub: GT.quant GT.var;
-}
 
 type unify_constraint = {
   unify_why: unify_why;

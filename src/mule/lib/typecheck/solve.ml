@@ -11,6 +11,18 @@ let solve_kind_constraint ctx = function
   | `HasKind c ->
       solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
+let solve_instance_constraint ctx inst_c =
+  let qv = Expand.expand ctx
+    ~g:inst_c.C.inst_super
+    ~at:(failwith "TODO")
+    ~inst_c
+  in
+  Context.constrain ctx (`Unify C.{
+      unify_why = `InstanceRoot inst_c;
+      unify_sub = inst_c.inst_sub;
+      unify_super = qv;
+    })
+
 module OrganizedConstraints = struct
   (* Organizes a list of constraints for processing *)
 
@@ -24,6 +36,8 @@ module OrganizedConstraints = struct
     unify: C.unify_constraint list;
     instance: C.instance_constraint list;
   }
+
+  let empty = { kind = []; unify = []; instance = []; }
 
   let rec of_list acc = function
     | [] ->
@@ -58,13 +72,14 @@ end
 let solve ctx =
   let module OCS = OrganizedConstraints in
   let rec go ocs =
-    match OCS.pop ocs with
+    let ocs' = OCS.append (OCS.of_list ctx (Context.take_constraints ctx)) ocs in
+    match OCS.pop ocs' with
     | None -> ()
     | Some (`Kind c, cs) ->
-        solve_kind_constraint ctx c;
-        let ocs' = OCS.append (OCS.of_list ctx (Context.take_constraints ctx)) cs in
-        go ocs'
+        solve_kind_constraint ctx c; go cs
+    | Some (`Instance c, cs) ->
+        solve_instance_constraint ctx c; go cs
     | Some _ ->
         failwith "TODO: other constraints"
   in
-  go (OCS.of_list ctx (Context.take_constraints ctx))
+  go OCS.empty
