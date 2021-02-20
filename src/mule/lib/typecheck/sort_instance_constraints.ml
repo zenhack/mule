@@ -18,7 +18,13 @@ let must_not_cycle = function
 let g_node_order : Context.t -> C.instance_constraint list -> GT.Ids.G.t list =
   fun ctx cs ->
     let edges = List.map cs ~f:(constraint_edge ctx) in
-    let nodes = List.map cs ~f:(fun c -> GT.GNode.id c.C.inst_super) in
+    let nodes = List.concat_map cs ~f:(fun c ->
+        [
+          GT.GNode.id c.C.inst_super;
+          GT.GNode.id (Util.g_for_q ctx c.C.inst_sub);
+        ]
+      )
+    in
     Tsort.sort
       (module GT.Ids.G)
       ~edges
