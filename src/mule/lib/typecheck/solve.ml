@@ -1,5 +1,6 @@
 
 module C = Constraint_t
+module GT = Graph_types
 
 let solve_has_kind ctx t k =
   let k' = Infer_kind.infer_kind ctx t in
@@ -11,10 +12,17 @@ let solve_kind_constraint ctx = function
   | `HasKind c ->
       solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
-let solve_instance_constraint ctx inst_c =
+let rec lowest_g ctx qv =
+  let GT.{q_bound; _} = Context.read_var ctx Context.quant qv in
+  let GT.{b_target; _} = Context.read_var ctx Context.bound q_bound in
+  match b_target with
+  | `G g -> g
+  | `Q qv' -> lowest_g ctx qv'
+
+let propagate_instance_constraint ctx inst_c =
   let qv = Expand.expand ctx
     ~g:inst_c.C.inst_super
-    ~at:(failwith "TODO")
+    ~at:(lowest_g ctx inst_c.C.inst_sub)
     ~inst_c
   in
   Context.constrain ctx (`Unify C.{
@@ -78,7 +86,7 @@ let solve ctx =
     | Some (`Kind c, cs) ->
         solve_kind_constraint ctx c; go cs
     | Some (`Instance c, cs) ->
-        solve_instance_constraint ctx c; go cs
+        propagate_instance_constraint ctx c; go cs
     | Some _ ->
         failwith "TODO: other constraints"
   in
