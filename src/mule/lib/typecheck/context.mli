@@ -19,6 +19,8 @@ val make_var : t -> 'a vtype -> 'a -> 'a GT.var
 val read_var : t -> 'a vtype -> 'a GT.var -> 'a
 val write_var : t -> 'a vtype -> 'a -> 'a GT.var -> unit
 
+val modify_var : t -> 'a vtype -> ('a -> 'a) -> 'a GT.var -> unit
+
 (* Variables for the constant prekinds `Type and `Row. *)
 val type_v : t -> GT.prekind GT.var
 val row_v : t -> GT.prekind GT.var

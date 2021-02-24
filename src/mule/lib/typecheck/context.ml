@@ -136,6 +136,9 @@ let write_var ctx lens value var =
     (Union_find.set store var value, ())
   )
 
+let modify_var ctx lens f var =
+  write_var ctx lens (f (read_var ctx lens var)) var
+
 let with_quant ctx bnd f =
   let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
   let rec q = lazy (make_var ctx quant {

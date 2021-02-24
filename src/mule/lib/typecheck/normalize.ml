@@ -1,20 +1,19 @@
-(*
-open Mlftype
+module GT = Graph_types
 
-let rec whnf_typ : typ -> typ = fun t -> match t with
-  | `Free _ | `Ctor _ | `Lambda -> t
-  | `Apply (f, arg) ->
+let rec whnf_typ ctx t = match t with
+  | `Free _ | `Ctor _ | `Lambda _ | `Poison _ -> t
+  | `Apply (id, f, arg) ->
       begin
-        UnionFind.modify whnf_q f;
-        apply_qq f arg
+        Context.modify_var ctx Context.quant (whnf_q ctx) f;
+        apply_qq ctx id f arg
       end
-and whnf_q : quant -> quant = fun q ->
-  UnionFind.modify whnf_typ q.q_body;
+and whnf_q ctx q =
+  Context.modify_var ctx Context.typ (whnf_typ ctx) (Lazy.force q.q_body);
   q
-and apply_qq f arg =
-  match (UnionFind.get f).q_body | UnionFind.get with
-  | `Lambda (_param, _body) ->
+and apply_qq ctx app_id f arg =
+  let ft = Lazy.force (Context.read_var ctx Context.quant f).q_body in
+  match Context.read_var ctx Context.typ ft with
+  | `Lambda (_id, _param, _body) ->
       failwith "TODO"
   | _ ->
-      `Apply (f, arg)
-   *)
+    `Apply (app_id, f, arg)
