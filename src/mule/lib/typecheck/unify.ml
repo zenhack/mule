@@ -73,6 +73,83 @@ and unify_prekind ctx lv rv =
         merge `Poison
   )
 
+
+let weakest_flag l r = match l, r with
+  | `Flex, x | x, `Flex -> x
+  | `Rigid, `Rigid -> `Rigid
+  | `Explicit, `Explicit -> `Explicit
+  | `Rigid, `Explicit | `Explicit, `Rigid ->
+      failwith "TODO: poison for flags"
+
+let bound_lca _ctx _l _r =
+  failwith "TODO: bound_lca"
+
+let unify_bound ctx lv rv =
+  unify_vars ctx Context.bound lv rv (fun merge l r ->
+    merge GT.{
+      b_flag = weakest_flag l.b_flag r.b_flag;
+      b_target = bound_lca ctx l.b_target r.b_target;
+    }
+  )
+
+let merge_tyvar ctx l r =
+  unify_bound ctx l.GT.tv_bound r.GT.tv_bound;
+  unify_kind ctx l.GT.tv_kind r.GT.tv_kind;
+  (* TODO: we probably need to track both ids for the later steps of rebind; consider
+     making tv_id a set or something. *)
+  l
+
+let mismatched_kinds ctx merge id lk rk =
+  Context.error ctx (`TypeError (`MismatchedKinds(lk, rk)));
+  merge (`Poison id)
+
+let rec unify_typ ctx lv rv =
+  unify_vars ctx Context.typ lv rv (fun merge l r ->
+    let l = Normalize.whnf_typ ctx l in
+    let r = Normalize.whnf_typ ctx r in
+    match l, r with
+    | `Poison x, _ | _, `Poison x -> merge (`Poison x)
+    | `Free ltv, `Free rtv ->
+        merge (`Free (merge_tyvar ctx ltv rtv))
+
+    | `Ctor (lid, _), `Ctor (rid, _)
+    | `Apply(lid, _, _), `Apply(rid, _, _)
+    | `Lambda(lid, _, _), `Lambda(rid, _, _)
+      when GT.Ids.Type.equal lid rid ->
+        merge l
+
+    | `Ctor (lid, lc), `Ctor (rid, rc) ->
+        merge_ctor ctx merge (lid, lc) (rid, rc)
+    | `Apply(_, lf, larg), `Apply(_, rf, rarg) ->
+        unify_quant ctx lf rf;
+        unify_quant ctx larg rarg;
+        merge l
+    | `Lambda(_, lp, lbody), `Lambda(_, rp, rbody) ->
+        unify_quant ctx lp rp;
+        unify_quant ctx lbody rbody
+    | _ ->
+        Context.error ctx (`TypeError (`MismatchedCtors (failwith "TODO")));
+        merge (`Poison (failwith "TODO"))
+  )
+and merge_ctor ctx merge (lid, lc) (rid, rc) =
+  match lc, rc with
+  | `Type lt,`Type rt -> merge_type_ctor merge lid lt rid rt
+  | `Row lr,`Row rr -> merge_row_ctor merge lid lr rid rr
+  | `Type _, `Row _ -> mismatched_kinds ctx merge lid `Type `Row
+  | `Row _, `Type _ -> mismatched_kinds ctx merge lid `Row `Type
+and merge_type_ctor _merge _lid _lt _rid _rt =
+  failwith "TODO: merge_type_ctor"
+and merge_row_ctor merge lid lr _rid rr =
+  match lr, rr with
+  | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))
+  | _ -> failwith "TODO: merge_row_ctor"
+and unify_quant ctx lv rv =
+  unify_vars ctx Context.quant lv rv (fun merge l r ->
+    unify_bound ctx l.q_bound r.q_bound;
+    unify_typ ctx (Lazy.force l.q_body) (Lazy.force r.q_body);
+    merge l
+  )
+
 (*
 open Common_ast
 open Graph_types
