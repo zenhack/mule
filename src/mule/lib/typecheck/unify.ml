@@ -145,6 +145,15 @@ let rec unify_typ ctx lv rv =
       when GT.Ids.Type.equal lid rid ->
         merge l
 
+    | `Free tv, x | x, `Free tv ->
+        let bnd = Context.read_var ctx Context.bound tv.tv_bound in
+        begin match bnd.b_flag with
+          | `Flex -> merge x
+          | `Rigid | `Explicit ->
+              Context.error ctx (`TypeError (`CantInstantiate (failwith "TODO")));
+              merge (`Poison tv.tv_id)
+        end
+
     | `Ctor (lid, lc), `Ctor (rid, rc) ->
         merge_ctor ctx merge (lid, lc) (rid, rc)
     | `Apply(_, lf, larg), `Apply(_, rf, rarg) ->
@@ -160,12 +169,27 @@ let rec unify_typ ctx lv rv =
   )
 and merge_ctor ctx merge (lid, lc) (rid, rc) =
   match lc, rc with
-  | `Type lt,`Type rt -> merge_type_ctor merge lid lt rid rt
+  | `Type lt,`Type rt -> merge_type_ctor ctx merge lid lt rid rt
   | `Row lr,`Row rr -> merge_row_ctor merge lid lr rid rr
   | `Type _, `Row _ -> mismatched_kinds ctx merge lid `Type `Row
   | `Row _, `Type _ -> mismatched_kinds ctx merge lid `Row `Type
-and merge_type_ctor _merge _lid _lt _rid _rt =
-  failwith "TODO: merge_type_ctor"
+and merge_type_ctor ctx merge lid lt _rid rt =
+  let merge' v = merge (`Ctor(lid, `Type v)) in
+  match lt, rt with
+  | `Fn(lp, lr), `Fn(rp, rr) ->
+      unify_quant ctx lp rp;
+      unify_quant ctx lr rr;
+      merge' (`Fn(lp, lr))
+  | `Const l, `Const r ->
+      if Poly.equal l r then
+        merge' (`Const l)
+      else
+        begin
+          Context.error ctx (`TypeError (`MismatchedCtors (failwith "TODO")));
+          merge (`Poison lid)
+        end
+  | _ ->
+      failwith "TODO: other cases for merge_type_ctor"
 and merge_row_ctor merge lid lr _rid rr =
   match lr, rr with
   | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))
