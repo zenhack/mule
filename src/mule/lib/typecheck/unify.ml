@@ -81,8 +81,35 @@ let weakest_flag l r = match l, r with
   | `Rigid, `Explicit | `Explicit, `Rigid ->
       failwith "TODO: poison for flags"
 
-let bound_lca _ctx _l _r =
-  failwith "TODO: bound_lca"
+let rec bound_lca ctx l r =
+  let order_by_age cmp l r =
+    if cmp <= 0 then
+      (l, r)
+    else
+      (r, l)
+  in
+  match l, r with
+  | `G g, `Q qv | `Q qv, `G g ->
+      let q = Context.read_var ctx Context.quant qv in
+      let b = Context.read_var ctx Context.bound q.q_bound in
+      bound_lca ctx (`G g) (b.b_target)
+  | `G lg, `G rg ->
+      let cmp = GT.Ids.G.compare (GT.GNode.id lg) (GT.GNode.id rg) in
+      if cmp = 0 then
+        `G lg
+      else
+        let (older, newer) = order_by_age cmp lg rg in
+        bound_lca ctx (`G older) (`G (Option.value_exn (GT.GNode.bound newer)))
+  | `Q lqv, `Q rqv ->
+      let lq = Context.read_var ctx Context.quant lqv in
+      let rq = Context.read_var ctx Context.quant rqv in
+      let cmp = GT.Ids.Quant.compare lq.q_id rq.q_id in
+      if cmp = 0 then
+        `Q lqv
+      else
+        let ((oqv, _oq), (_nqv, nq)) = order_by_age cmp (lqv, lq) (rqv, rq) in
+        let b = Context.read_var ctx Context.bound nq.q_bound in
+        bound_lca ctx (`Q oqv) b.b_target
 
 let unify_bound ctx lv rv =
   unify_vars ctx Context.bound lv rv (fun merge l r ->
