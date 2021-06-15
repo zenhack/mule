@@ -13,6 +13,10 @@ let solve_kind_constraint ctx = function
   | `HasKind c ->
       solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
+let solve_unify_constraint ctx c =
+  Unify.unify_quant ctx c.C.unify_super c.C.unify_sub
+  (* TODO: rebind etc. *)
+
 let propagate_instance_constraint ctx inst_c =
   let qv = Expand.expand ctx
     ~g:inst_c.C.inst_super
@@ -81,6 +85,8 @@ let solve ctx =
         solve_kind_constraint ctx c; go cs
     | Some (`Instance c, cs) ->
         propagate_instance_constraint ctx c; go cs
+    | Some (`Unify c, cs) ->
+        solve_unify_constraint ctx c; go cs
     | Some _ ->
         failwith "TODO: other constraints"
   in
