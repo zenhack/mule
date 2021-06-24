@@ -147,11 +147,18 @@ let rec unify_typ ctx lv rv =
 
     | `Free tv, x | x, `Free tv ->
         let bnd = Context.read_var ctx Context.bound tv.tv_bound in
+        let report_err flag =
+          Context.error ctx
+            (`TypeError (`UnifyFailed (MuleErr.{
+                  ue_constraint = failwith "TODO";
+                  ue_cause = `CantInstantiate (flag, x);
+                })));
+          merge (`Poison tv.tv_id)
+        in
         begin match bnd.b_flag with
           | `Flex -> merge x
-          | `Rigid | `Explicit ->
-              Context.error ctx (`TypeError (`CantInstantiate (failwith "TODO")));
-              merge (`Poison tv.tv_id)
+          | `Rigid -> report_err `Rigid
+          | `Explicit -> report_err `Explicit
         end
 
     | `Ctor (lid, lc), `Ctor (rid, rc) ->
@@ -164,7 +171,11 @@ let rec unify_typ ctx lv rv =
         unify_quant ctx lp rp;
         unify_quant ctx lbody rbody
     | _ ->
-        Context.error ctx (`TypeError (`MismatchedCtors (failwith "TODO")));
+        Context.error ctx
+          (`TypeError (`UnifyFailed MuleErr.{
+                ue_constraint = failwith "TODO";
+                ue_cause = failwith "TODO";
+              }));
         merge (`Poison (failwith "TODO"))
   )
 and merge_ctor ctx merge (lid, lc) (rid, rc) =
@@ -185,7 +196,11 @@ and merge_type_ctor ctx merge lid lt _rid rt =
         merge' (`Const l)
       else
         begin
-          Context.error ctx (`TypeError (`MismatchedCtors (failwith "TODO")));
+          Context.error ctx
+            (`TypeError (`UnifyFailed MuleErr.{
+                  ue_constraint = failwith "TODO";
+                  ue_cause = `MismatchedCtors (`Type lt, `Type rt);
+                }));
           merge (`Poison lid)
         end
   | _ ->
