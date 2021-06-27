@@ -122,9 +122,7 @@ let unify_bound ctx lv rv =
 let merge_tyvar ctx l r =
   unify_bound ctx l.GT.tv_bound r.GT.tv_bound;
   unify_kind ctx l.GT.tv_kind r.GT.tv_kind;
-  (* TODO: we probably need to track both ids for the later steps of rebind; consider
-     making tv_id a set or something. *)
-  l
+  { l with tv_merged = Set.union l.tv_merged r.tv_merged }
 
 let mismatched_kinds ctx merge id lk rk =
   Context.error ctx (`TypeError (`MismatchedKinds(lk, rk)));
@@ -213,5 +211,5 @@ and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
     unify_bound ctx l.q_bound r.q_bound;
     unify_typ ctx c (Lazy.force l.q_body) (Lazy.force r.q_body);
-    merge l
+    merge { l with q_merged = Set.union l.q_merged r.q_merged }
   )
