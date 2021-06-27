@@ -170,7 +170,7 @@ variables, but for now we'll assume they are variables. Legal variable
 names must:
 
 * Start with a lower case letter or underscore
-* Consisit of only letters, numbers, and the characters `_`, `-`, `!`,
+* Consist of only letters, numbers, and the characters `_`, `-`, `!`,
   and `?`.
 * Right now identifiers are ascii-only. Eventually we will likely allow
   any unicode letter, to support developers who speak languages other
