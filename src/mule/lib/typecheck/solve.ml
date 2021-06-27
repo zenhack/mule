@@ -77,7 +77,12 @@ end
 
 let solve ctx =
   let module OCS = OrganizedConstraints in
+  let render () =
+    if Config.render_constraint_graph () then
+      Context.DebugGraph.dump ctx
+  in
   let rec go ocs =
+    render ();
     let ocs' = OCS.append (OCS.of_list ctx (Context.take_constraints ctx)) ocs in
     match OCS.pop ocs' with
     | None -> ()
