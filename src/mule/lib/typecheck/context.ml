@@ -232,12 +232,13 @@ module DebugGraph = struct
     if not (Set.mem g_seen id) then
       begin
         seen.g_seen := Set.add g_seen id;
-        Debug.show_node `G (GT.Ids.G.to_int id);
+        let id = GT.Ids.G.to_int id in
+        Debug.show_node `G id [id];
         let q_var = Lazy.force (GT.GNode.get g) in
         let q = read_var ctx quant q_var in
         dump_q ctx seen q;
         Debug.show_edge `Structural
-          (GT.Ids.G.to_int id)
+          id
           (GT.Ids.Quant.to_int q.q_id);
         Option.iter
           (GT.GNode.bound g)
@@ -255,7 +256,10 @@ module DebugGraph = struct
       begin
         seen.quant_seen := Set.add quant_seen id;
         let q_id = GT.Ids.Quant.to_int id in
-        Debug.show_node `Quant q_id;
+        let q_merged = Set.to_list q.q_merged
+                     |> List.map ~f:GT.Ids.Quant.to_int
+        in
+        Debug.show_node `Quant q_id q_merged;
         let t_var = Lazy.force q.q_body in
         let t = read_var ctx typ t_var in
         dump_typ ctx seen t;
@@ -284,6 +288,9 @@ module DebugGraph = struct
     | `Lambda(id, _, _) -> id
     | `Apply(id, _, _) -> id
     | `Poison id -> id
+  and merged_typ_ids t = match t with
+    | `Free GT.{tv_merged; _} -> Set.to_list tv_merged
+    | _ -> [typ_id t]
   and dump_typ ctx seen t =
     let id = typ_id t in
     let type_seen = !(seen.type_seen) in
@@ -310,7 +317,9 @@ module DebugGraph = struct
           | `Apply _ -> `Const (`Named `Apply)
           | `Poison _ -> `Const (`Named `Poison)
         in
-        Debug.show_node node_type (GT.Ids.Type.to_int id);
+        Debug.show_node node_type
+          (GT.Ids.Type.to_int id)
+          (List.map ~f:GT.Ids.Type.to_int (merged_typ_ids t));
         let kids = typ_kids ctx t in
         List.iter kids ~f:(fun q ->
           dump_q ctx seen q;

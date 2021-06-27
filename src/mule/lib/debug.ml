@@ -6,7 +6,7 @@ let render_hook = ref (fun () -> ())
 let frame_no: int ref = ref 0
 
 let edges: (edge_type * int * int) list ref = ref []
-let nodes: (node_type * int) list ref = ref []
+let nodes: (node_type * int * int list) list ref = ref []
 
 let start_graph () =
   edges := [];
@@ -15,8 +15,8 @@ let start_graph () =
 let show_edge ty from to_ =
   edges := (ty, from, to_) :: !edges
 
-let show_node ty n =
-  nodes := (ty, n) :: !nodes
+let show_node ty n ns =
+  nodes := (ty, n, ns) :: !nodes
 
 let root_node: int option ref =
   ref None
@@ -24,11 +24,11 @@ let root_node: int option ref =
 let set_root: int -> unit = fun id ->
   root_node := Some id
 
-let fmt_node: node_type -> int -> string =
-  fun ty n ->
+let fmt_node: node_type -> int -> int list -> string =
+  fun ty node nodes ->
   String.concat
     [ "  n"
-    ; Int.to_string n
+    ; Int.to_string node
     ; " [label=\""
     ; begin match ty with
       | `G -> "G"
@@ -49,10 +49,12 @@ let fmt_node: node_type -> int -> string =
           end
       | `Quant -> "Q"
     end
-    ; " : "
-    ; Int.to_string n
-    ; "\""
-    ; if Poly.equal (Some n) !root_node then
+    ; " : ("
+    ; nodes
+        |> List.map ~f:Int.to_string
+        |> String.concat ~sep:", "
+    ; ")\""
+    ; if Poly.equal (Some node) !root_node then
         " shape=box "
       else
         ""
@@ -79,8 +81,8 @@ let end_graph () =
     | Some id -> Out.fprintf dest "  root=\"n%d\";\n" id
     | None -> ()
   end;
-  List.iter !nodes ~f:(fun (ty, id) ->
-    Out.fprintf dest "%s" (fmt_node ty id)
+  List.iter !nodes ~f:(fun (ty, id, ids) ->
+    Out.fprintf dest "%s" (fmt_node ty id ids)
   );
   List.iter !edges ~f:(fun (ty, from, to_) ->
     match ty with
