@@ -130,7 +130,7 @@ let mismatched_kinds ctx merge id lk rk =
   Context.error ctx (`TypeError (`MismatchedKinds(lk, rk)));
   merge (`Poison id)
 
-let rec unify_typ ctx lv rv =
+let rec unify_typ ctx c lv rv =
   unify_vars ctx Context.typ lv rv (fun merge l r ->
     let l = Normalize.whnf_typ ctx l in
     let r = Normalize.whnf_typ ctx r in
@@ -150,7 +150,7 @@ let rec unify_typ ctx lv rv =
         let report_err flag =
           Context.error ctx
             (`TypeError (`UnifyFailed (MuleErr.{
-                  ue_constraint = failwith "TODO";
+                  ue_constraint = c;
                   ue_cause = `CantInstantiate (flag, x);
                 })));
           merge (`Poison tv.tv_id)
@@ -162,34 +162,34 @@ let rec unify_typ ctx lv rv =
         end
 
     | `Ctor (lid, lc), `Ctor (rid, rc) ->
-        merge_ctor ctx merge (lid, lc) (rid, rc)
+        merge_ctor ctx c merge (lid, lc) (rid, rc)
     | `Apply(_, lf, larg), `Apply(_, rf, rarg) ->
-        unify_quant ctx lf rf;
-        unify_quant ctx larg rarg;
+        unify_quant ctx c lf rf;
+        unify_quant ctx c larg rarg;
         merge l
     | `Lambda(_, lp, lbody), `Lambda(_, rp, rbody) ->
-        unify_quant ctx lp rp;
-        unify_quant ctx lbody rbody
+        unify_quant ctx c lp rp;
+        unify_quant ctx c lbody rbody
     | _ ->
         Context.error ctx
           (`TypeError (`UnifyFailed MuleErr.{
-                ue_constraint = failwith "TODO";
+                ue_constraint = c;
                 ue_cause = failwith "TODO";
               }));
         merge (`Poison (failwith "TODO"))
   )
-and merge_ctor ctx merge (lid, lc) (rid, rc) =
+and merge_ctor ctx c merge (lid, lc) (rid, rc) =
   match lc, rc with
-  | `Type lt,`Type rt -> merge_type_ctor ctx merge lid lt rid rt
+  | `Type lt,`Type rt -> merge_type_ctor ctx c merge lid lt rid rt
   | `Row lr,`Row rr -> merge_row_ctor merge lid lr rid rr
   | `Type _, `Row _ -> mismatched_kinds ctx merge lid `Type `Row
   | `Row _, `Type _ -> mismatched_kinds ctx merge lid `Row `Type
-and merge_type_ctor ctx merge lid lt _rid rt =
+and merge_type_ctor ctx c merge lid lt _rid rt =
   let merge' v = merge (`Ctor(lid, `Type v)) in
   match lt, rt with
   | `Fn(lp, lr), `Fn(rp, rr) ->
-      unify_quant ctx lp rp;
-      unify_quant ctx lr rr;
+      unify_quant ctx c lp rp;
+      unify_quant ctx c lr rr;
       merge' (`Fn(lp, lr))
   | `Const l, `Const r ->
       if Poly.equal l r then
@@ -198,7 +198,7 @@ and merge_type_ctor ctx merge lid lt _rid rt =
         begin
           Context.error ctx
             (`TypeError (`UnifyFailed MuleErr.{
-                  ue_constraint = failwith "TODO";
+                  ue_constraint = c;
                   ue_cause = `MismatchedCtors (`Type lt, `Type rt);
                 }));
           merge (`Poison lid)
@@ -209,9 +209,9 @@ and merge_row_ctor merge lid lr _rid rr =
   match lr, rr with
   | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))
   | _ -> failwith "TODO: merge_row_ctor"
-and unify_quant ctx lv rv =
+and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
     unify_bound ctx l.q_bound r.q_bound;
-    unify_typ ctx (Lazy.force l.q_body) (Lazy.force r.q_body);
+    unify_typ ctx c (Lazy.force l.q_body) (Lazy.force r.q_body);
     merge l
   )

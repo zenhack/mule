@@ -14,7 +14,7 @@ let solve_kind_constraint ctx = function
       solve_has_kind ctx c.C.has_kind_type c.C.has_kind_kind
 
 let solve_unify_constraint ctx c =
-  Unify.unify_quant ctx c.C.unify_super c.C.unify_sub
+  Unify.unify_quant ctx c c.C.unify_super c.C.unify_sub
   (* TODO: rebind etc. *)
 
 let propagate_instance_constraint ctx inst_c =
