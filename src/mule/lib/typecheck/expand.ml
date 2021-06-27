@@ -83,13 +83,22 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c =
         ~g
         ~inst_c
     else
-      Context.make_var ctx Context.typ (`Free {
-        tv_id = GT.Ids.Type.fresh ctr;
-        tv_bound = make_bound ctx (NotRoot (Lazy.force qv')) `Flex;
-        tv_kind = Infer_kind.infer_kind ctx tv;
-      })
+      begin
+        let tv_id = GT.Ids.Type.fresh ctr in
+        Context.make_var ctx Context.typ (`Free {
+          tv_id;
+          tv_merged = Set.singleton (module GT.Ids.Type) tv_id;
+          tv_bound = make_bound ctx (NotRoot (Lazy.force qv')) `Flex;
+          tv_kind = Infer_kind.infer_kind ctx tv;
+        })
+      end
   )
-  and qv' = lazy (Context.make_var ctx Context.quant {q_id; q_bound; q_body})
+  and qv' = lazy (Context.make_var ctx Context.quant {
+      q_id;
+      q_merged = Set.singleton (module GT.Ids.Quant) q_id;
+      q_bound;
+      q_body;
+    })
   in
   ignore (Lazy.force q_body);
   if not q_in_constraint_interior then
@@ -109,6 +118,7 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c =
       let bound = make_bound ctx (NotRoot root) t_bound.b_flag in
       let tv' = Context.make_var ctx Context.typ (`Free {
           tv_id = id';
+          tv_merged = Set.singleton (module GT.Ids.Type) id';
           tv_bound = bound;
           tv_kind = ftv.tv_kind;
         })
@@ -121,8 +131,11 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c =
              then unify the Q nodes. We should probably refactor to
              allow just putting the constraint directly on the type
              vars. *)
-          let fresh_q body = Context.make_var ctx Context.quant {
-              q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx);
+          let fresh_q body =
+            let q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx) in
+            Context.make_var ctx Context.quant {
+              q_id;
+              q_merged = Set.singleton (module GT.Ids.Quant) q_id;
               q_bound = Context.make_var ctx Context.bound {
                   b_target = `G g;
                   b_flag = `Flex;

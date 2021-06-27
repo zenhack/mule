@@ -143,6 +143,7 @@ let with_quant ctx bnd f =
   let q_id = GT.Ids.Quant.fresh ctx.ctx_ctr in
   let rec q = lazy (make_var ctx quant {
       q_id;
+      q_merged = Set.singleton (module GT.Ids.Quant) q_id;
       q_bound = make_var ctx bound bnd;
       q_body;
     })

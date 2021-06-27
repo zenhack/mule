@@ -15,8 +15,10 @@ module Gen : sig
 end = struct
   let make_tyvar ctx bnd tv_kind =
     let ctr = Context.get_ctr ctx in
+    let tv_id = GT.Ids.Type.fresh ctr in
     Context.make_var ctx Context.typ (`Free {
-        tv_id = GT.Ids.Type.fresh ctr;
+        tv_id;
+        tv_merged = Set.singleton (module GT.Ids.Type) tv_id;
         tv_bound = Context.make_var ctx Context.bound bnd;
         tv_kind;
       })

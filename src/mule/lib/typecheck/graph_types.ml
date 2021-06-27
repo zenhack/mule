@@ -113,6 +113,7 @@ type typ =
   ]
 and tyvar = {
   tv_id: Ids.Type.t;
+  tv_merged: Ids.TypeSet.t;
   tv_bound: bound var;
   tv_kind: kind var;
 }
@@ -136,6 +137,7 @@ and row_ctor =
 and const = [ `Text | `Int | `Char ]
 and quant = {
   q_id: Ids.Quant.t;
+  q_merged: Ids.QuantSet.t;
   q_bound: bound var;
   q_body: typ var Lazy.t;
 }
