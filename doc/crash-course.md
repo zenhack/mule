@@ -457,7 +457,7 @@ in
 alice where extra-info
 ```
 
-The field names in a record can be defined reursively, or refer to one
+The field names in a record can be defined recursively, or refer to one
 another, like in a let binding:
 
 ```
