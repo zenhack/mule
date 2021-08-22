@@ -1,6 +1,6 @@
 
 (* This module implements the 'expand' operation,
-   from {Yakobowski 2008} section 3.1 *)
+   from {MLF-Graph-Infer} section 3.1 *)
 
 module GT = Graph_types
 module C = Constraint_t

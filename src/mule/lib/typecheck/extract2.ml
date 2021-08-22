@@ -1,7 +1,7 @@
 (* This module is responsible for turning a graphical type
    into a syntactic one.
 
-   We borrow and extend a trick from {Leijen 2005}: the authors observe
+   We borrow and extend a trick from {QMLF}: the authors observe
    that type variables that are used only once, and are either flexible
    in positive position or rigid in negative position can be inlined,
    reducing the need to use the bounded-quantification syntax.
