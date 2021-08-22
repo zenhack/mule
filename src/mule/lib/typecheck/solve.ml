@@ -101,7 +101,5 @@ let solve ctx =
         propagate_instance_constraint ctx c; go cs
     | Some (`Unify c, cs) ->
         solve_unify_constraint ctx c; go cs
-    | Some _ ->
-        failwith "TODO: other constraints"
   in
   go OCS.empty
