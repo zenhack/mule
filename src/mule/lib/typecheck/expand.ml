@@ -123,11 +123,11 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
   )
 and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
   let ty = Context.read_var ctx Context.typ tv in
-  let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~seen in
-  let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
-  match ty with
-  | `Free ftv ->
-      Seen.get seen.seen_ty ftv.tv_id (fun () ->
+  Seen.get seen.seen_ty (GT.typ_id ty) (fun () ->
+    let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~seen in
+    let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
+    match ty with
+    | `Free ftv ->
         let t_bound = Context.read_var ctx Context.bound ftv.tv_bound in
         let bound = make_bound ctx (NotRoot root) t_bound.b_flag in
         let tv' = Context.make_var ctx Context.typ (`Free {
@@ -164,26 +164,26 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
               })
           end;
         tv'
-      )
-  | `Poison _ -> tv
-  | `Apply(_, f, arg) ->
-      Context.make_var ctx Context.typ (`Apply(id', walk_q' f, walk_q' arg))
-  | `Lambda(_, p, r)  ->
-      Context.make_var ctx Context.typ (`Lambda(id', walk_q' p, walk_q' r))
-  | `Ctor(_, ctor) ->
-      Context.make_var ctx Context.typ
-        (`Ctor
-          ( id'
-          , begin match ctor with
-            | `Type(`Fn(p, r))         -> `Type(`Fn(walk_q' p, walk_q' r))
-            | `Type(`Record(ts, vs))   -> `Type(`Record(walk_q' ts, walk_q' vs))
-            | `Type(`Union r)          -> `Type(`Union(walk_q' r))
-            | `Type(`Const c)          -> `Type(`Const c)
-            | `Row(`Extend(lbl, h, t)) -> `Row(`Extend(lbl, walk_q' h, walk_q' t))
-            | `Row `Empty              -> `Row `Empty
-            end
+    | `Poison _ -> tv
+    | `Apply(_, f, arg) ->
+        Context.make_var ctx Context.typ (`Apply(id', walk_q' f, walk_q' arg))
+    | `Lambda(_, p, r)  ->
+        Context.make_var ctx Context.typ (`Lambda(id', walk_q' p, walk_q' r))
+    | `Ctor(_, ctor) ->
+        Context.make_var ctx Context.typ
+          (`Ctor
+            ( id'
+            , begin match ctor with
+              | `Type(`Fn(p, r))         -> `Type(`Fn(walk_q' p, walk_q' r))
+              | `Type(`Record(ts, vs))   -> `Type(`Record(walk_q' ts, walk_q' vs))
+              | `Type(`Union r)          -> `Type(`Union(walk_q' r))
+              | `Type(`Const c)          -> `Type(`Const c)
+              | `Row(`Extend(lbl, h, t)) -> `Row(`Extend(lbl, walk_q' h, walk_q' t))
+              | `Row `Empty              -> `Row `Empty
+              end
+            )
           )
-        )
+ )
 
 let expand ctx ~g ~at ~inst_c =
   let parents = ParentSet.singleton (GT.GNode.id g) in

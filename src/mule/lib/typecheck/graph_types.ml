@@ -152,3 +152,10 @@ and bound = {
 }
 and bound_flag =
   [ `Flex | `Rigid | `Explicit ]
+
+let typ_id = function
+  | `Free {tv_id; _} -> tv_id
+  | `Ctor (id, _) -> id
+  | `Lambda (id, _, _) -> id
+  | `Apply (id, _, _) -> id
+  | `Poison id -> id
