@@ -51,71 +51,66 @@ let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
 
 let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~q_seen =
   let q = Context.read_var ctx Context.quant qv in
-  match Map.find (!q_seen) q.q_id with
-    | Some qv -> qv
-    | None ->
+  Seen.get q_seen q.q_id (fun () ->
+    let ctr = Context.get_ctr ctx in
+    let root = match is_root with
+      | Root _ -> qv
+      | NotRoot qroot -> qroot
+    in
+    let
+      GT.{
+        b_flag = old_flag;
+        b_target = q_parent;
+      } = Context.read_var ctx Context.bound q.q_bound
+    in
+    let q_in_constraint_interior = ParentSet.has ctx parents q_parent in
+    let q_bound =
+      if q_in_constraint_interior then
+        make_bound ctx is_root old_flag
+      else
+        Context.make_var ctx Context.bound {
+          b_target = `G g;
+          b_flag = `Flex;
+        }
+    in
+    let q_id = GT.Ids.Quant.fresh ctr in
+    let rec q_body = lazy (
+      let tv = Lazy.force q.q_body in
+      if q_in_constraint_interior then
+        walk_ty ctx
+          ~tv
+          ~parents:(ParentSet.add ctx parents (`Q qv))
+          ~root
+          ~g
+          ~inst_c
+          ~q_seen
+      else
         begin
-          let ctr = Context.get_ctr ctx in
-          let root = match is_root with
-            | Root _ -> qv
-            | NotRoot qroot -> qroot
-          in
-          let
-            GT.{
-              b_flag = old_flag;
-              b_target = q_parent;
-            } = Context.read_var ctx Context.bound q.q_bound
-          in
-          let q_in_constraint_interior = ParentSet.has ctx parents q_parent in
-          let q_bound =
-            if q_in_constraint_interior then
-              make_bound ctx is_root old_flag
-            else
-              Context.make_var ctx Context.bound {
-                b_target = `G g;
-                b_flag = `Flex;
-              }
-          in
-          let q_id = GT.Ids.Quant.fresh ctr in
-          let rec q_body = lazy (
-            let tv = Lazy.force q.q_body in
-            if q_in_constraint_interior then
-              walk_ty ctx
-                ~tv
-                ~parents:(ParentSet.add ctx parents (`Q qv))
-                ~root
-                ~g
-                ~inst_c
-                ~q_seen
-            else
-              begin
-                let tv_id = GT.Ids.Type.fresh ctr in
-                Context.make_var ctx Context.typ (`Free {
-                  tv_id;
-                  tv_merged = Set.singleton (module GT.Ids.Type) tv_id;
-                  tv_bound = make_bound ctx (NotRoot (Lazy.force qv')) `Flex;
-                  tv_kind = Infer_kind.infer_kind ctx tv;
-                })
-              end
-          )
-          and qv' = lazy (Context.make_var ctx Context.quant {
-              q_id;
-              q_merged = Set.singleton (module GT.Ids.Quant) q_id;
-              q_bound;
-              q_body;
-            })
-          in
-          ignore (Lazy.force q_body);
-          if not q_in_constraint_interior then
-            Context.constrain ctx (`Unify {
-                unify_why = `InstanceLeaf inst_c;
-                unify_sub = Lazy.force qv';
-                unify_super = qv;
-              });
-          let qv' = Lazy.force qv' in
-          q_seen := Map.set !q_seen ~key:q.q_id ~data:qv';
-          qv'
+          let tv_id = GT.Ids.Type.fresh ctr in
+          Context.make_var ctx Context.typ (`Free {
+            tv_id;
+            tv_merged = Set.singleton (module GT.Ids.Type) tv_id;
+            tv_bound = make_bound ctx (NotRoot (Lazy.force qv')) `Flex;
+            tv_kind = Infer_kind.infer_kind ctx tv;
+          })
         end
+    )
+    and qv' = lazy (Context.make_var ctx Context.quant {
+        q_id;
+        q_merged = Set.singleton (module GT.Ids.Quant) q_id;
+        q_bound;
+        q_body;
+      })
+    in
+    ignore (Lazy.force q_body);
+    if not q_in_constraint_interior then
+      Context.constrain ctx (`Unify {
+          unify_why = `InstanceLeaf inst_c;
+          unify_sub = Lazy.force qv';
+          unify_super = qv;
+        });
+    Lazy.force qv'
+  )
 and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~q_seen =
   let ty = Context.read_var ctx Context.typ tv in
   let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~q_seen in
@@ -182,4 +177,4 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~q_seen =
 let expand ctx ~g ~at ~inst_c =
   let parents = ParentSet.singleton (GT.GNode.id g) in
   let qv = Lazy.force (GT.GNode.get g) in
-  walk_q ctx qv ~g:at ~parents ~is_root:(Root g) ~inst_c ~q_seen:(ref (Map.empty (module GT.Ids.Quant)))
+  walk_q ctx qv ~g:at ~parents ~is_root:(Root g) ~inst_c ~q_seen:(Seen.make (module GT.Ids.Quant))
