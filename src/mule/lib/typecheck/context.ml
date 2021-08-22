@@ -201,15 +201,15 @@ let errors ctx =
 
 module DebugGraph = struct
   type seen = {
-    quant_seen: GT.Ids.QuantSet.t ref;
-    type_seen: GT.Ids.TypeSet.t ref;
-    g_seen: GT.Ids.GSet.t ref;
+    quant_seen: (GT.Ids.Quant.t, unit) Seen.t;
+    type_seen: (GT.Ids.Type.t, unit) Seen.t;
+    g_seen: (GT.Ids.G.t, unit) Seen.t;
   }
 
   let empty_seen () = {
-    quant_seen = ref (Set.empty (module GT.Ids.Quant));
-    type_seen = ref (Set.empty (module GT.Ids.Type));
-    g_seen = ref (Set.empty (module GT.Ids.G));
+    quant_seen = Seen.make (module GT.Ids.Quant);
+    type_seen = Seen.make (module GT.Ids.Type);
+    g_seen = Seen.make (module GT.Ids.G);
   }
 
   let typ_kids ctx t =
@@ -228,47 +228,41 @@ module DebugGraph = struct
 
   let rec dump_g ctx seen g =
     let id = GT.GNode.id g in
-    let g_seen = !(seen.g_seen) in
-    if not (Set.mem g_seen id) then
-      begin
-        seen.g_seen := Set.add g_seen id;
-        let id = GT.Ids.G.to_int id in
-        Debug.show_node `G id [id];
-        let q_var = Lazy.force (GT.GNode.get g) in
-        let q = read_var ctx quant q_var in
-        dump_q ctx seen q;
-        Debug.show_edge `Structural
-          id
-          (GT.Ids.Quant.to_int q.q_id);
-        Option.iter
-          (GT.GNode.bound g)
-          ~f:(fun g_bound ->
-            dump_g ctx seen g_bound;
-            Debug.show_edge (`Binding `Flex)
-              (GT.Ids.G.to_int (GT.GNode.id g_bound))
-              (GT.Ids.G.to_int (GT.GNode.id g))
-          )
-      end
+    Seen.guard seen.g_seen id (fun () ->
+      let id = GT.Ids.G.to_int id in
+      Debug.show_node `G id [id];
+      let q_var = Lazy.force (GT.GNode.get g) in
+      let q = read_var ctx quant q_var in
+      dump_q ctx seen q;
+      Debug.show_edge `Structural
+        id
+        (GT.Ids.Quant.to_int q.q_id);
+      Option.iter
+        (GT.GNode.bound g)
+        ~f:(fun g_bound ->
+          dump_g ctx seen g_bound;
+          Debug.show_edge (`Binding `Flex)
+            (GT.Ids.G.to_int (GT.GNode.id g_bound))
+            (GT.Ids.G.to_int (GT.GNode.id g))
+        )
+    )
   and dump_q ctx seen q =
     let id = q.q_id in
-    let quant_seen = !(seen.quant_seen) in
-    if not (Set.mem quant_seen id) then
-      begin
-        seen.quant_seen := Set.add quant_seen id;
-        let q_id = GT.Ids.Quant.to_int id in
-        let q_merged = Set.to_list q.q_merged
-                     |> List.map ~f:GT.Ids.Quant.to_int
-        in
-        Debug.show_node `Quant q_id q_merged;
-        let t_var = Lazy.force q.q_body in
-        let t = read_var ctx typ t_var in
-        dump_typ ctx seen t;
-        let t_id = typ_id t in
-        Debug.show_edge `Structural
-          q_id
-          (GT.Ids.Type.to_int t_id);
-        dump_bound ctx seen q_id (read_var ctx bound q.q_bound)
-      end
+    Seen.guard seen.quant_seen id (fun () ->
+      let q_id = GT.Ids.Quant.to_int id in
+      let q_merged = Set.to_list q.q_merged
+                   |> List.map ~f:GT.Ids.Quant.to_int
+      in
+      Debug.show_node `Quant q_id q_merged;
+      let t_var = Lazy.force q.q_body in
+      let t = read_var ctx typ t_var in
+      dump_typ ctx seen t;
+      let t_id = typ_id t in
+      Debug.show_edge `Structural
+        q_id
+        (GT.Ids.Type.to_int t_id);
+      dump_bound ctx seen q_id (read_var ctx bound q.q_bound)
+    )
   and dump_bound ctx seen src b =
     (* We don't need to track bounds in `seen`, since they're non-cyclic
        and we already track their sources. *)
@@ -293,51 +287,48 @@ module DebugGraph = struct
     | _ -> [typ_id t]
   and dump_typ ctx seen t =
     let id = typ_id t in
-    let type_seen = !(seen.type_seen) in
-    if not (Set.mem type_seen id) then
-      begin
-        seen.type_seen := Set.add type_seen id;
-        let node_type = match t with
-          | `Free {tv_bound; _} ->
-              dump_bound ctx seen
-                (GT.Ids.Type.to_int id)
-                (read_var ctx bound tv_bound);
-              `Free
-          | `Ctor(_, `Row(`Extend(lbl, _, _))) -> `Const (`Extend lbl)
-          | `Ctor(_, `Row `Empty) -> `Const (`Named `Empty)
-          | `Ctor(_, `Type t) -> `Const (`Named (match t with
-              | `Const `Text -> `Text
-              | `Const `Int -> `Int
-              | `Const `Char -> `Char
-              | `Fn _ -> `Fn
-              | `Record _ -> `Record
-              | `Union _ -> `Union
-            ))
-          | `Lambda _ -> `Const (`Named `Lambda)
-          | `Apply _ -> `Const (`Named `Apply)
-          | `Poison _ -> `Const (`Named `Poison)
-        in
-        Debug.show_node node_type
+    Seen.guard seen.type_seen id (fun () ->
+      let node_type = match t with
+        | `Free {tv_bound; _} ->
+            dump_bound ctx seen
+              (GT.Ids.Type.to_int id)
+              (read_var ctx bound tv_bound);
+            `Free
+        | `Ctor(_, `Row(`Extend(lbl, _, _))) -> `Const (`Extend lbl)
+        | `Ctor(_, `Row `Empty) -> `Const (`Named `Empty)
+        | `Ctor(_, `Type t) -> `Const (`Named (match t with
+            | `Const `Text -> `Text
+            | `Const `Int -> `Int
+            | `Const `Char -> `Char
+            | `Fn _ -> `Fn
+            | `Record _ -> `Record
+            | `Union _ -> `Union
+          ))
+        | `Lambda _ -> `Const (`Named `Lambda)
+        | `Apply _ -> `Const (`Named `Apply)
+        | `Poison _ -> `Const (`Named `Poison)
+      in
+      Debug.show_node node_type
+        (GT.Ids.Type.to_int id)
+        (List.map ~f:GT.Ids.Type.to_int (merged_typ_ids t));
+      let kids = typ_kids ctx t in
+      List.iter kids ~f:(fun q ->
+        dump_q ctx seen q;
+        Debug.show_edge `Structural
           (GT.Ids.Type.to_int id)
-          (List.map ~f:GT.Ids.Type.to_int (merged_typ_ids t));
-        let kids = typ_kids ctx t in
-        List.iter kids ~f:(fun q ->
-          dump_q ctx seen q;
-          Debug.show_edge `Structural
-            (GT.Ids.Type.to_int id)
-            (GT.Ids.Quant.to_int q.q_id)
-        );
-        begin match kids with
-          | [] -> ()
-          | q :: qs ->
-              ignore (List.fold_left qs ~init:q ~f:(fun l r ->
-                  Debug.show_edge `Sibling
-                    (GT.Ids.Quant.to_int l.q_id)
-                    (GT.Ids.Quant.to_int r.q_id);
-                  r
-                ))
-        end
+          (GT.Ids.Quant.to_int q.q_id)
+      );
+      begin match kids with
+        | [] -> ()
+        | q :: qs ->
+            ignore (List.fold_left qs ~init:q ~f:(fun l r ->
+                Debug.show_edge `Sibling
+                  (GT.Ids.Quant.to_int l.q_id)
+                  (GT.Ids.Quant.to_int r.q_id);
+                r
+              ))
       end
+    )
 
   let dump ctx extra_constraints =
     let seen = empty_seen () in
