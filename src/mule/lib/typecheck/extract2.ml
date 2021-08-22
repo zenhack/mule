@@ -6,7 +6,7 @@
    in positive position or rigid in negative position can be inlined,
    reducing the need to use the bounded-quantification syntax.
 
-   The extension is that, since mule also has existential quantifiers,
+   Our extension is that, since mule also has existential quantifiers,
    we can use those for rigid variables in positive position or flexible
    variables in negative position -- so the bounded quantification syntax
    is only necessary when the type is truly inexpressible as a tree.
