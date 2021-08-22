@@ -35,6 +35,16 @@ type is_root =
   | Root of GT.g_node
   | NotRoot of GT.quant GT.var
 
+type seen = {
+  seen_q: (GT.Ids.Quant.t, GT.quant GT.var) Seen.t;
+  seen_ty: (GT.Ids.Type.t, GT.typ GT.var) Seen.t;
+}
+
+let make_seen () = {
+  seen_q = Seen.make (module GT.Ids.Quant);
+  seen_ty = Seen.make (module GT.Ids.Type);
+}
+
 let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
   fun ctx is_root flag ->
     Context.make_var ctx Context.bound (
@@ -49,9 +59,9 @@ let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
         }
     )
 
-let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~q_seen =
+let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
   let q = Context.read_var ctx Context.quant qv in
-  Seen.get q_seen q.q_id (fun () ->
+  Seen.get seen.seen_q q.q_id (fun () ->
     let ctr = Context.get_ctr ctx in
     let root = match is_root with
       | Root _ -> qv
@@ -83,7 +93,7 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~q_seen =
           ~root
           ~g
           ~inst_c
-          ~q_seen
+          ~seen
       else
         begin
           let tv_id = GT.Ids.Type.fresh ctr in
@@ -111,49 +121,50 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~q_seen =
         });
     Lazy.force qv'
   )
-and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~q_seen =
+and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
   let ty = Context.read_var ctx Context.typ tv in
-  let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~q_seen in
+  let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~seen in
   let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
   match ty with
   | `Free ftv ->
-      let t_bound = Context.read_var ctx Context.bound ftv.tv_bound in
-      let bound = make_bound ctx (NotRoot root) t_bound.b_flag in
-      let tv' = Context.make_var ctx Context.typ (`Free {
-          tv_id = id';
-          tv_merged = Set.singleton (module GT.Ids.Type) id';
-          tv_bound = bound;
-          tv_kind = ftv.tv_kind;
-        })
-      in
-      if not (ParentSet.has ctx parents t_bound.b_target) then
-        begin
-          (* HACK: we need to unify the two type variables, but
-             our unification constraints act on Q-nodes. So, we create
-             two fresh, inert Q nodes, point one at each type var, and
-             then unify the Q nodes. We should probably refactor to
-             allow just putting the constraint directly on the type
-             vars. *)
-          let fresh_q body =
-            let q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx) in
-            Context.make_var ctx Context.quant {
-              q_id;
-              q_merged = Set.singleton (module GT.Ids.Quant) q_id;
-              q_bound = Context.make_var ctx Context.bound {
-                  b_target = `G g;
-                  b_flag = `Flex;
-                };
-              q_body = lazy body;
-            }
-          in
-          Context.constrain ctx (`Unify C.{
-              unify_why = `InstanceLeaf inst_c;
-              unify_super = fresh_q tv;
-              unify_sub = fresh_q tv';
-            })
-        end;
-      tv'
-
+      Seen.get seen.seen_ty ftv.tv_id (fun () ->
+        let t_bound = Context.read_var ctx Context.bound ftv.tv_bound in
+        let bound = make_bound ctx (NotRoot root) t_bound.b_flag in
+        let tv' = Context.make_var ctx Context.typ (`Free {
+            tv_id = id';
+            tv_merged = Set.singleton (module GT.Ids.Type) id';
+            tv_bound = bound;
+            tv_kind = ftv.tv_kind;
+          })
+        in
+        if not (ParentSet.has ctx parents t_bound.b_target) then
+          begin
+            (* HACK: we need to unify the two type variables, but
+               our unification constraints act on Q-nodes. So, we create
+               two fresh, inert Q nodes, point one at each type var, and
+               then unify the Q nodes. We should probably refactor to
+               allow just putting the constraint directly on the type
+               vars. *)
+            let fresh_q body =
+              let q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx) in
+              Context.make_var ctx Context.quant {
+                q_id;
+                q_merged = Set.singleton (module GT.Ids.Quant) q_id;
+                q_bound = Context.make_var ctx Context.bound {
+                    b_target = `G g;
+                    b_flag = `Flex;
+                  };
+                q_body = lazy body;
+              }
+            in
+            Context.constrain ctx (`Unify C.{
+                unify_why = `InstanceLeaf inst_c;
+                unify_super = fresh_q tv;
+                unify_sub = fresh_q tv';
+              })
+          end;
+        tv'
+      )
   | `Poison _ -> tv
   | `Apply(_, f, arg) ->
       Context.make_var ctx Context.typ (`Apply(id', walk_q' f, walk_q' arg))
@@ -177,4 +188,4 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~q_seen =
 let expand ctx ~g ~at ~inst_c =
   let parents = ParentSet.singleton (GT.GNode.id g) in
   let qv = Lazy.force (GT.GNode.get g) in
-  walk_q ctx qv ~g:at ~parents ~is_root:(Root g) ~inst_c ~q_seen:(Seen.make (module GT.Ids.Quant))
+  walk_q ctx qv ~g:at ~parents ~is_root:(Root g) ~inst_c ~seen:(make_seen ())
