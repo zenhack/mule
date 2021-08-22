@@ -45,6 +45,15 @@ module OrganizedConstraints = struct
 
   let empty = { kind = []; unify = []; instance = []; }
 
+  let to_list ocs =
+    List.concat [
+      List.map ocs.instance ~f:(fun x -> `Instance x);
+      List.map ocs.unify ~f:(fun x -> `Unify x);
+      List.map ocs.kind ~f:(function
+        | `UnifyKind x -> `UnifyKind x
+        | `HasKind x -> `HasKind x
+      );
+    ]
   let rec of_list acc = function
     | [] ->
         acc
@@ -77,13 +86,13 @@ end
 
 let solve ctx =
   let module OCS = OrganizedConstraints in
-  let render () =
+  let render lst =
     if Config.render_constraint_graph () then
-      Context.DebugGraph.dump ctx
+      Context.DebugGraph.dump ctx (OCS.to_list lst)
   in
   let rec go ocs =
-    render ();
     let ocs' = OCS.append (OCS.of_list ctx (Context.take_constraints ctx)) ocs in
+    render ocs';
     match OCS.pop ocs' with
     | None -> ()
     | Some (`Kind c, cs) ->

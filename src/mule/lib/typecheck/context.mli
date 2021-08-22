@@ -63,5 +63,5 @@ val error : t -> MuleErr.t -> unit
 val errors : t -> MuleErr.t list
 
 module DebugGraph : sig
-  val dump : t -> unit
+  val dump : t -> C.constr list -> unit
 end

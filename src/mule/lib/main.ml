@@ -18,7 +18,7 @@ let typecheck path =
   in
   let g = Context.get_g ctx in
   let _q = Lazy.force (Graph_types.GNode.get g) in
-  Context.DebugGraph.dump ctx;
+  Context.DebugGraph.dump ctx [];
   Solve.solve ctx;
   match Context.errors ctx with
   | [] -> failwith "TODO: do something with resultant type."

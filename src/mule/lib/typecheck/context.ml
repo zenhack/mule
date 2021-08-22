@@ -339,11 +339,11 @@ module DebugGraph = struct
         end
       end
 
-  let dump ctx =
+  let dump ctx extra_constraints =
     let seen = empty_seen () in
     Debug.start_graph ();
     dump_g ctx seen (get_g ctx);
-    List.iter (get_constraints ctx) ~f:(function
+    List.iter (extra_constraints @ get_constraints ctx) ~f:(function
       | `Instance C.{inst_super; inst_sub; inst_why = _} ->
           dump_g ctx seen inst_super;
           let q = read_var ctx quant inst_sub in
