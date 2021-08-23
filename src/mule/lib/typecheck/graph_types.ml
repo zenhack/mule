@@ -159,3 +159,31 @@ let typ_id = function
   | `Lambda (id, _, _) -> id
   | `Apply (id, _, _) -> id
   | `Poison id -> id
+
+type ('q, 'v) seen = {
+  seen_q: (Ids.Quant.t, 'q) Seen.t;
+  seen_ty: (Ids.Type.t, 'v) Seen.t;
+}
+
+let empty_seen () = {
+  seen_q = Seen.make (module Ids.Quant);
+  seen_ty = Seen.make (module Ids.Type);
+}
+
+
+let ty_q_kids = function
+  | `Ctor (_, `Type (`Fn (a, b)))
+  | `Ctor (_, `Type (`Record (a, b)))
+  | `Ctor (_, `Row (`Extend (_, a, b)))
+  | `Lambda (_, a, b)
+  | `Apply (_, a, b) ->
+      [a; b]
+
+  | `Ctor (_, `Type (`Union a)) ->
+      [a]
+
+  | `Free _
+  | `Ctor (_, `Type (`Const _))
+  | `Ctor (_, `Row `Empty)
+  | `Poison _ ->
+      []
