@@ -41,3 +41,71 @@ and compute_rcs_ty seen ctx rc tv =
   Seen.guard seen.GT.seen_ty id (fun () ->
     List.iter (GT.ty_q_kids t) ~f:(compute_rcs_q seen ctx rc)
   )
+
+(* Return the quant for the variable's b_target, or None if it
+   is bound on a G-node *)
+let maybe_q_target ctx bv =
+  let {GT.b_target; _} = Context.read_var ctx Context.bound bv in
+  match b_target with
+  | `G _ -> None
+  | `Q qv -> Some (Context.read_var ctx Context.quant qv).q_id
+
+
+(* enumerate_binidngs_* walk over the type graph, and (lazily)
+   return a list of binding edges that target q-nodes. Each
+   binding edge is a pair (node, target), where target is the
+   GT.quant on which node is bound, and node is
+   [ `Q quant var | `Ty typ var ]. *)
+let rec enumerate_bindings_q seen ctx qv =
+  let q = Context.read_var ctx Context.quant qv in
+  Seen.get seen.GT.seen_q q.q_id (fun () ->
+    let body = enumerate_bindings_ty seen ctx (Lazy.force q.q_body) in
+    match maybe_q_target ctx q.q_bound with
+    | None -> body
+    | Some q' -> lazy ((`Q qv, q') :: Lazy.force body)
+  )
+and enumerate_bindings_ty seen ctx tv =
+  let typ = Context.read_var ctx Context.typ tv in
+  Seen.get seen.GT.seen_ty (GT.typ_id typ) (fun () ->
+    let kids = lazy (
+      GT.ty_q_kids typ
+        |> List.map ~f:(fun q ->
+            Lazy.force (enumerate_bindings_q seen ctx q)
+          )
+        |> List.concat
+      )
+    in
+    match typ with
+    | `Free {tv_bound; _} ->
+        begin match maybe_q_target ctx tv_bound with
+        | None -> kids
+        | Some q -> lazy ((`Ty tv, q) :: Lazy.force kids)
+        end
+    | _ -> kids
+  )
+
+(* Turn the list of bindings returned by enumerate_bindings_* into a map
+   from q -> nodes bound on q. *)
+let accumulate_bindings binds =
+  List.fold
+    binds
+    ~init:(Map.empty (module GT.Ids.Quant))
+    ~f:(fun m (child, q) ->
+      Map.update m q.GT.q_id ~f:(fun v ->
+        child :: Option.value v ~default:[]
+      )
+    )
+
+(* TODO:
+   - Compute refcounts for each type.
+   - walk over the graph, and generate nodes in a bottom-up fashion.
+   - Keep track of parent nodes on the way down; if you see a node
+     you've seen before, emit a type variable and add it to the list
+     of recursive nodes. On the way back up, if a node is in the
+     recursive set, add a rec binder to it with the appropriate variable
+     name.
+   - At each q node, for each of the nodes bound on it with rc > 1, and
+     for each bottom node with rc == 1, emit a quantifier, with that node
+     as its bound. Choice of exists or all quantifier depends on the binder
+     flag and whether the quant appears in positive or negative position.
+*)
