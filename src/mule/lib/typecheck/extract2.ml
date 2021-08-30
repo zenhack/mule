@@ -17,6 +17,7 @@
 *)
 
 module GT = Graph_types
+module DT = Desugared_ast_type_t
 
 type rc = {
   rc_q: int GT.Ids.QuantMap.t ref;
@@ -90,14 +91,60 @@ let accumulate_bindings binds =
   List.fold
     binds
     ~init:(Map.empty (module GT.Ids.Quant))
-    ~f:(fun m (child, q) ->
-      Map.update m q.GT.q_id ~f:(fun v ->
+    ~f:(fun m (child, q_id) ->
+      Map.update m q_id ~f:(fun v ->
         child :: Option.value v ~default:[]
       )
     )
 
+type bind_src =
+    [ `Q of GT.quant GT.var
+    | `Ty of GT.typ GT.var
+    ]
+
+type display_ctx = {
+  rc: rc;
+  bindings: bind_src list GT.Ids.QuantMap.t;
+}
+
+let degraph_quant ctx qv =
+  let rc = {
+    rc_q = ref (Map.empty (module GT.Ids.Quant));
+    rc_ty = ref (Map.empty (module GT.Ids.Type));
+  }
+  in
+  compute_rcs_q (GT.empty_seen ()) ctx rc qv;
+  let binds = accumulate_bindings (Lazy.force (enumerate_bindings_q (GT.empty_seen ()) ctx qv)) in
+  let recursive = ref (Map.empty (module GT.Ids.Quant)) in
+  let rec go_q qv ~parents =
+    let q = Context.read_var ctx Context.quant qv in
+    if Set.mem parents q.q_id then
+      failwith "TODO"
+    else
+      failwith "TODO"
+  and go_ty tv ~parents =
+    let t = Context.read_var ctx Context.typ tv in
+    match t with
+    | `Free _ -> failwith "TODO"
+    | `Ctor(_, c) -> go_ctor ~parents c
+    | `Lambda(_, p, r) -> go_lambda ~parents p r
+    | `Apply(_, f, arg) -> go_apply ~parents f arg
+    | `Poison _ -> failwith "TODO"
+  and go_ctor ~parents = function
+    | _ -> failwith "TODO"
+  and go_lambda ~parents _p _r =
+    failwith "TODO"
+  and go_apply ~parents fn arg =
+    DT.App {
+      app_info = ();
+      app_fn = go_q ~parents fn;
+      app_arg = go_q ~parents arg;
+    }
+  in
+  go_q ~parents:(Set.empty (module GT.Ids.Quant)) qv
+
+
 (* TODO:
-   - Compute refcounts for each type.
    - walk over the graph, and generate nodes in a bottom-up fashion.
    - Keep track of parent nodes on the way down; if you see a node
      you've seen before, emit a type variable and add it to the list
