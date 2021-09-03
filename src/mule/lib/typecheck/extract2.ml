@@ -11,24 +11,38 @@
    variables in negative position -- so the bounded quantification syntax
    is only necessary when the type is truly inexpressible as a tree.
 
-   Much of the logic in this module has to do with preparation; e.g.
-   we first compute reference counts for each type, so we can easily
-   tell whether we should inline a type.
+   The logic for this is surprisingly complex; there is a lot of bookkeeping
+   to manage both because of the trick described above, and just because
+   we're turning a possibly-cyclic graph into a syntactic tree, so this
+   involves a lot more than just walking over and converting everything.
+
+   Notably:
+
+   - The trick above requires us to compute refcounts for the nodes.
+   - We have to catch recursive types and add rec. binders.
 *)
 
 module GT = Graph_types
 module DT = Desugared_ast_type_t
 module Var = Common_ast.Var
 
+(* Reference counts for all nodes in the type graph. The refcount is
+   the number of structural references to a node; binding edges do not
+   count. *)
 type rc = {
   rc_q: int GT.Ids.QuantMap.t;
   rc_ty: int GT.Ids.TypeMap.t;
 }
 
+(* The source of a binding edge. *)
 type bind_src =
     [ `Q of GT.quant GT.var
     | `Ty of GT.typ GT.var
     ]
+
+(* A binding edge, as (source, target). Note that for our purposes in this
+   module, we don't need to process q-nodes that are themselves bound on
+   g-nodes, we can assume the target is always q-node. *)
 type binding = (bind_src * GT.Ids.Quant.t)
 
 (* State & info bundle needed to display a type. *)
@@ -54,21 +68,24 @@ type display_ctx = {
   memo_types: (unit DT.t, unit DT.t) GT.seen;
 }
 
+(**** Helpers for computing reference counts ****)
+
+(* An initially empty set of refcounts. *)
 let empty_rcs = {
   rc_q = Map.empty (module GT.Ids.Quant);
   rc_ty = Map.empty (module GT.Ids.Type);
 }
 
+(* Bump the refcount for a q-node *)
 let addref_q rc id =
   Ref.replace rc (fun r ->
     { r with rc_q = Map.update r.rc_q id ~f:(fun v -> Option.value v ~default:0 + 1) }
   )
-
+(* Bump the refcount for a type node. *)
 let addref_ty rc id =
   Ref.replace rc (fun r ->
     { r with rc_ty = Map.update r.rc_ty id ~f:(fun v -> Option.value v ~default:0 + 1) }
   )
-
 let rec compute_rcs_q seen ctx rc qv =
   let q = Context.read_var ctx Context.quant qv in
   addref_q rc q.q_id;
@@ -83,10 +100,14 @@ and compute_rcs_ty seen ctx rc tv =
     List.iter (GT.ty_q_kids t) ~f:(compute_rcs_q seen ctx rc)
   )
 
-let compute_rcs_q ctx qv =
-  let rc_ref = ref empty_rcs in
-  compute_rcs_q (GT.empty_seen ()) ctx rc_ref qv;
-  !rc_ref
+(* Compute the reference counts for all nodes reachable from qv. *)
+let compute_rcs_q : Context.t -> GT.quant GT.var -> rc =
+  fun ctx qv ->
+    let rc_ref = ref empty_rcs in
+    compute_rcs_q (GT.empty_seen ()) ctx rc_ref qv;
+    !rc_ref
+
+(**** Helpers for collecting binding edges. ***)
 
 (* Return the quant for the variable's b_target, or None if it
    is bound on a G-node *)
