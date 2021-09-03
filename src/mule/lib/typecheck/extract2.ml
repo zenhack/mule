@@ -65,7 +65,7 @@ type display_ctx = {
   sign: Sign.t;
 
   (* memoized results for each node. *)
-  memo_types: (unit DT.t, unit DT.t) GT.seen;
+  seen: (unit DT.t, unit DT.t) GT.seen;
 }
 
 (**** Helpers for computing reference counts ****)
@@ -175,7 +175,7 @@ let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
       recursive_vars = ref (Map.empty (module GT.Ids.Quant));
       parents = Set.empty (module GT.Ids.Quant);
       sign = `Pos;
-      memo_types = GT.empty_seen ();
+      seen = GT.empty_seen ();
     }
 
 (* Mark the node as recursive if it isn't already, and return the
@@ -199,6 +199,55 @@ let maybe_with_recursive : display_ctx -> GT.Ids.Quant.t -> unit DT.t -> unit DT
         mu_var = v;
         mu_body = body;
       }
+
+type bind_src_result =
+  [ `Inline of unit DT.t
+  | `Bound of DT.quantifier * Var.t * unit DT.t
+  ]
+
+let rec degraph_bind_src : display_ctx -> bind_src -> bind_src_result =
+  fun dc -> function
+    | `Q qv ->
+        let q = Context.read_var dc.ctx Context.quant qv in
+        let degraph_child = degraph_bind_src { dc with parents = Set.add dc.parents q.q_id } in
+        Seen.get dc.seen.seen_q dc.ctx q.q_id (fun () ->
+          (* TODO FIXME: check for recursive type. *)
+          let (_inline, bound) =
+            Map.find dc.bindings q
+              |> Option.value ~default:[]
+              |> List.map ~f:degraph_child
+              |> List.partition_map ~f:(function
+                | `Inline v -> Either.First v
+                | `Bound v -> Either.Second v
+              )
+          in
+          let body = degraph_child (`Ty (Lazy.force q.q_body)) in
+          List.fold_left
+            bound
+            ~init:body
+            ~f:(fun q_body (q_quant, q_var, ty) ->
+              DT.Quant {
+                q_info = ();
+                q_quant;
+                q_var;
+                q_bound =
+                  begin match ty with
+                    | DT.Var _ -> None
+                    | _ -> Some ty
+                  end;
+                q_body;
+              }
+            )
+        )
+    | `Ty tv ->
+        let ty = Context.read_var dc.ctx Context.typ tv in
+        let ty_id = GT.typ_id ty in
+        Seen.get dc.seen.seen_ty dc.ctx ty_id (fun () ->
+          if Map.find_exn dc.rc.rc_ty ty_id == 1 then
+            failwith "TODO"
+          else
+            failwith "TODO"
+        )
 
 (*
 let degraph_quant ctx qv =
