@@ -160,9 +160,9 @@ let typ_id = function
   | `Apply (id, _, _) -> id
   | `Poison id -> id
 
-type ('q, 'v) seen = {
+type ('q, 'ty) seen = {
   seen_q: (Ids.Quant.t, 'q) Seen.t;
-  seen_ty: (Ids.Type.t, 'v) Seen.t;
+  seen_ty: (Ids.Type.t, 'ty) Seen.t;
 }
 
 let empty_seen () = {

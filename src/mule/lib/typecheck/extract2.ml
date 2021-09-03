@@ -18,16 +18,27 @@
 
 module GT = Graph_types
 module DT = Desugared_ast_type_t
+module Var = Common_ast.Var
 
 type rc = {
-  rc_q: int GT.Ids.QuantMap.t ref;
-  rc_ty: int GT.Ids.TypeMap.t ref;
+  rc_q: int GT.Ids.QuantMap.t;
+  rc_ty: int GT.Ids.TypeMap.t;
 }
 
-let addref_q {rc_q; _} id =
-  rc_q := Map.update !rc_q id ~f:(fun v -> Option.value v ~default:0 + 1)
-let addref_ty {rc_ty; _} id =
-  rc_ty := Map.update !rc_ty id ~f:(fun v -> Option.value v ~default:0 + 1)
+let empty_rcs = {
+  rc_q = Map.empty (module GT.Ids.Quant);
+  rc_ty = Map.empty (module GT.Ids.Type);
+}
+
+let addref_q rc id =
+  Ref.replace rc (fun r ->
+    { r with rc_q = Map.update r.rc_q id ~f:(fun v -> Option.value v ~default:0 + 1) }
+  )
+
+let addref_ty rc id =
+  Ref.replace rc (fun r ->
+    { r with rc_ty = Map.update r.rc_ty id ~f:(fun v -> Option.value v ~default:0 + 1) }
+  )
 
 let rec compute_rcs_q seen ctx rc qv =
   let q = Context.read_var ctx Context.quant qv in
@@ -43,6 +54,11 @@ and compute_rcs_ty seen ctx rc tv =
     List.iter (GT.ty_q_kids t) ~f:(compute_rcs_q seen ctx rc)
   )
 
+let compute_rcs_q ctx qv =
+  let rc_ref = ref empty_rcs in
+  compute_rcs_q (GT.empty_seen ()) ctx rc_ref qv;
+  !rc_ref
+
 (* Return the quant for the variable's b_target, or None if it
    is bound on a G-node *)
 let maybe_q_target ctx bv =
@@ -51,6 +67,12 @@ let maybe_q_target ctx bv =
   | `G _ -> None
   | `Q qv -> Some (Context.read_var ctx Context.quant qv).q_id
 
+
+type bind_src =
+    [ `Q of GT.quant GT.var
+    | `Ty of GT.typ GT.var
+    ]
+type binding = (bind_src * GT.Ids.Quant.t)
 
 (* enumerate_binidngs_* walk over the type graph, and (lazily)
    return a list of binding edges that target q-nodes. Each
@@ -87,26 +109,78 @@ and enumerate_bindings_ty seen ctx tv =
 
 (* Turn the list of bindings returned by enumerate_bindings_* into a map
    from q -> nodes bound on q. *)
-let accumulate_bindings binds =
-  List.fold
-    binds
-    ~init:(Map.empty (module GT.Ids.Quant))
-    ~f:(fun m (child, q_id) ->
-      Map.update m q_id ~f:(fun v ->
-        child :: Option.value v ~default:[]
+let accumulate_bindings : binding list -> bind_src list GT.Ids.QuantMap.t =
+  fun binds ->
+    List.fold
+      binds
+      ~init:(Map.empty (module GT.Ids.Quant))
+      ~f:(fun m (child, q_id) ->
+        Map.update m q_id ~f:(fun v ->
+          child :: Option.value v ~default:[]
+        )
       )
-    )
 
-type bind_src =
-    [ `Q of GT.quant GT.var
-    | `Ty of GT.typ GT.var
-    ]
-
+(* State & info bundle needed to display a type. *)
 type display_ctx = {
-  rc: rc;
-  bindings: bind_src list GT.Ids.QuantMap.t;
+  ctx: Context.t; (* General type context, for reading variables *)
+
+  (* These are computed up front, and never change: *)
+  rc: rc; (* Refcounts for each node *)
+  bindings: bind_src list GT.Ids.QuantMap.t; (* Map from each q node to nodes bound on it. *)
+
+  (* For q-nodes we have determined are recursive types, this contains
+     variable names to use for those types. *)
+  recursive_vars: Var.t GT.Ids.QuantMap.t ref;
+
+  (* List of q-nodes that are structural parents of the node we are currently
+     examining. Used to catch recursive types. *)
+  parents: GT.Ids.QuantSet.t;
+
+  (* The variance of our position in the type. *)
+  sign: Sign.t;
+
+  (* memoized results for each node. *)
+  memo_types: (unit DT.t, unit DT.t) GT.seen;
 }
 
+(* Generate the initial display context for printing the node. *)
+let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
+  fun ctx qv -> {
+      rc = compute_rcs_q ctx qv;
+      bindings =
+        enumerate_bindings_q (GT.empty_seen ()) ctx qv
+        |> Lazy.force
+        |> accumulate_bindings;
+      ctx;
+      recursive_vars = ref (Map.empty (module GT.Ids.Quant));
+      parents = Set.empty (module GT.Ids.Quant);
+      sign = `Pos;
+      memo_types = GT.empty_seen ();
+    }
+
+(* Mark the node as recursive if it isn't already, and return the
+   variable name to use for it. *)
+let as_recursive_var : display_ctx -> GT.Ids.Quant.t -> Var.t =
+  fun dc qid -> match Map.find !(dc.recursive_vars) qid with
+    | Some v -> v
+    | None ->
+        begin
+          let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
+          dc.recursive_vars := Map.set ~key:qid ~data:v !(dc.recursive_vars);
+          v
+        end
+(* If the node is known to be a recursive type, wrap the type it in a rec.
+   binder, with the appropriate variable name. Otherwise just return it as-is. *)
+let maybe_with_recursive : display_ctx -> GT.Ids.Quant.t -> unit DT.t -> unit DT.t =
+  fun dc qid body -> match Map.find !(dc.recursive_vars) qid with
+    | None -> body
+    | Some v -> DT.Recur {
+        mu_info = ();
+        mu_var = v;
+        mu_body = body;
+      }
+
+(*
 let degraph_quant ctx qv =
   let rc = {
     rc_q = ref (Map.empty (module GT.Ids.Quant));
@@ -115,13 +189,51 @@ let degraph_quant ctx qv =
   in
   compute_rcs_q (GT.empty_seen ()) ctx rc qv;
   let binds = accumulate_bindings (Lazy.force (enumerate_bindings_q (GT.empty_seen ()) ctx qv)) in
-  let recursive = ref (Map.empty (module GT.Ids.Quant)) in
+
+  let recursive = ref (Set.empty (module GT.Ids.Quant)) in
+  let q_names = ref (Map.empty (module GT.Ids.Quant)) in
+  let ty_names = ref (Map.empty (module GT.Ids.Type)) in
+
+  let make_var mapref id =
+    let v = Gensym.anon_var (Context.get_ctr ctx) in
+    recursive := Map.set ~key:id ~data:v !mapref;
+    v
+  in
+
   let rec go_q qv ~parents =
     let q = Context.read_var ctx Context.quant qv in
     if Set.mem parents q.q_id then
-      failwith "TODO"
+      begin
+        let v = make_var q_names q.q_id in
+        recursive := Map.set ~key:q.q_id ~data:v !recursive;
+        DT.Var {
+          v_var = v;
+          v_info = ();
+          v_src = `Generated;
+        }
+      end
     else
-      failwith "TODO"
+      let body = go_ty (Lazy.force q.q_body) ~parents:(Set.add parents q.q_id) in
+      let pre_quant =
+        if Set.mem !recursive q.q_id then
+          DT.Recur {
+              mu_info = ();
+              mu_var = Map.find_exn !q_names q.q_id;
+              mu_body = body;
+            }
+        else
+          body
+      in
+      let with_quant =
+      if (Map.find_exn !(rc.rc_q) q.q_id) > 1 then
+          begin
+            let v = make_var q_names q.q_id in
+
+          end
+        else
+          (* TODO: bind quantifiers. *)
+          body
+      end
   and go_ty tv ~parents =
     let t = Context.read_var ctx Context.typ tv in
     match t with
@@ -142,6 +254,7 @@ let degraph_quant ctx qv =
     }
   in
   go_q ~parents:(Set.empty (module GT.Ids.Quant)) qv
+   *)
 
 
 (* TODO:
