@@ -25,6 +25,35 @@ type rc = {
   rc_ty: int GT.Ids.TypeMap.t;
 }
 
+type bind_src =
+    [ `Q of GT.quant GT.var
+    | `Ty of GT.typ GT.var
+    ]
+type binding = (bind_src * GT.Ids.Quant.t)
+
+(* State & info bundle needed to display a type. *)
+type display_ctx = {
+  ctx: Context.t; (* General type context, for reading variables *)
+
+  (* These are computed up front, and never change: *)
+  rc: rc; (* Refcounts for each node *)
+  bindings: bind_src list GT.Ids.QuantMap.t; (* Map from each q node to nodes bound on it. *)
+
+  (* For q-nodes we have determined are recursive types, this contains
+     variable names to use for those types. *)
+  recursive_vars: Var.t GT.Ids.QuantMap.t ref;
+
+  (* List of q-nodes that are structural parents of the node we are currently
+     examining. Used to catch recursive types. *)
+  parents: GT.Ids.QuantSet.t;
+
+  (* The variance of our position in the type. *)
+  sign: Sign.t;
+
+  (* memoized results for each node. *)
+  memo_types: (unit DT.t, unit DT.t) GT.seen;
+}
+
 let empty_rcs = {
   rc_q = Map.empty (module GT.Ids.Quant);
   rc_ty = Map.empty (module GT.Ids.Type);
@@ -66,13 +95,6 @@ let maybe_q_target ctx bv =
   match b_target with
   | `G _ -> None
   | `Q qv -> Some (Context.read_var ctx Context.quant qv).q_id
-
-
-type bind_src =
-    [ `Q of GT.quant GT.var
-    | `Ty of GT.typ GT.var
-    ]
-type binding = (bind_src * GT.Ids.Quant.t)
 
 (* enumerate_binidngs_* walk over the type graph, and (lazily)
    return a list of binding edges that target q-nodes. Each
@@ -119,29 +141,6 @@ let accumulate_bindings : binding list -> bind_src list GT.Ids.QuantMap.t =
           child :: Option.value v ~default:[]
         )
       )
-
-(* State & info bundle needed to display a type. *)
-type display_ctx = {
-  ctx: Context.t; (* General type context, for reading variables *)
-
-  (* These are computed up front, and never change: *)
-  rc: rc; (* Refcounts for each node *)
-  bindings: bind_src list GT.Ids.QuantMap.t; (* Map from each q node to nodes bound on it. *)
-
-  (* For q-nodes we have determined are recursive types, this contains
-     variable names to use for those types. *)
-  recursive_vars: Var.t GT.Ids.QuantMap.t ref;
-
-  (* List of q-nodes that are structural parents of the node we are currently
-     examining. Used to catch recursive types. *)
-  parents: GT.Ids.QuantSet.t;
-
-  (* The variance of our position in the type. *)
-  sign: Sign.t;
-
-  (* memoized results for each node. *)
-  memo_types: (unit DT.t, unit DT.t) GT.seen;
-}
 
 (* Generate the initial display context for printing the node. *)
 let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
