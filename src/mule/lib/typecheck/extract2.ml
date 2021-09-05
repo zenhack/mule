@@ -45,6 +45,19 @@ type bind_src =
    g-nodes, we can assume the target is always q-node. *)
 type binding = (bind_src * GT.Ids.Quant.t)
 
+(* Information about a type needed for it to be used as a bound.
+   TODO: move this to DT? *)
+type quant_info = {
+  (* Variable name to which to bind the type in the quantifier *)
+  qi_var: Var.t;
+
+  (* Quantifier with which to bind bs_var *)
+  qi_quant: DT.quantifier;
+
+  (* The actual bound on the quantifier. *)
+  qi_bound: unit DT.t option;
+}
+
 (* State & info bundle needed to display a type. *)
 type display_ctx = {
   ctx: Context.t; (* General type context, for reading variables *)
@@ -65,7 +78,7 @@ type display_ctx = {
   sign: Sign.t;
 
   (* memoized results for each node. *)
-  seen: (unit DT.t, unit DT.t) GT.seen;
+  seen: (quant_info, quant_info) GT.seen;
 }
 
 (**** Helpers for computing reference counts ****)
@@ -200,53 +213,83 @@ let maybe_with_recursive : display_ctx -> GT.Ids.Quant.t -> unit DT.t -> unit DT
         mu_body = body;
       }
 
-type bind_src_result =
-  [ `Inline of unit DT.t
-  | `Bound of DT.quantifier * Var.t * unit DT.t
-  ]
-
-let rec degraph_bind_src : display_ctx -> bind_src -> bind_src_result =
+let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
     | `Q qv ->
         let q = Context.read_var dc.ctx Context.quant qv in
         let degraph_child = degraph_bind_src { dc with parents = Set.add dc.parents q.q_id } in
-        Seen.get dc.seen.seen_q dc.ctx q.q_id (fun () ->
+        Seen.get dc.seen.seen_q q.q_id (fun () ->
           (* TODO FIXME: check for recursive type. *)
-          let (_inline, bound) =
-            Map.find dc.bindings q
+          let bound_vars =
+            Map.find dc.bindings q.q_id
               |> Option.value ~default:[]
               |> List.map ~f:degraph_child
-              |> List.partition_map ~f:(function
-                | `Inline v -> Either.First v
-                | `Bound v -> Either.Second v
-              )
           in
           let body = degraph_child (`Ty (Lazy.force q.q_body)) in
-          List.fold_left
-            bound
-            ~init:body
-            ~f:(fun q_body (q_quant, q_var, ty) ->
-              DT.Quant {
-                q_info = ();
-                q_quant;
-                q_var;
-                q_bound =
-                  begin match ty with
-                    | DT.Var _ -> None
-                    | _ -> Some ty
-                  end;
-                q_body;
-              }
-            )
+          {
+            qi_var = Gensym.anon_var (Context.get_ctr dc.ctx);
+            qi_quant = (
+              failwith "TODO"
+            );
+            qi_bound = Some (List.fold_left
+              bound_vars
+              ~init:(Option.value body.qi_bound ~default:(DT.Var {
+                  v_info = ();
+                  v_src = `Generated;
+                  v_var = body.qi_var;
+                }))
+              ~f:(fun q_body qi ->
+                DT.Quant {
+                  q_info = ();
+                  q_quant = qi.qi_quant;
+                  q_var = qi.qi_var;
+                  q_bound = qi.qi_bound;
+                  q_body;
+                }
+              ));
+          }
         )
     | `Ty tv ->
         let ty = Context.read_var dc.ctx Context.typ tv in
         let ty_id = GT.typ_id ty in
-        Seen.get dc.seen.seen_ty dc.ctx ty_id (fun () ->
-          if Map.find_exn dc.rc.rc_ty ty_id == 1 then
-            failwith "TODO"
-          else
-            failwith "TODO"
+        Seen.get dc.seen.seen_ty ty_id (fun () ->
+          let get_q dc q = DT.Var {
+              v_info = ();
+              v_src = `Generated;
+              v_var = (degraph_bind_src dc (`Q q)).qi_var;
+            }
+          in
+          let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
+          match ty with
+          | `Free _ ->
+              {
+                qi_var = v;
+                qi_quant = failwith "TODO";
+                qi_bound = None;
+              }
+          | `Ctor (_, `Type(`Fn(p, r))) ->
+              {
+                qi_var = v;
+                qi_quant = failwith "TODO";
+                qi_bound = Some (DT.Fn {
+                    fn_info = ();
+                    fn_pvar = None;
+                    fn_param = get_q { dc with sign = Sign.flip dc.sign } p;
+                    fn_ret = get_q dc r;
+                  });
+              }
+          | `Ctor (_, `Type(`Const c)) ->
+              {
+                qi_var = v;
+                qi_quant = failwith "TODO";
+                qi_bound = Some (DT.Named {
+                    n_info = ();
+                    n_name = match c with
+                      | `Text -> `Text
+                      | `Int -> `Int
+                      | `Char -> `Char
+                  });
+              }
         )
 
 (*
