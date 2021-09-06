@@ -209,11 +209,16 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
         let ty = Context.read_var dc.ctx Context.typ tv in
         let ty_id = GT.typ_id ty in
         Seen.get dc.seen.seen_ty ty_id (fun () ->
-          let get_q q = DT.Var {
-              v_info = ();
-              v_src = `Generated;
-              v_var = (degraph_bind_src dc (`Q q)).qi_var;
-            }
+          let get_q q =
+            let qi = degraph_bind_src dc (`Q q) in
+            match qi.qi_bound with
+            | None | Some (DT.Quant _) -> DT.Var {
+                v_info = ();
+                v_src = `Generated;
+                v_var = qi.qi_var;
+              }
+            (* If there's nothing bound on the q node, just inline it. *)
+            | Some t -> t
           in
           let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
           match ty with
