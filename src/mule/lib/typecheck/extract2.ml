@@ -274,3 +274,4 @@ let extract_type_ast : Context.t -> GT.quant GT.var -> unit DT.t =
   fun ctx qv ->
   let dc = build_display_ctx ctx qv in
   Option.value_exn (degraph_bind_src dc (`Q qv)).qi_bound
+  |> Relabel.relabel_type ()
