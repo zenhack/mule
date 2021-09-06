@@ -4,4 +4,5 @@ set -e
 cd $(dirname $0)
 export MULE_ROOT="$PWD/stdlib"
 make
+echo
 ./_build/default/src/mule/mule.exe $@
