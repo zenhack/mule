@@ -84,32 +84,24 @@ let maybe_q_target ctx bv =
    binding edge is a pair (node, target), where target is the
    GT.quant on which node is bound, and node is
    [ `Q quant var | `Ty typ var ]. *)
-let rec enumerate_bindings_q seen ctx qv =
+let rec enumerate_bindings_q emit seen ctx qv =
   let q = Context.read_var ctx Context.quant qv in
-  Seen.get seen.GT.seen_q q.q_id (fun () ->
-    let body = enumerate_bindings_ty seen ctx (Lazy.force q.q_body) in
-    match maybe_q_target ctx q.q_bound with
-    | None -> body
-    | Some q' -> lazy ((`Q qv, q') :: Lazy.force body)
+  Seen.guard seen.GT.seen_q q.q_id (fun () ->
+    enumerate_bindings_ty emit seen ctx (Lazy.force q.q_body);
+    Option.iter (maybe_q_target ctx q.q_bound) ~f:(fun q' ->
+      emit (`Q qv, q')
+    )
   )
-and enumerate_bindings_ty seen ctx tv =
+and enumerate_bindings_ty emit seen ctx tv =
   let typ = Context.read_var ctx Context.typ tv in
-  Seen.get seen.GT.seen_ty (GT.typ_id typ) (fun () ->
-    let kids = lazy (
-      GT.ty_q_kids typ
-        |> List.map ~f:(fun q ->
-            Lazy.force (enumerate_bindings_q seen ctx q)
-          )
-        |> List.concat
-      )
-    in
+  Seen.guard seen.GT.seen_ty (GT.typ_id typ) (fun () ->
+    List.iter (GT.ty_q_kids typ) ~f:(enumerate_bindings_q emit seen ctx);
     match typ with
     | `Free {tv_bound; _} ->
-        begin match maybe_q_target ctx tv_bound with
-        | None -> kids
-        | Some q -> lazy ((`Ty tv, q) :: Lazy.force kids)
-        end
-    | _ -> kids
+        Option.iter (maybe_q_target ctx tv_bound) ~f:(fun q ->
+          emit (`Ty tv, q)
+        )
+    | _ -> ()
   )
 
 (* Turn the list of bindings returned by enumerate_bindings_* into a map
@@ -127,16 +119,16 @@ let accumulate_bindings : binding list -> bind_src list GT.Ids.QuantMap.t =
 
 (* Generate the initial display context for printing the node. *)
 let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
-  fun ctx qv -> {
-      bindings =
-        enumerate_bindings_q (GT.empty_seen ()) ctx qv
-        |> Lazy.force
-        |> accumulate_bindings;
-      ctx;
-      recursive_vars = ref (Map.empty (module GT.Ids.Quant));
-      parents = Set.empty (module GT.Ids.Quant);
-      seen = GT.empty_seen ();
-    }
+  fun ctx qv ->
+  let bs = ref [] in
+  enumerate_bindings_q (fun b -> bs := b :: !bs) (GT.empty_seen ()) ctx qv;
+  {
+    bindings = accumulate_bindings !bs;
+    ctx;
+    recursive_vars = ref (Map.empty (module GT.Ids.Quant));
+    parents = Set.empty (module GT.Ids.Quant);
+    seen = GT.empty_seen ();
+  }
 
 (* Mark the node as recursive if it isn't already, and return the
    variable name to use for it. *)
@@ -186,36 +178,49 @@ let rec degraph_quant : display_ctx -> GT.quant GT.var -> quant_info =
       {
         qi_var = Gensym.anon_var (Context.get_ctr dc.ctx);
         qi_quant = bv_to_tmp_quant dc.ctx q.q_bound;
-        qi_bound = Some (List.fold_left
-          bound_vars
-          ~init:body
-          ~f:(fun q_body qi ->
-            DT.Quant {
-              q_info = ();
-              q_quant = qi.qi_quant;
-              q_var = qi.qi_var;
-              q_bound = qi.qi_bound;
-              q_body;
-            }
-          ));
+        qi_bound =
+          Some
+            (maybe_with_recursive child_dc q.q_id
+              (List.fold_left
+                bound_vars
+                ~init:body
+                ~f:(fun q_body qi ->
+                  DT.Quant {
+                    q_info = ();
+                    q_quant = qi.qi_quant;
+                    q_var = qi.qi_var;
+                    q_bound = qi.qi_bound;
+                    q_body;
+                  }
+                )));
       }
     )
 and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
   fun dc tv ->
     let ty = Context.read_var dc.ctx Context.typ tv in
     let ty_id = GT.typ_id ty in
+    let get_q qv =
+      let q = Context.read_var dc.ctx Context.quant qv in
+      if Set.mem dc.parents q.q_id then
+        DT.Var {
+          v_info = ();
+          v_src = `Generated;
+          v_var = as_recursive_var dc q.q_id;
+        }
+      else
+        begin
+          let qi = degraph_quant dc qv in
+          match qi.qi_bound with
+          | None | Some (DT.Quant _) -> DT.Var {
+              v_info = ();
+              v_src = `Generated;
+              v_var = qi.qi_var;
+            }
+          (* If there's nothing bound on the q node, just inline it. *)
+          | Some t -> t
+        end
+    in
     Seen.get dc.seen.seen_ty ty_id (fun () ->
-      let get_q q =
-        let qi = degraph_bind_src dc (`Q q) in
-        match qi.qi_bound with
-        | None | Some (DT.Quant _) -> DT.Var {
-            v_info = ();
-            v_src = `Generated;
-            v_var = qi.qi_var;
-          }
-        (* If there's nothing bound on the q node, just inline it. *)
-        | Some t -> t
-      in
       let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
       match ty with
       | `Free _ -> DT.Var {
