@@ -213,6 +213,16 @@ let maybe_with_recursive : display_ctx -> GT.Ids.Quant.t -> unit DT.t -> unit DT
         mu_body = body;
       }
 
+(* convert a binding to a quantifier, based on its flag. This assumes the quantifier
+   will be in positive position.
+
+   The way we use it this is not actually true, but we go back over the type in a
+   separate pass, fixing up the quantifiers based on their actual position. *)
+let bv_to_tmp_quant ctx bv =
+  match (Context.read_var ctx Context.bound bv).b_flag with
+  | `Flex -> `All
+  | `Rigid -> `Exist
+
 let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
     | `Q qv ->
@@ -228,9 +238,7 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
           let body = degraph_child (`Ty (Lazy.force q.q_body)) in
           {
             qi_var = Gensym.anon_var (Context.get_ctr dc.ctx);
-            qi_quant = (
-              failwith "TODO"
-            );
+            qi_quant = bv_to_tmp_quant dc.ctx q.q_bound;
             qi_bound = Some (List.fold_left
               bound_vars
               ~init:(Option.value body.qi_bound ~default:(DT.Var {
@@ -261,16 +269,16 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
           in
           let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
           match ty with
-          | `Free _ ->
+          | `Free tyvar ->
               {
                 qi_var = v;
-                qi_quant = failwith "TODO";
+                qi_quant = bv_to_tmp_quant dc.ctx (tyvar.tv_bound);
                 qi_bound = None;
               }
           | `Ctor (_, `Type(`Fn(p, r))) ->
               {
                 qi_var = v;
-                qi_quant = failwith "TODO";
+                qi_quant = `All; (* Doesn't matter; node is inert. *)
                 qi_bound = Some (DT.Fn {
                     fn_info = ();
                     fn_pvar = None;
@@ -281,7 +289,7 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
           | `Ctor (_, `Type(`Const c)) ->
               {
                 qi_var = v;
-                qi_quant = failwith "TODO";
+                qi_quant = `All;
                 qi_bound = Some (DT.Named {
                     n_info = ();
                     n_name = match c with
