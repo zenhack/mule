@@ -66,7 +66,7 @@ type display_ctx = {
   parents: GT.Ids.QuantSet.t;
 
   (* memoized results for each node. *)
-  seen: (quant_info, quant_info) GT.seen;
+  seen: (quant_info, unit DT.t) GT.seen;
 }
 
 (**** Helpers for collecting binding edges. ***)
@@ -171,85 +171,99 @@ let bv_to_tmp_quant ctx bv =
   | `Rigid -> `Exist
   | `Explicit -> failwith "TODO"
 
-let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
-  fun dc -> function
-    | `Q qv ->
-        let q = Context.read_var dc.ctx Context.quant qv in
-        let degraph_child = degraph_bind_src { dc with parents = Set.add dc.parents q.q_id } in
-        Seen.get dc.seen.seen_q q.q_id (fun () ->
-          (* TODO FIXME: check for recursive type. *)
-          let bound_vars =
-            Map.find dc.bindings q.q_id
-              |> Option.value ~default:[]
-              |> List.map ~f:degraph_child
-          in
-          let body = degraph_child (`Ty (Lazy.force q.q_body)) in
-          {
-            qi_var = Gensym.anon_var (Context.get_ctr dc.ctx);
-            qi_quant = bv_to_tmp_quant dc.ctx q.q_bound;
-            qi_bound = Some (List.fold_left
-              bound_vars
-              ~init:(Option.value body.qi_bound ~default:(DT.Var {
-                  v_info = ();
-                  v_src = `Generated;
-                  v_var = body.qi_var;
-                }))
-              ~f:(fun q_body qi ->
-                DT.Quant {
-                  q_info = ();
-                  q_quant = qi.qi_quant;
-                  q_var = qi.qi_var;
-                  q_bound = qi.qi_bound;
-                  q_body;
-                }
-              ));
+let rec degraph_quant : display_ctx -> GT.quant GT.var -> quant_info =
+  fun dc qv ->
+    let q = Context.read_var dc.ctx Context.quant qv in
+    let child_dc = { dc with parents = Set.add dc.parents q.q_id } in
+    Seen.get dc.seen.seen_q q.q_id (fun () ->
+      (* TODO FIXME: check for recursive type. *)
+      let bound_vars =
+        Map.find dc.bindings q.q_id
+          |> Option.value ~default:[]
+          |> List.map ~f:(degraph_bind_src child_dc)
+      in
+      let body = degraph_type child_dc (Lazy.force q.q_body) in
+      {
+        qi_var = Gensym.anon_var (Context.get_ctr dc.ctx);
+        qi_quant = bv_to_tmp_quant dc.ctx q.q_bound;
+        qi_bound = Some (List.fold_left
+          bound_vars
+          ~init:body
+          ~f:(fun q_body qi ->
+            DT.Quant {
+              q_info = ();
+              q_quant = qi.qi_quant;
+              q_var = qi.qi_var;
+              q_bound = qi.qi_bound;
+              q_body;
+            }
+          ));
+      }
+    )
+and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
+  fun dc tv ->
+    let ty = Context.read_var dc.ctx Context.typ tv in
+    let ty_id = GT.typ_id ty in
+    Seen.get dc.seen.seen_ty ty_id (fun () ->
+      let get_q q =
+        let qi = degraph_bind_src dc (`Q q) in
+        match qi.qi_bound with
+        | None | Some (DT.Quant _) -> DT.Var {
+            v_info = ();
+            v_src = `Generated;
+            v_var = qi.qi_var;
           }
-        )
+        (* If there's nothing bound on the q node, just inline it. *)
+        | Some t -> t
+      in
+      let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
+      match ty with
+      | `Free _ -> DT.Var {
+            v_info = ();
+            v_src = `Generated;
+            v_var = v;
+          }
+      | `Ctor (_, ctor) ->
+          begin match ctor with
+            | `Type(`Fn(p, r)) -> DT.Fn {
+                fn_info = ();
+                fn_pvar = None;
+                fn_param = get_q p;
+                fn_ret = get_q r;
+              }
+            | `Type(`Const c) -> DT.Named {
+                n_info = ();
+                n_name = match c with
+                  | `Text -> `Text
+                  | `Int -> `Int
+                  | `Char -> `Char
+              }
+            | _ -> failwith "TODO"
+          end
+      | _ -> failwith "TODO"
+    )
+and degraph_bind_src : display_ctx -> bind_src -> quant_info =
+  fun dc -> function
+    | `Q q -> degraph_quant dc q
     | `Ty tv ->
         let ty = Context.read_var dc.ctx Context.typ tv in
-        let ty_id = GT.typ_id ty in
-        Seen.get dc.seen.seen_ty ty_id (fun () ->
-          let get_q q =
-            let qi = degraph_bind_src dc (`Q q) in
-            match qi.qi_bound with
-            | None | Some (DT.Quant _) -> DT.Var {
-                v_info = ();
-                v_src = `Generated;
-                v_var = qi.qi_var;
-              }
-            (* If there's nothing bound on the q node, just inline it. *)
-            | Some t -> t
-          in
-          let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
-          match ty with
-          | `Free tyvar -> {
-                qi_var = v;
-                qi_quant = bv_to_tmp_quant dc.ctx (tyvar.tv_bound);
-                qi_bound = None;
-              }
-          | `Ctor (_, ctor) -> {
-                qi_var = v;
-                qi_quant = `All; (* Doesn't matter; node is inert. *)
-                qi_bound =
-                  Some begin match ctor with
-                    | `Type(`Fn(p, r)) -> DT.Fn {
-                        fn_info = ();
-                        fn_pvar = None;
-                        fn_param = get_q p;
-                        fn_ret = get_q r;
-                      }
-                    | `Type(`Const c) -> DT.Named {
-                        n_info = ();
-                        n_name = match c with
-                          | `Text -> `Text
-                          | `Int -> `Int
-                          | `Char -> `Char
-                      }
-                    | _ -> failwith "TODO"
-                  end;
-              }
-          | _ -> failwith "TODO"
-        )
+        begin match ty with
+        | `Free tyvar ->
+            begin match degraph_type dc tv with
+            | DT.Var {v_var; _} -> {
+                  qi_var = v_var;
+                  qi_quant = bv_to_tmp_quant dc.ctx (tyvar.tv_bound);
+                  qi_bound = None;
+                }
+            | _ ->
+                (* Should never happen; `Free always returns a var. *)
+                failwith "Impossible"
+            end
+        | _ ->
+            (* Should never happen; only `Free nodes have binding
+               edges. *)
+            failwith "Impossible"
+        end
 
 let extract_type_ast : Context.t -> GT.quant GT.var -> unit DT.t =
   fun ctx qv ->
