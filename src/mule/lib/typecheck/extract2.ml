@@ -169,6 +169,7 @@ let bv_to_tmp_quant ctx bv =
   match (Context.read_var ctx Context.bound bv).b_flag with
   | `Flex -> `All
   | `Rigid -> `Exist
+  | `Explicit -> failwith "TODO"
 
 let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
@@ -239,6 +240,13 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
                           | `Int -> `Int
                           | `Char -> `Char
                       }
+                    | _ -> failwith "TODO"
                   end;
               }
+          | _ -> failwith "TODO"
         )
+
+let extract_type_ast : Context.t -> GT.quant GT.var -> unit DT.t =
+  fun ctx qv ->
+  let dc = build_display_ctx ctx qv in
+  Option.value_exn (degraph_bind_src dc (`Q qv)).qi_bound

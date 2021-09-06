@@ -17,11 +17,16 @@ let typecheck path =
     )
   in
   let g = Context.get_g ctx in
-  let _q = Lazy.force (Graph_types.GNode.get g) in
+  let q = Lazy.force (Graph_types.GNode.get g) in
   Context.DebugGraph.dump ctx [];
   Solve.solve ctx;
   match Context.errors ctx with
-  | [] -> failwith "TODO: do something with resultant type."
+  | [] ->
+      begin
+        Extract2.extract_type_ast ctx q
+        |> Pretty.typ
+        |> Stdio.print_endline
+      end
   | (e :: _) ->
       (* TODO: display /all/ errors, not just the first *)
       MuleErr.throw e
