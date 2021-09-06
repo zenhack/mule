@@ -269,34 +269,30 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
           in
           let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
           match ty with
-          | `Free tyvar ->
-              {
+          | `Free tyvar -> {
                 qi_var = v;
                 qi_quant = bv_to_tmp_quant dc.ctx (tyvar.tv_bound);
                 qi_bound = None;
               }
-          | `Ctor (_, `Type(`Fn(p, r))) ->
-              {
+          | `Ctor (_, ctor) -> {
                 qi_var = v;
                 qi_quant = `All; (* Doesn't matter; node is inert. *)
-                qi_bound = Some (DT.Fn {
-                    fn_info = ();
-                    fn_pvar = None;
-                    fn_param = get_q { dc with sign = Sign.flip dc.sign } p;
-                    fn_ret = get_q dc r;
-                  });
-              }
-          | `Ctor (_, `Type(`Const c)) ->
-              {
-                qi_var = v;
-                qi_quant = `All;
-                qi_bound = Some (DT.Named {
-                    n_info = ();
-                    n_name = match c with
-                      | `Text -> `Text
-                      | `Int -> `Int
-                      | `Char -> `Char
-                  });
+                qi_bound =
+                  Some begin match ctor with
+                    | `Type(`Fn(p, r)) -> DT.Fn {
+                        fn_info = ();
+                        fn_pvar = None;
+                        fn_param = get_q { dc with sign = Sign.flip dc.sign } p;
+                        fn_ret = get_q dc r;
+                      }
+                    | `Type(`Const c) -> DT.Named {
+                        n_info = ();
+                        n_name = match c with
+                          | `Text -> `Text
+                          | `Int -> `Int
+                          | `Char -> `Char
+                      }
+                  end;
               }
         )
 
