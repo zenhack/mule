@@ -26,14 +26,6 @@ module GT = Graph_types
 module DT = Desugared_ast_type_t
 module Var = Common_ast.Var
 
-(* Reference counts for all nodes in the type graph. The refcount is
-   the number of structural references to a node; binding edges do not
-   count. *)
-type rc = {
-  rc_q: int GT.Ids.QuantMap.t;
-  rc_ty: int GT.Ids.TypeMap.t;
-}
-
 (* The source of a binding edge. *)
 type bind_src =
     [ `Q of GT.quant GT.var
@@ -62,9 +54,8 @@ type quant_info = {
 type display_ctx = {
   ctx: Context.t; (* General type context, for reading variables *)
 
-  (* These are computed up front, and never change: *)
-  rc: rc; (* Refcounts for each node *)
-  bindings: bind_src list GT.Ids.QuantMap.t; (* Map from each q node to nodes bound on it. *)
+  (* Map from each q node to nodes bound on it. *)
+  bindings: bind_src list GT.Ids.QuantMap.t;
 
   (* For q-nodes we have determined are recursive types, this contains
      variable names to use for those types. *)
@@ -77,45 +68,6 @@ type display_ctx = {
   (* memoized results for each node. *)
   seen: (quant_info, quant_info) GT.seen;
 }
-
-(**** Helpers for computing reference counts ****)
-
-(* An initially empty set of refcounts. *)
-let empty_rcs = {
-  rc_q = Map.empty (module GT.Ids.Quant);
-  rc_ty = Map.empty (module GT.Ids.Type);
-}
-
-(* Bump the refcount for a q-node *)
-let addref_q rc id =
-  Ref.replace rc (fun r ->
-    { r with rc_q = Map.update r.rc_q id ~f:(fun v -> Option.value v ~default:0 + 1) }
-  )
-(* Bump the refcount for a type node. *)
-let addref_ty rc id =
-  Ref.replace rc (fun r ->
-    { r with rc_ty = Map.update r.rc_ty id ~f:(fun v -> Option.value v ~default:0 + 1) }
-  )
-let rec compute_rcs_q seen ctx rc qv =
-  let q = Context.read_var ctx Context.quant qv in
-  addref_q rc q.q_id;
-  Seen.guard seen.GT.seen_q q.q_id (fun () ->
-    compute_rcs_ty seen ctx rc (Lazy.force q.q_body)
-  )
-and compute_rcs_ty seen ctx rc tv =
-  let t = Context.read_var ctx Context.typ tv in
-  let id = GT.typ_id t in
-  addref_ty rc id;
-  Seen.guard seen.GT.seen_ty id (fun () ->
-    List.iter (GT.ty_q_kids t) ~f:(compute_rcs_q seen ctx rc)
-  )
-
-(* Compute the reference counts for all nodes reachable from qv. *)
-let compute_rcs_q : Context.t -> GT.quant GT.var -> rc =
-  fun ctx qv ->
-    let rc_ref = ref empty_rcs in
-    compute_rcs_q (GT.empty_seen ()) ctx rc_ref qv;
-    !rc_ref
 
 (**** Helpers for collecting binding edges. ***)
 
@@ -176,7 +128,6 @@ let accumulate_bindings : binding list -> bind_src list GT.Ids.QuantMap.t =
 (* Generate the initial display context for printing the node. *)
 let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
   fun ctx qv -> {
-      rc = compute_rcs_q ctx qv;
       bindings =
         enumerate_bindings_q (GT.empty_seen ()) ctx qv
         |> Lazy.force
