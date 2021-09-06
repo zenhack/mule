@@ -74,9 +74,6 @@ type display_ctx = {
      examining. Used to catch recursive types. *)
   parents: GT.Ids.QuantSet.t;
 
-  (* The variance of our position in the type. *)
-  sign: Sign.t;
-
   (* memoized results for each node. *)
   seen: (quant_info, quant_info) GT.seen;
 }
@@ -187,7 +184,6 @@ let build_display_ctx : Context.t -> GT.quant GT.var -> display_ctx =
       ctx;
       recursive_vars = ref (Map.empty (module GT.Ids.Quant));
       parents = Set.empty (module GT.Ids.Quant);
-      sign = `Pos;
       seen = GT.empty_seen ();
     }
 
@@ -261,7 +257,7 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
         let ty = Context.read_var dc.ctx Context.typ tv in
         let ty_id = GT.typ_id ty in
         Seen.get dc.seen.seen_ty ty_id (fun () ->
-          let get_q dc q = DT.Var {
+          let get_q q = DT.Var {
               v_info = ();
               v_src = `Generated;
               v_var = (degraph_bind_src dc (`Q q)).qi_var;
@@ -282,8 +278,8 @@ let rec degraph_bind_src : display_ctx -> bind_src -> quant_info =
                     | `Type(`Fn(p, r)) -> DT.Fn {
                         fn_info = ();
                         fn_pvar = None;
-                        fn_param = get_q { dc with sign = Sign.flip dc.sign } p;
-                        fn_ret = get_q dc r;
+                        fn_param = get_q p;
+                        fn_ret = get_q r;
                       }
                     | `Type(`Const c) -> DT.Named {
                         n_info = ();
