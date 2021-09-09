@@ -202,6 +202,9 @@ let strip_needless_quantifiers ty =
         ( DT.App{app_info; app_fn; app_arg}
         , Set.union fv_fn fv_arg
         )
+    | DT.Row{r_row} ->
+        let r_row, fvs = go_row r_row in
+        (DT.Row {r_row}, fvs)
   and go_row {row_info; row_fields; row_rest} =
     let row_fields, fv_fields =
       List.fold_right

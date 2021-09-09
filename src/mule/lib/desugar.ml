@@ -145,6 +145,7 @@ let substitue_type_apps
     | DT.Union _
     | DT.Path _
     | DT.Named _
+    | DT.Row _
       -> None
   in
   (* Return whether one of the variables in [vars] would be shadowed in part of [ty]. *)
@@ -210,6 +211,8 @@ let substitue_type_apps
               tl_param;
               tl_body = go tl_body;
             }
+        | DT.Row{r_row} ->
+            DT.Row{r_row = go_row r_row}
       end
   and go_row {row_info; row_fields; row_rest} = {
     row_info;

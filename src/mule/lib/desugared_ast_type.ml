@@ -67,6 +67,8 @@ let rec subst old new_ ty = match ty with
         app_fn = subst old new_ app_fn;
         app_arg = subst old new_ app_arg;
       }
+  | Row {r_row} ->
+      Row { r_row = subst_row old new_ r_row }
 and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
   row_info;
   row_fields = List.map ls ~f:(fun (l, field) -> (l, subst old new_ field));
@@ -127,6 +129,8 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
       sexp_of_t app_fn;
       sexp_of_t app_arg;
     ]
+  | Row {r_row} ->
+      List [Atom "row"; sexp_of_row r_row]
 and sexp_of_row {row_fields; row_rest; _} =
   let fields =
     List.map row_fields ~f:(fun (l, t) ->
@@ -149,6 +153,7 @@ let get_info = function
   | Opaque {o_info; _} -> o_info
   | TypeLam{tl_info; _} -> tl_info
   | App{app_info; _} -> app_info
+  | Row{r_row = {row_info; _}} -> row_info
 
 let rec map ty ~f = match ty with
   | Opaque {o_info} -> Opaque { o_info = f o_info }
@@ -205,14 +210,17 @@ let rec map ty ~f = match ty with
         app_fn = map app_fn ~f;
         app_arg = map app_arg ~f;
       }
+  | Row {r_row} ->
+      Row {r_row = map_row r_row ~f}
 and map_row {row_info; row_fields; row_rest} ~f = {
   row_info = f row_info;
   row_fields = List.map row_fields ~f:(fun(l, t) -> (l, map t ~f));
   row_rest = Option.map row_rest ~f:(map ~f);
 }
 
-let pretty_import {i_orig_path; _} =
-  PP.(group (string "import" ^/^ text i_orig_path))
+let pretty_import : import -> PP.document =
+  fun {i_orig_path; _} ->
+    PP.(group (string "import" ^/^ text i_orig_path))
 
 let pretty_path_root = function
   | `Var v -> Var.pretty v
@@ -305,6 +313,17 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
           ^/^
           parens_if_tighter_than prec AppArg (indent (pretty_t AppArg app_arg))
         ))
+  | Row {r_row} ->
+      PP.(
+        string "<"
+        ^^ pretty_t prec (Record {
+            r_info = r_row.row_info; (* Doesn't matter, but needs to be the right type. *)
+            r_types = { row_info = (); row_fields = []; row_rest = None };
+            r_values = r_row;
+            r_src = None;
+          })
+        ^^ string ">"
+      )
 and pretty_quant prec quant var body =
   let rec go vars = function
     | Quant{q_quant; q_var; q_body; _} when Poly.equal quant q_quant ->
@@ -347,8 +366,8 @@ and pretty_type_member lbl ty =
       end
     ))
 
-let to_string ty =
-  PP.(build_string (pretty_t Prec.TopLevel ty))
+let to_string : 'a t -> string =
+  fun ty -> PP.(build_string (pretty_t Prec.TopLevel ty))
 
 let rec apply_to_kids t ~f = match t with
   | Var _ | Path _ | Named _ | Opaque _ -> t
@@ -386,10 +405,12 @@ let rec apply_to_kids t ~f = match t with
         app_fn = f app_fn;
         app_arg = f app_arg;
       }
+  | Row {r_row} ->
+      Row {r_row = apply_to_row r_row ~f}
 and apply_to_row {row_info; row_fields; row_rest} ~f = {
   row_info;
   row_fields = List.map row_fields ~f:(fun (l, t) -> (l, f t));
-  row_rest;
+  row_rest; (* FIXME: Should we be applying f to this as well? *)
 }
 
 (* Collect the free type variables in a type *)
@@ -414,6 +435,8 @@ let rec ftv = function
   | App {app_fn; app_arg; _} -> Set.union (ftv app_fn) (ftv app_arg)
 
   | Opaque _ | Named _ -> Set.empty (module Var)
+
+  | Row {r_row} -> ftv_row r_row
 (*  Like ftv, but for rows: *)
 and ftv_row {row_fields; row_rest; _} =
   let rest_ftv = match row_rest with

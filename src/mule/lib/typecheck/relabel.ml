@@ -69,6 +69,7 @@ let relabel_type: unit -> 'a Desugared_ast.Type.t -> 'a Desugared_ast.Type.t = f
         p_lbls;
         p_src;
       }
+    | Row {r_row} -> Row {r_row = go_row r_row }
   and go_row {row_info; row_fields; row_rest} =
     let row_fields  = List.map row_fields ~f:(fun (l, ty) -> (l, go ty)) in
     let row_rest = Option.map row_rest ~f:go in
