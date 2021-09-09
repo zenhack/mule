@@ -243,10 +243,22 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
                   | `Int -> `Int
                   | `Char -> `Char
               }
-            | _ -> failwith "TODO"
+            | `Type(`Union r) ->
+                DT.Union { u_row = degraph_row dc r }
+            | `Type(`Record(types, values)) -> DT.Record {
+                r_info = ();
+                r_types = degraph_row dc types;
+                r_values = degraph_row dc values;
+                r_src = None;
+              }
+            | `Row _ ->
+                failwith "TODO"
           end
-      | _ -> failwith "TODO"
+      | _ ->
+        failwith "TODO"
     )
+and degraph_row : display_ctx -> GT.quant GT.var -> unit DT.row =
+  failwith "TODO"
 and degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
     | `Q q -> degraph_quant dc q
