@@ -244,20 +244,34 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
                   | `Char -> `Char
               }
             | `Type(`Union r) ->
-                DT.Union { u_row = degraph_row dc r }
+                DT.Union { u_row = degraph_row_quant dc r }
             | `Type(`Record(types, values)) -> DT.Record {
                 r_info = ();
-                r_types = degraph_row dc types;
-                r_values = degraph_row dc values;
+                r_types = degraph_row_quant dc types;
+                r_values = degraph_row_quant dc values;
                 r_src = None;
               }
-            | `Row _ ->
-                failwith "TODO"
+            | `Row r ->
+                DT.Row { r_row = degraph_row_ty dc r }
           end
       | _ ->
         failwith "TODO"
     )
-and degraph_row : display_ctx -> GT.quant GT.var -> unit DT.row =
+and degraph_row_ty : display_ctx -> GT.row_ctor -> unit DT.row =
+  fun _dc -> function
+    | `Extend (l, _h, _t) -> {
+        row_info = ();
+        row_fields = [
+          (l, failwith "TODO: get_q h")
+        ];
+        row_rest = Some (failwith "TODO: which member do we pick?" (* degraph_quant dc t *));
+      }
+    | `Empty -> {
+        row_info = ();
+        row_fields = [];
+        row_rest = None;
+      }
+and degraph_row_quant : display_ctx -> GT.quant GT.var -> unit DT.row =
   failwith "TODO"
 and degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
