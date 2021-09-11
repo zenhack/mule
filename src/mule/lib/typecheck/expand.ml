@@ -63,10 +63,6 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
   let q = Context.read_var ctx Context.quant qv in
   Seen.get seen.seen_q q.q_id (fun () ->
     let ctr = Context.get_ctr ctx in
-    let root = match is_root with
-      | Root _ -> qv
-      | NotRoot qroot -> qroot
-    in
     let
       GT.{
         b_flag = old_flag;
@@ -90,7 +86,7 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
         walk_ty ctx
           ~tv
           ~parents:(ParentSet.add ctx parents (`Q qv))
-          ~root
+          ~root:(Lazy.force root)
           ~g
           ~inst_c
           ~seen
@@ -104,6 +100,10 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
             tv_kind = Infer_kind.infer_kind ctx tv;
           })
         end
+    )
+    and root = lazy (match is_root with
+      | Root _ -> Lazy.force qv'
+      | NotRoot qroot -> qroot
     )
     and qv' = lazy (Context.make_var ctx Context.quant {
         q_id;
