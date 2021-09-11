@@ -195,31 +195,30 @@ let rec degraph_quant : display_ctx -> GT.quant GT.var -> quant_info =
                 )));
       }
     )
+and get_q dc qv =
+  let q = Context.read_var dc.ctx Context.quant qv in
+  if Set.mem dc.parents q.q_id then
+    DT.Var {
+      v_info = ();
+      v_src = `Generated;
+      v_var = as_recursive_var dc q.q_id;
+    }
+  else
+    begin
+      let qi = degraph_quant dc qv in
+      match qi.qi_bound with
+      | None | Some (DT.Quant _) -> DT.Var {
+          v_info = ();
+          v_src = `Generated;
+          v_var = qi.qi_var;
+        }
+      (* If there's nothing bound on the q node, just inline it. *)
+      | Some t -> t
+    end
 and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
   fun dc tv ->
     let ty = Context.read_var dc.ctx Context.typ tv in
     let ty_id = GT.typ_id ty in
-    let get_q qv =
-      let q = Context.read_var dc.ctx Context.quant qv in
-      if Set.mem dc.parents q.q_id then
-        DT.Var {
-          v_info = ();
-          v_src = `Generated;
-          v_var = as_recursive_var dc q.q_id;
-        }
-      else
-        begin
-          let qi = degraph_quant dc qv in
-          match qi.qi_bound with
-          | None | Some (DT.Quant _) -> DT.Var {
-              v_info = ();
-              v_src = `Generated;
-              v_var = qi.qi_var;
-            }
-          (* If there's nothing bound on the q node, just inline it. *)
-          | Some t -> t
-        end
-    in
     Seen.get dc.seen.seen_ty ty_id (fun () ->
       let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
       match ty with
@@ -233,8 +232,8 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
             | `Type(`Fn(p, r)) -> DT.Fn {
                 fn_info = ();
                 fn_pvar = None;
-                fn_param = get_q p;
-                fn_ret = get_q r;
+                fn_param = get_q dc p;
+                fn_ret = get_q dc r;
               }
             | `Type(`Const c) -> DT.Named {
                 n_info = ();
@@ -244,11 +243,11 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
                   | `Char -> `Char
               }
             | `Type(`Union r) ->
-                DT.Union { u_row = degraph_row_quant dc r }
+                DT.Union { u_row = get_row_q dc r }
             | `Type(`Record(types, values)) -> DT.Record {
                 r_info = ();
-                r_types = degraph_row_quant dc types;
-                r_values = degraph_row_quant dc values;
+                r_types = get_row_q dc types;
+                r_values = get_row_q dc values;
                 r_src = None;
               }
             | `Row r ->
@@ -258,21 +257,28 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
         failwith "TODO"
     )
 and degraph_row_ty : display_ctx -> GT.row_ctor -> unit DT.row =
-  fun _dc -> function
-    | `Extend (l, _h, _t) -> {
+  fun dc -> function
+    | `Extend (l, h, t) -> {
         row_info = ();
         row_fields = [
-          (l, failwith "TODO: get_q h")
+          (l, get_q dc h)
         ];
-        row_rest = Some (failwith "TODO: which member do we pick?" (* degraph_quant dc t *));
+        row_rest = Some (get_q dc t);
       }
     | `Empty -> {
         row_info = ();
         row_fields = [];
         row_rest = None;
       }
-and degraph_row_quant : display_ctx -> GT.quant GT.var -> unit DT.row =
-  failwith "TODO"
+and get_row_q : display_ctx -> GT.quant GT.var -> unit DT.row =
+  fun dc qv ->
+    match get_q dc qv with
+    | DT.Row {r_row} -> r_row
+    | t -> {
+        row_info = ();
+        row_fields = [];
+        row_rest = Some t;
+      }
 and degraph_bind_src : display_ctx -> bind_src -> quant_info =
   fun dc -> function
     | `Q q -> degraph_quant dc q
