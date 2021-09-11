@@ -381,7 +381,7 @@ end = struct
         make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
                                    `Type(`Record(q_types, q_values))));
     | _ ->
-        failwith "TODO"
+        failwith "TODO: other cases in gen_expr_q"
   and gen_const ctx const =
     let ty = match const with
       | Const.Integer _ -> `Int

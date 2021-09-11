@@ -14,6 +14,6 @@ and apply_qq ctx app_id f arg =
   let ft = Lazy.force (Context.read_var ctx Context.quant f).q_body in
   match Context.read_var ctx Context.typ ft with
   | `Lambda (_id, _param, _body) ->
-      failwith "TODO"
+      failwith "TODO: apply_qq lambda"
   | _ ->
     `Apply (app_id, f, arg)

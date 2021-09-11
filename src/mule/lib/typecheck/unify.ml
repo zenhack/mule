@@ -172,9 +172,9 @@ let rec unify_typ ctx c lv rv =
         Context.error ctx
           (`TypeError (`UnifyFailed MuleErr.{
                 ue_constraint = c;
-                ue_cause = failwith "TODO";
+                ue_cause = failwith "TODO: unify_typ fallthrough (1)";
               }));
-        merge (`Poison (failwith "TODO"))
+        merge (`Poison (failwith "TODO: unify_typ_fallthrough (2)"))
   )
 and merge_ctor ctx c merge (lid, lc) (rid, rc) =
   match lc, rc with

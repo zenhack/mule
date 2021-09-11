@@ -161,7 +161,10 @@ let bv_to_tmp_quant ctx bv =
   match (Context.read_var ctx Context.bound bv).b_flag with
   | `Flex -> `All
   | `Rigid -> `Exist
-  | `Explicit -> failwith "TODO"
+  | `Explicit ->
+      (* As I write this, this doesn't come up, but it will one we actually
+         handle type lambdas; we will have to rework it. *)
+      failwith "TODO: bv_to_tmp_quant `Explicit"
 
 let rec degraph_quant : display_ctx -> GT.quant GT.var -> quant_info =
   fun dc qv ->
@@ -254,7 +257,7 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
                 DT.Row { r_row = degraph_row_ty dc r }
           end
       | _ ->
-        failwith "TODO"
+        failwith "TODO: degraph_type: other cases."
     )
 and degraph_row_ty : display_ctx -> GT.row_ctor -> unit DT.row =
   fun dc -> function
