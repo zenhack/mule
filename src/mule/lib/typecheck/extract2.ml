@@ -34,7 +34,11 @@ type bind_src =
 
 (* A binding edge, as (source, target). Note that for our purposes in this
    module, we don't need to process q-nodes that are themselves bound on
-   g-nodes, we can assume the target is always q-node. *)
+   g-nodes, we can assume the target is always q-node.
+
+  TODO: I think we actually do need to deal with g-nodes, as some binding
+  edges may get promoted that far.
+*)
 type binding = (bind_src * GT.Ids.Quant.t)
 
 (* Information about a type needed for it to be used as a bound.
