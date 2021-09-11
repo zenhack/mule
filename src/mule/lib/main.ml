@@ -23,7 +23,7 @@ let typecheck path =
   | [] ->
       begin
         Extract2.extract_type_ast ctx q
-        |> Pretty.typ
+        |> Desugared_ast_type.to_string
         |> Stdio.print_endline
       end
   | (e :: _) ->
