@@ -54,10 +54,6 @@ let fmt_node: node_type -> int -> int list -> string =
         |> List.map ~f:Int.to_string
         |> String.concat ~sep:", "
     ; ")\""
-    ; if Poly.equal (Some node) !root_node then
-        " shape=box "
-      else
-        ""
     ; "];\n"
     ]
 
