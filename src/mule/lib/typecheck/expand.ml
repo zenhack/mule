@@ -188,4 +188,4 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
 let expand ctx ~g ~at ~inst_c =
   let parents = ParentSet.singleton (GT.GNode.id g) in
   let qv = Lazy.force (GT.GNode.get g) in
-  walk_q ctx qv ~g:at ~parents ~is_root:(Root g) ~inst_c ~seen:(make_seen ())
+  walk_q ctx qv ~g:at ~parents ~is_root:(Root at) ~inst_c ~seen:(make_seen ())
