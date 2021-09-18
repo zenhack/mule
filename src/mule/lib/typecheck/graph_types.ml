@@ -18,6 +18,9 @@ module type Id = sig
   val equal : t -> t -> bool
   val t_of_sexp : Sexp.t -> t
   val sexp_of_t : t -> Sexp.t
+
+  val min : t -> t -> t
+  val max : t -> t -> t
 end
 
 module IdImpl : Id = struct

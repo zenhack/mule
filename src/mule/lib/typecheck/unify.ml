@@ -122,7 +122,10 @@ let unify_bound ctx lv rv =
 let merge_tyvar ctx l r =
   unify_bound ctx l.GT.tv_bound r.GT.tv_bound;
   unify_kind ctx l.GT.tv_kind r.GT.tv_kind;
-  { l with tv_merged = Set.union l.tv_merged r.tv_merged }
+  { l with
+    tv_id = GT.Ids.Type.min l.tv_id r.tv_id;
+    tv_merged = Set.union l.tv_merged r.tv_merged;
+  }
 
 let mismatched_kinds ctx merge id lk rk =
   Context.error ctx (`TypeError (`MismatchedKinds(lk, rk)));
@@ -211,5 +214,9 @@ and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
     unify_bound ctx l.q_bound r.q_bound;
     unify_typ ctx c (Lazy.force l.q_body) (Lazy.force r.q_body);
-    merge { l with q_merged = Set.union l.q_merged r.q_merged }
+    merge {
+      l with
+      q_id = GT.Ids.Quant.min l.q_id r.q_id;
+      q_merged = Set.union l.q_merged r.q_merged;
+    }
   )
