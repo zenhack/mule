@@ -131,6 +131,14 @@ let mismatched_kinds ctx merge id lk rk =
   Context.error ctx (`TypeError (`MismatchedKinds(lk, rk)));
   merge (`Poison id)
 
+let mismatched_ctors ctx merge id c lc rc =
+    Context.error ctx
+      (`TypeError (`UnifyFailed MuleErr.{
+            ue_constraint = c;
+            ue_cause = `MismatchedCtors (lc, rc);
+          }));
+    merge (`Poison id)
+
 let rec unify_typ ctx c lv rv =
   unify_vars ctx Context.typ lv rv (fun merge l r ->
     let l = Normalize.whnf_typ ctx l in
@@ -182,18 +190,13 @@ let rec unify_typ ctx c lv rv =
 and merge_ctor ctx c merge (lid, lc) (rid, rc) =
   match lc, rc with
   | `Type lt,`Type rt -> merge_type_ctor ctx c merge lid lt rid rt
-  | `Row lr,`Row rr -> merge_row_ctor merge lid lr rid rr
+  | `Row lr,`Row rr -> merge_row_ctor ctx c merge lid lr rid rr
   | `Type _, `Row _ -> mismatched_kinds ctx merge lid `Type `Row
   | `Row _, `Type _ -> mismatched_kinds ctx merge lid `Row `Type
 and merge_type_ctor ctx c merge lid lt _rid rt =
   let merge' v = merge (`Ctor(lid, `Type v)) in
   let mismatched () =
-      Context.error ctx
-        (`TypeError (`UnifyFailed MuleErr.{
-              ue_constraint = c;
-              ue_cause = `MismatchedCtors (`Type lt, `Type rt);
-            }));
-      merge (`Poison lid)
+    mismatched_ctors ctx merge lid c (`Type lt) (`Type rt)
   in
   match lt, rt with
   | `Fn(lp, lr), `Fn(rp, rr) ->
@@ -214,10 +217,21 @@ and merge_type_ctor ctx c merge lid lt _rid rt =
       merge' (`Union l)
   | _ ->
     mismatched ()
-and merge_row_ctor merge lid lr _rid rr =
+and merge_row_ctor ctx c merge lid lr _rid rr =
   match lr, rr with
   | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))
-  | _ -> failwith "TODO: merge_row_ctor"
+  | `Extend(ll, lh, lt), `Extend(rl, rh, rt) ->
+      if Poly.equal ll rl then
+        begin
+          unify_quant ctx c lh rh;
+          unify_quant ctx c lt rt;
+          merge (`Ctor(lid, `Row(`Extend(ll, lh, lt))))
+        end
+      else
+        failwith "TODO: rows with different head labels"
+  | `Empty, `Extend _
+  | `Extend _, `Empty ->
+      mismatched_ctors ctx merge lid c (`Row lr) (`Row rr)
 and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
     unify_bound ctx l.q_bound r.q_bound;
