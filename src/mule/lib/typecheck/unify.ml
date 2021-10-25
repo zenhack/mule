@@ -187,6 +187,14 @@ and merge_ctor ctx c merge (lid, lc) (rid, rc) =
   | `Row _, `Type _ -> mismatched_kinds ctx merge lid `Row `Type
 and merge_type_ctor ctx c merge lid lt _rid rt =
   let merge' v = merge (`Ctor(lid, `Type v)) in
+  let mismatched () =
+      Context.error ctx
+        (`TypeError (`UnifyFailed MuleErr.{
+              ue_constraint = c;
+              ue_cause = `MismatchedCtors (`Type lt, `Type rt);
+            }));
+      merge (`Poison lid)
+  in
   match lt, rt with
   | `Fn(lp, lr), `Fn(rp, rr) ->
       unify_quant ctx c lp rp;
@@ -196,16 +204,16 @@ and merge_type_ctor ctx c merge lid lt _rid rt =
       if Poly.equal l r then
         merge' (`Const l)
       else
-        begin
-          Context.error ctx
-            (`TypeError (`UnifyFailed MuleErr.{
-                  ue_constraint = c;
-                  ue_cause = `MismatchedCtors (`Type lt, `Type rt);
-                }));
-          merge (`Poison lid)
-        end
+        mismatched ()
+  | `Record(lt, lv), `Record(rt, rv) ->
+      unify_quant ctx c lt rt;
+      unify_quant ctx c lv rv;
+      merge' (`Record(lt, lv))
+  | `Union l, `Union r ->
+      unify_quant ctx c l r;
+      merge' (`Union l)
   | _ ->
-      failwith "TODO: other cases for merge_type_ctor"
+    mismatched ()
 and merge_row_ctor merge lid lr _rid rr =
   match lr, rr with
   | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))

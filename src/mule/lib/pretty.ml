@@ -17,6 +17,13 @@ let rec show_kind = function
   | `Arrow(l, r) ->
       String.concat ["("; show_kind l; " -> "; show_kind r; ")"]
 
+let show_unify_error ue =
+  match ue.ue_cause with
+  | `MismatchedCtors(_, _) ->
+      "Mismatched ctors"
+  | `CantInstantiate _ ->
+      "Can't instantiate"
+
 let show_type_error : MuleErr_t.type_error -> string = function
   | `MismatchedKinds (l, r) ->
       "mismatched kinds: " ^ show_kind l ^ " and " ^ show_kind r
@@ -24,8 +31,8 @@ let show_type_error : MuleErr_t.type_error -> string = function
       "mismatched guards"
   | `OccursCheckKind ->
       "inferring kinds: occurs check failed"
-  | `UnifyFailed _ ->
-      "TODO"
+  | `UnifyFailed ue ->
+      show_unify_error ue
 
 let show_path_error {pe_path; pe_loc; pe_problem} =
   let path = String.escaped pe_path in

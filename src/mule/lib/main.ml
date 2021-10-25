@@ -26,9 +26,11 @@ let typecheck path =
         |> Desugared_ast_type.to_string
         |> Stdio.print_endline
       end
-  | (e :: _) ->
-      (* TODO: display /all/ errors, not just the first *)
-      MuleErr.throw e
+  | es ->
+      List.iter es ~f:(fun err ->
+        Report.print_endline (Pretty.error err);
+      );
+      Caml.exit 1
 
 
 let interp_cmd = function
