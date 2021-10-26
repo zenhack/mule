@@ -102,7 +102,7 @@ type val_var =
       ( GT.quant GT.var
         * DE.lam_src
       )
-  | `LetBound of GT.g_node
+  | `LetBound of (GT.g_node * Label.t option)
   ]
 
 type polarity = [ `Pos | `Neg ]

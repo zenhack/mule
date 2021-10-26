@@ -212,17 +212,34 @@ end = struct
     match expr with
     (* The first four of these come unmodified from {Yakobowski 2008} *)
     | DE.Var {v_var; v_src} ->
-        let q_var = Context.with_quant ctx bnd (fun _ -> make_tyvar ctx bnd (make_kind ctx `Type)) in
         begin match Context.lookup_val ctx v_var with
           | None ->
               Context.with_quant ctx bnd (fun _ -> unbound_var_poison ctx v_var v_src)
           | Some binding ->
+              let q_var = make_tyvar_q ctx bnd (make_kind ctx `Type) in
               begin match binding with
-                | `LetBound g ->
+                | `LetBound (g, None) ->
                     Context.constrain ctx C.(
                         `Instance {
                           inst_super = g;
                           inst_sub = q_var;
+                          inst_why = `VarUse v_src;
+                        }
+                      )
+                | `LetBound (g, Some lbl) ->
+                    let row_q = make_type_q ctx bnd (
+                        `Ctor(
+                          GT.Ids.Type.fresh (Context.get_ctr ctx),
+                          `Row(`Extend(
+                            lbl,
+                            q_var,
+                            make_tyvar_q ctx bnd (make_kind ctx `Row))))
+                    )
+                    in
+                    Context.constrain ctx C.(
+                        `Instance {
+                          inst_super = g;
+                          inst_sub = row_q;
                           inst_why = `VarUse v_src;
                         }
                       )
@@ -283,7 +300,7 @@ end = struct
         )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
-        Context.with_val_binding ctx let_v (`LetBound g_e) (fun ctx ->
+        Context.with_val_binding ctx let_v (`LetBound (g_e, None)) (fun ctx ->
           gen_expr_q ctx g let_body
         )
 
@@ -423,7 +440,7 @@ end = struct
           Context.with_val_binding
             ctx
             key
-            (`LetBound g)
+            (`LetBound (g, None))
             f
         )
     in
