@@ -38,11 +38,17 @@ type is_root =
 type seen = {
   seen_q: (GT.Ids.Quant.t, GT.quant GT.var) Seen.t;
   seen_ty: (GT.Ids.Type.t, GT.typ GT.var) Seen.t;
+
+  seen_ci_g: (GT.Ids.G.t, bool) Seen.t;
+  seen_ci_q: (GT.Ids.Quant.t, bool) Seen.t;
 }
 
 let make_seen () = {
   seen_q = Seen.make (module GT.Ids.Quant);
   seen_ty = Seen.make (module GT.Ids.Type);
+
+  seen_ci_g = Seen.make (module GT.Ids.G);
+  seen_ci_q = Seen.make (module GT.Ids.Quant);
 }
 
 let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
@@ -59,7 +65,30 @@ let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
         }
     )
 
-let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
+let rec bound_under seen ctx g = function
+  | `G g' ->
+      let (g_id', g_id) = GT.GNode.(id g', id g) in
+      Seen.get seen.seen_ci_g g_id' (fun () ->
+        if GT.Ids.G.(g_id' < g_id) then
+          (* We're above the target. *)
+          false
+        else if GT.Ids.G.(g_id' = g_id) then
+          true
+        else
+          begin match GT.GNode.bound g' with
+            | None -> false
+            | Some v -> bound_under seen ctx g (`G v)
+          end
+      )
+  | `Q qv ->
+      let q = Context.read_var ctx Context.quant qv in
+      Seen.get seen.seen_ci_q q.q_id (fun () ->
+        bound_under seen ctx g
+          (Context.read_var ctx Context.bound q.q_bound).b_target
+      )
+
+
+let rec walk_q ctx qv ~g ~is_root ~inst_c ~seen =
   let q = Context.read_var ctx Context.quant qv in
   Seen.get seen.seen_q q.q_id (fun () ->
     let ctr = Context.get_ctr ctx in
@@ -69,7 +98,9 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
         b_target = q_parent;
       } = Context.read_var ctx Context.bound q.q_bound
     in
-    let q_in_constraint_interior = ParentSet.has ctx parents q_parent in
+    let q_in_constraint_interior =
+      bound_under seen ctx g q_parent
+    in
     let q_bound =
       if q_in_constraint_interior then
         make_bound ctx is_root old_flag
@@ -85,7 +116,6 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
       if q_in_constraint_interior then
         walk_ty ctx
           ~tv
-          ~parents:(ParentSet.add ctx parents (`Q qv))
           ~root:(Lazy.force root)
           ~g
           ~inst_c
@@ -121,10 +151,10 @@ let rec walk_q ctx qv ~g ~parents ~is_root ~inst_c ~seen =
         });
     Lazy.force qv'
   )
-and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
+and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
   let ty = Context.read_var ctx Context.typ tv in
   Seen.get seen.seen_ty (GT.typ_id ty) (fun () ->
-    let walk_q' qv = walk_q ctx qv ~parents ~is_root:(NotRoot root) ~g ~inst_c ~seen in
+    let walk_q' qv = walk_q ctx qv ~is_root:(NotRoot root) ~g ~inst_c ~seen in
     let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
     match ty with
     | `Free ftv ->
@@ -137,7 +167,7 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
             tv_kind = ftv.tv_kind;
           })
         in
-        if not (ParentSet.has ctx parents t_bound.b_target) then
+        if not (bound_under seen ctx g t_bound.b_target) then
           begin
             (* HACK: we need to unify the two type variables, but
                our unification constraints act on Q-nodes. So, we create
@@ -186,6 +216,5 @@ and walk_ty ctx ~tv ~parents ~root ~g ~inst_c ~seen =
  )
 
 let expand ctx ~g ~at ~inst_c =
-  let parents = ParentSet.singleton (GT.GNode.id g) in
   let qv = Lazy.force (GT.GNode.get g) in
-  walk_q ctx qv ~g:at ~parents ~is_root:(Root at) ~inst_c ~seen:(make_seen ())
+  walk_q ctx qv ~g:at ~is_root:(Root at) ~inst_c ~seen:(make_seen ())

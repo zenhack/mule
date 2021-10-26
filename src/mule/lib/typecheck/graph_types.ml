@@ -21,6 +21,12 @@ module type Id = sig
 
   val min : t -> t -> t
   val max : t -> t -> t
+
+  val (<) : t -> t -> bool
+  val (>) : t -> t -> bool
+  val (>=) : t -> t -> bool
+  val (<=) : t -> t -> bool
+  val (=) : t -> t -> bool
 end
 
 module IdImpl : Id = struct
