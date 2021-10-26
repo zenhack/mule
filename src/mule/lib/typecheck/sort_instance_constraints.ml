@@ -7,8 +7,14 @@ let constraint_edge : Context.t -> C.instance_constraint -> GT.Ids.G.t Tsort.edg
   fun ctx C.{inst_super = g; inst_sub = q; _} ->
     let qg = Util.g_for_q ctx q in
     Tsort.{
-      from = GT.GNode.id g;
-      to_ = GT.GNode.id qg;
+      (* This is slightly non-intuitive; in the papers an instance constraint
+         is displayed as a red arrow pointing from a g node to a type node
+         (which corresponds to the q node here). so you would think these would
+         be flipped. But Tsort returns nodes with no *outgoing* edges first,
+         so that would give us the opposite order from what we want. So we
+         flip the meaning here. *)
+      from = GT.GNode.id qg;
+      to_ = GT.GNode.id g;
     }
 
 let must_not_cycle = function
