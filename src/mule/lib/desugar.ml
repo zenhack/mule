@@ -36,12 +36,9 @@ let sort_binds: fv:('a -> VarSet.t) -> (Var.t * 'a) list -> (Var.t * 'a) Tsort.r
       ~edges
   in
   let map = Map.of_alist_exn (module Var) nodes in
-  List.map
+  Tsort.Result.map
     sorted_vars
-    ~f:(function
-      | `Cycle vs -> `Cycle (NonEmpty.map vs ~f:(fun v -> (v, Util.find_exn map v)))
-      | `Single v -> `Single (v, Util.find_exn map v)
-    )
+    ~f:(fun v -> (v, Util.find_exn map v))
 
 let build_sorted
   : bindings:('a Tsort.result)

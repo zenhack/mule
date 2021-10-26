@@ -15,3 +15,9 @@ val sort
   -> nodes:('n list)
   -> edges:('n edge list)
   -> 'n result
+
+module Result : sig
+  type 'a t = 'a Tsort_t.result
+
+  val map : 'a t -> f:('a -> 'b) -> 'b t
+end

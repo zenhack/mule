@@ -154,6 +154,15 @@ let sort (type n) (module Node : Comparator.S with type t = n) ~nodes ~edges =
   );
   List.rev !ret
 
+module Result = struct
+  type 'a t = 'a result
+
+  let map rs ~f = List.map rs ~f:begin function
+    | `Single x -> `Single (f x)
+    | `Cycle (x, xs) -> `Cycle (f x, List.map xs ~f)
+  end
+end
+
 
 (*** TESTS ***)
 
