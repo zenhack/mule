@@ -71,6 +71,11 @@ let join_cycles comparator map =
               })
               lsv
               (Map.find_exn map r);
+            (* In case all of the parents were already the same set,
+               we need to mark this explicitly; otherwise singleton
+               cycles will be marked as non-cycles: *)
+            let ns = UnionFind.get lsv in
+            UnionFind.set lsv { ns with ns_is_cycle = true };
             lsv
           ))
     else
@@ -225,4 +230,10 @@ module Tests = struct
         `Single "C";
         `Cycle ("A", ["B"]);
       ]
+
+  let%test _ =
+    expect
+      ~nodes:["A"]
+      ~edges:[{from = "A"; to_ = "A"}]
+      ~result:[`Cycle("A", [])]
 end
