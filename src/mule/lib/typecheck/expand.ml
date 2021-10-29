@@ -5,32 +5,6 @@
 module GT = Graph_types
 module C = Constraint_t
 
-module ParentSet = struct
-  type t = {
-    gs: GT.Ids.GSet.t;
-    qs: GT.Ids.QuantSet.t;
-  }
-
-  let has ctx {gs; qs} = function
-    | `G g ->
-        Set.mem gs (GT.GNode.id g)
-    | `Q qv ->
-        let q = Context.read_var ctx Context.quant qv in
-        Set.mem qs q.q_id
-
-  let add ctx {gs; qs} = function
-    | `G g ->
-        { gs = Set.add gs (GT.GNode.id g); qs }
-    | `Q qv ->
-        let q = Context.read_var ctx Context.quant qv in
-        { qs = Set.add qs q.q_id; gs }
-
-  let singleton g = {
-    gs = Set.singleton (module GT.Ids.G) g;
-    qs = Set.empty (module GT.Ids.Quant);
-  }
-end
-
 type is_root =
   | Root of GT.g_node
   | NotRoot of GT.quant GT.var
