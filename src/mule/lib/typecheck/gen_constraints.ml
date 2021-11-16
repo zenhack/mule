@@ -397,8 +397,45 @@ end = struct
         in
         make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
                                    `Type(`Record(q_types, q_values))));
+    | DE.Record binds ->
+        gen_rec_binds ctx g binds
     | _ ->
         failwith "TODO: other cases in gen_expr_q"
+  and gen_rec_binds ctx g binds =
+    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+    List.map binds.rec_vals ~f:(function
+      | (v, None, e) -> (v, e)
+      | (v, Some t, e) ->
+          ( v
+          , DE.App {
+              app_fn = DE.WithType {
+                wt_type = t;
+                wt_src = `Generated;
+              };
+              app_arg = e;
+            }
+          )
+    )
+    |>
+    List.map ~f:(fun (v, e) ->
+      let q_v = make_tyvar_q ctx bnd (make_kind ctx `Type) in
+      Context.with_val_binding ctx v (`LambdaBound (q_v, `Generated)) (fun ctx ->
+        (v, gen_expr_q ctx g e)
+      )
+    )
+    |> List.fold_left
+      ~init:(Context.with_quant ctx bnd (fun _ ->
+          make_ctor_ty ctx (`Row `Empty)
+        ))
+      ~f:(fun tt (hv, ht) ->
+        Context.with_quant ctx bnd (fun _ ->
+          make_ctor_ty ctx (`Row (`Extend( Label.of_string (Var.to_string hv),  ht, tt)))
+        ))
+    |> (fun vals ->
+      Context.with_quant ctx bnd (fun _ ->
+        make_ctor_ty ctx (`Type (`Record(make_tyvar_q ctx bnd (make_kind ctx `Row), vals)))
+      )
+    )
   and gen_const ctx const =
     let ty = match const with
       | Const.Integer _ -> `Int

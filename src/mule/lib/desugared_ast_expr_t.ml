@@ -8,6 +8,7 @@ type withtype_src =
   | `RecordVal of (Label.t Loc.located * Surface_ast.Type.lt * Surface_ast.Expr.lt)
   | `Msig
   | `Main
+  | `Generated
   ]
 type partial_lambda_src =
   (* Something that was part of an actually lambda. We do desugaring of
