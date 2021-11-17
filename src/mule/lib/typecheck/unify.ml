@@ -232,6 +232,22 @@ and merge_row_ctor ctx c merge lid lr _rid rr =
   | `Extend _, `Empty ->
       mismatched_ctors ctx merge lid c (`Row lr) (`Row rr)
 and merge_unorderd_rows ctx c merge le re =
+  (* TODO(perf): This is a fallback for when rows aren't already
+     sorted the same way -- but especially for the large rows that
+     come up with "module" records, this is likely to be a bottlneck,
+     since it's O(n * log(n)) in the size of the row, and will likely
+     for each field access.
+
+     We should at some point find a way to avoid doing all this work
+     just for a single field. Most likely this will involve storing
+     the row as a map, rather than converting it to one to unify and
+     then back, as we do now.
+
+     Much of this inefficiency is an artifact of following the papers
+     closely, which are often designed for easy formal analysis of the
+     type system, rather than efficient execution.
+  *)
+
   let lm, lt = build_row_map ctx le in
   let rm, rt = build_row_map ctx re in
 
