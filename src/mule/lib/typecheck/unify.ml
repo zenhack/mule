@@ -1,3 +1,4 @@
+open Common_ast
 module GT = Graph_types
 
 let rec pk_occurs_in_kind ctx id kv =
@@ -169,7 +170,6 @@ let rec unify_typ ctx c lv rv =
           | `Rigid -> report_err `Rigid
           | `Explicit -> report_err `Explicit
         end
-
     | `Ctor (lid, lc), `Ctor (rid, rc) ->
         merge_ctor ctx c merge (lid, lc) (rid, rc)
     | `Apply(_, lf, larg), `Apply(_, rf, rarg) ->
@@ -220,18 +220,111 @@ and merge_type_ctor ctx c merge lid lt _rid rt =
 and merge_row_ctor ctx c merge lid lr _rid rr =
   match lr, rr with
   | `Empty, `Empty -> merge (`Ctor(lid, `Row `Empty))
-  | `Extend(ll, lh, lt), `Extend(rl, rh, rt) ->
-      if Poly.equal ll rl then
-        begin
-          unify_quant ctx c lh rh;
-          unify_quant ctx c lt rt;
-          merge (`Ctor(lid, `Row(`Extend(ll, lh, lt))))
-        end
-      else
-        failwith "TODO: rows with different head labels"
+  | `Extend(ll, lh, lt), `Extend(rl, rh, rt) when Poly.equal ll rl ->
+      unify_quant ctx c lh rh;
+      unify_quant ctx c lt rt;
+      merge (`Ctor(lid, `Row(`Extend(ll, lh, lt))))
+  | `Extend le, `Extend re ->
+      (* Labels don't match, but they might just be out of order; do
+         this the hard way, where we have to normalize everything: *)
+      merge_unorderd_rows ctx c merge le re
   | `Empty, `Extend _
   | `Extend _, `Empty ->
       mismatched_ctors ctx merge lid c (`Row lr) (`Row rr)
+and merge_unorderd_rows ctx c merge le re =
+  let lm, lt = build_row_map ctx le in
+  let rm, rt = build_row_map ctx re in
+
+  (* First, merge the fields that appear explicitly in the two rows: *)
+  let common_fields = ref [] in
+  let rec merge_field lbl = function
+    | [], [] -> None
+    | [], (r::rs) -> Some (`Right (r, rs))
+    | (l::ls), [] -> Some (`Left (l, ls))
+    | (l::ls), (r::rs) ->
+          unify_quant ctx c l r;
+          common_fields := (lbl, l) :: !common_fields;
+          merge_field lbl (ls, rs)
+  in
+  let m = Map.merge lm rm ~f:(fun ~key:lbl -> function
+      | `Both (ls, rs) -> merge_field lbl (NonEmpty.to_list ls, NonEmpty.to_list rs)
+      | `Left ls -> Some (`Left ls)
+      | `Right rs -> Some (`Right rs)
+    )
+  in
+
+  let to_pairs lbl vs = List.map ~f:(fun v -> (lbl, v)) (NonEmpty.to_list vs) in
+  let (ls, rs) =
+    Map.to_alist m
+    |> List.partition_map ~f:(function
+      | (lbl, `Left ls) -> Either.First (to_pairs lbl ls)
+      | (lbl, `Right rs) -> Either.Second (to_pairs lbl rs)
+    )
+  in
+  (* Now we have lists of fields that are disjoint; they only
+     appear in one side or the other. These now need to unify
+     with each other, but we can't just recurse, since that
+     would send us back here in an infinite loop.
+
+     hypothesis: If either of these lists is non-empty, then
+     this is always a type error.
+
+     I'm like 95% sure this works, but need to let it germinate
+     a bit... What if both tails are flexible?
+  *)
+  begin match ls, rs with
+  | (_::_), (_::_) -> failwith "TODO: both have more fields, type error"
+  | ls, rs ->
+      let reattach_fields fs tail =
+        List.fold_right fs
+          ~init:tail
+          ~f:(fun (lbl, h) t ->
+            (* The bound doesn't really matter, since the extend is
+               inert, but we should probably make sure everything is
+               well dominated. Just point it at the same thing as the
+               tail. *)
+
+            let bnd =
+              (Context.read_var ctx Context.quant t).q_bound
+              |> Context.read_var ctx Context.bound
+            in
+            Context.with_quant ctx bnd (fun _ ->
+              let ty_id = GT.Ids.Type.fresh (Context.get_ctr ctx) in
+              Context.make_var ctx Context.typ (`Ctor(ty_id, `Row(`Extend(lbl, h, t))))
+            )
+          )
+      in
+      let qv = reattach_fields (List.concat ls) lt in
+      unify_quant ctx c qv (reattach_fields (List.concat rs) rt);
+      let qv = reattach_fields (List.rev !common_fields) qv in
+
+      (* It's a bit gross that we have to fish the body out and give it to
+         merge; we should refactor to avoid this. *)
+      let q = Context.read_var ctx Context.quant qv in
+      let ret = Context.read_var ctx Context.typ (Lazy.force q.q_body) in
+
+      merge ret
+  end
+and build_row_map ctx e =
+  (* Build up a map from label -> nonempty list of fields with that label,
+     retaining the order of the fields. The first time we hit something
+     that's not an `Extends, we return a pair of (the map, tail)
+     [e] is the argument to the `Extend constructor for the first field. *)
+  let rec go acc qv =
+    let GT.{q_body = tv; _} = Context.read_var ctx Context.quant qv in
+    match Context.read_var ctx Context.typ (Lazy.force tv) with
+    | `Ctor(_, `Row(`Extend(lbl, h, t))) ->
+        go
+          (Map.update acc lbl ~f:(function
+              | None -> NonEmpty.singleton h
+              | Some hs -> NonEmpty.cons h hs
+            ))
+          t
+    | _ ->
+        (Map.map ~f:NonEmpty.rev acc, qv)
+  in
+  let (lbl, h, t) = e in
+  go (Map.singleton (module Label) lbl (NonEmpty.singleton h)) t
 and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
     unify_bound ctx l.q_bound r.q_bound;
