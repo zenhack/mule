@@ -40,6 +40,8 @@ type unify_why =
 
   (* Use of a lambda bound variable: *)
   | `VarUse of (DE.var_src * DE.lam_src)
+
+  | `TODO of string
   ]
 
 (* Reason for a `UnifyKind constraint. *)

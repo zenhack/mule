@@ -399,6 +399,42 @@ end = struct
                                    `Type(`Record(q_types, q_values))));
     | DE.Record binds ->
         gen_rec_binds ctx g binds
+    | DE.LetRec {letrec_binds; letrec_body} ->
+        let record = gen_rec_binds ctx g letrec_binds in
+        let rec go ctx g = function
+          | [] -> gen_expr_q ctx g letrec_body
+          | (v, _, _) :: binds ->
+              let lbl = Label.of_string (Var.to_string v) in
+              let gv =
+                Context.with_sub_g ctx (fun ctx g ->
+                  let ctr = Context.get_ctr ctx in
+                  let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+                  let q_head = make_tyvar_q ctx bnd (make_kind ctx `Type) in
+                  let q_tail = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+                  let q_types = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+                  let q_values =
+                    make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
+                                               `Row(`Extend(lbl, q_head, q_tail))))
+                  in
+                  let q_rec =
+                    make_type_q ctx bnd (`Ctor(GT.Ids.Type.fresh ctr,
+                                               `Type(`Record(q_types, q_values))))
+                  in
+                  Context.constrain ctx C.(
+                      `Unify {
+                        unify_super = record;
+                        unify_sub = q_rec;
+                        unify_why = `TODO "letrec bound variable";
+                      }
+                    );
+                  q_head
+                )
+              in
+              Context.with_val_binding ctx v (`LetBound(gv, Some lbl)) (fun ctx ->
+                go ctx g binds
+              )
+        in
+        go ctx g letrec_binds.rec_vals
     | _ ->
         failwith "TODO: other cases in gen_expr_q"
   and gen_rec_binds ctx g binds =
