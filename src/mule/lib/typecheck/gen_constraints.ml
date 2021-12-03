@@ -316,6 +316,21 @@ end = struct
             })
         )
 
+    | DE.LetType{lettype_v; lettype_t; lettype_body} ->
+        let expand polarity =
+          let q = Context.with_quant ctx bnd (fun q -> expand_type ctx polarity q lettype_t) in
+          Lazy.force (Context.read_var ctx Context.quant q).q_body
+        in
+        let pos = expand `Pos in
+        let neg = expand `Neg in
+        let get_type polarity _ = match polarity with
+          | `Pos -> pos
+          | `Neg -> neg
+        in
+        Context.with_type_binding ctx lettype_v get_type begin fun ctx ->
+          gen_expr_q ctx g lettype_body
+        end
+
     (* Boring stuff like constant literals *)
     | DE.Const {const_val} ->
         Context.with_quant ctx bnd (fun _ -> gen_const ctx const_val)
