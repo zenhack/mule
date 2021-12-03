@@ -76,7 +76,25 @@ let build_sorted_let_vals: (Var.t * 'a D.t) Tsort.result -> 'a D.t -> 'a D.t =
       }
     )
 
-let _ = build_sorted_let_vals (* temporary, silence unused val warning from ocamlc. *)
+let build_sorted_let_types: (Var.t * 'a DT.t) Tsort.result -> 'a D.t -> 'a D.t =
+  fun bindings body ->
+  build_sorted ~bindings ~body
+    ~recursive:(fun binds body ->
+      D.LetRec {
+        letrec_binds = {
+          rec_types = [NonEmpty.to_list binds];
+          rec_vals = [];
+        };
+        letrec_body = body;
+      }
+    )
+    ~nonrecursive:(fun (v, t) body ->
+      D.LetType {
+        lettype_v = v;
+        lettype_t = t;
+        lettype_body = body;
+      }
+    )
 
 let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
   fun nodes ->
@@ -98,15 +116,9 @@ let sort_let ~rec_types ~rec_vals ~letrec_body =
           )
     )
   in
+  let types = sort_binds ~fv:DT.ftv rec_types in
   let vals = sort_binds ~fv:D.fv vals in
-  D.(LetRec {
-      letrec_binds = {
-        rec_types = sort_let_types rec_types;
-        rec_vals = [];
-      };
-      letrec_body =
-        build_sorted_let_vals vals letrec_body;
-  })
+  build_sorted_let_types types (build_sorted_let_vals vals letrec_body)
 
 (* [substitute_type_apps f params ty] replaces occurances of [f] applied to
  * the list of parameters in [ty] with just [f]. *)
