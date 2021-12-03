@@ -25,6 +25,8 @@ let rec fv: 'a t -> VarSet.t = function
       fv c_arg
   | Let {let_v; let_e; let_body} ->
       Set.union (fv let_e) (Set.remove (fv let_body) let_v)
+  | LetType{lettype_body; _} ->
+      fv lettype_body
   | LetRec _ ->
       failwith "TODO: fv(letrec)"
 and fv_branch = function
@@ -115,6 +117,12 @@ let rec sexp_of_t = function
       Sexp.List [
         Sexp.Atom "let";
         Sexp.List [Var.sexp_of_t v; sexp_of_t e];
+        sexp_of_t body;
+      ]
+  | LetType{lettype_v = v; lettype_t = t; lettype_body = body} ->
+      Sexp.List [
+        Sexp.Atom "lettype";
+        Sexp.List [Var.sexp_of_t v; Type.sexp_of_t t];
         sexp_of_t body;
       ]
   | LetRec{letrec_binds; letrec_body} ->
@@ -209,6 +217,11 @@ let rec apply_to_kids e ~f = match e with
       let_e = f let_e;
       let_body = f let_body
     }
+  | LetType{lettype_v; lettype_t; lettype_body} -> LetType {
+      lettype_v;
+      lettype_t;
+      lettype_body = f lettype_body;
+    }
   | LetRec{letrec_binds; letrec_body} ->
       LetRec {
         letrec_binds = apply_to_rec_kids letrec_binds ~f;
@@ -268,6 +281,11 @@ let rec map e ~f =
       let_v;
       let_e = map let_e ~f;
       let_body = map let_body ~f;
+    }
+  | LetType{lettype_v; lettype_t; lettype_body} -> LetType{
+      lettype_v;
+      lettype_t = Type.map lettype_t ~f;
+      lettype_body = map lettype_body ~f;
     }
   | LetRec{letrec_binds; letrec_body} ->
       LetRec {

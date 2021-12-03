@@ -94,6 +94,11 @@ type 'i t =
       let_e : 'i t;
       let_body : 'i t;
     }
+  | LetType of {
+      lettype_v: Var.t;
+      lettype_t: 'i Type_t.t;
+      lettype_body: 'i t;
+    }
   | LetRec of {
       letrec_binds : 'i rec_bind;
       letrec_body: 'i t;

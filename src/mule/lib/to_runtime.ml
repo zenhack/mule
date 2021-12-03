@@ -79,6 +79,8 @@ let translate
                 };
               app_arg = e;
             })
+      | D.LetType {lettype_body = body; _} ->
+          go_expr depth env body
   and go_var depth env v =
     begin match Util.find_exn env v with
       | `Index m ->

@@ -67,6 +67,8 @@ let translate_expr ~get_import expr =
           ( Js.Lam1(name, go env' let_body)
           , go env let_e
           )
+    | D.Expr.LetType{lettype_body; _} ->
+        go env lettype_body
     | D.Expr.Const {const_val} ->
         Js.Const const_val
     | D.Expr.UpdateVal {uv_lbl; uv_val; uv_record} ->
