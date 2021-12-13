@@ -142,8 +142,6 @@ let mismatched_ctors ctx merge id c lc rc =
 
 let rec unify_typ ctx c lv rv =
   unify_vars ctx Context.typ lv rv (fun merge l r ->
-    let l = Normalize.whnf_typ ctx l in
-    let r = Normalize.whnf_typ ctx r in
     match l, r with
     | `Poison x, _ | _, `Poison x -> merge (`Poison x)
     | `Free ltv, `Free rtv ->
@@ -343,6 +341,8 @@ and build_row_map ctx e =
   go (Map.singleton (module Label) lbl (NonEmpty.singleton h)) t
 and unify_quant ctx c lv rv =
   unify_vars ctx Context.quant lv rv (fun merge l r ->
+    let l = Normalize.whnf_q ctx l in
+    let r = Normalize.whnf_q ctx r in
     unify_bound ctx l.q_bound r.q_bound;
     unify_typ ctx c (Lazy.force l.q_body) (Lazy.force r.q_body);
     merge {
