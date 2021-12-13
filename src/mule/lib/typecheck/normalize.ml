@@ -1,5 +1,8 @@
 module GT = Graph_types
 
+let clone_lambda _ =
+  failwith "TODO: clone_lambda"
+
 let rec whnf_typ ctx t = match t with
   | `Free _ | `Ctor _ | `Lambda _ | `Poison _ -> t
   | `Apply (id, f, arg) ->
@@ -13,7 +16,8 @@ and whnf_q ctx q =
 and apply_qq ctx app_id f arg =
   let ft = Lazy.force (Context.read_var ctx Context.quant f).q_body in
   match Context.read_var ctx Context.typ ft with
-  | `Lambda (_id, _param, _body) ->
-      failwith "TODO: apply_qq lambda"
+  | `Lambda lam ->
+    let (_id, _param, _body) = clone_lambda lam in
+    failwith "TODO: apply_qq lambda"
   | _ ->
     `Apply (app_id, f, arg)
