@@ -17,8 +17,13 @@ and apply_qq ctx qv app_id f arg =
   let ft = Lazy.force (Context.read_var ctx Context.quant f).q_body in
   match Context.read_var ctx Context.typ ft with
   | `Lambda lam ->
-    let (_id, _param, _body) = clone_lambda qv lam in
-    failwith "TODO: apply_qq lambda"
+    (* TODO(perf): skip clone_lambda if the lambda is bound low enough. *)
+    let (param, body) = clone_lambda qv lam in
+    let arg' = Context.read_var ctx Context.quant arg in
+    let body' = Context.read_var ctx Context.quant body in
+    Context.merge ctx Context.quant param arg arg';
+    Context.merge ctx Context.quant qv body body';
+    Context.read_var ctx Context.typ (Lazy.force body'.q_body)
   | _ ->
     `Apply (app_id, f, arg)
 
