@@ -21,3 +21,6 @@ and apply_qq ctx app_id f arg =
     failwith "TODO: apply_qq lambda"
   | _ ->
     `Apply (app_id, f, arg)
+
+let whnf_qv ctx qv =
+  Context.modify_var ctx Context.quant (whnf_q ctx) qv

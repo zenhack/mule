@@ -1,4 +1,4 @@
 
 module GT = Graph_types
 
-val whnf_q : Context.t -> GT.quant -> GT.quant
+val whnf_qv : Context.t -> GT.quant GT.var -> unit

@@ -340,9 +340,9 @@ and build_row_map ctx e =
   let (lbl, h, t) = e in
   go (Map.singleton (module Label) lbl (NonEmpty.singleton h)) t
 and unify_quant ctx c lv rv =
+  Normalize.whnf_qv ctx lv;
+  Normalize.whnf_qv ctx rv;
   unify_vars ctx Context.quant lv rv (fun merge l r ->
-    let l = Normalize.whnf_q ctx l in
-    let r = Normalize.whnf_q ctx r in
     unify_bound ctx l.q_bound r.q_bound;
     unify_typ ctx c (Lazy.force l.q_body) (Lazy.force r.q_body);
     merge {
