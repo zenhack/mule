@@ -130,13 +130,8 @@ and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
               })
           end;
         tv'
-    | `Poison _ -> tv
-    | `Apply(_, f, arg) ->
-        Context.make_var ctx Context.typ (`Apply(id', walk_q' f, walk_q' arg))
-    | `Lambda(_, p, r)  ->
-        Context.make_var ctx Context.typ (`Lambda(id', walk_q' p, walk_q' r))
-    | `Ctor(_, ctor) ->
-        Context.make_var ctx Context.typ (`Ctor(id', GT.map_ctor ~f:walk_q' ctor))
+    | _ ->
+        Context.make_var ctx Context.typ (Expand_reduce.clone_map_typ ~new_id:id' ~f:walk_q' ty)
  )
 
 let expand ctx ~g ~at ~inst_c =

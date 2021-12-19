@@ -46,10 +46,9 @@ and clone_typ seen ctx tv ~b_target =
     let clone_q' qv = clone_q seen ctx qv ~is_root:false ~b_target in
     let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
     match t with
-    | `Ctor (_, ctor) ->
-        Context.make_var ctx Context.typ (`Ctor(id', GT.map_ctor ~f:clone_q' ctor))
+    | `Free _ -> failwith "TODO: clone_typ/`Free"
     | _ ->
-        failwith "TODO: clone_typ"
+        Context.make_var ctx Context.typ (Expand_reduce.clone_map_typ ~new_id:id' ~f:clone_q' t)
   )
 
 let get_qv_typ ctx qv =

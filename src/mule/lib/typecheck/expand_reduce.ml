@@ -85,3 +85,14 @@ let rec bound_under seen ctx ~limit ~target =
           bound_under seen ctx ~limit:(`Q qvlim)
             ~target:(Context.read_var ctx Context.bound qtgt.q_bound).b_target
       )
+
+(* Apply the function f to each q in the type, and return a new type with
+   new_id as its id. *)
+let clone_map_typ ~new_id ~f = function
+  | `Poison _ -> `Poison new_id
+  | `Apply(_, fn, arg) -> `Apply(new_id, f fn, f arg)
+  | `Lambda(_, p, r)  -> `Lambda(new_id, f p, f r)
+  | `Ctor(_, ctor) -> `Ctor(new_id, GT.map_ctor ~f ctor)
+  | `Free _ ->
+      (* This is very sad. TODO: refactor so we can avoid this. *)
+      MuleErr.bug "Can't call clone_map_typ on a `Free"
