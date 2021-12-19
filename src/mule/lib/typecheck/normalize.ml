@@ -1,6 +1,6 @@
 module GT = Graph_types
 
-let clone_lambda _qv (_id, _param, _body) =
+let clone_q _seen _ctx _b_target _q =
   failwith "TODO: clone_lambda"
 
 let rec whnf_typ ctx qv t = match t with
@@ -13,19 +13,33 @@ let rec whnf_typ ctx qv t = match t with
 and whnf_q ctx qv q =
   Context.modify_var ctx Context.typ (whnf_typ ctx qv) (Lazy.force q.q_body);
   q
-and apply_qq ctx qv app_id f arg =
-  let ft = Lazy.force (Context.read_var ctx Context.quant f).q_body in
+and apply_qq ctx qv app_id fq arg =
+  let f = Context.read_var ctx Context.quant fq in
+  let ft = Lazy.force f.q_body in
   match Context.read_var ctx Context.typ ft with
-  | `Lambda lam ->
-    (* TODO(perf): skip clone_lambda if the lambda is bound low enough. *)
-    let (param, body) = clone_lambda qv lam in
+  | `Lambda (_, param, body) ->
+    let (param, body) =
+      let seen = Expand_reduce.make_seen () in
+      let f_bnd = Context.read_var ctx Context.bound f.q_bound in
+      if Expand_reduce.bound_under seen ctx ~limit:(`Q qv) ~target:f_bnd.b_target then
+        (* Already localized to this `Apply; no need to copy, as there are
+           no other uses. *)
+        (param, body)
+      else
+        begin
+          match clone_q seen ctx (`Q qv) fq with
+          | `Lambda (_, param, body) -> (param, body)
+          | _ -> MuleErr.bug "clone_q didn't return a lambda."
+        end
+    in
     let arg' = Context.read_var ctx Context.quant arg in
     let body' = Context.read_var ctx Context.quant body in
     Context.merge ctx Context.quant param arg arg';
     Context.merge ctx Context.quant qv body body';
+    (* TODO/FIXME: set the bound on body to something legal and useful. *)
     Context.read_var ctx Context.typ (Lazy.force body'.q_body)
   | _ ->
-    `Apply (app_id, f, arg)
+    `Apply (app_id, fq, arg)
 
 let whnf_qv ctx qv =
   Context.modify_var ctx Context.quant (whnf_q ctx qv) qv
