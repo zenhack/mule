@@ -136,19 +136,7 @@ and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
     | `Lambda(_, p, r)  ->
         Context.make_var ctx Context.typ (`Lambda(id', walk_q' p, walk_q' r))
     | `Ctor(_, ctor) ->
-        Context.make_var ctx Context.typ
-          (`Ctor
-            ( id'
-            , begin match ctor with
-              | `Type(`Fn(p, r))         -> `Type(`Fn(walk_q' p, walk_q' r))
-              | `Type(`Record(ts, vs))   -> `Type(`Record(walk_q' ts, walk_q' vs))
-              | `Type(`Union r)          -> `Type(`Union(walk_q' r))
-              | `Type(`Const c)          -> `Type(`Const c)
-              | `Row(`Extend(lbl, h, t)) -> `Row(`Extend(lbl, walk_q' h, walk_q' t))
-              | `Row `Empty              -> `Row `Empty
-              end
-            )
-          )
+        Context.make_var ctx Context.typ (`Ctor(id', GT.map_ctor ~f:walk_q' ctor))
  )
 
 let expand ctx ~g ~at ~inst_c =

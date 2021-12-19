@@ -40,12 +40,16 @@ and clone_bound seen ctx bv ~b_target =
         b_flag = b.b_flag;
       }
 (* Like clone_q, but for type nodes. *)
-and clone_typ seen ctx tv ~b_target:_ =
+and clone_typ seen ctx tv ~b_target =
   let t = Context.read_var ctx Context.typ tv in
   Seen.get seen.Expand_reduce.seen_ty (GT.typ_id t) (fun () ->
-    let _tv_id = GT.Ids.Type.fresh (Context.get_ctr ctx) in
+    let clone_q' qv = clone_q seen ctx qv ~is_root:false ~b_target in
+    let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
     match t with
-    | _ -> failwith "TODO: clone_typ: other cases"
+    | `Ctor (_, ctor) ->
+        Context.make_var ctx Context.typ (`Ctor(id', GT.map_ctor ~f:clone_q' ctor))
+    | _ ->
+        failwith "TODO: clone_typ"
   )
 
 let get_qv_typ ctx qv =

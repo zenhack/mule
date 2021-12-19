@@ -196,3 +196,15 @@ let ty_q_kids = function
   | `Ctor (_, `Row `Empty)
   | `Poison _ ->
       []
+
+let map_type_ctor ~f = function
+  | `Fn (a, b) -> `Fn(f a, f b)
+  | `Record (a, b) -> `Record(f a, f b)
+  | `Union a -> `Union (f a)
+  | `Const c -> `Const c
+let map_row_ctor ~f = function
+  | `Empty -> `Empty
+  | `Extend (lbl, a, b) -> `Extend(lbl, f a, f b)
+let map_ctor ~f = function
+  | `Type t -> `Type (map_type_ctor ~f t)
+  | `Row r -> `Row (map_row_ctor ~f r)
