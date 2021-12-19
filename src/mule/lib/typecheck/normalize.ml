@@ -3,20 +3,22 @@ module GT = Graph_types
 (* Clone the interior of a subgraph rooted at qv, where the interior
    is defined as nodes bound at b_target or below. Nodes bound above
    b_target will be shared with the original. *)
-let rec clone_q seen ctx qv ~b_target =
-  (* TODO: how do we distinguish between the root, which needs to be
-     bound on b_target, and the other nodes, which should be bound on
-     the clone of their original binding? Probably need an is_root
-     like in expand. *)
+let rec clone_q seen ctx qv ~is_root ~b_target =
   let q = Context.read_var ctx Context.quant qv in
   Seen.get seen.Expand_reduce.seen_q q.q_id (fun () ->
     let orig_bound = Context.read_var ctx Context.bound q.q_bound in
     if Expand_reduce.bound_under seen ctx ~limit:b_target ~target:orig_bound.b_target then
       let q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx) in
       let q_body = clone_typ seen ctx (Lazy.force q.q_body) ~b_target in
+      let q_bound =
+        if is_root then
+          Context.make_var ctx Context.bound {b_target; b_flag = `Flex}
+        else
+          clone_bound seen ctx q.q_bound ~b_target
+      in
       Context.make_var ctx Context.quant {
-        q_bound = clone_bound seen ctx q.q_bound ~b_target;
         q_id;
+        q_bound;
         q_merged = Set.singleton (module GT.Ids.Quant) q_id;
         q_body = lazy q_body;
       }
@@ -34,7 +36,7 @@ and clone_bound seen ctx bv ~b_target =
         )
   | `Q qv ->
       Context.make_var ctx Context.bound {
-        b_target = `Q (clone_q seen ctx qv ~b_target);
+        b_target = `Q (clone_q seen ctx qv ~b_target ~is_root:false);
         b_flag = b.b_flag;
       }
 (* Like clone_q, but for type nodes. *)
@@ -74,7 +76,7 @@ and apply_qq ctx qv app_id fq arg =
         (param, body)
       else
         begin
-          let fq' = clone_q seen ctx fq ~b_target:(`Q qv) in
+          let fq' = clone_q seen ctx fq ~b_target:(`Q qv) ~is_root:true in
           match get_qv_typ ctx fq' with
           | `Lambda (_, param, body) -> (param, body)
           | _ -> MuleErr.bug "clone_q didn't return a lambda."
