@@ -1,7 +1,50 @@
 module GT = Graph_types
 
-let clone_q _seen _ctx _b_target _q =
-  failwith "TODO: clone_lambda"
+(* Clone the interior of a subgraph rooted at qv, where the interior
+   is defined as nodes bound at b_target or below. Nodes bound above
+   b_target will be shared with the original. *)
+let rec clone_q seen ctx qv ~b_target =
+  (* TODO: how do we distinguish between the root, which needs to be
+     bound on b_target, and the other nodes, which should be bound on
+     the clone of their original binding? Probably need an is_root
+     like in expand. *)
+  let q = Context.read_var ctx Context.quant qv in
+  Seen.get seen.Expand_reduce.seen_q q.q_id (fun () ->
+    let orig_bound = Context.read_var ctx Context.bound q.q_bound in
+    if Expand_reduce.bound_under seen ctx ~limit:b_target ~target:orig_bound.b_target then
+      let q_id = GT.Ids.Quant.fresh (Context.get_ctr ctx) in
+      let q_body = clone_typ seen ctx (Lazy.force q.q_body) ~b_target in
+      Context.make_var ctx Context.quant {
+        q_bound = clone_bound seen ctx q.q_bound ~b_target;
+        q_id;
+        q_merged = Set.singleton (module GT.Ids.Quant) q_id;
+        q_body = lazy q_body;
+      }
+    else
+      qv
+  )
+and clone_bound seen ctx bv ~b_target =
+  let b = Context.read_var ctx Context.bound bv in
+  match b.b_target with
+  | `G _ ->
+      (* TODO: restructure to avoid checking this at runtime. *)
+      MuleErr.bug
+        ( "Impossible: shouldn't have called this with a G; " ^
+          "that would imply that this is bound above the apply node."
+        )
+  | `Q qv ->
+      Context.make_var ctx Context.bound {
+        b_target = `Q (clone_q seen ctx qv ~b_target);
+        b_flag = b.b_flag;
+      }
+(* Like clone_q, but for type nodes. *)
+and clone_typ seen ctx tv ~b_target:_ =
+  let t = Context.read_var ctx Context.typ tv in
+  Seen.get seen.Expand_reduce.seen_ty (GT.typ_id t) (fun () ->
+    let _tv_id = GT.Ids.Type.fresh (Context.get_ctr ctx) in
+    match t with
+    | _ -> failwith "TODO: clone_typ: other cases"
+  )
 
 let get_qv_typ ctx qv =
   let q = Context.read_var ctx Context.quant qv in
@@ -31,7 +74,7 @@ and apply_qq ctx qv app_id fq arg =
         (param, body)
       else
         begin
-          let fq' = clone_q seen ctx (`Q qv) fq in
+          let fq' = clone_q seen ctx fq ~b_target:(`Q qv) in
           match get_qv_typ ctx fq' with
           | `Lambda (_, param, body) -> (param, body)
           | _ -> MuleErr.bug "clone_q didn't return a lambda."
