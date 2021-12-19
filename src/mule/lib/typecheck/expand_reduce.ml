@@ -56,6 +56,13 @@ let rec bound_under seen ctx ~limit ~target =
           (* We're above the target. *)
           false
         else if GT.Ids.G.(g_id' = g_id) then
+          (* XXX: I think this is wrong in general, though in curent usage
+             we never actually pass in the same node at top level, so this
+             only applies if we've walked up the tree from some lower node,
+             so it gives the correct result in those cases. TODO: fix
+             this so that it actualy makes sense as an input of its own.
+
+             Same thing with the q nodes, below. *)
           true
         else
           begin match GT.GNode.bound g' with
@@ -72,6 +79,7 @@ let rec bound_under seen ctx ~limit ~target =
           (* Above the target *)
           false
         else if GT.Ids.Quant.(tgt_id = lim_id) then
+          (* XXX: see corresponding comment for G nodes above. *)
           true
         else
           bound_under seen ctx ~limit:(`Q qvlim)
