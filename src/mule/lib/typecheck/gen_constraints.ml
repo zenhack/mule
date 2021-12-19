@@ -153,6 +153,14 @@ end = struct
                   )
               )
           )
+(*
+    | DT.App _ ->
+        failwith "TODO: exapnd app"
+    | DT.TypeLam {tl_info = _; tl_param; tl_body} ->
+        failwith "TODO: expand type lambda"
+    | DT.Recur {mu_info; mu_var; mu_body} ->
+        failwith "TODO: recursive type"
+*)
     | _ -> failwith "TODO: other cases in expand_type"
   and expand_row
     : Context.t
