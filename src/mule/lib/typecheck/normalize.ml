@@ -46,7 +46,17 @@ and clone_typ seen ctx tv ~b_target =
     let clone_q' qv = clone_q seen ctx qv ~is_root:false ~b_target in
     let id' = GT.Ids.Type.fresh (Context.get_ctr ctx) in
     match t with
-    | `Free _ -> failwith "TODO: clone_typ/`Free"
+    | `Free ftv ->
+        let bnd = Context.read_var ctx Context.bound ftv.tv_bound in
+        if Expand_reduce.bound_under seen ctx ~limit:b_target ~target:bnd.b_target then
+          Context.make_var ctx Context.typ (`Free {
+            tv_id = id';
+            tv_merged = Set.singleton (module GT.Ids.Type) id';
+            tv_bound = clone_bound seen ctx ftv.tv_bound ~b_target;
+            tv_kind = ftv.tv_kind;
+          })
+        else
+          tv
     | _ ->
         Context.make_var ctx Context.typ (Expand_reduce.clone_map_typ ~new_id:id' ~f:clone_q' t)
   )
