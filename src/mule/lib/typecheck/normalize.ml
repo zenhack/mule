@@ -76,30 +76,38 @@ let rec whnf_typ ctx qv t = match t with
 and whnf_q ctx qv q =
   Context.modify_var ctx Context.typ (whnf_typ ctx qv) (Lazy.force q.q_body);
   q
-and apply_qq ctx qv app_id fq arg =
+and apply_qq ctx appq app_id fq arg =
   match get_qv_typ ctx fq with
   | `Lambda (_, param, body) ->
     let (param, body) =
       let seen = Expand_reduce.make_seen () in
       let f = Context.read_var ctx Context.quant fq in
       let f_bnd = Context.read_var ctx Context.bound f.q_bound in
-      if Expand_reduce.bound_under seen ctx ~limit:(`Q qv) ~target:f_bnd.b_target then
+      if Expand_reduce.bound_under seen ctx ~limit:(`Q appq) ~target:f_bnd.b_target then
         (* Already localized to this `Apply; no need to copy, as there are
            no other uses. *)
         (param, body)
       else
         begin
-          let fq' = clone_q seen ctx fq ~b_target:(`Q qv) ~is_root:true in
+          let fq' = clone_q seen ctx fq ~b_target:(`Q appq) ~is_root:true in
           match get_qv_typ ctx fq' with
           | `Lambda (_, param, body) -> (param, body)
           | _ -> MuleErr.bug "clone_q didn't return a lambda."
         end
     in
+    (*
+       1. Replace the parameter node with the argument.
+       2. Set the body's bound to what the application's was.
+       3. Replace the application with the body (whose parameter
+          has now been substituted).
+
+       1 and 3 have the effect of removing the explicit bounds.
+    *)
     let arg' = Context.read_var ctx Context.quant arg in
-    let body' = Context.read_var ctx Context.quant body in
     Context.merge ctx Context.quant param arg arg';
-    Context.merge ctx Context.quant qv body body';
-    (* TODO/FIXME: set the bound on body to something legal and useful. *)
+    let body' = Context.read_var ctx Context.quant body in
+    let app_bnd = (Context.read_var ctx Context.quant appq).q_bound in
+    Context.merge ctx Context.quant appq body { body' with q_bound = app_bnd };
     Context.read_var ctx Context.typ (Lazy.force body'.q_body)
   | _ ->
     `Apply (app_id, fq, arg)
