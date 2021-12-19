@@ -9,28 +9,6 @@ type is_root =
   | Root of GT.g_node
   | NotRoot of GT.quant GT.var
 
-(* A group of Seen.t used during the expansion process. *)
-type seen = {
-  (* Nodes we have already visited traversing the graph *)
-  seen_q: (GT.Ids.Quant.t, GT.quant GT.var) Seen.t;
-  seen_ty: (GT.Ids.Type.t, GT.typ GT.var) Seen.t;
-
-  (* Nodes who's status in the constraints interior (ci)
-     is known. Note that this structure's lifetime is always
-     bound to a particular call to expand, so the g node whose
-     constraint interior is in question is implicit. *)
-  seen_ci_g: (GT.Ids.G.t, bool) Seen.t;
-  seen_ci_q: (GT.Ids.Quant.t, bool) Seen.t;
-}
-
-let make_seen () = {
-  seen_q = Seen.make (module GT.Ids.Quant);
-  seen_ty = Seen.make (module GT.Ids.Type);
-
-  seen_ci_g = Seen.make (module GT.Ids.G);
-  seen_ci_q = Seen.make (module GT.Ids.Quant);
-}
-
 let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
   fun ctx is_root flag ->
     Context.make_var ctx Context.bound (
@@ -45,32 +23,10 @@ let make_bound : Context.t -> is_root -> GT.bound_flag -> GT.bound GT.var =
         }
     )
 
-let rec bound_under seen ctx g = function
-  | `G g' ->
-      let (g_id', g_id) = GT.GNode.(id g', id g) in
-      Seen.get seen.seen_ci_g g_id' (fun () ->
-        if GT.Ids.G.(g_id' < g_id) then
-          (* We're above the target. *)
-          false
-        else if GT.Ids.G.(g_id' = g_id) then
-          true
-        else
-          begin match GT.GNode.bound g' with
-            | None -> false
-            | Some v -> bound_under seen ctx g (`G v)
-          end
-      )
-  | `Q qv ->
-      let q = Context.read_var ctx Context.quant qv in
-      Seen.get seen.seen_ci_q q.q_id (fun () ->
-        bound_under seen ctx g
-          (Context.read_var ctx Context.bound q.q_bound).b_target
-      )
-
 
 let rec walk_q ctx qv ~g ~is_root ~inst_c ~seen =
   let q = Context.read_var ctx Context.quant qv in
-  Seen.get seen.seen_q q.q_id (fun () ->
+  Seen.get seen.Expand_reduce.seen_q q.q_id (fun () ->
     let ctr = Context.get_ctr ctx in
     let
       GT.{
@@ -79,7 +35,7 @@ let rec walk_q ctx qv ~g ~is_root ~inst_c ~seen =
       } = Context.read_var ctx Context.bound q.q_bound
     in
     let q_in_constraint_interior =
-      bound_under seen ctx g q_parent
+      Expand_reduce.bound_under seen ctx g q_parent
     in
     let q_bound =
       if q_in_constraint_interior then
@@ -147,7 +103,7 @@ and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
             tv_kind = ftv.tv_kind;
           })
         in
-        if not (bound_under seen ctx g t_bound.b_target) then
+        if not (Expand_reduce.bound_under seen ctx g t_bound.b_target) then
           begin
             (* HACK: we need to unify the two type variables, but
                our unification constraints act on Q-nodes. So, we create
@@ -197,4 +153,4 @@ and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
 
 let expand ctx ~g ~at ~inst_c =
   let qv = Lazy.force (GT.GNode.get g) in
-  walk_q ctx qv ~g:at ~is_root:(Root at) ~inst_c ~seen:(make_seen ())
+  walk_q ctx qv ~g:at ~is_root:(Root at) ~inst_c ~seen:(Expand_reduce.make_seen ())
