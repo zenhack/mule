@@ -39,8 +39,17 @@ let make_seen () = {
   seen_ci_q = Seen.make (module GT.Ids.Quant);
 }
 
-let rec bound_under seen ctx g = function
-  | `G g' ->
+let rec bound_under seen ctx ~limit ~target =
+  match limit, target with
+  | `Q _, `G _ -> false (* Gs can't be bound below Qs *)
+  | `G g, `Q qv ->
+      (* Walk up the chain; eventually we'll hit a G. *)
+      let q = Context.read_var ctx Context.quant qv in
+      Seen.get seen.seen_ci_q q.q_id (fun () ->
+        bound_under seen ctx ~limit:(`G g)
+          ~target:(Context.read_var ctx Context.bound q.q_bound).b_target
+      )
+  | `G g, `G g' ->
       let (g_id', g_id) = GT.GNode.(id g', id g) in
       Seen.get seen.seen_ci_g g_id' (fun () ->
         if GT.Ids.G.(g_id' < g_id) then
@@ -51,12 +60,20 @@ let rec bound_under seen ctx g = function
         else
           begin match GT.GNode.bound g' with
             | None -> false
-            | Some v -> bound_under seen ctx g (`G v)
+            | Some v -> bound_under seen ctx ~limit:(`G g) ~target:(`G v)
           end
       )
-  | `Q qv ->
-      let q = Context.read_var ctx Context.quant qv in
-      Seen.get seen.seen_ci_q q.q_id (fun () ->
-        bound_under seen ctx g
-          (Context.read_var ctx Context.bound q.q_bound).b_target
+  | `Q qvlim, `Q qvtgt ->
+      let qlim = Context.read_var ctx Context.quant qvlim in
+      let qtgt = Context.read_var ctx Context.quant qvtgt in
+      let lim_id, tgt_id = qlim.q_id, qtgt.q_id in
+      Seen.get seen.seen_ci_q qtgt.q_id (fun () ->
+        if GT.Ids.Quant.(tgt_id < lim_id) then
+          (* Above the target *)
+          false
+        else if GT.Ids.Quant.(tgt_id = lim_id) then
+          true
+        else
+          bound_under seen ctx ~limit:(`Q qvlim)
+            ~target:(Context.read_var ctx Context.bound qtgt.q_bound).b_target
       )

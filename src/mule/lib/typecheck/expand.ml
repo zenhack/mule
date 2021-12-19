@@ -35,7 +35,7 @@ let rec walk_q ctx qv ~g ~is_root ~inst_c ~seen =
       } = Context.read_var ctx Context.bound q.q_bound
     in
     let q_in_constraint_interior =
-      Expand_reduce.bound_under seen ctx g q_parent
+      Expand_reduce.bound_under seen ctx ~limit:(`G g) ~target:q_parent
     in
     let q_bound =
       if q_in_constraint_interior then
@@ -103,7 +103,7 @@ and walk_ty ctx ~tv ~root ~g ~inst_c ~seen =
             tv_kind = ftv.tv_kind;
           })
         in
-        if not (Expand_reduce.bound_under seen ctx g t_bound.b_target) then
+        if not (Expand_reduce.bound_under seen ctx ~limit:(`G g) ~target:t_bound.b_target) then
           begin
             (* HACK: we need to unify the two type variables, but
                our unification constraints act on Q-nodes. So, we create
