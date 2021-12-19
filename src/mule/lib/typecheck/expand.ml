@@ -9,10 +9,16 @@ type is_root =
   | Root of GT.g_node
   | NotRoot of GT.quant GT.var
 
+(* A group of Seen.t used during the expansion process. *)
 type seen = {
+  (* Nodes we have already visited traversing the graph *)
   seen_q: (GT.Ids.Quant.t, GT.quant GT.var) Seen.t;
   seen_ty: (GT.Ids.Type.t, GT.typ GT.var) Seen.t;
 
+  (* Nodes who's status in the constraints interior (ci)
+     is known. Note that this structure's lifetime is always
+     bound to a particular call to expand, so the g node whose
+     constraint interior is in question is implicit. *)
   seen_ci_g: (GT.Ids.G.t, bool) Seen.t;
   seen_ci_q: (GT.Ids.Quant.t, bool) Seen.t;
 }
