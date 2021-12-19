@@ -10,6 +10,7 @@ type typeconst_name =
   | `Union
   | `Apply
   | `Lambda
+  | `Fix
 
   | `Poison
   ]

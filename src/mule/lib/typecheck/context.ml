@@ -217,6 +217,7 @@ module DebugGraph = struct
       | `Free _ | `Poison _ -> []
       | `Apply(_, f, arg) -> [f; arg]
       | `Lambda(_, param, body) -> [param; body]
+      | `Fix _ -> []
       | `Ctor(_, `Type(`Fn(p, r))) -> [p; r]
       | `Ctor(_, `Type(`Record(t, v))) -> [t; v]
       | `Ctor(_, `Type(`Union r)) -> [r]
@@ -282,6 +283,7 @@ module DebugGraph = struct
     | `Lambda(id, _, _) -> id
     | `Apply(id, _, _) -> id
     | `Poison id -> id
+    | `Fix id -> id
   and merged_typ_ids t = match t with
     | `Free GT.{tv_merged; _} -> Set.to_list tv_merged
     | _ -> [typ_id t]
@@ -306,6 +308,7 @@ module DebugGraph = struct
           ))
         | `Lambda _ -> `Const (`Named `Lambda)
         | `Apply _ -> `Const (`Named `Apply)
+        | `Fix _ -> `Const (`Named `Fix)
         | `Poison _ -> `Const (`Named `Poison)
       in
       Debug.show_node node_type

@@ -116,6 +116,10 @@ type typ =
   | `Lambda of (Ids.Type.t * quant var * quant var)
   | `Apply of (Ids.Type.t * quant var * quant var)
 
+  (* Type level fixpoint operator. Has kind (unguarded k -> guarded k) -> guarded k
+     (for any k), which enforces whnf termination. *)
+  | `Fix of Ids.Type.t
+
   (* `Posion is not a real type; it is used as part of our error handling
      strategy. TODO: write docs about error handling *)
   | `Poison of Ids.Type.t
@@ -167,6 +171,7 @@ let typ_id = function
   | `Ctor (id, _) -> id
   | `Lambda (id, _, _) -> id
   | `Apply (id, _, _) -> id
+  | `Fix id -> id
   | `Poison id -> id
 
 type ('q, 'ty) seen = {
@@ -187,6 +192,7 @@ let ty_q_kids = function
   | `Lambda (_, a, b)
   | `Apply (_, a, b) ->
       [a; b]
+  | `Fix _ -> []
 
   | `Ctor (_, `Type (`Union a)) ->
       [a]

@@ -67,7 +67,7 @@ let get_qv_typ ctx qv =
   Context.read_var ctx Context.typ body
 
 let rec whnf_typ ctx qv t = match t with
-  | `Free _ | `Ctor _ | `Lambda _ | `Poison _ -> t
+  | `Free _ | `Ctor _ | `Lambda _ | `Fix _ | `Poison _ -> t
   | `Apply (id, f, arg) ->
       begin
         Context.modify_var ctx Context.quant (whnf_q ctx qv) f;

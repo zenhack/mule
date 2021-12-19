@@ -42,6 +42,7 @@ let fmt_node: node_type -> int -> int list -> string =
             | `Named `Union -> "|"
             | `Named `Apply -> "<apply>"
             | `Named `Lambda -> "<lambda>"
+            | `Named `Fix -> "<fix>"
             | `Named `Record -> "{...type _, ..._}"
             | `Named `Empty -> "<>"
             | `Named `Poison -> "<poison>"

@@ -92,6 +92,7 @@ let clone_map_typ ~new_id ~f = function
   | `Poison _ -> `Poison new_id
   | `Apply(_, fn, arg) -> `Apply(new_id, f fn, f arg)
   | `Lambda(_, p, r)  -> `Lambda(new_id, f p, f r)
+  | `Fix _ -> `Fix new_id
   | `Ctor(_, ctor) -> `Ctor(new_id, GT.map_ctor ~f ctor)
   | `Free _ ->
       (* This is very sad. TODO: refactor so we can avoid this. *)
