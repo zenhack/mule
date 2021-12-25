@@ -153,9 +153,21 @@ end = struct
                   )
               )
           )
+    | DT.App {app_fn; app_arg; app_info = _} ->
+        let bnd = GT.{ b_target; b_flag = `Flex } in
+        let expand_type' t =
+          Context.with_quant ctx bnd (fun q_target ->
+            expand_type ctx polarity q_target t
+          )
+        in
+        Context.make_var ctx Context.typ
+          (`Apply
+            ( GT.Ids.Type.fresh (Context.get_ctr ctx)
+            , expand_type' app_fn
+            , expand_type' app_arg
+            )
+          )
 (*
-    | DT.App _ ->
-        failwith "TODO: exapnd app"
     | DT.TypeLam {tl_info = _; tl_param; tl_body} ->
         failwith "TODO: expand type lambda"
     | DT.Recur {mu_info; mu_var; mu_body} ->
