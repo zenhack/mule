@@ -168,11 +168,36 @@ end = struct
             )
           )
 (*
-    | DT.TypeLam {tl_info = _; tl_param; tl_body} ->
+    | DT.TypeLam {tl_param; tl_body; tl_info = _} ->
+        (*  NB. this is a little fiddly, since the parameter is a q-node;
+            need to think through what it should be bound on vs. the bottom
+            node, and what their flag(s) should be. *)
         failwith "TODO: expand type lambda"
-    | DT.Recur {mu_info; mu_var; mu_body} ->
-        failwith "TODO: recursive type"
 *)
+    | DT.Recur {mu_info; mu_var; mu_body} ->
+        (* XXX: maybe we should be doing this in the desugar step, instead of
+           here. *)
+        let new_id () = GT.Ids.Type.fresh (Context.get_ctr ctx) in
+        let bnd = GT.{ b_target; b_flag = `Flex } in
+        let expand_type' t =
+          Context.with_quant ctx bnd (fun q_target ->
+            expand_type ctx polarity q_target t
+          )
+        in
+        let body = expand_type' (DT.TypeLam {
+            tl_param = mu_var;
+            tl_body = mu_body;
+            tl_info = mu_info;
+          })
+        in
+        let app_id = new_id () in
+        let fix_id = new_id () in
+        let fix =
+          Context.with_quant ctx bnd (fun _ ->
+            Context.make_var ctx Context.typ (`Fix fix_id)
+          )
+        in
+        Context.make_var ctx Context.typ (`Apply(app_id, fix, body))
     | _ -> failwith "TODO: other cases in expand_type"
   and expand_row
     : Context.t
