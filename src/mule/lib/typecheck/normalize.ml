@@ -66,6 +66,45 @@ let get_qv_typ ctx qv =
   let body = Lazy.force q.q_body in
   Context.read_var ctx Context.typ body
 
+let subst ctx ~var_qv ~val_qv =
+  let qv_tv qv = Lazy.force (Context.read_var ctx Context.quant qv).q_body in
+  let val_tv = qv_tv val_qv in
+  let t = Context.read_var ctx Context.typ val_tv in
+  let q = Context.read_var ctx Context.quant val_qv in
+  Context.merge ctx Context.typ (qv_tv var_qv) val_tv t;
+  Context.merge ctx Context.quant var_qv val_qv q
+
+let clone_lambda ctx ~appq ~fq ~param ~body =
+  let seen = Expand_reduce.make_seen () in
+  let f = Context.read_var ctx Context.quant fq in
+  let f_bnd = Context.read_var ctx Context.bound f.q_bound in
+  if Expand_reduce.bound_under seen ctx ~limit:(`Q appq) ~target:f_bnd.b_target then
+    (* Already localized to this `Apply; no need to copy, as there are
+       no other uses. *)
+    (param, body)
+  else
+    begin
+      let fq' = clone_q seen ctx fq ~b_target:(`Q appq) ~is_root:true in
+      match get_qv_typ ctx fq' with
+      | `Lambda (_, param, body) -> (param, body)
+      | _ -> MuleErr.bug "clone_q didn't return a lambda."
+    end
+
+let apply_lambda ctx ~appq ~param ~body ~arg =
+  (*
+     1. Replace the parameter node with the argument.
+     2. Set the body's bound to what the application's was.
+     3. Replace the application with the body (whose parameter
+        has now been substituted).
+
+     1 and 3 have the effect of removing the explicit bounds.
+  *)
+  subst ctx ~var_qv:param ~val_qv:arg;
+  let body' = Context.read_var ctx Context.quant body in
+  let app_bnd = (Context.read_var ctx Context.quant appq).q_bound in
+  Context.merge ctx Context.quant appq body { body' with q_bound = app_bnd };
+  Context.read_var ctx Context.typ (Lazy.force body'.q_body)
+
 let rec whnf_typ ctx qv t = match t with
   | `Free _ | `Ctor _ | `Lambda _ | `Fix _ | `Poison _ -> t
   | `Apply (id, f, arg) ->
@@ -79,36 +118,18 @@ and whnf_q ctx qv q =
 and apply_qq ctx appq app_id fq arg =
   match get_qv_typ ctx fq with
   | `Lambda (_, param, body) ->
-    let (param, body) =
-      let seen = Expand_reduce.make_seen () in
-      let f = Context.read_var ctx Context.quant fq in
-      let f_bnd = Context.read_var ctx Context.bound f.q_bound in
-      if Expand_reduce.bound_under seen ctx ~limit:(`Q appq) ~target:f_bnd.b_target then
-        (* Already localized to this `Apply; no need to copy, as there are
-           no other uses. *)
-        (param, body)
-      else
-        begin
-          let fq' = clone_q seen ctx fq ~b_target:(`Q appq) ~is_root:true in
-          match get_qv_typ ctx fq' with
-          | `Lambda (_, param, body) -> (param, body)
-          | _ -> MuleErr.bug "clone_q didn't return a lambda."
-        end
-    in
-    (*
-       1. Replace the parameter node with the argument.
-       2. Set the body's bound to what the application's was.
-       3. Replace the application with the body (whose parameter
-          has now been substituted).
+    let (param, body) = clone_lambda ctx ~appq ~fq ~param ~body in
+    apply_lambda ctx ~appq ~param ~body ~arg
+  | `Fix _ ->
+    Context.modify_var ctx Context.quant (whnf_q ctx appq) arg;
+    begin match get_qv_typ ctx arg with
+      | `Lambda(_, param, body) ->
+          let (param, body) = clone_lambda ctx ~appq ~fq:arg ~param ~body in
+          apply_lambda ctx ~appq ~param ~body ~arg:body
+      | _ ->
+          `Apply (app_id, fq, arg)
+    end
 
-       1 and 3 have the effect of removing the explicit bounds.
-    *)
-    let arg' = Context.read_var ctx Context.quant arg in
-    Context.merge ctx Context.quant param arg arg';
-    let body' = Context.read_var ctx Context.quant body in
-    let app_bnd = (Context.read_var ctx Context.quant appq).q_bound in
-    Context.merge ctx Context.quant appq body { body' with q_bound = app_bnd };
-    Context.read_var ctx Context.typ (Lazy.force body'.q_body)
   | _ ->
     `Apply (app_id, fq, arg)
 

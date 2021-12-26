@@ -167,13 +167,27 @@ end = struct
             , expand_type' app_arg
             )
           )
-(*
     | DT.TypeLam {tl_param; tl_body; tl_info = _} ->
-        (*  NB. this is a little fiddly, since the parameter is a q-node;
-            need to think through what it should be bound on vs. the bottom
-            node, and what their flag(s) should be. *)
-        failwith "TODO: expand type lambda"
-*)
+        let ctr = Context.get_ctr ctx in
+        let bnd = GT.{ b_target; b_flag = `Explicit } in
+        let tv_id = GT.Ids.Type.fresh ctr in
+        let pk_id = GT.Ids.Kind.fresh ctr in
+        let param_qv = make_tyvar_q ctx bnd (make_kind ctx (`Free pk_id)) in
+        let param_tv = Lazy.force (Context.read_var ctx Context.quant param_qv).q_body in
+        let body_qv =
+            Context.with_type_binding ctx tl_param (fun _ _ -> param_tv) begin fun ctx ->
+                Context.with_quant ctx bnd (fun q_target ->
+                  expand_type ctx polarity q_target tl_body
+                )
+            end
+        in
+        Context.make_var ctx Context.typ
+          ( `Lambda
+            ( tv_id
+            , param_qv
+            , body_qv
+            )
+          )
     | DT.Recur {mu_info; mu_var; mu_body} ->
         (* XXX: maybe we should be doing this in the desugar step, instead of
            here. *)
