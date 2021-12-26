@@ -90,21 +90,6 @@ let clone_lambda ctx ~appq ~fq ~param ~body =
       | _ -> MuleErr.bug "clone_q didn't return a lambda."
     end
 
-let apply_lambda ctx ~appq ~param ~body ~arg =
-  (*
-     1. Replace the parameter node with the argument.
-     2. Set the body's bound to what the application's was.
-     3. Replace the application with the body (whose parameter
-        has now been substituted).
-
-     1 and 3 have the effect of removing the explicit bounds.
-  *)
-  subst ctx ~var_qv:param ~val_qv:arg;
-  let body' = Context.read_var ctx Context.quant body in
-  let app_bnd = (Context.read_var ctx Context.quant appq).q_bound in
-  Context.merge ctx Context.quant appq body { body' with q_bound = app_bnd };
-  Context.read_var ctx Context.typ (Lazy.force body'.q_body)
-
 let rec whnf_typ ctx qv t = match t with
   | `Free _ | `Ctor _ | `Lambda _ | `Fix _ | `Poison _ -> t
   | `Apply (id, f, arg) ->
@@ -132,6 +117,20 @@ and apply_qq ctx appq app_id fq arg =
 
   | _ ->
     `Apply (app_id, fq, arg)
+and apply_lambda ctx ~appq ~param ~body ~arg =
+  (*
+     1. Replace the parameter node with the argument.
+     2. Set the body's bound to what the application's was.
+     3. Replace the application with the body (whose parameter
+        has now been substituted).
 
-let whnf_qv ctx qv =
+     1 and 3 have the effect of removing the explicit bounds.
+  *)
+  subst ctx ~var_qv:param ~val_qv:arg;
+  let body' = Context.read_var ctx Context.quant body in
+  let app_bnd = (Context.read_var ctx Context.quant appq).q_bound in
+  Context.merge ctx Context.quant appq body { body' with q_bound = app_bnd };
+  whnf_qv ctx appq;
+  Context.read_var ctx Context.typ (Lazy.force body'.q_body)
+and whnf_qv ctx qv =
   Context.modify_var ctx Context.quant (whnf_q ctx qv) qv
