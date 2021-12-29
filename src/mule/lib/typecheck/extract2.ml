@@ -69,7 +69,14 @@ type display_ctx = {
      examining. Used to catch recursive types. *)
   parents: GT.Ids.QuantSet.t;
 
-  (* memoized results for each node. *)
+  (* memoized results for each node.
+
+     Note that for type nodes (as opposed to q-nodes), we only memoize
+     free variables; otherwise we would have to separately track parents
+     and recursive bindings for those as well. Only memoizing variables
+     means we can just punt and rely on the logic for quants to handle
+     it.
+  *)
   seen: (quant_info, unit DT.t) GT.seen;
 }
 
@@ -175,7 +182,6 @@ let rec degraph_quant : display_ctx -> GT.quant GT.var -> quant_info =
     let q = Context.read_var dc.ctx Context.quant qv in
     let child_dc = { dc with parents = Set.add dc.parents q.q_id } in
     Seen.get dc.seen.seen_q q.q_id (fun () ->
-      (* TODO FIXME: check for recursive type. *)
       let bound_vars =
         Map.find dc.bindings q.q_id
           |> Option.value ~default:[]
@@ -226,43 +232,42 @@ and degraph_type : display_ctx -> GT.typ GT.var -> unit DT.t =
   fun dc tv ->
     let ty = Context.read_var dc.ctx Context.typ tv in
     let ty_id = GT.typ_id ty in
-    Seen.get dc.seen.seen_ty ty_id (fun () ->
-      let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
-      match ty with
-      | `Free _ -> DT.Var {
-            v_info = ();
-            v_src = `Generated;
-            v_var = v;
-          }
-      | `Ctor (_, ctor) ->
-          begin match ctor with
-            | `Type(`Fn(p, r)) -> DT.Fn {
-                fn_info = ();
-                fn_pvar = None;
-                fn_param = get_q dc p;
-                fn_ret = get_q dc r;
-              }
-            | `Type(`Const c) -> DT.Named {
-                n_info = ();
-                n_name = match c with
-                  | `Text -> `Text
-                  | `Int -> `Int
-                  | `Char -> `Char
-              }
-            | `Type(`Union r) ->
-                DT.Union { u_row = get_row_q dc r }
-            | `Type(`Record(types, values)) -> DT.Record {
-                r_info = ();
-                r_types = get_row_q dc types;
-                r_values = get_row_q dc values;
-                r_src = None;
-              }
-            | `Row r ->
-                DT.Row { r_row = degraph_row_ty dc r }
-          end
-      | _ ->
-        failwith "TODO: degraph_type: other cases."
-    )
+    match ty with
+    | `Free _ -> Seen.get dc.seen.seen_ty ty_id (fun () ->
+        let v = Gensym.anon_var (Context.get_ctr dc.ctx) in
+        DT.Var {
+          v_info = ();
+          v_src = `Generated;
+          v_var = v;
+        })
+    | `Ctor (_, ctor) ->
+        begin match ctor with
+          | `Type(`Fn(p, r)) -> DT.Fn {
+              fn_info = ();
+              fn_pvar = None;
+              fn_param = get_q dc p;
+              fn_ret = get_q dc r;
+            }
+          | `Type(`Const c) -> DT.Named {
+              n_info = ();
+              n_name = match c with
+                | `Text -> `Text
+                | `Int -> `Int
+                | `Char -> `Char
+            }
+          | `Type(`Union r) ->
+              DT.Union { u_row = get_row_q dc r }
+          | `Type(`Record(types, values)) -> DT.Record {
+              r_info = ();
+              r_types = get_row_q dc types;
+              r_values = get_row_q dc values;
+              r_src = None;
+            }
+          | `Row r ->
+              DT.Row { r_row = degraph_row_ty dc r }
+        end
+    | _ ->
+      failwith "TODO: degraph_type: other cases."
 and degraph_row_ty : display_ctx -> GT.row_ctor -> unit DT.row =
   fun dc -> function
     | `Extend (l, h, t) -> {
