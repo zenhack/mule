@@ -383,6 +383,9 @@ end = struct
         let pos = expand `Pos in
         let neg = expand `Neg in
         let get_type polarity _ = match polarity with
+          (* FIXME: I think we actually need to make a bottom node
+             and an instance constraint, rather than just emitting the existing
+             node directly. *)
           | `Pos -> pos
           | `Neg -> neg
         in
