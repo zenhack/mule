@@ -516,26 +516,35 @@ end = struct
         failwith "TODO: other cases in gen_expr_q"
   and gen_rec_binds ctx g binds =
     let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
-    List.map binds.rec_vals ~f:(function
-      | (v, None, e) -> (v, e)
-      | (v, Some t, e) ->
-          ( v
-          , DE.App {
-              app_fn = DE.WithType {
-                wt_type = t;
-                wt_src = `Generated;
-              };
-              app_arg = e;
-            }
-          )
-    )
-    |>
-    List.map ~f:(fun (v, e) ->
-      let q_v = make_tyvar_q ctx bnd (make_kind ctx `Type) in
-      Context.with_val_binding ctx v (`LambdaBound (q_v, `Generated)) (fun ctx ->
-        (v, gen_expr_q ctx g e)
+    let vals =
+      List.map binds.rec_vals ~f:(function
+        | (v, None, e) -> (v, e)
+        | (v, Some t, e) ->
+            ( v
+            , DE.App {
+                app_fn = DE.WithType {
+                  wt_type = t;
+                  wt_src = `Generated;
+                };
+                app_arg = e;
+              }
+            )
       )
-    )
+    in
+    let val_qvs = List.map vals ~f:(fun (v, _) ->
+        (v, make_tyvar_q ctx bnd (make_kind ctx `Type))
+      )
+    in
+    let rec go ctx = function
+      | [] -> List.map vals ~f:(fun (v, e) ->
+          (v, gen_expr_q ctx g e)
+        )
+      | ((v, qv) :: vqs) ->
+          Context.with_val_binding ctx v (`LambdaBound (qv, `Generated)) (fun ctx ->
+            go ctx vqs
+          )
+    in
+    go ctx val_qvs
     |> List.fold_left
       ~init:(Context.with_quant ctx bnd (fun _ ->
           make_ctor_ty ctx (`Row `Empty)
