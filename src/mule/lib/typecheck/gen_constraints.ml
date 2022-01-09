@@ -528,8 +528,9 @@ end = struct
     | _ ->
         failwith "TODO: other cases in gen_expr_q"
   and gen_rec_binds ctx g binds =
-    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
     let vals =
+      (* First, fold any type annotations on the binding into
+         the expression: *)
       List.map binds.rec_vals ~f:(function
         | (v, None, e) -> (v, e)
         | (v, Some t, e) ->
@@ -544,6 +545,7 @@ end = struct
             )
       )
     in
+    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
     let val_qvs = List.map vals ~f:(fun (v, _) ->
         (v, make_tyvar_q ctx bnd (make_kind ctx `Type))
       )
