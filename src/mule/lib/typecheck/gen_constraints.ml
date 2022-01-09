@@ -88,7 +88,7 @@ end = struct
           | None ->
               unbound_var_poison ctx v_var v_src
           | Some f ->
-              f polarity q_target
+              f v_src polarity q_target
         end
     | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
     | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
@@ -103,7 +103,7 @@ end = struct
           | Some ty ->
               expand_type ctx polarity q_target ty
         in
-        Context.with_type_binding ctx q_var (fun _ _ -> tv) begin fun ctx ->
+        Context.with_type_binding ctx q_var (fun _ _ _ -> tv) begin fun ctx ->
           expand_type ctx polarity q_target q_body
         end
     | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
@@ -175,7 +175,7 @@ end = struct
         let param_qv = make_tyvar_q ctx bnd (make_kind ctx (`Free pk_id)) in
         let param_tv = Lazy.force (Context.read_var ctx Context.quant param_qv).q_body in
         let body_qv =
-            Context.with_type_binding ctx tl_param (fun _ _ -> param_tv) begin fun ctx ->
+            Context.with_type_binding ctx tl_param (fun _ _ _ -> param_tv) begin fun ctx ->
                 Context.with_quant ctx bnd (fun q_target ->
                   expand_type ctx polarity q_target tl_body
                 )
@@ -377,17 +377,30 @@ end = struct
 
     | DE.LetType{lettype_v; lettype_t; lettype_body} ->
         let expand polarity =
-          let q = Context.with_quant ctx bnd (fun q -> expand_type ctx polarity q lettype_t) in
-          Lazy.force (Context.read_var ctx Context.quant q).q_body
+          Context.with_sub_g ctx (fun ctx g ->
+            let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+            Context.with_quant ctx bnd (fun q -> expand_type ctx polarity q lettype_t)
+          )
         in
         let pos = expand `Pos in
         let neg = expand `Neg in
-        let get_type polarity _ = match polarity with
-          (* FIXME: I think we actually need to make a bottom node
-             and an instance constraint, rather than just emitting the existing
-             node directly. *)
-          | `Pos -> pos
-          | `Neg -> neg
+        let get_type v_src polarity _ =
+          let pk_id = GT.Ids.Kind.fresh (Context.get_ctr ctx) in
+          let qv = make_tyvar_q ctx bnd (make_kind ctx (`Free pk_id)) in
+          let super = match polarity with
+            | `Pos -> pos
+            | `Neg -> neg
+          in
+          Context.constrain ctx C.(
+            `Instance {
+              inst_super = super;
+              inst_sub = qv;
+              (* TODO: do we really want to re-use VarUse here? I have
+                 a vague hunch that these cases want to be different. *)
+              inst_why = `VarUse v_src;
+            }
+          );
+          Lazy.force (Context.read_var ctx Context.quant qv).q_body
         in
         Context.with_type_binding ctx lettype_v get_type begin fun ctx ->
           gen_expr_q ctx g lettype_body
@@ -578,7 +591,7 @@ end = struct
           Context.with_type_binding
             ctx
             key
-            (fun polarity q_target ->
+            (fun _v_src polarity q_target ->
                 expand_type ctx polarity q_target ty
             )
             f
