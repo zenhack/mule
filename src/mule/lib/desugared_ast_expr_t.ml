@@ -122,11 +122,5 @@ and 'i leaf = {
 }
 and 'i rec_bind = {
   rec_vals: (Var.t * 'i Type_t.t option * 'i t) list;
-  rec_types: (Var.t * 'i Type_t.t) list list;
-  (* TODO: do we actually need the double list in rec_types? These were I think
-     originally intended to be groups of mutually recursive type bindings, but
-     at least for `let type` bindings we no longer need this, since we can just
-     split different groups into separate let expresions - the double list predates
-     the LetType constructor. Do we still need this for records, and if so, is
-     there a better approach? *)
+  rec_types: (Var.t * 'i Type_t.t) list;
 }

@@ -82,7 +82,7 @@ let build_sorted_let_types: (Var.t * 'a DT.t) Tsort.result -> 'a D.t -> 'a D.t =
     ~recursive:(fun binds body ->
       D.LetRec {
         letrec_binds = {
-          rec_types = [NonEmpty.to_list binds];
+          rec_types = NonEmpty.to_list binds;
           rec_vals = [];
         };
         letrec_body = body;
@@ -95,14 +95,6 @@ let build_sorted_let_types: (Var.t * 'a DT.t) Tsort.result -> 'a D.t -> 'a D.t =
         lettype_body = body;
       }
     )
-
-let sort_let_types: (Var.t * 'i DT.t) list -> (Var.t * 'i DT.t) list list =
-  fun nodes ->
-  List.map (sort_binds ~fv:DT.ftv nodes) ~f:(function
-    (* TODO: manage cycles vs. singles differently. *)
-    | `Cycle (v, vs) -> v::vs
-    | `Single v -> [v]
-  )
 
 let sort_let ~rec_types ~rec_vals ~letrec_body =
   let vals = List.map rec_vals ~f:(fun (v, t, e) -> match t with
@@ -656,7 +648,6 @@ and desugar_record fields =
           )
     )
   in
-  let types = sort_let_types types in
   let binds = D.{
       rec_types = types;
       rec_vals = values;
