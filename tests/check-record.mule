@@ -1,4 +1,7 @@
-#SKIP
+# NB. the below rationale is out of date; the internals of the type checker
+# have changed substantially since this was wirtten. TODO: update the
+# below discussion.
+#
 # This tests the branch for records in the type checker's checking mode.
 # Importantly, the below does not type check if left to the catchall
 # (synth followed by require_subytpe), becuase the type annotations must

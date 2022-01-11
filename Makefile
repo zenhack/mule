@@ -11,7 +11,7 @@ install: all
 	dune build @install
 	dune install mule
 	dune install mule-stdlib
-check: check_stdlib check_dunetest
+check: check_expect check_stdlib check_dunetest
 
 check_dunetest:
 	MULE_ROOT=$(PWD)/stdlib dune runtest

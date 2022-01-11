@@ -1,4 +1,3 @@
-#SKIP
 let type list a =
   | Cons { hd : a, tl : list a }
   | Nil {}
