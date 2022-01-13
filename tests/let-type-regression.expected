@@ -1,7 +1,7 @@
 
 Desugared:
 
-	(letrec (types (((a (rec a int))) ((b (rec b a))))) (values ()) (Integer 0))
+	(lettype (a (rec a int)) (lettype (b (rec b a)) (Integer 0)))
 
 inferred type:
 
