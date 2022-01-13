@@ -1,12 +1,18 @@
 include Load_t
 
 type loader = {
+  ctx: Context.t;
   results: (string, result, String.comparator_witness) Map.t ref;
   current: string option;
   edges: string Tsort.edge list ref;
 }
 
 let new_loader () = {
+  ctx = Gen_constraints.Gen.(
+      with_intrinsics
+        (Context.make_empty Gensym.global)
+        (fun ctx -> ctx)
+  );
   results = ref (Map.empty (module String));
   current = None;
   edges = ref [];
@@ -33,6 +39,7 @@ let rec load_surface_ast loader ~typ ~expr ~export ~extra_types =
   in
   let typ_var =
     Typecheck.typecheck
+      loader.ctx
       dexp
       ~want:(Option.to_list dtyp @ extra_types)
       ~export
@@ -41,7 +48,7 @@ let rec load_surface_ast loader ~typ ~expr ~export ~extra_types =
         typ_var
       )
   in
-  let typ = Extract.get_var_type typ_var in
+  let typ = Extract2.extract_type_ast loader.ctx typ_var in
   Report.display "inferred type"  (fun () -> Pretty.typ typ);
   let rt_expr = lazy (
     To_runtime.translate

@@ -154,6 +154,8 @@ let with_quant ctx bnd f =
 
 let get_g ctx = ctx.ctx_g
 
+let make_empty ctr = make ctr get_g
+
 let with_sub_g ctx f =
   let rec g = lazy (GT.GNode.make_child ctx.ctx_g qvar)
   and qvar = lazy (

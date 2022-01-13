@@ -6,7 +6,13 @@ type t
 
 type 'a vtype
 
+(* Build and return a context, with a root g_node as returned
+   by the function. *)
 val make : Gensym.counter -> (t -> GT.g_node) -> t
+
+(* Build a context whos root g_node points at a dummy
+   type. *)
+val make_empty : Gensym.counter -> t
 
 val quant : GT.quant vtype
 val typ : GT.typ vtype
