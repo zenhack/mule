@@ -5,9 +5,10 @@ beta-reduction parts of the type checker. As discussed in
 of beta reduction is very similar to the expand procedure used
 in constraint solving.
 
-They are not quite the same, and trying to do this goes badly,
-but we *can* factor out some code that the two procedures share
-in common. This module contains that common code.
+They are not quite the same, and trying to use the same routine
+goes badly, but we *can* factor out some code that the two
+procedures share in common. This module contains that common
+code.
 *)
 
 module GT = Graph_types
