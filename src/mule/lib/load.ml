@@ -48,7 +48,7 @@ let rec load_surface_ast loader ~typ ~expr ~export ~extra_types =
         typ_var
       )
   in
-  let typ = Extract2.extract_type_ast loader.ctx typ_var in
+  let typ = Extract.extract_type_ast loader.ctx typ_var in
   Report.display "inferred type"  (fun () -> Pretty.typ typ);
   let rt_expr = lazy (
     To_runtime.translate

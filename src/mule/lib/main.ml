@@ -22,7 +22,7 @@ let typecheck path =
   match Context.errors ctx with
   | [] ->
       begin
-        Extract2.extract_type_ast ctx q
+        Extract.extract_type_ast ctx q
         |> Desugared_ast_type.to_string
         |> Stdio.print_endline
       end
