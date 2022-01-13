@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(letrec (types (((t (rec t (record (types ()) (values ()))))))) (values ())
-	 (: (record (types ()) (values ())) t))
+	(lettype (t (rec t (record (types ()) (values ()))))
+	 ((: t) (record (types ()) (values ()))))
 
 inferred type:
 
