@@ -1,12 +1,4 @@
 'use strict';
-const $update = (r, lbl, v) => {
-  var ret = {};
-  for(var k in Object.getOwnPropertyNames(r)) {
-    ret[k] = r[k];
-  }
-  ret[lbl] = v;
-  return ret;
-}
 
 const $lazy = (f) => {
   return {state: 'delayed', thunk: f}

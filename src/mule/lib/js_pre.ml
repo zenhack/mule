@@ -143,11 +143,7 @@ let rec to_js = function
   | GetTagArg e ->
       Js.Index(to_js e, Js.Int 1)
   | Update(old, lbl, value) ->
-      Js.Call(Js.Var "$update", [
-          to_js old;
-          Js.String (Label.to_string lbl);
-          to_js value;
-        ])
+      Js.RecordUpdate(to_js old, [Label.to_string lbl, to_js value])
   | Continue(e) ->
       Js.Lam([], `E (to_js e))
 and switch_to_js {sw_arg; sw_cases; sw_default} =

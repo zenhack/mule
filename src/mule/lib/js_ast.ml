@@ -10,13 +10,7 @@ let rec expr = function
   | Array es ->
       brackets (comma_sep (List.map es ~f:expr))
   | Object fs ->
-      braces (
-        comma_sep (
-          List.map fs ~f:(fun (name, e) ->
-            expr (String name) ^ c ':' ^ parens (expr e)
-          )
-        )
-      )
+      braces (comma_sep (List.map fs ~f:field))
   | String str ->
       s (Yojson.to_string (`String str))
   | Int n ->
@@ -26,6 +20,12 @@ let rec expr = function
   | Lam (ps, `E e) -> lambda ps (expr e)
   | Lam (ps, `S b) -> lambda ps (braces (stmts b))
   | Null -> s "null"
+  | RecordUpdate(old, fs) ->
+      braces (
+        comma_sep ((s "..." ^ (parens (expr old))) :: List.map ~f:field fs)
+      )
+and field (name, e) =
+  expr (String name) ^ c ':' ^ parens (expr e)
 and lambda ps body =
   concat [
     parens (comma_sep (List.map ps ~f:s));

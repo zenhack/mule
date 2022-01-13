@@ -4,7 +4,7 @@ type expr =
   | Call of (expr * expr list)
   | Index of (expr * expr)
   | Array of expr list
-  | Object of (string * expr) list
+  | Object of fields
   | String of string
   | BigInt of Z.t
   | Int of int
@@ -15,6 +15,9 @@ type expr =
         ]
       )
   | Null
+  (* {...foo, x: 1, y :2 } // TODO what does js actually call this? *)
+  | RecordUpdate of (expr * fields)
+and fields = (string * expr) list
 and stmt =
   | Return of expr
   | Switch of {
