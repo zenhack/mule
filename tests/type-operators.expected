@@ -1,8 +1,8 @@
 
 Desugared:
 
-	(letrec (types (((t (lam a (rec t int)))))) (values ())
-	 (: (Integer 4) (t (record (types ()) (values ())))))
+	(lettype (t (lam a (rec t int)))
+	 ((: (t (record (types ()) (values ())))) (Integer 4)))
 
 inferred type:
 

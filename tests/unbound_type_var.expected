@@ -1,5 +1,5 @@
 
 Desugared:
 
-	(fn x (let (x (: x a)) x))
+	(fn x (let (x ((: a) x)) x))
 Unbound variable `a` at line 1, column 9

@@ -8,5 +8,4 @@ Desugared:
 	     ((choice (record (types ()) (values ())))
 	      (record (types ()) (values ()))))
 	    (y ((choice (fn x x)) (fn x x)))))))
-Type error: <TODO>: Get rid of unspecified reasons.
-Mismatched type constructors: all a. a -> a is not a subtype of {}
+Type error: Mismatched ctors
