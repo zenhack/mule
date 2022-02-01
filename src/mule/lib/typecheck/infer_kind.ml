@@ -53,8 +53,70 @@ and infer_kind_ctor : Context.t -> GT.ctor -> GT.kind GT.var =
 and infer_prekind_ctor : Context.t -> GT.ctor -> GT.prekind GT.var =
   fun ctx ctor ->
     match ctor with
-      | `Type _ -> Context.type_v ctx
-      | `Row _ -> Context.row_v ctx
+    | `Type tc ->
+        constrain_prekind_type_ctor ctx tc;
+        Context.type_v ctx
+    | `Row rc ->
+        constrain_prekind_row_ctor ctx rc;
+        Context.row_v ctx
+and constrain_prekind_row_ctor ctx = function
+  | `Empty -> ()
+  | `Extend (_, h, t) ->
+      let hk = infer_kind_q ctx h in
+      let tk = infer_kind_q ctx t in
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Extend `Head);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Type);
+          unify_kind_sub = hk;
+        });
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Extend `Tail);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Row);
+          unify_kind_sub = tk;
+        })
+and constrain_prekind_type_ctor ctx = function
+  | `Fn (p, r) ->
+      let pk = infer_kind_q ctx p in
+      let rk = infer_kind_q ctx r in
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Fn `Param);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Type);
+          unify_kind_sub = pk;
+        });
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Fn `Result);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Type);
+          unify_kind_sub = rk;
+        })
+  | `Record (t, v) ->
+      let tk = infer_kind_q ctx t in
+      let vk = infer_kind_q ctx v in
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Record `Types);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Row);
+          unify_kind_sub = tk;
+        });
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg (`Record `Values);
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Row);
+          unify_kind_sub = vk;
+        })
+  | `Union r ->
+      let k = infer_kind_q ctx r in
+      Context.constrain ctx
+        (`UnifyKind C.{
+          unify_kind_why = `CtorArg `Union;
+          unify_kind_super = kwithg ctx `Free (Context.make_var ctx Context.prekind `Row);
+          unify_kind_sub = k;
+        })
+  | `Const _ ->
+      ()
 and infer_kind_q : Context.t -> GT.quant GT.var -> GT.kind GT.var =
   fun ctx qv ->
     let q = Context.read_var ctx Context.quant qv in

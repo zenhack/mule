@@ -50,7 +50,12 @@ type unify_kind_why =
      * denotes a "path" for the argument in the primitive constructor. e.g. `Fn `Param
      * indicates that the constrained kind was in the argument position of a ->
      * constructor. *)
-    | `CtorArg of [ `Fn of [ `Param | `Result ] ]
+    | `CtorArg of
+        [ `Fn of [ `Param | `Result ]
+        | `Extend of [ `Head | `Tail ]
+        | `Record of [ `Types | `Values ]
+        | `Union
+        ]
     (* Type was applied to another type; this means it must be an arrow type. *)
     | `Apply
   ]
