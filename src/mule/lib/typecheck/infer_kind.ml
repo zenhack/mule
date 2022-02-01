@@ -12,17 +12,12 @@ let rec infer_kind : Context.t -> GT.typ GT.var -> GT.kind GT.var =
     match t with
     | `Free tv -> tv.GT.tv_kind
     | `Ctor (_, ctor) -> infer_kind_ctor ctx ctor
-    | `Poison _ -> Context.make_var ctx Context.kind GT.{
-        k_prekind = Context.make_var ctx Context.prekind `Poison;
-        k_guard = Context.make_var ctx Context.guard `Poison;
-      }
+    | `Poison _ ->
+        kwithg ctx `Poison (Context.make_var ctx Context.prekind `Poison)
     | `Lambda(_, p, r) ->
         let k_p = infer_kind_q ctx p in
         let k_r = infer_kind_q ctx r in
-        Context.make_var ctx Context.kind GT.{
-            k_prekind = Context.make_var ctx Context.prekind (`Arrow(k_p, k_r));
-            k_guard = Context.make_var ctx Context.guard `Free;
-          }
+        kwithg ctx `Free (Context.make_var ctx Context.prekind (`Arrow(k_p, k_r)))
     | `Apply(_, f, arg) ->
         let k_f = infer_kind_q ctx f in
         let k_arg = infer_kind_q ctx arg in
