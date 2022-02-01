@@ -393,12 +393,12 @@ end = struct
         let pos = expand `Pos in
         let neg = expand `Neg in
         let get_type v_src polarity _ =
-          let pk_id = GT.Ids.Kind.fresh (Context.get_ctr ctx) in
-          let qv = make_tyvar_q ctx bnd (make_kind ctx (`Free pk_id)) in
           let super = match polarity with
             | `Pos -> pos
             | `Neg -> neg
           in
+          let kind = Infer_kind.infer_kind_q ctx (Lazy.force (GT.GNode.get super)) in
+          let qv = make_tyvar_q ctx bnd kind in
           Context.constrain ctx C.(
             `Instance {
               inst_super = super;
