@@ -41,8 +41,8 @@ let rec infer_kind : Context.t -> GT.typ GT.var -> GT.kind GT.var =
         let pre_k = Context.make_var ctx Context.prekind (`Free k_id) in
         let k_unguarded = kwithg ctx `Unguarded pre_k in
         let k_guarded = kwithg ctx `Guarded pre_k in
-        let k_arg = kwithg ctx `Free (Context.make_var ctx Context.prekind (`Arrow(k_unguarded, k_guarded))) in
-        kwithg ctx `Free (Context.make_var ctx Context.prekind (`Arrow(k_arg, k_guarded)))
+        let k_arg = kwithg ctx `Guarded (Context.make_var ctx Context.prekind (`Arrow(k_unguarded, k_guarded))) in
+        kwithg ctx `Guarded (Context.make_var ctx Context.prekind (`Arrow(k_arg, k_guarded)))
 and infer_kind_ctor : Context.t -> GT.ctor -> GT.kind GT.var =
   fun ctx ctor ->
     let pk = infer_prekind_ctor ctx ctor in
