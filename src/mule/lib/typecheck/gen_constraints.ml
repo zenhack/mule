@@ -367,12 +367,20 @@ end = struct
        type. *)
     | DE.WithType {wt_type; wt_src = _} ->
         Context.with_quant ctx bnd (fun q ->
-          expand_type ctx `Pos q (DT.Fn {
+          let tv = expand_type ctx `Pos q (DT.Fn {
               fn_info = ();
               fn_pvar = None;
               fn_param = wt_type;
               fn_ret = wt_type;
             })
+          in
+          let kv = Infer_kind.infer_kind ctx tv in
+          Context.constrain ctx (`UnifyKind C.{
+              unify_kind_why = `WithType;
+              unify_kind_super = Infer_kind.kwithg ctx `Free (Context.make_var ctx Context.prekind `Type);
+              unify_kind_sub = kv;
+            });
+          tv
         )
 
     | DE.LetType{lettype_v; lettype_t; lettype_body} ->

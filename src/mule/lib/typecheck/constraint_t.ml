@@ -58,6 +58,8 @@ type unify_kind_why =
         ]
     (* Type was applied to another type; this means it must be an arrow type. *)
     | `Apply
+    (* Type was used as a type annotation; must have kind type. *)
+    | `WithType
   ]
 
 type unify_constraint = {
