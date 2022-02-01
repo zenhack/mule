@@ -84,12 +84,7 @@ end = struct
     let b_target = `Q q_target in
     match exp with
     | DT.Var {v_var; v_src; v_info = _} ->
-        begin match Context.lookup_type ctx v_var with
-          | None ->
-              unbound_var_poison ctx v_var v_src
-          | Some f ->
-              f v_src polarity q_target
-        end
+        expand_var ctx v_var v_src polarity q_target
     | DT.Named {n_name = `Text; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Text))
     | DT.Named {n_name = `Int; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Int))
     | DT.Named {n_name = `Char; n_info = _} -> make_ctor_ty ctx (`Type (`Const `Char))
@@ -212,7 +207,22 @@ end = struct
           )
         in
         Context.make_var ctx Context.typ (`Apply(app_id, fix, body))
+    | DT.Path{p_arg; p_lbls; p_info = _} ->
+        let qv = match p_arg with
+          | `Var (v, src) -> expand_var ctx v src polarity q_target
+          | `Import _ -> failwith "TODO: import/path"
+        in
+        expand_path ctx q_target p_lbls qv
     | _ -> failwith "TODO: other cases in expand_type"
+  and expand_path _ctx _q_target _labels _arg =
+    failwith "TODO: expand_path"
+  and expand_var ctx v_var v_src polarity q_target =
+    begin match Context.lookup_type ctx v_var with
+      | None ->
+          unbound_var_poison ctx v_var v_src
+      | Some f ->
+          f v_src polarity q_target
+    end
   and expand_row
     : Context.t
       -> [ `Union | `Record of [ `Type | `Value ] ]

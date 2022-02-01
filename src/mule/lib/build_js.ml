@@ -5,8 +5,7 @@ module DT = Desugared_ast_type
 (* `import "ffi/js".main`: The type the entry point must statisfy *)
 let js_main_type = DT.Path {
     p_info = `Type;
-    p_var = `Import (DC.import_abs `Generated "ffi/js");
-    p_src = `Generated;
+    p_arg = `Import (DC.import_abs `Generated "ffi/js", `Generated);
     p_lbls = NonEmpty.singleton (Label.of_string "main");
   }
 

@@ -33,8 +33,7 @@ type 'i t =
     }
   | Path of {
       p_info : 'i;
-      p_var : [ `Var of Var.t | `Import of import ];
-      p_src : [ `Var of Var.t | `Import of Surface_ast.Import.t ] src;
+      p_arg : [ `Var of (Var.t * var_src) | `Import of (import * Surface_ast.Import.t src) ];
       p_lbls : Label.t NonEmpty.t;
     }
   | Record of {

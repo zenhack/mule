@@ -27,9 +27,9 @@ let rec subst old new_ ty = match ty with
         new_
       else
         ty
-  | Path{p_var; _} ->
-      begin match p_var with
-        | `Var v when Var.equal v old ->
+  | Path{p_arg; _} ->
+      begin match p_arg with
+        | `Var (v, _) when Var.equal v old ->
             MuleErr.bug "TODO"
         | _ ->
             ty
@@ -80,8 +80,8 @@ and subst_row old new_ {row_info; row_fields = ls; row_rest} = {
 
 
 let sexp_of_path_start = function
-  | `Import i -> sexp_of_import i
-  | `Var v -> Var.sexp_of_t v
+  | `Import (i, _) -> sexp_of_import i
+  | `Var (v, _) -> Var.sexp_of_t v
 
 let rec sexp_of_t: 'i t -> Sexp.t = function
   | Fn{fn_pvar = None; fn_param; fn_ret; _} ->
@@ -96,10 +96,10 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
       Sexp.List [Sexp.Atom "rec"; Var.sexp_of_t v; sexp_of_t body]
   | Var{v_var; _} ->
       Var.sexp_of_t v_var
-  | Path{p_var; p_lbls; _} -> Sexp.(
+  | Path{p_arg; p_lbls; _} -> Sexp.(
       List ([
         Atom ".";
-        sexp_of_path_start p_var;
+        sexp_of_path_start p_arg;
       ] @ List.map (NonEmpty.to_list p_lbls) ~f:Label.sexp_of_t)
     )
   | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
@@ -172,12 +172,11 @@ let rec map ty ~f = match ty with
         mu_var;
         mu_body = map mu_body ~f;
       }
-  | Path{p_info; p_var; p_lbls; p_src} ->
+  | Path{p_info; p_arg; p_lbls} ->
       Path{
         p_info = f p_info;
-        p_var;
+        p_arg;
         p_lbls;
-        p_src;
       }
   | Var {v_info; v_var; v_src} ->
       Var{v_info = f v_info; v_var; v_src}
@@ -223,8 +222,8 @@ let pretty_import : import -> PP.document =
     PP.(group (string "import" ^/^ text i_orig_path))
 
 let pretty_path_root = function
-  | `Var v -> Var.pretty v
-  | `Import i -> pretty_import i
+  | `Var (v, _) -> Var.pretty v
+  | `Import (i, _) -> pretty_import i
 
 let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
   | Fn {fn_pvar; fn_param; fn_ret; _} ->
@@ -250,9 +249,9 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
       PP.(Prec.(binder prec "rec" [Var.pretty mu_var] (pretty_t TopLevel mu_body)))
   | Var{v_var; _} ->
       Var.pretty v_var;
-  | Path {p_var; p_lbls; _} ->
+  | Path {p_arg; p_lbls; _} ->
       PP.(
-        (pretty_path_root p_var
+        (pretty_path_root p_arg
          :: List.map (NonEmpty.to_list p_lbls) ~f:(fun l -> string (Label.to_string l))
         )
         |> separate dot
@@ -416,8 +415,8 @@ and apply_to_row {row_info; row_fields; row_rest} ~f = {
 (* Collect the free type variables in a type *)
 let rec ftv = function
   | Var {v_var; _} -> Set.singleton (module Var) v_var
-  | Path{p_var = `Var v; _} -> Set.singleton (module Var) v
-  | Path{p_var = `Import _; _} -> Set.empty (module Var)
+  | Path{p_arg = `Var (v, _); _} -> Set.singleton (module Var) v
+  | Path{p_arg = `Import _; _} -> Set.empty (module Var)
 
   | TypeLam {tl_param; tl_body; _} -> Set.remove (ftv tl_body) tl_param
   | Quant   {q_var;    q_body;  _} -> Set.remove (ftv  q_body) q_var

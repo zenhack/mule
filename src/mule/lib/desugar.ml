@@ -345,21 +345,22 @@ let rec desugar_type' ty = match ty.Loc.l_value with
   | ST.Annotated _ ->
       MuleErr.throw (`IllegalAnnotatedType ty)
   | ST.Path{p_var; p_lbls; _} ->
-      let (p_var, src) = match p_var with
+      let p_arg = match p_var with
         | `Var Loc.{l_value; l_loc} ->
-            ( `Var l_value
-            , Loc.{l_value = `Var l_value; l_loc}
-            )
+            `Var
+              ( l_value
+              , `Sourced Loc.{l_value = l_value; l_loc}
+              )
         | `Import Loc.{l_value; l_loc} ->
-            ( `Import (desugar_import l_loc l_value)
-            , Loc.{l_value = `Import l_value; l_loc}
-            )
+            `Import
+              ( desugar_import l_loc l_value
+              , `Sourced Loc.{l_value = l_value; l_loc}
+              )
       in
       DT.Path {
         p_info = `Unknown;
-        p_var;
+        p_arg;
         p_lbls = NonEmpty.map p_lbls ~f:(fun Loc.{l_value = l; _} -> l);
-        p_src = `Sourced src;
       }
   | ST.App{app_fn = f; app_arg = x; _} ->
       DT.App {
