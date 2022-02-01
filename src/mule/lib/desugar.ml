@@ -358,7 +358,7 @@ let rec desugar_type' ty = match ty.Loc.l_value with
       DT.Path {
         p_info = `Unknown;
         p_var;
-        p_lbls = List.map p_lbls ~f:(fun Loc.{l_value = l; _} -> l);
+        p_lbls = NonEmpty.map p_lbls ~f:(fun Loc.{l_value = l; _} -> l);
         p_src = `Sourced src;
       }
   | ST.App{app_fn = f; app_arg = x; _} ->

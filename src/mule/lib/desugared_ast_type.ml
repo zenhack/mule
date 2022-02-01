@@ -100,7 +100,7 @@ let rec sexp_of_t: 'i t -> Sexp.t = function
       List ([
         Atom ".";
         sexp_of_path_start p_var;
-      ] @ List.map p_lbls ~f:Label.sexp_of_t)
+      ] @ List.map (NonEmpty.to_list p_lbls) ~f:Label.sexp_of_t)
     )
   | Record { r_info = _; r_src = _; r_types; r_values } -> Sexp.(
       List [
@@ -253,7 +253,7 @@ let rec pretty_t: PP.Prec.t -> 'i t -> PP.document = fun prec -> function
   | Path {p_var; p_lbls; _} ->
       PP.(
         (pretty_path_root p_var
-         :: List.map p_lbls ~f:(fun l -> string (Label.to_string l))
+         :: List.map (NonEmpty.to_list p_lbls) ~f:(fun l -> string (Label.to_string l))
         )
         |> separate dot
       )

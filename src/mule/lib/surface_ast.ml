@@ -61,7 +61,7 @@ module Type = struct
       }
     | Path of {
         p_var : [ `Var of var | `Import of Import.t Loc.located ];
-        p_lbls : label list;
+        p_lbls : label NonEmpty.t;
       }
     | Import of Import.t
   [@@deriving sexp_of]

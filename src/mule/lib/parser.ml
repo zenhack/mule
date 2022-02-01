@@ -216,9 +216,9 @@ and typ_factor = lazy (
           | `Var v -> Type.Var {v_var = v}
           | `Import i -> Type.Import i.Loc.l_value
         end
-      | p_lbls -> Type.Path {
+      | (l :: ls) -> Type.Path {
           p_var = head;
-          p_lbls;
+          p_lbls = (l, ls);
         }
     end;
   ]

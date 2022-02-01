@@ -35,7 +35,7 @@ type 'i t =
       p_info : 'i;
       p_var : [ `Var of Var.t | `Import of import ];
       p_src : [ `Var of Var.t | `Import of Surface_ast.Import.t ] src;
-      p_lbls : Label.t list;
+      p_lbls : Label.t NonEmpty.t;
     }
   | Record of {
       r_info : 'i;

@@ -7,7 +7,7 @@ let js_main_type = DT.Path {
     p_info = `Type;
     p_var = `Import (DC.import_abs `Generated "ffi/js");
     p_src = `Generated;
-    p_lbls = [Label.of_string "main"];
+    p_lbls = NonEmpty.singleton (Label.of_string "main");
   }
 
 let build src dest =

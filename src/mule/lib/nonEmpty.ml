@@ -11,3 +11,6 @@ let rev (x, xs) =
   | [] -> failwith "Impossible"
 let to_list (x, xs) =
   x :: xs
+
+let sexp_of_t of_elem lst =
+  List.sexp_of_t of_elem (to_list lst)
