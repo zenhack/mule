@@ -260,7 +260,7 @@ module DebugGraph = struct
       let t_var = Lazy.force q.q_body in
       let t = read_var ctx typ t_var in
       dump_typ ctx seen t;
-      let t_id = typ_id t in
+      let t_id = GT.typ_id t in
       Debug.show_edge `Structural
         q_id
         (GT.Ids.Type.to_int t_id);
@@ -279,18 +279,11 @@ module DebugGraph = struct
           GT.Ids.Quant.to_int q.q_id
     in
     Debug.show_edge (`Binding b.GT.b_flag) dest src
-  and typ_id = function
-    | `Free GT.{tv_id; _} -> tv_id
-    | `Ctor (id, _) -> id
-    | `Lambda(id, _, _) -> id
-    | `Apply(id, _, _) -> id
-    | `Poison id -> id
-    | `Fix id -> id
   and merged_typ_ids t = match t with
     | `Free GT.{tv_merged; _} -> Set.to_list tv_merged
-    | _ -> [typ_id t]
+    | _ -> [GT.typ_id t]
   and dump_typ ctx seen t =
-    let id = typ_id t in
+    let id = GT.typ_id t in
     Seen.guard seen.type_seen id (fun () ->
       let node_type = match t with
         | `Free {tv_bound; _} ->
