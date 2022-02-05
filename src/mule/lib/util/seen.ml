@@ -21,3 +21,29 @@ let make cmp =
       ignore (get k f)
   in
   {get; guard}
+
+module Tests = struct
+  let%test_unit _ =
+    (* It should be okay to walk cycles with guard: *)
+    let seen = make (module Int) in
+    let values = ref [] in
+    let rec go i =
+      guard seen i (fun () ->
+        values := i :: !values;
+        go ((i + 1) % 10)
+      )
+    in
+    go 0;
+    let ok =
+      Poly.equal
+        !values
+        [9;8;7;6;5;4;3;2;1;0]
+    in
+    if not ok then
+      failwith (String.concat [
+          "Incorrect result: ";
+          "[ ";
+          String.concat ~sep:";" (List.map ~f:Int.to_string !values);
+          " ]";
+        ])
+end
