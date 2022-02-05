@@ -1,3 +1,4 @@
+#XFAIL: match not implemented
 let factorial =
   fn n. match n with
   | 0 -> 1

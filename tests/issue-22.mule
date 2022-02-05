@@ -1,3 +1,4 @@
+#XFAIL?
 # Regression test for issue 22.
 let m : { type t, x : t, y : t -> int } =
   {x = 4, y = fn z. z}

@@ -1,5 +1,8 @@
+# TODO: the discussion below is based on a different architecture for the type
+# checker; reframe this in terms of how the type system works now.
+#
 # At one point we had a bug whose cause was that we'd flipped the arguments
-# to a require_subype. The upshot was that you could break the type system
+# to a require_subtype. The upshot was that you could break the type system
 # by using nested type annotations, where the outer was a subtype of the
 # inner. This is a regression test; the following should be rejected:
 (4 : int) : all a. a

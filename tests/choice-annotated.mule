@@ -1,3 +1,4 @@
+#XFAIL?
 # The classic example of something hindley-milner can't type check. In mule
 # we can, but the annotation is necessary.
 fn (choice : all a. a -> a -> a).

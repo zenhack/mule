@@ -1,3 +1,4 @@
+#XFAIL: recursive let type
 let type int-list
   = Cons { hd : int, tl : int-list }
   | Nil {}

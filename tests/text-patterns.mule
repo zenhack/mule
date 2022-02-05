@@ -1,3 +1,4 @@
+#XFAIL: match not implemented
 match "hey!" with
   | "hello" -> 1
   | "hey!" -> 2

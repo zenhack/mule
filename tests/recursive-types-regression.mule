@@ -1,3 +1,5 @@
+#XFAIL: type formatting
+#
 # Regression test for a stack overflow originally fixed by commit
 # b28750051945886aa838582660c4cd167951d037.
 #

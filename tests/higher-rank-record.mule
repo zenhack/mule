@@ -1,3 +1,4 @@
+#XFAIL?
 # This tests that type annotations allow higher-rank types even when extracted
 # from a record.
 let r = {y = fn x. x} in

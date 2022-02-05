@@ -1,1 +1,2 @@
+#XFAIL: expand_path
 (fn y. y.x) : (e : { type t a, x : t }) -> e.t

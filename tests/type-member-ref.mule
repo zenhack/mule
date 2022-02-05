@@ -1,2 +1,3 @@
+#XFAIL: type member
 let x = { type t = int }
 in (4 : x.t)

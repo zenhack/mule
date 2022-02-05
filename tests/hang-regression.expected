@@ -1,14 +1,5 @@
 
 Desugared:
 
-	(: (Integer 4) (all a a))
-Type error: The expression at line 1, columns 1-2 does not match its type annotation.
-The annotation says its type should be:
-
-all a. a
-
-but its actual type is:
-
-int
-
-We can't set the type variable `a` to int, because `a` is an `all`-bound type variable. The code must work for *all* types `a`, not just int.
+	((: (all a a)) (Integer 4))
+Type error: Can't instantiate

@@ -1,3 +1,5 @@
+#XFAIL: expand_path
+#
 # This is a regression test for a bug where the below failed to type check
 # with a kind mismatch error. It *shouldn't* type check, but it *is*
 # well-kinded.

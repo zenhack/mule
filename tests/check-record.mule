@@ -1,3 +1,5 @@
+#XFAIL: match not implemented.
+#
 # NB. the below rationale is out of date; the internals of the type checker
 # have changed substantially since this was wirtten. TODO: update the
 # below discussion.

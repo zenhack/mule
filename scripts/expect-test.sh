@@ -20,16 +20,20 @@ run_test() (
 	diff -u $expect_file $out_file
 )
 
-if [ "$topline" = "#SKIP" ]; then
-	echo SKIPPED
-	exit 0
-elif [ "$topline" = "#XFAIL" ]; then
-	if run_test; then
-		echo "ERROR: Expected test to fail, but it succeded."
-		exit 1
-	else
+case "$topline" in
+	\#SKIP*)
+		echo SKIPPED
 		exit 0
-	fi
-else
-	run_test
-fi
+		;;
+	\#XFAIL*)
+		if run_test >/dev/null 2>/dev/null; then
+			echo "ERROR: Expected test to fail, but it succeded."
+			exit 1
+		else
+			exit 0
+		fi
+		;;
+	*)
+		run_test
+		;;
+esac

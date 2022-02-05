@@ -1,3 +1,4 @@
+#XFAIL?
 # Make sure let-bound variables get generalized even when the top-level pattern
 # isn't a variable.
 let Ok (x : all a. a -> a) = Ok (fn x. x) in

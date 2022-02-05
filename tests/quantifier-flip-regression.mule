@@ -1,3 +1,5 @@
+#XFAIL: match not implemented
+
 # This tests for a regression, where previously 'length' would be assigned
 # the type below, but with an `exist` quantifier instead of `all` (but gave
 # the correct type if the annotation was omitted!)

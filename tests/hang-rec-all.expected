@@ -1,0 +1,5 @@
+
+Desugared:
+
+	((: (rec a (all b a))) (Integer 4))
+Type error: mismatched guards

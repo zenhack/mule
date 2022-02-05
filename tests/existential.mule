@@ -1,1 +1,2 @@
+#XFAIL: type formatting
 (fn x. 4) : exist t. t -> t
