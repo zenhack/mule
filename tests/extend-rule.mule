@@ -1,3 +1,4 @@
+#XFAIL: type formatting
 let
   # These two types should be equivalent, and both assignable
   # to the given expression:

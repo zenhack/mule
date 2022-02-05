@@ -1,7 +1,5 @@
-# This tests for a regression. The original bug was found in the
-# constraint-based type checker that has since been replaced by the
-# bidirectional one we have now, so the original cause is unlikely to
-# crop up again -- but it still serves to provide more coverage.
+#XFAIL?
+# This tests for a regression.
 #
 # The problem was that the below would erroneously fail to type check,
 # because in the return value of from-order, the constraint graph ends

@@ -1,1 +1,2 @@
+#XFAIL: type member
 { x = {} } : { type t = {}, x : t }

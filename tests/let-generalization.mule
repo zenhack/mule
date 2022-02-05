@@ -1,3 +1,4 @@
+#XFAIL: type formatting
 let f = fn x. x in
   { a = f (fn y. y)
   , b = f (Ok {})

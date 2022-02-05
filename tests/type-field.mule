@@ -1,3 +1,4 @@
+#XFAIL: type member
 {
   , type t = int
   , x : t = 4

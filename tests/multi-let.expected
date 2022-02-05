@@ -1,8 +1,7 @@
 
 Desugared:
 
-	(letrec (types ())
-	 (values ((y (((. int add) x) (Integer 2))) (x (Integer 1)))) y)
+	(let (x (Integer 1)) (let (y (((. int add) x) (Integer 2))) y))
 
 inferred type:
 
@@ -10,19 +9,21 @@ inferred type:
 
 Runtime term:
 
-	(LetRec
-	 (((2
+	(App
+	 ((Lam
+	   (0 ()
 	    (App
-	     ((App
+	     ((Lam (0 () (Var 0)))
+	      (App
 	       ((App
-	         ((GetField add)
-	          (Record
-	           ((add (Prim <fun>)) (compare (Prim <fun>)) (div (Prim <fun>))
-	            (mul (Prim <fun>)) (rem (Prim <fun>)) (sub (Prim <fun>))))))
-	        (Var 1)))
-	      (Const (Integer 2)))))
-	   (0 (Const (Integer 1))))
-	  (Var 0)))
+	         ((App
+	           ((GetField add)
+	            (Record
+	             ((add (Prim <fun>)) (compare (Prim <fun>)) (div (Prim <fun>))
+	              (mul (Prim <fun>)) (rem (Prim <fun>)) (sub (Prim <fun>))))))
+	          (Var 0)))
+	        (Const (Integer 2))))))))
+	  (Const (Integer 1))))
 
 Evaluated:
 

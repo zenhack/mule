@@ -1,2 +1,3 @@
+#XFAIL: type members
 # This test verifies that shadowing (or lack thereof) works for function parameters.
 { type t a = (t : t a) -> int }
