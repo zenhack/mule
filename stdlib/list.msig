@@ -38,7 +38,7 @@
     # , slice : all a. int -> int -> t a -> t a
     #   """O(log n): Extract a sub-range of the list.
     #
-    #    Precisely, `slice i len` Extracts `len`elements starting at
+    #    Precisely, `slice i len` extracts `len`elements starting at
     #    index `i` This is equivalent to `take len (drop i xs)`.
     #    """
     #  , index  : all a. int -> t a -> maybe a
