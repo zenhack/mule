@@ -11,7 +11,7 @@ expect_file=${src_file%.*}.expected
 
 cd $(dirname $0)/..
 export MULE_ROOT="$PWD/stdlib"
-echo "EXPECT TEST: $src_file"
+#echo "EXPECT TEST: $src_file"
 
 topline="$(head -n 1 < $src_file)"
 
