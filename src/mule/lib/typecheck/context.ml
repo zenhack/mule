@@ -219,6 +219,7 @@ module DebugGraph = struct
       | `Free _ | `Poison _ -> []
       | `Apply(_, f, arg) -> [f; arg]
       | `Lambda(_, param, body) -> [param; body]
+      | `GetField _ -> []
       | `Fix _ -> []
       | `Ctor(_, `Type(`Fn(p, r))) -> [p; r]
       | `Ctor(_, `Type(`Record(t, v))) -> [t; v]
@@ -301,6 +302,7 @@ module DebugGraph = struct
             | `Record _ -> `Record
             | `Union _ -> `Union
           ))
+        | `GetField (_, section, lbl) -> `Const(`Named(`GetField(section, lbl)))
         | `Lambda _ -> `Const (`Named `Lambda)
         | `Apply _ -> `Const (`Named `Apply)
         | `Fix _ -> `Const (`Named `Fix)

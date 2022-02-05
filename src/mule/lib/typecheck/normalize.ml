@@ -91,7 +91,9 @@ let clone_lambda ctx ~appq ~fq ~param ~body =
     end
 
 let rec whnf_typ ctx qv t = match t with
-  | `Free _ | `Ctor _ | `Lambda _ | `Fix _ | `Poison _ -> t
+  | `Free _ | `Ctor _ | `Lambda _
+  | `GetField _ | `Fix _ | `Poison _ -> t
+
   | `Apply (id, f, arg) ->
       begin
         Context.modify_var ctx Context.quant (whnf_q ctx qv) f;
@@ -105,6 +107,18 @@ and apply_qq ctx appq app_id fq arg =
   | `Lambda (_, param, body) ->
     let (param, body) = clone_lambda ctx ~appq ~fq ~param ~body in
     apply_lambda ctx ~appq ~param ~body ~arg
+  | `GetField (_, section, lbl) ->
+    Context.modify_var ctx Context.quant (whnf_q ctx appq) arg;
+    begin match get_qv_typ ctx arg with
+      | `Ctor(_, `Type(`Record(ts, vs))) ->
+          let row = match section with
+            | `Types -> ts
+            | `Values -> vs
+          in
+          project_field ctx lbl row
+      | _ ->
+          `Apply (app_id, fq, arg)
+    end
   | `Fix _ ->
     Context.modify_var ctx Context.quant (whnf_q ctx appq) arg;
     begin match get_qv_typ ctx arg with
@@ -117,6 +131,7 @@ and apply_qq ctx appq app_id fq arg =
 
   | _ ->
     `Apply (app_id, fq, arg)
+and project_field _ctx _lbl _row = failwith "TODO"
 and apply_lambda ctx ~appq ~param ~body ~arg =
   (*
      1. Replace the parameter node with the argument.

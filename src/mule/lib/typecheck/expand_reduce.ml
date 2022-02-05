@@ -91,6 +91,7 @@ let rec bound_under seen ctx ~limit ~target =
    new_id as its id. *)
 let clone_map_typ ~new_id ~f = function
   | `Poison _ -> `Poison new_id
+  | `GetField (_, section, lbl) -> `GetField(new_id, section, lbl)
   | `Apply(_, fn, arg) -> `Apply(new_id, f fn, f arg)
   | `Lambda(_, p, r)  -> `Lambda(new_id, f p, f r)
   | `Fix _ -> `Fix new_id

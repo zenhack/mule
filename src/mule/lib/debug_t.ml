@@ -10,6 +10,7 @@ type typeconst_name =
   | `Union
   | `Apply
   | `Lambda
+  | `GetField of [ `Types | `Values ] * Label.t
   | `Fix
 
   | `Poison

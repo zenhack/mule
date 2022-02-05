@@ -42,6 +42,8 @@ let fmt_node: node_type -> int -> int list -> string =
             | `Named `Union -> "|"
             | `Named `Apply -> "<apply>"
             | `Named `Lambda -> "<lambda>"
+            | `Named (`GetField(`Types, lbl)) -> "_.type " ^ Label.to_string lbl
+            | `Named (`GetField(`Values, lbl)) -> "_." ^ Label.to_string lbl
             | `Named `Fix -> "<fix>"
             | `Named `Record -> "{...type _, ..._}"
             | `Named `Empty -> "<>"

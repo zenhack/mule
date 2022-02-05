@@ -115,6 +115,7 @@ type typ =
   | `Ctor of (Ids.Type.t * ctor)
   | `Lambda of (Ids.Type.t * quant var * quant var)
   | `Apply of (Ids.Type.t * quant var * quant var)
+  | `GetField of (Ids.Type.t * [ `Types | `Values ] * Label.t)
 
   (* Type level fixpoint operator. Has kind (unguarded k -> guarded k) -> guarded k
      (for any k), which enforces whnf termination. *)
@@ -169,6 +170,7 @@ and bound_flag =
 let typ_id = function
   | `Free {tv_id; _} -> tv_id
   | `Ctor (id, _) -> id
+  | `GetField (id, _, _) -> id
   | `Lambda (id, _, _) -> id
   | `Apply (id, _, _) -> id
   | `Fix id -> id
@@ -193,6 +195,7 @@ let ty_q_kids = function
   | `Apply (_, a, b) ->
       [a; b]
   | `Fix _ -> []
+  | `GetField _ -> []
 
   | `Ctor (_, `Type (`Union a)) ->
       [a]

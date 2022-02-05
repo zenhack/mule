@@ -14,6 +14,11 @@ let rec infer_kind : Context.t -> GT.typ GT.var -> GT.kind GT.var =
     | `Ctor (_, ctor) -> infer_kind_ctor ctx ctor
     | `Poison _ ->
         kwithg ctx `Poison (Context.make_var ctx Context.prekind `Poison)
+    | `GetField _ ->
+        let tv = Context.make_var ctx Context.prekind `Type in
+        let k_p = kwithg ctx `Free tv in
+        let k_r = kwithg ctx `Free tv in
+        kwithg ctx `Free (Context.make_var ctx Context.prekind (`Arrow(k_p, k_r)))
     | `Lambda(_, p, r) ->
         let k_p = infer_kind_q ctx p in
         let k_r = infer_kind_q ctx r in
