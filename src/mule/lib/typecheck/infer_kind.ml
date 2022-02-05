@@ -35,7 +35,7 @@ let rec infer_kind : Context.t -> GT.typ GT.var -> GT.kind GT.var =
             unify_kind_super = k_f';
             unify_kind_why = `Apply;
           });
-        k_f
+        k_ret
     | `Fix _ ->
         (* (unguarded 'k -> guarded 'k) -> guarded 'k,
            where the arrows' guards are unconstrained: *)
