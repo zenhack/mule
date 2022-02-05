@@ -78,7 +78,7 @@
       try {
         return cmd()
       } finally {
-        return cleanup()
+        cleanup()
       }
       ```
       "
