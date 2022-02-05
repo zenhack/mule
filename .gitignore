@@ -8,3 +8,9 @@ _build
 # Profiler output:
 perf.data
 perf.data.*
+
+# I often use this file for playing with examples:
+/scratch.mule
+
+# I use this to leave short-term notes for myself:
+/NOTES
