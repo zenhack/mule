@@ -17,10 +17,13 @@ let rec infer_kind : Context.t -> GT.typ GT.var -> GT.kind GT.var =
     | `Poison _ ->
         kwithg ctx `Poison (mkpk ctx `Poison)
     | `GetField _ ->
-        let tv = mkpk ctx `Type in
-        let k_p = kwithg ctx `Free tv in
-        let k_r = kwithg ctx `Free tv in
-        kwithg ctx `Free (mkpk ctx (`Arrow(k_p, k_r)))
+        (* Make sure the arguement and result share a guard *)
+        let k = Context.make_var ctx Context.kind GT.{
+            k_prekind = mkpk ctx `Type;
+            k_guard = Context.make_var ctx Context.guard `Free;
+          }
+        in
+        kwithg ctx `Free (mkpk ctx (`Arrow(k, k)))
     | `Lambda(_, p, r) ->
         let k_p = infer_kind_q ctx p in
         let k_r = infer_kind_q ctx r in
