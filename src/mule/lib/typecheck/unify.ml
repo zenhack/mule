@@ -177,6 +177,9 @@ let rec unify_typ ctx c lv rv =
     | `Lambda(_, lp, lbody), `Lambda(_, rp, rbody) ->
         unify_quant ctx c lp rp;
         unify_quant ctx c lbody rbody
+    | `GetField(_, lsec, llbl), `GetField(_, rsec, rlbl)
+        when Label.equal llbl rlbl && Poly.equal lsec rsec ->
+          ()
     | _ ->
         Context.error ctx
           (`TypeError (`UnifyFailed MuleErr.{
