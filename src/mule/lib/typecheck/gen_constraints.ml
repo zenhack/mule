@@ -208,14 +208,44 @@ end = struct
         in
         Context.make_var ctx Context.typ (`Apply(app_id, fix, body))
     | DT.Path{p_arg; p_lbls; p_info = _} ->
-        let qv = match p_arg with
-          | `Var (v, src) -> expand_var ctx v src polarity q_target
-          | `Import _ -> failwith "TODO: import/path"
+        let bnd = GT.{ b_target; b_flag = `Flex } in
+        let qv = Context.with_quant ctx bnd (fun _ ->
+            match p_arg with
+            | `Var (v, src) -> expand_var ctx v src polarity q_target
+            | `Import _ -> failwith "TODO: import/path"
+          )
         in
         expand_path ctx q_target p_lbls qv
     | _ -> failwith "TODO: other cases in expand_type"
-  and expand_path _ctx _q_target _labels _arg =
-    failwith "TODO: expand_path"
+  and expand_path ctx q_target labels (arg : GT.quant GT.var) =
+    let bnd = GT.{ b_target = `Q q_target; b_flag = `Flex } in
+    let wrap section label arg =
+      let getfield_q = Context.with_quant ctx bnd (fun _ ->
+          Context.make_var ctx Context.typ (
+            `GetField
+              ( GT.Ids.Type.fresh (Context.get_ctr ctx)
+              , section
+              , label
+              )
+          )
+        )
+      in
+      Context.with_quant ctx bnd (fun _ ->
+        Context.make_var ctx Context.typ
+          (`Apply
+            ( GT.Ids.Type.fresh (Context.get_ctr ctx)
+            , getfield_q
+            , arg
+            )
+          )
+      )
+    in
+    let rec go acc = function
+      | (l, []) ->             wrap `Types  l acc
+      | (l, (l' :: ls)) -> go (wrap `Values l acc) (l', ls)
+    in
+    let qv = go arg labels in
+    Lazy.force (Context.read_var ctx Context.quant qv).q_body
   and expand_var ctx v_var v_src polarity q_target =
     begin match Context.lookup_type ctx v_var with
       | None ->
