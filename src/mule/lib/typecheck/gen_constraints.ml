@@ -598,29 +598,51 @@ end = struct
         (v, make_tyvar_q ctx bnd (make_kind ctx `Type))
       )
     in
-    let rec go ctx = function
-      | [] -> List.map vals ~f:(fun (v, e) ->
-          (v, gen_expr_q ctx g e)
+    let row_of_list items =
+      List.fold_left
+        items
+        ~init:(Context.with_quant ctx bnd (fun _ ->
+            make_ctor_ty ctx (`Row `Empty)
+          ))
+        ~f:(fun tt (hv, ht) ->
+          Context.with_quant ctx bnd (fun _ ->
+            make_ctor_ty ctx (`Row (`Extend( Label.of_string (Var.to_string hv),  ht, tt)))
+          ))
+    in
+    let rec go_types ctx val_types =
+      let val_row = row_of_list val_types in
+      (* TODO: build the type row. The full term we'll end up with will
+         be something like:
+
+         fix (lam r. {
+            , ...type _
+            , ...val_row
+         }
+
+         where we'll have to fill in the type row, using GetField to add
+         the necessary type bindings to the environment first.
+
+         DESIGN TODO: figure out how to actuall represent the type row;
+         we need to think about polarity here.
+      *)
+
+      let type_row = make_tyvar_q ctx bnd (make_kind ctx `Row) in
+      Context.with_quant ctx bnd (fun _ ->
+        make_ctor_ty ctx (`Type (`Record(type_row, val_row)))
+      )
+    in
+    let rec go_vals ctx = function
+      | [] -> go_types ctx (
+          List.map vals ~f:(fun (v, e) ->
+            (v, gen_expr_q ctx g e)
+          )
         )
       | ((v, qv) :: vqs) ->
           Context.with_val_binding ctx v (`LambdaBound (qv, `Generated)) (fun ctx ->
-            go ctx vqs
+            go_vals ctx vqs
           )
     in
-    go ctx val_qvs
-    |> List.fold_left
-      ~init:(Context.with_quant ctx bnd (fun _ ->
-          make_ctor_ty ctx (`Row `Empty)
-        ))
-      ~f:(fun tt (hv, ht) ->
-        Context.with_quant ctx bnd (fun _ ->
-          make_ctor_ty ctx (`Row (`Extend( Label.of_string (Var.to_string hv),  ht, tt)))
-        ))
-    |> (fun vals ->
-      Context.with_quant ctx bnd (fun _ ->
-        make_ctor_ty ctx (`Type (`Record(make_tyvar_q ctx bnd (make_kind ctx `Row), vals)))
-      )
-    )
+    go_vals ctx val_qvs
   and gen_const ctx const =
     let ty = match const with
       | Const.Integer _ -> `Int
