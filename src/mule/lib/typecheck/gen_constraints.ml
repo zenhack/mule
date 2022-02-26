@@ -615,7 +615,7 @@ end = struct
       (* TODO: build the type row. The full term we'll end up with will
          be something like:
 
-         fix (lam r. {
+         fix lam r. {
             , ...type _
             , ...val_row
          }
@@ -623,7 +623,7 @@ end = struct
          where we'll have to fill in the type row, using GetField to add
          the necessary type bindings to the environment first.
 
-         DESIGN TODO: figure out how to actuall represent the type row;
+         DESIGN TODO: figure out how to actually represent the type row;
          we need to think about polarity here.
       *)
 
