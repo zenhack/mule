@@ -32,7 +32,15 @@ module Name = struct
 end
 
 module Var : Name.S = Name.Impl
-module Label : Name.S = Name.Impl
+module Label : sig
+  include Name.S
+  val of_var : Var.t -> t
+  val to_var : t -> Var.t
+end = struct
+  include Name.Impl
+  let of_var v = of_string (Var.to_string v)
+  let to_var l = Var.of_string (to_string l)
+end
 
 
 let var_to_label v = Var.to_string v |> Label.of_string

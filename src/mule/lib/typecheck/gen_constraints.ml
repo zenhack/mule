@@ -542,7 +542,7 @@ end = struct
         let rec go ctx g = function
           | [] -> gen_expr_q ctx g letrec_body
           | (v, _, _) :: binds ->
-              let lbl = Label.of_string (Var.to_string v) in
+              let lbl = Label.of_var v in
               let gv =
                 Context.with_sub_g ctx (fun ctx g ->
                   let ctr = Context.get_ctr ctx in
@@ -607,7 +607,7 @@ end = struct
           ))
         ~f:(fun tt (hv, ht) ->
           Context.with_quant ctx bnd (fun _ ->
-            make_ctor_ty ctx (`Row (`Extend(Label.of_string (Var.to_string hv),  ht, tt)))
+            make_ctor_ty ctx (`Row (`Extend(Label.of_var hv,  ht, tt)))
           ))
     in
     let rec go_types ctx val_types =
