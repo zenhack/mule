@@ -607,7 +607,7 @@ end = struct
           ))
         ~f:(fun tt (hv, ht) ->
           Context.with_quant ctx bnd (fun _ ->
-            make_ctor_ty ctx (`Row (`Extend( Label.of_string (Var.to_string hv),  ht, tt)))
+            make_ctor_ty ctx (`Row (`Extend(Label.of_string (Var.to_string hv),  ht, tt)))
           ))
     in
     let rec go_types ctx val_types =
