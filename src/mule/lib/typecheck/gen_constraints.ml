@@ -578,7 +578,8 @@ end = struct
   and gen_rec_binds ctx g binds =
     let vals =
       (* First, fold any type annotations on the binding into
-         the expression: *)
+         the expression. TODO: maybe this should happen in
+         desugar? *)
       List.map binds.rec_vals ~f:(function
         | (v, None, e) -> (v, e)
         | (v, Some t, e) ->
