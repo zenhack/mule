@@ -181,16 +181,16 @@ let take_constraints ctx =
   ctx.ctx_constraints := [];
   ret
 
-let with_val_binding ctx var value f =
+let with_val_binding ctx var value =
   let vals = Map.set ~key:var ~data:value ctx.ctx_env.vals in
-  f { ctx with ctx_env = { ctx.ctx_env with vals } }
+  { ctx with ctx_env = { ctx.ctx_env with vals } }
 
 let lookup_val ctx var =
   Map.find ctx.ctx_env.vals var
 
-let with_type_binding ctx var binding f =
+let with_type_binding ctx var binding =
   let types = Map.set ~key:var ~data:binding ctx.ctx_env.types in
-  f { ctx with ctx_env = { ctx.ctx_env with types } }
+  { ctx with ctx_env = { ctx.ctx_env with types } }
 
 let lookup_type ctx var =
   Map.find ctx.ctx_env.types var

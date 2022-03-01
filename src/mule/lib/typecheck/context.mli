@@ -42,10 +42,10 @@ val with_sub_g : t -> (t -> GT.g_node -> GT.quant GT.var) -> GT.g_node
 
 val get_g : t -> GT.g_node
 
-val with_val_binding : t -> Var.t -> C.val_var -> (t -> 'a) -> 'a
+val with_val_binding : t -> Var.t -> C.val_var -> t
 val lookup_val : t -> Var.t -> C.val_var option
 
-val with_type_binding : t -> Var.t -> C.type_var -> (t -> 'a) -> 'a
+val with_type_binding : t -> Var.t -> C.type_var -> t
 val lookup_type : t -> Var.t -> C.type_var option
 
 val get_ctr : t -> Gensym.counter

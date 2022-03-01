@@ -98,9 +98,8 @@ end = struct
           | Some ty ->
               expand_type ctx polarity q_target ty
         in
-        Context.with_type_binding ctx q_var (fun _ _ _ -> tv) begin fun ctx ->
-          expand_type ctx polarity q_target q_body
-        end
+        let ctx = Context.with_type_binding ctx q_var (fun _ _ _ -> tv) in
+        expand_type ctx polarity q_target q_body
     | DT.Fn{ fn_param; fn_ret; fn_pvar = _; fn_info = _} ->
         (* TODO: do something with fn_pvar. *)
         let mk_branch polarity expr =
@@ -170,11 +169,10 @@ end = struct
         let param_qv = make_tyvar_q ctx bnd (make_kind ctx (`Free pk_id)) in
         let param_tv = Lazy.force (Context.read_var ctx Context.quant param_qv).q_body in
         let body_qv =
-            Context.with_type_binding ctx tl_param (fun _ _ _ -> param_tv) begin fun ctx ->
-                Context.with_quant ctx bnd (fun q_target ->
-                  expand_type ctx polarity q_target tl_body
-                )
-            end
+          let ctx = Context.with_type_binding ctx tl_param (fun _ _ _ -> param_tv) in
+          Context.with_quant ctx bnd (fun q_target ->
+            expand_type ctx polarity q_target tl_body
+          )
         in
         Context.make_var ctx Context.typ
           ( `Lambda
@@ -386,22 +384,20 @@ end = struct
         )
     | DE.Lam {l_param; l_body; l_src} ->
         let q_param = make_tyvar_q ctx bnd (make_kind ctx `Type) in
-        Context.with_val_binding ctx l_param (`LambdaBound (q_param, l_src)) (fun ctx ->
-          let ctr = Context.get_ctr ctx in
-          let g_ret = gen_expr ctx l_body in
-          let q_ret = Lazy.force (GT.GNode.get g_ret) in
-          Context.with_quant ctx bnd (fun _ ->
-            Context.make_var
-              ctx
-              Context.typ
-              (`Ctor(GT.Ids.Type.fresh ctr, `Type(`Fn(q_param, q_ret))))
-          )
+        let ctx = Context.with_val_binding ctx l_param (`LambdaBound (q_param, l_src)) in
+        let ctr = Context.get_ctr ctx in
+        let g_ret = gen_expr ctx l_body in
+        let q_ret = Lazy.force (GT.GNode.get g_ret) in
+        Context.with_quant ctx bnd (fun _ ->
+          Context.make_var
+            ctx
+            Context.typ
+            (`Ctor(GT.Ids.Type.fresh ctr, `Type(`Fn(q_param, q_ret))))
         )
     | DE.Let {let_v; let_e; let_body} ->
         let g_e = gen_expr ctx let_e in
-        Context.with_val_binding ctx let_v (`LetBound (g_e, None)) (fun ctx ->
-          gen_expr_q ctx g let_body
-        )
+        let ctx = Context.with_val_binding ctx let_v (`LetBound (g_e, None)) in
+        gen_expr_q ctx g let_body
 
     (* Type coercions are just the identity function specilized to the given
        type. *)
@@ -450,9 +446,8 @@ end = struct
           );
           Lazy.force (Context.read_var ctx Context.quant qv).q_body
         in
-        Context.with_type_binding ctx lettype_v get_type begin fun ctx ->
-          gen_expr_q ctx g lettype_body
-        end
+        let ctx = Context.with_type_binding ctx lettype_v get_type in
+        gen_expr_q ctx g lettype_body
 
     (* Boring stuff like constant literals *)
     | DE.Const {const_val} ->
@@ -568,9 +563,8 @@ end = struct
                   q_head
                 )
               in
-              Context.with_val_binding ctx v (`LetBound(gv, Some lbl)) (fun ctx ->
-                go ctx g binds
-              )
+              let ctx = Context.with_val_binding ctx v (`LetBound(gv, Some lbl)) in
+              go ctx g binds
         in
         go ctx g letrec_binds.rec_vals
     | _ ->
@@ -639,9 +633,8 @@ end = struct
           )
         )
       | ((v, qv) :: vqs) ->
-          Context.with_val_binding ctx v (`LambdaBound (qv, `Generated)) (fun ctx ->
-            go_vals ctx vqs
-          )
+          let ctx = Context.with_val_binding ctx v (`LambdaBound (qv, `Generated)) in
+          go_vals ctx vqs
     in
     go_vals ctx val_qvs
   and gen_const ctx const =
@@ -661,13 +654,16 @@ end = struct
         ~init:f
         ~f:(fun ~key ~data f ctx ->
           let ty = DT.map data ~f:(fun _ -> ()) in
-          Context.with_type_binding
+          (* TODO: this is an artefact of a prior api where with_type_binding
+             took a funciton instead of just returning new context; simplify. *)
+          let ctx = Context.with_type_binding
             ctx
             key
             (fun _v_src polarity q_target ->
                 expand_type ctx polarity q_target ty
             )
-            f
+          in
+          f ctx
         )
     in
     let with_vals =
@@ -682,11 +678,12 @@ end = struct
               )
             )
           in
-          Context.with_val_binding
+          let ctx = Context.with_val_binding
             ctx
             key
             (`LetBound (g, None))
-            f
+          in
+          f ctx
         )
     in
     with_vals ctx
