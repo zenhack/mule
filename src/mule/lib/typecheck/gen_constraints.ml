@@ -570,8 +570,26 @@ end = struct
     | _ ->
         failwith "TODO: other cases in gen_expr_q"
   and gen_rec_binds ctx g binds =
+    (* We want to build a term like:
+
+         fix lam r. {
+            , ...type type_row
+            , ...val_row
+         }
+
+       ...where both rows are generated with all of the bindings filled in,
+       using GetField.
+
+       DESIGN TODO: figure out how to actually represent the type row;
+       we need to think about polarity here.
+    *)
+    let ctr = Context.get_ctr ctx in
+    let new_id () = GT.Ids.Type.fresh ctr in
+
+    (* The raw syntactic bindings, as lists of (var, binding) *)
+    let types = binds.rec_types in
     let vals =
-      (* First, fold any type annotations on the binding into
+      (* Fold any type annotations on the binding into
          the expression. TODO: maybe this should happen in
          desugar? *)
       List.map binds.rec_vals ~f:(function
@@ -588,55 +606,155 @@ end = struct
             )
       )
     in
-    let bnd = GT.{ b_target = `G g; b_flag = `Flex } in
+
+    let bnd_g = GT.{ b_target = `G g; b_flag = `Flex } in
+
+    (* Helper function, converts a list into a row. *)
+    let row_of_list : (Var.t * GT.quant GT.var) list -> GT.quant GT.var =
+      fun items ->
+        List.fold_left
+          items
+          ~init:(Context.with_quant ctx bnd_g (fun _ ->
+              make_ctor_ty ctx (`Row `Empty)
+            ))
+          ~f:(fun tt (hv, ht) ->
+            Context.with_quant ctx bnd_g (fun _ ->
+              make_ctor_ty ctx (`Row (`Extend(Label.of_var hv,  ht, tt)))
+            ))
+    in
+
+    (* Map each value to a flexible bottom node of kind `Type. *)
     let val_qvs = List.map vals ~f:(fun (v, _) ->
-        (v, make_tyvar_q ctx bnd (make_kind ctx `Type))
+        (v, make_tyvar_q ctx bnd_g (make_kind ctx `Type))
       )
     in
-    let row_of_list items =
-      List.fold_left
-        items
-        ~init:(Context.with_quant ctx bnd (fun _ ->
-            make_ctor_ty ctx (`Row `Empty)
-          ))
-        ~f:(fun tt (hv, ht) ->
-          Context.with_quant ctx bnd (fun _ ->
-            make_ctor_ty ctx (`Row (`Extend(Label.of_var hv,  ht, tt)))
-          ))
+
+    let app_qv = Context.with_quant ctx bnd_g (fun app_qv ->
+        let bnd_app = GT.{ b_target = `Q app_qv; b_flag = `Flex } in
+
+        Context.make_var ctx Context.typ
+          (`Apply
+            ( new_id ()
+            , make_type_q ctx bnd_app (`Fix (new_id ()))
+            , Context.with_quant ctx bnd_app (fun lambda_qv ->
+                let param_qv = make_tyvar_q ctx
+                    GT.{ b_target = `Q lambda_qv; b_flag = `Explicit }
+                    (make_kind ctx `Type)
+                in
+
+                (* Map type variables to recursive references to themselves via
+                   GetField. *)
+                let type_qvs =
+                  List.map types ~f:(fun (v, _) ->
+                    ( v
+                    , make_type_q
+                        ctx
+                        bnd_g
+                        (`Apply
+                            ( new_id ()
+                            , make_type_q ctx bnd_g (`GetField(new_id (), `Types, Label.of_var v))
+                            , param_qv
+                            )
+                        )
+                    )
+                  )
+                in
+
+                (* Actually construct the record. *)
+                let val_row = row_of_list val_qvs in
+                let type_row = row_of_list type_qvs in
+                let record_qv = Context.with_quant ctx bnd_g (fun _ ->
+                    make_ctor_ty ctx (`Type (`Record(type_row, val_row)))
+                  )
+                in
+
+                Context.make_var ctx Context.typ (
+                  `Lambda
+                    ( new_id ()
+                    , param_qv
+                    , record_qv
+                    )
+                  )
+                )
+              )
+            )
+          )
     in
-    let go_types ctx val_types =
-      let val_row = row_of_list val_types in
-      (* TODO: build the type row. The full term we'll end up with will
-         be something like:
 
-         fix lam r. {
-            , ...type _
-            , ...val_row
-         }
+    (* Ok, we've consructed the main term. Now build an where each of the fields
+       is referenced by a variable of the same name. In that environment, we will
+       generate each type and make a unification constraint for it.
+       and walk the fields; we should have one unification constraint per field. *)
 
-         where we'll have to fill in the type row, using GetField to add
-         the necessary type bindings to the environment first.
-
-         DESIGN TODO: figure out how to actually represent the type row;
-         we need to think about polarity here.
-      *)
-
-      let type_row = make_tyvar_q ctx bnd (make_kind ctx `Row) in
-      Context.with_quant ctx bnd (fun _ ->
-        make_ctor_ty ctx (`Type (`Record(type_row, val_row)))
-      )
+    let get_attr ctx section var =
+      Context.make_var
+        ctx
+        Context.typ
+          (`Apply
+            ( new_id ()
+            , make_type_q ctx bnd_g (`GetField(new_id (), section, Label.of_var var))
+            , app_qv
+            )
+          )
     in
-    let rec go_vals ctx = function
-      | [] -> go_types ctx (
-          List.map vals ~f:(fun (v, e) ->
-            (v, gen_expr_q ctx g e)
+
+    (* TODO *)
+    let ctx =
+      List.fold types
+        ~init:ctx
+        ~f:(fun ctx (v, _) ->
+          Context.with_type_binding ctx v (fun _ _ _ ->
+            get_attr ctx `Types v
           )
         )
-      | ((v, qv) :: vqs) ->
-          let ctx = Context.with_val_binding ctx v (`LambdaBound (qv, `Generated)) in
-          go_vals ctx vqs
     in
-    go_vals ctx val_qvs
+    let ctx =
+      List.fold vals
+        ~init:ctx
+        ~f:(fun ctx (v, _) ->
+          let qv = Context.with_quant ctx bnd_g (fun _ -> get_attr ctx `Values v) in
+          Context.with_val_binding ctx v (`LambdaBound (qv, `Generated))
+        )
+    in
+
+    (* Constrain a specified field of app_qv to the given type *)
+    let constrain_field section label qv =
+      let row_kind = make_kind ctx `Row in
+      let this_row =
+        Context.with_quant ctx bnd_g (fun _ ->
+          make_ctor_ty ctx (`Row (`Extend (label, qv, make_tyvar_q ctx bnd_g row_kind)))
+        )
+      in
+      let other_row = make_tyvar_q ctx bnd_g row_kind in
+      let (type_row, val_row) = match section with
+        | `Types -> (this_row, other_row)
+        | `Values -> (other_row, this_row)
+      in
+      let record_qv = Context.with_quant ctx bnd_g (fun _ ->
+          make_ctor_ty ctx (`Type (`Record (type_row, val_row)))
+        )
+      in
+      Context.constrain ctx C.(
+          `Unify {
+            unify_super = record_qv;
+            unify_sub = app_qv;
+            unify_why = `TODO "recursive binding field";
+          }
+        )
+    in
+
+    List.iter vals ~f:(fun (v, e) ->
+      let qv = gen_expr_q ctx g e in
+      constrain_field `Values (Label.of_var v) qv
+    );
+    List.iter types ~f:(fun (v, t) ->
+      let qv = Context.with_quant ctx bnd_g (fun qv ->
+        expand_type ctx `Pos qv t
+      )
+      in
+      constrain_field `Types (Label.of_var v) qv
+    );
+    app_qv
   and gen_const ctx const =
     let ty = match const with
       | Const.Integer _ -> `Int
