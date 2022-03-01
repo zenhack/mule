@@ -610,7 +610,7 @@ end = struct
             make_ctor_ty ctx (`Row (`Extend(Label.of_var hv,  ht, tt)))
           ))
     in
-    let rec go_types ctx val_types =
+    let go_types ctx val_types =
       let val_row = row_of_list val_types in
       (* TODO: build the type row. The full term we'll end up with will
          be something like:
